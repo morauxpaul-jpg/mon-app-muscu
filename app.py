@@ -21,42 +21,39 @@ st.markdown("""
 
 # --- CONNEXION GOOGLE SHEETS ---
 @st.cache_resource
-def get_google_sheet():
-    # Récupération de la clé secrète stockée dans Streamlit
+def get_google_sheets():
     credentials_dict = dict(st.secrets["gcp_service_account"])
     gc = gspread.service_account_from_dict(credentials_dict)
-    # Ouverture du fichier "Muscu_App"
-    return gc.open("Muscu_App").sheet1
+    sh = gc.open("Muscu_App")
+    return sh.get_worksheet(0), sh.worksheet("Programme")
 
-worksheet = get_google_sheet()
+ws_history, ws_prog = get_google_sheets()
 
-# --- GESTION DES DONNÉES ---
-PROG_FILE = "programme.json"
-
-DEFAULT_PROG = {
-    "Lundi (Push 1)": ["Dips", "Développé incliné haltères", "Écartés poulie", "Elévation latérale", "Extension poulie"],
-    "Mardi (Pull 1)": ["Traction", "Tirage Vertical", "Rowing machine", "Curl marteau"],
-    "Jeudi (Push 2)": ["Développé couché", "Développé militaire", "Dips", "Extension corde"],
-    "Vendredi (Pull 2)": ["Traction", "Tirage neutre", "Rowing", "Reverse fly", "Curl incliné"],
-    "Samedi (Legs)": ["Presse à cuisse", "Leg curl", "Mollets", "Crunch"]
-}
+# --- GESTION DU PROGRAMME (VIDE PAR DÉFAUT) ---
+DEFAULT_PROG = {} # <-- C'est ici que l'appli démarre vide !
 
 def load_prog():
-    if not os.path.exists(PROG_FILE):
-        with open(PROG_FILE, "w", encoding='utf-8') as f: json.dump(DEFAULT_PROG, f)
+    val = ws_prog.acell('A1').value
+    if not val:
+        save_prog(DEFAULT_PROG)
         return DEFAULT_PROG
-    with open(PROG_FILE, "r", encoding='utf-8') as f: return json.load(f)
+    return json.loads(val)
 
+def save_prog(prog_data):
+    ws_prog.update_acell('A1', json.dumps(prog_data))
+
+# --- GESTION DE L'HISTORIQUE ---
 def get_historique():
-    data = worksheet.get_all_records()
+    data = ws_history.get_all_records()
     if not data:
         return pd.DataFrame(columns=["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
     return pd.DataFrame(data)
 
 def save_historique(df):
-    worksheet.clear()
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
+    ws_history.clear()
+    ws_history.update([df.columns.values.tolist()] + df.values.tolist())
 
+# Chargement des données
 programme = load_prog()
 df_history = get_historique()
 
@@ -65,32 +62,70 @@ st.title("💪 Suivi Training")
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Mes Progrès"])
 
 # ==============================================================================
-# ONGLET 1 : MON PROGRAMME & GESTION DES CYCLES
+# ONGLET 1 : MON PROGRAMME (CRÉATION ET TRI DES SÉANCES)
 # ==============================================================================
 with tab1:
     st.subheader("Mes Séances")
-    for jour, exos in programme.items():
+    
+    jours = list(programme.keys())
+    
+    if not jours:
+        st.info("Ton programme est vide. Crée ta première séance ci-dessous !")
+
+    # Affichage et gestion des séances
+    for idx_jour, jour in enumerate(jours):
+        exos = programme[jour]
         with st.expander(f"⚙️ {jour}", expanded=False):
+            
+            # --- OUTILS POUR DÉPLACER/SUPPRIMER LA SÉANCE ---
+            c_up, c_down, c_del = st.columns([1, 1, 1])
+            if c_up.button("⬆️ Monter", key=f"up_s_{jour}") and idx_jour > 0:
+                jours[idx_jour], jours[idx_jour-1] = jours[idx_jour-1], jours[idx_jour]
+                save_prog({k: programme[k] for k in jours})
+                st.rerun()
+            if c_down.button("⬇️ Descendre", key=f"down_s_{jour}") and idx_jour < len(jours)-1:
+                jours[idx_jour], jours[idx_jour+1] = jours[idx_jour+1], jours[idx_jour]
+                save_prog({k: programme[k] for k in jours})
+                st.rerun()
+            if c_del.button("🗑️ Supprimer", key=f"del_s_{jour}"):
+                del programme[jour]
+                save_prog(programme)
+                st.rerun()
+                
+            st.markdown("---")
+            
+            # --- GESTION DES EXERCICES ---
             for i, exo in enumerate(exos):
                 c1, c2, c3, c4 = st.columns([6, 1, 1, 1])
                 c1.write(f"**{exo}**")
-                if c2.button("⬆️", key=f"up_{jour}_{i}") and i > 0:
+                if c2.button("⬆️", key=f"up_e_{jour}_{i}") and i > 0:
                     exos[i], exos[i-1] = exos[i-1], exos[i]
-                    with open(PROG_FILE, "w", encoding='utf-8') as f: json.dump(programme, f)
+                    save_prog(programme)
                     st.rerun()
-                if c3.button("⬇️", key=f"down_{jour}_{i}") and i < len(exos)-1:
+                if c3.button("⬇️", key=f"down_e_{jour}_{i}") and i < len(exos)-1:
                     exos[i], exos[i+1] = exos[i+1], exos[i]
-                    with open(PROG_FILE, "w", encoding='utf-8') as f: json.dump(programme, f)
+                    save_prog(programme)
                     st.rerun()
-                if c4.button("🗑️", key=f"del_{jour}_{i}"):
+                if c4.button("🗑️", key=f"del_e_{jour}_{i}"):
                     exos.pop(i)
-                    with open(PROG_FILE, "w", encoding='utf-8') as f: json.dump(programme, f)
+                    save_prog(programme)
                     st.rerun()
-            nv_exo = st.text_input("Ajouter un exo :", key=f"add_{jour}", label_visibility="collapsed", placeholder="+ Nouvel exercice")
-            if st.button("Ajouter", key=f"btn_add_{jour}") and nv_exo:
+            nv_exo = st.text_input("Ajouter un exo :", key=f"add_e_{jour}", label_visibility="collapsed", placeholder="+ Nouvel exercice")
+            if st.button("Ajouter l'exo", key=f"btn_add_e_{jour}") and nv_exo:
                 exos.append(nv_exo)
-                with open(PROG_FILE, "w", encoding='utf-8') as f: json.dump(programme, f)
+                save_prog(programme)
                 st.rerun()
+
+    st.markdown("---")
+    
+    # --- CRÉATION D'UNE NOUVELLE SÉANCE ---
+    st.subheader("➕ Créer une séance")
+    c_new_s, c_btn_s = st.columns([3, 1])
+    nv_seance = c_new_s.text_input("Nom de la séance", label_visibility="collapsed", placeholder="Ex: Push, Fullbody...")
+    if c_btn_s.button("Créer") and nv_seance and nv_seance not in programme:
+        programme[nv_seance] = []
+        save_prog(programme)
+        st.rerun()
 
     st.markdown("---")
     with st.expander("🛠️ Gestion des Cycles et Données"):
@@ -106,50 +141,52 @@ with tab1:
         if st.button("🗑️ Effacer TOUTES les données"):
             empty_df = pd.DataFrame(columns=["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
             save_historique(empty_df)
-            st.success("Toutes les données ont été effacées de Google Sheets.")
+            st.success("Toutes les données ont été effacées.")
             st.rerun()
 
 # ==============================================================================
-# ONGLET 2 : ENTRAÎNEMENT (SAUVEGARDE GOOGLE SHEETS)
+# ONGLET 2 : ENTRAÎNEMENT
 # ==============================================================================
 with tab2:
-    c1, c2 = st.columns([2, 1])
-    choix_seance = c1.selectbox("Séance du jour :", list(programme.keys()), label_visibility="collapsed")
-    sem_actuelle = c2.number_input("Semaine N°", min_value=1, max_value=50, value=1, label_visibility="collapsed")
-    st.markdown("---")
-    for exo in programme[choix_seance]:
-        with st.expander(f"🔹 {exo}", expanded=True):
-            hist_s1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1)]
-            hist_s2 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 2)]
-            if not hist_s1.empty or not hist_s2.empty:
-                st.caption("🔍 Historique récent :")
-                if not hist_s2.empty:
-                    st.markdown(f"**🗓️ Semaine {sem_actuelle - 2}**")
-                    st.dataframe(hist_s2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-                if not hist_s1.empty:
-                    st.markdown(f"**🗓️ Semaine {sem_actuelle - 1}**")
-                    st.dataframe(hist_s1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-            
-            st.caption(f"✍️ Aujourd'hui (Semaine {sem_actuelle}) :")
-            data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
-            if not data_sem.empty:
-                default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy()
-            else:
-                default_sets = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
-            
-            edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True)
-            if st.button(f"✅ Valider {exo}"):
-                valid_sets = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
-                valid_sets["Semaine"] = sem_actuelle
-                valid_sets["Séance"] = choix_seance
-                valid_sets["Exercice"] = exo
-                mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
-                new_df = df_history[~mask]
-                new_df = pd.concat([new_df, valid_sets], ignore_index=True)
-                # SAUVEGARDE EN LIGNE
-                save_historique(new_df)
-                st.success("Sauvegardé sur ton Google Sheets ! ☁️")
-                st.rerun()
+    if not programme:
+        st.warning("⚠️ Va d'abord dans l'onglet 'Programme' pour créer ta première séance !")
+    else:
+        c1, c2 = st.columns([2, 1])
+        choix_seance = c1.selectbox("Séance du jour :", list(programme.keys()), label_visibility="collapsed")
+        sem_actuelle = c2.number_input("Semaine N°", min_value=1, max_value=50, value=1, label_visibility="collapsed")
+        st.markdown("---")
+        for exo in programme[choix_seance]:
+            with st.expander(f"🔹 {exo}", expanded=True):
+                hist_s1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1)]
+                hist_s2 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 2)]
+                if not hist_s1.empty or not hist_s2.empty:
+                    st.caption("🔍 Historique récent :")
+                    if not hist_s2.empty:
+                        st.markdown(f"**🗓️ Semaine {sem_actuelle - 2}**")
+                        st.dataframe(hist_s2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    if not hist_s1.empty:
+                        st.markdown(f"**🗓️ Semaine {sem_actuelle - 1}**")
+                        st.dataframe(hist_s1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                
+                st.caption(f"✍️ Aujourd'hui (Semaine {sem_actuelle}) :")
+                data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
+                if not data_sem.empty:
+                    default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy()
+                else:
+                    default_sets = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
+                
+                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True)
+                if st.button(f"✅ Valider {exo}"):
+                    valid_sets = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
+                    valid_sets["Semaine"] = sem_actuelle
+                    valid_sets["Séance"] = choix_seance
+                    valid_sets["Exercice"] = exo
+                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
+                    new_df = df_history[~mask]
+                    new_df = pd.concat([new_df, valid_sets], ignore_index=True)
+                    save_historique(new_df)
+                    st.success("Sauvegardé sur Google Sheets ! ☁️")
+                    st.rerun()
 
 # ==============================================================================
 # ONGLET 3 : MES PROGRÈS
