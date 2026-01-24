@@ -57,7 +57,9 @@ def save_historique(df):
 programme = load_prog()
 df_history = get_historique()
 
-st.title("logo.png")
+col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
+with col_logo_2:
+    st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Mes Progrès"])
 
@@ -217,6 +219,7 @@ with tab3:
             with st.expander("Voir tout l'historique"):
                 df_clean = df_exo[["Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True])
                 st.dataframe(df_clean, use_container_width=True, hide_index=True)
+
 
 
 
