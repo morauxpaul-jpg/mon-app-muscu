@@ -26,7 +26,7 @@ st.markdown("""
         background-attachment: fixed; background-size: cover;
         color: #E0E0E0; font-family: 'Helvetica', sans-serif;
     }
-    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; border-radius: 12px; padding: 5px; }
+    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; backdrop-filter: blur(5px); border-radius: 12px; padding: 5px; }
     .stTabs [aria-selected="true"] { background-color: rgba(255, 255, 255, 0.9) !important; color: #0A1931 !important; border-radius: 8px; font-weight: bold; }
     .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; margin-bottom: 10px; backdrop-filter: blur(5px); }
     div[data-testid="stMetricValue"] { font-size: 28px !important; color: #4A90E2 !important; font-weight: 800; text-shadow: 0 0 10px rgba(74, 144, 226, 0.5); }
@@ -82,78 +82,78 @@ tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "�
 with tab1:
     st.subheader("Mes Séances")
     jours = list(programme.keys())
-    if not jours: st.info("Programme vide.")
     for idx_jour, jour in enumerate(jours):
         exos = programme[jour]
         with st.expander(f"⚙️ {jour}"):
             c_up, c_down, c_del = st.columns([1, 1, 1])
-            if c_up.button("⬆️ Monter", key=f"up_s_{jour}") and idx_jour > 0:
-                jours[idx_jour], jours[idx_jour-1] = jours[idx_jour-1], jours[idx_jour]
-                save_prog({k: programme[k] for k in jours}); st.rerun()
-            if c_down.button("⬇️ Descendre", key=f"down_s_{jour}") and idx_jour < len(jours)-1:
-                jours[idx_jour], jours[idx_jour+1] = jours[idx_jour+1], jours[idx_jour]
-                save_prog({k: programme[k] for k in jours}); st.rerun()
+            if c_up.button("⬆️ Monter", key=f"up_s_{jour}"):
+                if idx_jour > 0:
+                    jours[idx_jour], jours[idx_jour-1] = jours[idx_jour-1], jours[idx_jour]
+                    save_prog({k: programme[k] for k in jours}); st.rerun()
             if c_del.button("🗑️ Supprimer", key=f"del_s_{jour}"):
                 del programme[jour]; save_prog(programme); st.rerun()
             st.markdown("---")
             for i, exo in enumerate(exos):
-                c1, c2, c3, c4 = st.columns([6, 1, 1, 1])
+                c1, c2 = st.columns([8, 2])
                 c1.write(f"**{exo}**")
-                if c2.button("⬆️", key=f"ue_{jour}_{i}") and i > 0:
-                    exos[i], exos[i-1] = exos[i-1], exos[i]; save_prog(programme); st.rerun()
-                if c4.button("🗑️", key=f"de_{jour}_{i}"):
+                if c2.button("🗑️", key=f"de_{jour}_{i}"):
                     exos.pop(i); save_prog(programme); st.rerun()
-            nv = st.text_input("Ajouter exo :", key=f"in_{jour}", placeholder="+ Nouvel exo")
+            nv = st.text_input("Ajouter exo :", key=f"in_{jour}")
             if st.button("Ajouter l'exo", key=f"btn_{jour}") and nv:
                 exos.append(nv); save_prog(programme); st.rerun()
-    st.subheader("➕ Créer une séance")
-    nvs = st.text_input("Nom séance")
-    if st.button("Créer") and nvs:
-        programme[nvs] = []; save_prog(programme); st.rerun()
 
-# --- ONGLET 2 : ENTRAÎNEMENT ---
+# --- ONGLET 2 : ENTRAÎNEMENT (AVEC OPTION SAUTER) ---
 with tab2:
     if not programme: st.warning("Crée d'abord une séance !")
     else:
         c1, c2 = st.columns([2, 1])
         choix_seance = c1.selectbox("Séance :", list(programme.keys()), label_visibility="collapsed")
         sem_actuelle = c2.number_input("Semaine N°", min_value=1, value=1, label_visibility="collapsed")
+        
         for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
+                # 1. Affichage historique S-1
                 h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1)]
                 if not h1.empty:
                     st.caption("🔍 Historique S-1 :")
                     st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                
+                # 2. Saisie ou Option "Sauter"
+                col_btn_val, col_btn_skip = st.columns([1, 1])
+                
                 data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
                 default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy() if not data_sem.empty else pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
+                
                 edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
-                if st.button(f"✅ Valider {exo}"):
+                
+                if col_btn_val.button(f"✅ Valider {exo}"):
                     valid = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
                     valid["Semaine"], valid["Séance"], valid["Exercice"] = sem_actuelle, choix_seance, exo
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
                     save_historique(pd.concat([df_history[~mask], valid], ignore_index=True)); st.success("Sauvegardé !"); st.rerun()
+                
+                # NOUVEAU : BOUTON POUR SAUTER LA SÉANCE
+                if col_btn_skip.button(f"🚫 Pas de séance", key=f"skip_{exo}"):
+                    skip_row = pd.DataFrame({
+                        "Semaine": [sem_actuelle],
+                        "Séance": [choix_seance],
+                        "Exercice": [exo],
+                        "Série": [1],
+                        "Reps": [0],
+                        "Poids": [0.0],
+                        "Remarque": ["SÉANCE MANQUÉE ❌"]
+                    })
+                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
+                    save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True))
+                    st.warning(f"L'exercice {exo} a été marqué comme manqué.")
+                    st.rerun()
 
 # --- ONGLET 3 : PROGRÈS ---
 with tab3:
-    if df_history.empty: st.info("Fais ton premier entraînement !")
-    else:
-        st.subheader("📊 Résumé Global")
-        col1, col2, col3 = st.columns(3)
-        total_poids = (df_history["Poids"] * df_history["Reps"]).sum()
-        max_semaine = df_history["Semaine"].max()
-        col1.metric("Semaine Max", f"S{max_semaine}")
-        col2.metric("Poids total", f"{int(total_poids)} kg")
-        col3.metric("Nb Séances", df_history["Séance"].nunique() * max_semaine)
-        st.markdown("---")
-        st.subheader("🎯 Zoom par exercice")
-        exo_list = sorted(list(df_history["Exercice"].unique()))
-        selected_exo = st.selectbox("Choisis un exercice :", exo_list)
-        df_exo = df_history[df_history["Exercice"] == selected_exo].copy()
+    if not df_history.empty:
+        selected_exo = st.selectbox("Choisis un exercice :", sorted(list(df_history["Exercice"].unique())))
+        df_exo = df_history[df_history["Exercice"] == selected_exo]
         if not df_exo.empty:
-            max_p = df_exo["Poids"].max()
-            rec = df_exo[df_exo["Poids"] == max_p].iloc[0]
-            st.success(f"🏆 Record : **{rec['Poids']} kg x {rec['Reps']}** (S{rec['Semaine']})")
-            progression = df_exo.groupby("Semaine")["Poids"].max()
-            st.line_chart(progression)
+            st.line_chart(df_exo.groupby("Semaine")["Poids"].max())
             with st.expander("Voir tout l'historique"):
                 st.dataframe(df_exo[["Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True]), hide_index=True, use_container_width=True)
