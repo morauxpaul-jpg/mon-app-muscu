@@ -120,59 +120,48 @@ with tab2:
         
         for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                # 1. Historique S-1 (Filtre précis par séance)
-                h1 = df_history[(df_history["Exercice"] == exo) & 
-                                (df_history["Semaine"] == sem_actuelle - 1) & 
-                                (df_history["Séance"] == choix_seance)]
-                
+                h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1) & (df_history["Séance"] == choix_seance)]
                 vol_h1 = (h1["Poids"] * h1["Reps"]).sum()
                 if not h1.empty:
                     st.caption(f"🔍 S-1 : {int(vol_h1)} kg total")
                     st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 
-                # 2. Préparation des lignes de saisie (Logique du fix)
-                data_sem = df_history[(df_history["Exercice"] == exo) & 
-                                      (df_history["Semaine"] == sem_actuelle) & 
-                                      (df_history["Séance"] == choix_seance)]
+                data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
                 
+                # Logique du fix de ligne automatique
                 if not data_sem.empty:
-                    # On affiche les séries déjà faites + une ligne vide pour la suivante
                     existing = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy()
                     next_num = int(existing["Série"].max() + 1)
                     new_line = pd.DataFrame({"Série": [next_num], "Reps": [0], "Poids": [0.0], "Remarque": [""]})
                     default_sets = pd.concat([existing, new_line], ignore_index=True)
                 else:
-                    # Si rien n'est fait, on propose 3 séries par défaut
                     default_sets = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
                 
-                # Éditeur de tableau
-                st.caption("✍️ Saisie des séries (clique sur Valider après chaque série pour le chrono)")
-                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, 
-                                           column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
+                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
                 
                 c_val, c_skip = st.columns(2)
                 if c_val.button(f"✅ Valider {exo}"):
-                    # On ne garde que les lignes avec des données réelles
                     valid = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
                     valid["Semaine"], valid["Séance"], valid["Exercice"] = sem_actuelle, choix_seance, exo
-                    
-                    # Remplacement dans l'historique global
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
-                    new_df = pd.concat([df_history[~mask], valid], ignore_index=True)
-                    save_historique(new_df)
+                    save_historique(pd.concat([df_history[~mask], valid], ignore_index=True))
                     
-                    # Gestion Chrono
                     if activer_chrono:
                         st.success(f"Sauvegardé ! Repos : {rest_time}s")
                         t_placeholder = st.empty()
                         for t in range(rest_time, 0, -1):
                             t_placeholder.metric("⏳ Temps restant", f"{t}s")
                             time.sleep(1)
+                        # SIGNAL SONORE
+                        st.components.v1.html("""
+                            <audio autoplay>
+                                <source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg">
+                            </audio>
+                        """, height=0)
                         t_placeholder.success("💥 Allez, série suivante !")
-                    
                     st.rerun()
                 
-                if c_skip.button(f"🚫 Pas de séance aujourd'hui", key=f"skip_{exo}"):
+                if c_skip.button(f"🚫 Sauter l'exo", key=f"skip_{exo}"):
                     skip_row = pd.DataFrame({"Semaine": [sem_actuelle], "Séance": [choix_seance], "Exercice": [exo], "Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": ["SÉANCE MANQUÉE ❌"]})
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
                     save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True)); st.rerun()
@@ -196,11 +185,9 @@ with tab3:
             if not df_valide.empty:
                 max_charge = df_valide["Poids"].max()
                 df_valide["1RM"] = df_valide.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
-                
                 c_rec, c_1rm = st.columns(2)
                 c_rec.success(f"🏆 Record : **{max_charge} kg**")
                 c_1rm.info(f"💪 Force (1RM) : **{round(df_valide['1RM'].max(), 1)} kg**")
-                
                 st.caption("📈 Évolution des charges (Poids Max) :")
                 st.line_chart(df_exo.groupby("Semaine")["Poids"].max())
             
