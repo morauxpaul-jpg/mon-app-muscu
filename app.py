@@ -26,7 +26,7 @@ st.markdown("""
         background-attachment: fixed; background-size: cover;
         color: #E0E0E0; font-family: 'Helvetica', sans-serif;
     }
-    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; backdrop-filter: blur(5px); border-radius: 12px; padding: 5px; }
+    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; border-radius: 12px; padding: 5px; }
     .stTabs [aria-selected="true"] { background-color: rgba(255, 255, 255, 0.9) !important; color: #0A1931 !important; border-radius: 8px; font-weight: bold; }
     .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; margin-bottom: 10px; backdrop-filter: blur(5px); }
     div[data-testid="stMetricValue"] { font-size: 28px !important; color: #4A90E2 !important; font-weight: 800; text-shadow: 0 0 10px rgba(74, 144, 226, 0.5); }
@@ -39,7 +39,7 @@ def calc_1rm(weight, reps):
     if reps == 1: return weight
     return weight * (36 / (37 - reps))
 
-# --- CONNEXION GOOGLE SHEETS ---
+# --- 3. CONNEXION GOOGLE SHEETS ---
 @st.cache_resource
 def get_google_sheets():
     credentials_dict = dict(st.secrets["gcp_service_account"])
@@ -49,7 +49,7 @@ def get_google_sheets():
 
 ws_history, ws_prog = get_google_sheets()
 
-# --- GESTION DU PROGRAMME ---
+# --- 4. GESTION DU PROGRAMME ---
 def load_prog():
     val = ws_prog.acell('A1').value
     return json.loads(val) if val else {}
@@ -57,7 +57,7 @@ def load_prog():
 def save_prog(prog_data):
     ws_prog.update_acell('A1', json.dumps(prog_data))
 
-# --- GESTION DE L'HISTORIQUE ---
+# --- 5. GESTION DE L'HISTORIQUE ---
 def get_historique():
     data = ws_history.get_all_records()
     if not data: return pd.DataFrame(columns=["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
@@ -75,10 +75,11 @@ def save_historique(df):
 programme = load_prog()
 df_history = get_historique()
 
-# --- SIDEBAR POUR LE TIMER ---
+# --- SIDEBAR (PARAMÈTRES) ---
 with st.sidebar:
-    st.header("⏲️ Repos")
-    rest_time = st.slider("Secondes", 30, 300, 90, 15)
+    st.header("⏲️ Chrono")
+    activer_chrono = st.checkbox("Activer le repos auto", value=True)
+    rest_time = st.slider("Secondes de repos", 30, 300, 90, 15)
 
 # Logo
 col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
@@ -92,11 +93,11 @@ with tab1:
     jours = list(programme.keys())
     for idx_jour, jour in enumerate(jours):
         with st.expander(f"⚙️ {jour}"):
-            c_up, c_down, c_del = st.columns([1, 1, 1])
-            if c_up.button("⬆️", key=f"up_s_{jour}") and idx_jour > 0:
+            c_up, c_del = st.columns([1, 1])
+            if c_up.button("⬆️ Monter", key=f"up_s_{jour}") and idx_jour > 0:
                 jours[idx_jour], jours[idx_jour-1] = jours[idx_jour-1], jours[idx_jour]
                 save_prog({k: programme[k] for k in jours}); st.rerun()
-            if c_del.button("🗑️", key=f"del_s_{jour}"):
+            if c_del.button("🗑️ Supprimer", key=f"del_s_{jour}"):
                 del programme[jour]; save_prog(programme); st.rerun()
             for i, exo in enumerate(programme[jour]):
                 c1, c2 = st.columns([8, 2])
@@ -106,7 +107,6 @@ with tab1:
             nv = st.text_input("Ajouter exo :", key=f"in_{jour}")
             if st.button("Ajouter", key=f"btn_{jour}") and nv:
                 programme[jour].append(nv); save_prog(programme); st.rerun()
-    st.subheader("➕ Créer une séance")
     nvs = st.text_input("Nom séance")
     if st.button("Créer séance") and nvs:
         programme[nvs] = []; save_prog(programme); st.rerun()
@@ -120,33 +120,59 @@ with tab2:
         
         for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1) & (df_history["Séance"] == choix_seance)]
+                # 1. Historique S-1 (Filtre précis par séance)
+                h1 = df_history[(df_history["Exercice"] == exo) & 
+                                (df_history["Semaine"] == sem_actuelle - 1) & 
+                                (df_history["Séance"] == choix_seance)]
+                
                 vol_h1 = (h1["Poids"] * h1["Reps"]).sum()
                 if not h1.empty:
                     st.caption(f"🔍 S-1 : {int(vol_h1)} kg total")
                     st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 
-                data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
-                default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy() if not data_sem.empty else pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
+                # 2. Préparation des lignes de saisie (Logique du fix)
+                data_sem = df_history[(df_history["Exercice"] == exo) & 
+                                      (df_history["Semaine"] == sem_actuelle) & 
+                                      (df_history["Séance"] == choix_seance)]
                 
-                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
+                if not data_sem.empty:
+                    # On affiche les séries déjà faites + une ligne vide pour la suivante
+                    existing = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy()
+                    next_num = int(existing["Série"].max() + 1)
+                    new_line = pd.DataFrame({"Série": [next_num], "Reps": [0], "Poids": [0.0], "Remarque": [""]})
+                    default_sets = pd.concat([existing, new_line], ignore_index=True)
+                else:
+                    # Si rien n'est fait, on propose 3 séries par défaut
+                    default_sets = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
+                
+                # Éditeur de tableau
+                st.caption("✍️ Saisie des séries (clique sur Valider après chaque série pour le chrono)")
+                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, 
+                                           column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
                 
                 c_val, c_skip = st.columns(2)
                 if c_val.button(f"✅ Valider {exo}"):
+                    # On ne garde que les lignes avec des données réelles
                     valid = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
                     valid["Semaine"], valid["Séance"], valid["Exercice"] = sem_actuelle, choix_seance, exo
-                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
-                    save_historique(pd.concat([df_history[~mask], valid], ignore_index=True))
                     
-                    st.success(f"Série validée ! Repos : {rest_time}s")
-                    t_placeholder = st.empty()
-                    for t in range(rest_time, 0, -1):
-                        t_placeholder.metric("⏳ Temps restant", f"{t}s")
-                        time.sleep(1)
-                    t_placeholder.success("💥 Allez, série suivante !")
+                    # Remplacement dans l'historique global
+                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
+                    new_df = pd.concat([df_history[~mask], valid], ignore_index=True)
+                    save_historique(new_df)
+                    
+                    # Gestion Chrono
+                    if activer_chrono:
+                        st.success(f"Sauvegardé ! Repos : {rest_time}s")
+                        t_placeholder = st.empty()
+                        for t in range(rest_time, 0, -1):
+                            t_placeholder.metric("⏳ Temps restant", f"{t}s")
+                            time.sleep(1)
+                        t_placeholder.success("💥 Allez, série suivante !")
+                    
                     st.rerun()
                 
-                if c_skip.button(f"🚫 Sauter", key=f"skip_{exo}"):
+                if c_skip.button(f"🚫 Pas de séance aujourd'hui", key=f"skip_{exo}"):
                     skip_row = pd.DataFrame({"Semaine": [sem_actuelle], "Séance": [choix_seance], "Exercice": [exo], "Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": ["SÉANCE MANQUÉE ❌"]})
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
                     save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True)); st.rerun()
@@ -175,7 +201,7 @@ with tab3:
                 c_rec.success(f"🏆 Record : **{max_charge} kg**")
                 c_1rm.info(f"💪 Force (1RM) : **{round(df_valide['1RM'].max(), 1)} kg**")
                 
-                st.caption("📈 Évolution des charges (Poids Max par semaine) :")
+                st.caption("📈 Évolution des charges (Poids Max) :")
                 st.line_chart(df_exo.groupby("Semaine")["Poids"].max())
             
             with st.expander("Historique complet"):
