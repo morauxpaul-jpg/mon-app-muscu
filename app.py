@@ -12,39 +12,57 @@ st.markdown("""
 <style>
     /* Configuration du fond de l'application */
     .stApp {
-        background: linear-gradient(180deg, #001524 0%, #003366 50%, #005C97 100%);
+        /* On superpose un halo lumineux blanc (radial) sur un dégradé sombre (linéaire) */
+        background: 
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+            linear-gradient(180deg, #0A1931 0%, #000000 100%);
         background-attachment: fixed;
+        background-size: cover;
         color: #E0E0E0;
         font-family: 'Helvetica', sans-serif;
     }
     
-    /* Transparence pour les onglets */
+    /* Transparence pour les onglets pour qu'ils se fondent dans le décor */
     .stTabs [data-baseweb="tab-list"] { 
-        background-color: rgba(255, 255, 255, 0.05) !important; 
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(5px); /* Petit effet de flou derrière les onglets */
         border-radius: 12px;
         padding: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Style des onglets sélectionnés */
+    /* Style des onglets sélectionnés (blanc pour le contraste) */
     .stTabs [aria-selected="true"] { 
-        background-color: #2D63ED !important; 
-        color: white !important; 
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        color: #0A1931 !important; /* Texte bleu foncé sur fond blanc */
         border-radius: 8px;
+        font-weight: bold;
     }
     
     /* Effet de transparence sur les menus déroulants (Expanders) */
     .stExpander {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(10, 25, 49, 0.6) !important; /* Bleu nuit très transparent */
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
         border-radius: 10px;
         margin-bottom: 10px;
+        backdrop-filter: blur(5px);
+    }
+    
+    /* Titres des expanders en blanc */
+    .streamlit-expanderHeader {
+        color: #FFFFFF !important;
+        font-weight: 600;
     }
 
-    /* Style des métriques (chiffres clés) */
+    /* Style des métriques (chiffres clés) en blanc/bleu clair */
     div[data-testid="stMetricValue"] { 
         font-size: 28px !important; 
-        color: #2D63ED !important; 
-        font-weight: 800; 
+        color: #4A90E2 !important; /* Bleu clair lumineux pour les chiffres */
+        font-weight: 800;
+        text-shadow: 0 0 10px rgba(74, 144, 226, 0.5); /* Petit effet néon */
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #B0B0B0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -249,6 +267,7 @@ with tab3:
             with st.expander("Voir tout l'historique"):
                 df_clean = df_exo[["Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True])
                 st.dataframe(df_clean, use_container_width=True, hide_index=True)
+
 
 
 
