@@ -10,12 +10,27 @@ st.set_page_config(page_title="App Muscu", layout="centered", page_icon="logo2.p
 # --- DESIGN MODERNE ---
 st.markdown("""
 <style>
-    .stApp { background-color: #0E0E0E; color: #E0E0E0; font-family: 'Helvetica', sans-serif; }
-    h1, h2, h3 { color: #ffffff !important; font-weight: 600; }
-    .stTabs [data-baseweb="tab-list"] { background-color: #1A1A1A; border-radius: 12px; padding: 5px; }
-    .stTabs [data-baseweb="tab"] { color: #888; font-size: 16px; font-weight: 600; }
-    .stTabs [aria-selected="true"] { background-color: #2D63ED !important; color: white !important; border-radius: 8px;}
-    div[data-testid="stMetricValue"] { font-size: 28px !important; color: #2D63ED !important; font-weight: 800; }
+    .stApp {
+        /* Dégradé de bleu profond (du haut vers le bas) */
+        background: linear-gradient(180deg, #001524 0%, #003366 50%, #005C97 100%);
+        background-attachment: fixed;
+        color: #E0E0E0;
+        font-family: 'Helvetica', sans-serif;
+    }
+    
+    /* On rend les onglets et les cartes un peu transparents pour laisser passer le bleu */
+    .stTabs [data-baseweb="tab-list"] { 
+        background-color: rgba(255, 255, 255, 0.05) !important; 
+        backdrop-filter: blur(10px); 
+    }
+    
+    .stExpander {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
 </style>
 """, unsafe_allow_html=True)
 
@@ -219,6 +234,7 @@ with tab3:
             with st.expander("Voir tout l'historique"):
                 df_clean = df_exo[["Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True])
                 st.dataframe(df_clean, use_container_width=True, hide_index=True)
+
 
 
 
