@@ -86,13 +86,20 @@ def get_historique():
     data = ws_history.get_all_records()
     if not data:
         return pd.DataFrame(columns=["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    # FORCE LE POIDS EN DÉCIMAL (FLOAT) AU CHARGEMENT
+    if "Poids" in df.columns:
+        df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0)
+    return df
 
 def save_historique(df):
     ws_history.clear()
+    # On s'assure que les colonnes sont dans le bon ordre avant de sauvegarder
+    cols = ["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"]
+    df = df[cols]
     ws_history.update([df.columns.values.tolist()] + df.values.tolist())
 
-# Chargement
+# Chargement initial
 programme = load_prog()
 df_history = get_historique()
 
@@ -155,17 +162,17 @@ with tab1:
         save_prog(programme)
         st.rerun()
 
-# --- ONGLET 2 : ENTRAÎNEMENT (AVEC AFFICHAGE INTELLIGENT) ---
+# --- ONGLET 2 : ENTRAÎNEMENT (FIX DÉCIMALES) ---
 with tab2:
     if not programme: st.warning("⚠️ Crée d'abord une séance !")
     else:
         c1, c2 = st.columns([2, 1])
         choix_seance = c1.selectbox("Séance :", list(programme.keys()), label_visibility="collapsed")
-        sem_actuelle = c2.number_input("Semaine", min_value=1, value=1, label_visibility="collapsed")
+        sem_actuelle = c2.number_input("Semaine N°", min_value=1, value=1, label_visibility="collapsed")
         
         for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                # Historique
+                # Affichage historique
                 h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1)]
                 if not h1.empty:
                     st.caption("Semaine précédente :")
@@ -173,9 +180,12 @@ with tab2:
                 
                 # Données actuelles
                 data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
-                default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy() if not data_sem.empty else pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
+                if not data_sem.empty:
+                    default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy()
+                else:
+                    default_sets = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
                 
-                # --- CONFIGURATION POUR CACHER LES .00 INUTILES ---
+                # CONFIGURATION POUR LES DÉCIMALES ET L'AFFICHAGE PROPRE
                 edited_df = st.data_editor(
                     default_sets, 
                     num_rows="dynamic", 
@@ -185,17 +195,21 @@ with tab2:
                         "Poids": st.column_config.NumberColumn(
                             "Poids (kg)",
                             min_value=0.0,
-                            step=0.05, # Pour permettre 10.25 par exemple
-                            format="%g" # Affiche 10 si rond, 10.5 si besoin, 10.25 si besoin 
+                            step=0.05,
+                            format="%g" # Affiche 10 si rond, 10.5 si besoin
                         )
                     }
                 )
                 
                 if st.button(f"✅ Valider {exo}"):
                     valid = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
+                    # On s'assure que la colonne Poids est bien au format décimal avant concat
+                    valid["Poids"] = valid["Poids"].astype(float)
                     valid["Semaine"], valid["Séance"], valid["Exercice"] = sem_actuelle, choix_seance, exo
+                    
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
-                    save_historique(pd.concat([df_history[~mask], valid], ignore_index=True))
+                    new_df = pd.concat([df_history[~mask], valid], ignore_index=True)
+                    save_historique(new_df)
                     st.success("Sauvegardé ! ☁️")
                     st.rerun()
 
