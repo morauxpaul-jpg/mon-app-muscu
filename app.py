@@ -7,29 +7,16 @@ import gspread
 # --- CONFIGURATION MOBILE ---
 st.set_page_config(page_title="Musculation Tracker", layout="centered", page_icon="logo2.png")
 
-# --- CONFIGURATION LOGO (REMPlACE TON_PSEUDO !) ---
-PSEUDO = "morauxpaul-jpg" 
-REPO = "mon-app-muscu"
-logo_url = f"https://raw.githubusercontent.com/{PSEUDO}/{REPO}/main/logo2.png"
+# --- FIX POUR L'ICÔNE SUR MOBILE ---
+# Remplace 'TON_PSEUDO' et 'TON_REPO' par tes vrais noms GitHub
+logo_url = "https://raw.githubusercontent.com/morauxpaul-jpg/mon-app-muscu/main/logo.jpg"
 
-# --- INJECTION HTML POUR FORCER L'ICÔNE ---
 st.markdown(f"""
     <head>
-        <link rel="apple-touch-icon" sizes="180x180" href="{logo_url}">
-        <link rel="icon" type="image/jpeg" sizes="192x192" href="{logo_url}">
-        <link rel="icon" type="image/jpeg" sizes="512x512" href="{logo_url}">
-        <link rel="shortcut icon" type="image/jpeg" href="{logo_url}">
-        
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="Muscu Tracker">
-        <meta name="theme-color" content="#0A1931">
+        <link rel="apple-touch-icon" href="{logo_url}">
+        <link rel="icon" sizes="192x192" href="{logo_url}">
+        <link rel="icon" sizes="512x512" href="{logo_url}">
     </head>
-    <style>
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
-        header {{visibility: hidden;}}
-    </style>
 """, unsafe_allow_html=True)
 
 # --- DESIGN MODERNE ---
