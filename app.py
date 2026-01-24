@@ -177,4 +177,14 @@ with tab2:
                 if st.button(f"✅ Valider {exo}"):
                     valid = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
                     valid["Semaine"], valid["Séance"], valid["Exercice"] = sem_actuelle, choix_seance, exo
-                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance
+                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
+                    new_df = pd.concat([df_history[~mask], valid], ignore_index=True)
+                    save_historique(new_df)
+                    st.success("Sauvegardé !"); st.rerun()
+
+# --- ONGLET 3 : MES PROGRÈS ---
+with tab3:
+    if not df_history.empty:
+        selected_exo = st.selectbox("Exercice :", sorted(list(df_history["Exercice"].unique())))
+        df_exo = df_history[df_history["Exercice"] == selected_exo]
+        st.line_chart(df_exo.groupby("Semaine")["Poids"].max())
