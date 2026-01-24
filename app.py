@@ -17,7 +17,7 @@ st.markdown(f"""
     </head>
 """, unsafe_allow_html=True)
 
-# --- DESIGN MODERNE (TON STYLE) ---
+# --- DESIGN MODERNE ---
 st.markdown("""
 <style>
     .stApp {
@@ -43,7 +43,7 @@ def get_google_sheets():
 
 ws_history, ws_prog = get_google_sheets()
 
-# --- GESTION DU PROGRAMME (JSON EN A1) ---
+# --- GESTION DU PROGRAMME ---
 DEFAULT_PROG = {}
 def load_prog():
     val = ws_prog.acell('A1').value
@@ -53,7 +53,7 @@ def load_prog():
 def save_prog(prog_data):
     ws_prog.update_acell('A1', json.dumps(prog_data))
 
-# --- GESTION DE L'HISTORIQUE (FIX DÉCIMALES) ---
+# --- GESTION DE L'HISTORIQUE ---
 def get_historique():
     data = ws_history.get_all_records()
     if not data:
@@ -110,7 +110,7 @@ with tab1:
     if st.button("Créer") and nvs:
         programme[nvs] = []; save_prog(programme); st.rerun()
 
-# --- ONGLET 2 : ENTRAÎNEMENT (AVEC OPTION SAUTER) ---
+# --- ONGLET 2 : ENTRAÎNEMENT (HISTORIQUE FILTRÉ PAR SÉANCE) ---
 with tab2:
     if not programme: st.warning("⚠️ Va d'abord dans l'onglet 'Programme' !")
     else:
@@ -120,9 +120,13 @@ with tab2:
         
         for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1)]
+                # FILTRE HISTORIQUE : On ajoute la condition (df_history["Séance"] == choix_seance)
+                h1 = df_history[(df_history["Exercice"] == exo) & 
+                                (df_history["Semaine"] == sem_actuelle - 1) & 
+                                (df_history["Séance"] == choix_seance)]
+                
                 if not h1.empty:
-                    st.caption("🔍 Historique S-1 :")
+                    st.caption(f"🔍 Historique S-1 ({choix_seance}) :")
                     st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 
                 col_btn_val, col_btn_skip = st.columns([1, 1])
@@ -142,7 +146,7 @@ with tab2:
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
                     save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True)); st.warning("Marqué comme manqué."); st.rerun()
 
-# --- ONGLET 3 : PROGRÈS (CORRECTION COMPTEUR) ---
+# --- ONGLET 3 : PROGRÈS ---
 with tab3:
     if df_history.empty: st.info("Fais ton premier entraînement !")
     else:
@@ -151,14 +155,13 @@ with tab3:
         total_poids = (df_history["Poids"] * df_history["Reps"]).sum()
         max_semaine = df_history["Semaine"].max()
         
-        # --- NOUVEAU CALCUL DU NOMBRE DE SÉANCES RÉELLES ---
-        # On ne compte que les paires (Semaine, Séance) où au moins un exercice a un Poids > 0
-        df_real_sessions = df_history[df_history["Poids"] > 0]
-        nb_reelles = len(df_real_sessions.groupby(["Semaine", "Séance"]))
+        # On ne compte que les séances avec du poids réel
+        df_real = df_history[df_history["Poids"] > 0]
+        nb_reelles = len(df_real.groupby(["Semaine", "Séance"]))
         
         col1.metric("Semaine Max", f"S{max_semaine}")
         col2.metric("Poids total", f"{int(total_poids)} kg")
-        col3.metric("Nb Séances", nb_reelles) # Affiche maintenant le vrai nombre
+        col3.metric("Nb Séances", nb_reelles)
         
         st.markdown("---")
         st.subheader("🎯 Zoom par exercice")
@@ -166,8 +169,6 @@ with tab3:
         selected_exo = st.selectbox("Choisis un exercice :", exo_list)
         df_exo = df_history[df_history["Exercice"] == selected_exo].copy()
         if not df_exo.empty:
-            max_p = df_exo["Poids"].max()
-            # On cherche le record parmi les séances non manquées
             df_record = df_exo[df_exo["Poids"] > 0]
             if not df_record.empty:
                 rec = df_record[df_record["Poids"] == df_record["Poids"].max()].iloc[0]
@@ -176,4 +177,4 @@ with tab3:
             progression = df_exo.groupby("Semaine")["Poids"].max()
             st.line_chart(progression)
             with st.expander("Voir tout l'historique"):
-                st.dataframe(df_exo[["Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True]), hide_index=True, use_container_width=True)
+                st.dataframe(df_exo[["Semaine", "Séance", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True]), hide_index=True, use_container_width=True)
