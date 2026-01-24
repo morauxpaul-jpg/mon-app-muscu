@@ -67,7 +67,6 @@ def save_historique(df):
     ws_history.clear()
     df["Poids"] = df["Poids"].astype(float)
     data = [df.columns.values.tolist()] + df.values.tolist()
-    # USER_ENTERED est crucial pour les virgules
     ws_history.update(data, value_input_option='USER_ENTERED')
 
 # Chargement
@@ -143,7 +142,7 @@ with tab2:
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
                     save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True)); st.warning("Marqué comme manqué."); st.rerun()
 
-# --- ONGLET 3 : PROGRÈS (RESTAURÉ À 100%) ---
+# --- ONGLET 3 : PROGRÈS (CORRECTION COMPTEUR) ---
 with tab3:
     if df_history.empty: st.info("Fais ton premier entraînement !")
     else:
@@ -151,9 +150,16 @@ with tab3:
         col1, col2, col3 = st.columns(3)
         total_poids = (df_history["Poids"] * df_history["Reps"]).sum()
         max_semaine = df_history["Semaine"].max()
+        
+        # --- NOUVEAU CALCUL DU NOMBRE DE SÉANCES RÉELLES ---
+        # On ne compte que les paires (Semaine, Séance) où au moins un exercice a un Poids > 0
+        df_real_sessions = df_history[df_history["Poids"] > 0]
+        nb_reelles = len(df_real_sessions.groupby(["Semaine", "Séance"]))
+        
         col1.metric("Semaine Max", f"S{max_semaine}")
         col2.metric("Poids total", f"{int(total_poids)} kg")
-        col3.metric("Nb Séances", df_history["Séance"].nunique() * max_semaine)
+        col3.metric("Nb Séances", nb_reelles) # Affiche maintenant le vrai nombre
+        
         st.markdown("---")
         st.subheader("🎯 Zoom par exercice")
         exo_list = sorted(list(df_history["Exercice"].unique()))
@@ -161,8 +167,12 @@ with tab3:
         df_exo = df_history[df_history["Exercice"] == selected_exo].copy()
         if not df_exo.empty:
             max_p = df_exo["Poids"].max()
-            rec = df_exo[df_exo["Poids"] == max_p].iloc[0]
-            st.success(f"🏆 Record : **{rec['Poids']} kg x {rec['Reps']}** (S{rec['Semaine']})")
+            # On cherche le record parmi les séances non manquées
+            df_record = df_exo[df_exo["Poids"] > 0]
+            if not df_record.empty:
+                rec = df_record[df_record["Poids"] == df_record["Poids"].max()].iloc[0]
+                st.success(f"🏆 Record : **{rec['Poids']} kg x {rec['Reps']}** (S{rec['Semaine']})")
+            
             progression = df_exo.groupby("Semaine")["Poids"].max()
             st.line_chart(progression)
             with st.expander("Voir tout l'historique"):
