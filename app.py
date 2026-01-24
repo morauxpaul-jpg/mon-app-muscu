@@ -4,8 +4,8 @@ import json
 import os
 import gspread
 
-# --- CONFIGURATION PAGE ---
-st.set_page_config(page_title="Musculation Tracker", layout="centered", page_icon="logo2.png")
+# --- 1. CONFIGURATION PAGE ---
+st.set_page_config(page_title="Musculation Tracker", layout="centered", page_icon="logo2.png") [cite: 1]
 
 # --- FIX POUR L'ICÔNE SUR MOBILE ---
 logo_url = "https://raw.githubusercontent.com/morauxpaul-jpg/mon-app-muscu/main/logo.jpg"
@@ -17,29 +17,29 @@ st.markdown(f"""
     </head>
 """, unsafe_allow_html=True)
 
-# --- DESIGN MODERNE ---
+# --- 2. DESIGN (TON STYLE BLEU NUIT) ---
 st.markdown("""
 <style>
     .stApp {
         background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-                    linear-gradient(180deg, #0A1931 0%, #000000 100%);
-        background-attachment: fixed; background-size: cover;
+                    linear-gradient(180deg, #0A1931 0%, #000000 100%); [cite: 2]
+        background-attachment: fixed; background-size: cover; [cite: 3]
         color: #E0E0E0; font-family: 'Helvetica', sans-serif;
     }
-    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; border-radius: 12px; padding: 5px; }
-    .stTabs [aria-selected="true"] { background-color: rgba(255, 255, 255, 0.9) !important; color: #0A1931 !important; border-radius: 8px; font-weight: bold; }
-    .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; margin-bottom: 10px; backdrop-filter: blur(5px); }
-    div[data-testid="stMetricValue"] { font-size: 28px !important; color: #4A90E2 !important; font-weight: 800; text-shadow: 0 0 10px rgba(74, 144, 226, 0.5); }
+    .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; backdrop-filter: blur(5px); border-radius: 12px; padding: 5px; } [cite: 4, 5]
+    .stTabs [aria-selected="true"] { background-color: rgba(255, 255, 255, 0.9) !important; color: #0A1931 !important; border-radius: 8px; font-weight: bold; } [cite: 6, 7]
+    .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; margin-bottom: 10px; backdrop-filter: blur(5px); } [cite: 8, 9]
+    div[data-testid="stMetricValue"] { color: #4A90E2 !important; font-weight: 800; text-shadow: 0 0 10px rgba(74, 144, 226, 0.5); } [cite: 11, 12]
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONCTION CALCUL 1RM ---
+# --- FONCTION CALCUL 1RM (Brzycki) ---
 def calc_1rm(weight, reps):
     if reps == 0: return 0
     if reps == 1: return weight
     return weight * (36 / (37 - reps))
 
-# --- CONNEXION GOOGLE SHEETS ---
+# --- 3. CONNEXION GOOGLE SHEETS ---
 @st.cache_resource
 def get_google_sheets():
     credentials_dict = dict(st.secrets["gcp_service_account"])
@@ -49,20 +49,23 @@ def get_google_sheets():
 
 ws_history, ws_prog = get_google_sheets()
 
-# --- GESTION DU PROGRAMME ---
+# --- 4. GESTION DU PROGRAMME (JSON EN A1) ---
+DEFAULT_PROG = {}
 def load_prog():
     val = ws_prog.acell('A1').value
-    return json.loads(val) if val else {}
+    if not val: return DEFAULT_PROG
+    return json.loads(val)
 
 def save_prog(prog_data):
     ws_prog.update_acell('A1', json.dumps(prog_data))
 
-# --- GESTION DE L'HISTORIQUE ---
+# --- 5. GESTION DE L'HISTORIQUE (FIX DÉCIMALES) ---
 def get_historique():
-    data = ws_history.get_all_records()
+    data = ws_history.get_all_records() [cite: 14]
     if not data: return pd.DataFrame(columns=["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
     df = pd.DataFrame(data)
-    df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0).astype(float)
+    if "Poids" in df.columns:
+        df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0).astype(float)
     return df
 
 def save_historique(df):
@@ -71,103 +74,119 @@ def save_historique(df):
     data = [df.columns.values.tolist()] + df.values.tolist()
     ws_history.update(data, value_input_option='USER_ENTERED')
 
-# Chargement
+# Chargement données
 programme = load_prog()
 df_history = get_historique()
 
+col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
+with col_logo_2: st.image("logo.png", use_container_width=True)
+
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Mes Progrès"])
 
-# --- ONGLET 1 : PROGRAMME ---
+# ================= ONGLET 1 : PROGRAMME =================
 with tab1:
     st.subheader("Mes Séances")
-    jours = list(programme.keys())
-    for idx, jour in enumerate(jours):
+    jours = list(programme.keys()) [cite: 15]
+    if not jours: st.info("Programme vide.")
+    for idx_jour, jour in enumerate(jours):
+        exos = programme[jour]
         with st.expander(f"⚙️ {jour}"):
-            if st.button("🗑️ Supprimer séance", key=f"del_s_{jour}"):
+            c_up, c_down, c_del = st.columns([1, 1, 1])
+            if c_up.button("⬆️ Monter", key=f"up_s_{jour}") and idx_jour > 0: [cite: 17]
+                jours[idx_jour], jours[idx_jour-1] = jours[idx_jour-1], jours[idx_jour]
+                save_prog({k: programme[k] for k in jours}); st.rerun()
+            if c_down.button("⬇️ Descendre", key=f"down_s_{jour}") and idx_jour < len(jours)-1: [cite: 18]
+                jours[idx_jour], jours[idx_jour+1] = jours[idx_jour+1], jours[idx_jour]
+                save_prog({k: programme[k] for k in jours}); st.rerun()
+            if c_del.button("🗑️ Supprimer", key=f"del_s_{jour}"): [cite: 19]
                 del programme[jour]; save_prog(programme); st.rerun()
-            for i, exo in enumerate(programme[jour]):
-                c1, c2 = st.columns([8, 2])
+            st.markdown("---")
+            for i, exo in enumerate(exos):
+                c1, c2, c3, c4 = st.columns([6, 1, 1, 1]) [cite: 20]
                 c1.write(f"**{exo}**")
-                if c2.button("🗑️", key=f"del_e_{jour}_{i}"):
-                    programme[jour].pop(i); save_prog(programme); st.rerun()
-            nv = st.text_input("Ajouter exo :", key=f"in_{jour}")
-            if st.button("Ajouter", key=f"btn_{jour}") and nv:
-                programme[jour].append(nv); save_prog(programme); st.rerun()
-    nvs = st.text_input("Nouvelle Séance")
-    if st.button("Créer séance") and nvs:
+                if c2.button("⬆️", key=f"ue_{jour}_{i}") and i > 0: [cite: 21]
+                    exos[i], exos[i-1] = exos[i-1], exos[i]; save_prog(programme); st.rerun()
+                if c4.button("🗑️", key=f"de_{jour}_{i}"): [cite: 22]
+                    exos.pop(i); save_prog(programme); st.rerun()
+            nv = st.text_input("Ajouter exo :", key=f"in_{jour}", placeholder="+ Nouvel exo")
+            if st.button("Ajouter l'exo", key=f"btn_{jour}") and nv: [cite: 23]
+                exos.append(nv); save_prog(programme); st.rerun()
+    st.subheader("➕ Créer une séance")
+    nvs = st.text_input("Nom séance", placeholder="Ex: Push...") [cite: 24]
+    if st.button("Créer") and nvs:
         programme[nvs] = []; save_prog(programme); st.rerun()
 
-# --- ONGLET 2 : ENTRAÎNEMENT (VOLUME & PROGRESSION) ---
+# ================= ONGLET 2 : ENTRAÎNEMENT =================
 with tab2:
-    if not programme: st.warning("Crée d'abord une séance !")
+    if not programme: st.warning("⚠️ Va d'abord dans l'onglet 'Programme' !") [cite: 27]
     else:
         c1, c2 = st.columns([2, 1])
-        choix_s = c1.selectbox("Séance :", list(programme.keys()))
-        sem = c2.number_input("Semaine", min_value=1, value=1)
-        
-        for exo in programme[choix_s]:
+        choix_seance = c1.selectbox("Séance :", list(programme.keys()), label_visibility="collapsed")
+        sem_actuelle = c2.number_input("Semaine N°", min_value=1, value=1, label_visibility="collapsed")
+        for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                # Historique filtré
-                h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem - 1) & (df_history["Séance"] == choix_s)]
+                h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1) & (df_history["Séance"] == choix_seance)]
                 vol_h1 = (h1["Poids"] * h1["Reps"]).sum()
-                
                 if not h1.empty:
                     st.caption(f"🔍 S-1 : {int(vol_h1)} kg total")
-                    st.dataframe(h1[["Série", "Reps", "Poids"]], hide_index=True, use_container_width=True)
-                
-                # Saisie
-                data_curr = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem) & (df_history["Séance"] == choix_s)]
-                default = data_curr[["Série", "Reps", "Poids", "Remarque"]].copy() if not data_curr.empty else pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
-                
-                edited_df = st.data_editor(default, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
-                
-                # Calcul Volume Actuel
+                    st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True) [cite: 30]
+                data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)] [cite: 31]
+                default_sets = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy() if not data_sem.empty else pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]}) [cite: 32]
+                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
                 vol_curr = (edited_df["Poids"] * edited_df["Reps"]).sum()
                 
-                col_v, col_s = st.columns([1, 1])
-                if col_v.button(f"✅ Valider {exo}"):
+                col_btn_val, col_btn_skip = st.columns([1, 1])
+                if col_btn_val.button(f"✅ Valider {exo}"): [cite: 33]
                     valid = edited_df[(edited_df["Poids"] > 0) | (edited_df["Reps"] > 0)].copy()
-                    valid["Semaine"], valid["Séance"], valid["Exercice"] = sem, choix_s, exo
-                    mask = (df_history["Semaine"] == sem) & (df_history["Séance"] == choix_s) & (df_history["Exercice"] == exo)
-                    save_historique(pd.concat([df_history[~mask], valid], ignore_index=True))
-                    
-                    # SYSTEME DE PROGRESSION
-                    diff = vol_curr - vol_h1
-                    if sem > 1:
-                        if diff > 0: st.toast(f"💪 Progression : +{int(diff)} kg de volume !", icon="🔥")
-                        else: st.toast("Continue tes efforts !", icon="🏋️")
-                    st.rerun()
+                    valid["Semaine"], valid["Séance"], valid["Exercice"] = sem_actuelle, choix_seance, exo [cite: 34]
+                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
+                    save_historique(pd.concat([df_history[~mask], valid], ignore_index=True)); st.success("Sauvegardé !"); st.rerun() [cite: 35]
+                
+                if col_btn_skip.button(f"🚫 Pas de séance", key=f"skip_{exo}"):
+                    skip_row = pd.DataFrame({"Semaine": [sem_actuelle], "Séance": [choix_seance], "Exercice": [exo], "Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": ["SÉANCE MANQUÉE ❌"]})
+                    mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
+                    save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True)); st.warning("Marqué comme manqué."); st.rerun()
 
-                if col_s.button(f"🚫 Sauter", key=f"skip_{exo}"):
-                    row = pd.DataFrame({"Semaine": [sem], "Séance": [choix_s], "Exercice": [exo], "Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": ["SÉANCE MANQUÉE ❌"]})
-                    mask = (df_history["Semaine"] == sem) & (df_history["Séance"] == choix_s) & (df_history["Exercice"] == exo)
-                    save_historique(pd.concat([df_history[~mask], row], ignore_index=True)); st.rerun()
-
-# --- ONGLET 3 : PROGRÈS (1RM & CHARTS) ---
+# ================= ONGLET 3 : PROGRÈS (RECORD & CHARGES) =================
 with tab3:
-    if df_history.empty: st.info("Aucune donnée.")
+    if df_history.empty: st.info("Fais ton premier entraînement !")
     else:
-        st.subheader("📊 Résumé")
-        # On calcule le 1RM pour chaque ligne
-        df_history["1RM"] = df_history.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
-        
+        st.subheader("📊 Résumé Global")
         col1, col2, col3 = st.columns(3)
-        col1.metric("Volume total", f"{int((df_history['Poids'] * df_history['Reps']).sum())} kg")
-        col2.metric("Max 1RM", f"{round(df_history['1RM'].max(), 1)} kg")
-        col3.metric("Séances", len(df_history[df_history["Poids"] > 0].groupby(["Semaine", "Séance"])))
+        total_poids = (df_history["Poids"] * df_history["Reps"]).sum() [cite: 36]
+        max_semaine = df_history["Semaine"].max()
+        df_real = df_history[df_history["Poids"] > 0]
+        nb_reelles = len(df_real.groupby(["Semaine", "Séance"]))
+        col1.metric("Semaine Max", f"S{max_semaine}")
+        col2.metric("Poids total", f"{int(total_poids)} kg") [cite: 36]
+        col3.metric("Nb Séances", nb_reelles)
+        st.markdown("---")
         
-        st.divider()
-        sel_exo = st.selectbox("Analyse Exercice :", sorted(df_history["Exercice"].unique()))
-        df_e = df_history[df_history["Exercice"] == sel_exo]
+        st.subheader("🎯 Zoom par exercice")
+        exo_list = sorted(list(df_history["Exercice"].unique()))
+        selected_exo = st.selectbox("Choisis un exercice :", exo_list)
+        df_exo = df_history[df_history["Exercice"] == selected_exo].copy()
         
-        # Graphique 1RM
-        st.caption("Progression du 1RM estimé (Force pure)")
-        st.line_chart(df_e.groupby("Semaine")["1RM"].max())
-        
-        # Conseil de progression
-        last_sem = df_e["Semaine"].max()
-        last_perf = df_e[df_e["Semaine"] == last_sem]
-        avg_reps = last_perf["Reps"].mean()
-        
-        if avg_reps >= 10: st.info(f"💡 Conseil : Tu fais beaucoup de reps ({int(avg_reps)}). Augmente de 1.25kg ou 2.5kg la semaine prochaine !")
-        elif avg_reps > 0: st.info("💡 Conseil : Reste sur ce poids et essaye de gagner 1 rep par série.")
+        if not df_exo.empty:
+            # --- CALCULS RECORDS & 1RM ---
+            df_valide = df_exo[df_exo["Poids"] > 0]
+            if not df_valide.empty:
+                # Record de charge (Poids max)
+                max_charge = df_valide["Poids"].max() [cite: 37]
+                best_set = df_valide[df_valide["Poids"] == max_charge].iloc[0]
+                
+                # 1RM Max historique
+                df_valide["1RM"] = df_valide.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
+                best_1rm = df_valide["1RM"].max()
+                
+                c_rec, c_1rm = st.columns(2)
+                c_rec.success(f"🏆 Record Actuel\n\n**{best_set['Poids']} kg x {best_set['Reps']}**") [cite: 37]
+                c_1rm.info(f"💪 Force Pure (1RM)\n\n**{round(best_1rm, 1)} kg**")
+                
+                st.divider()
+                st.caption("📈 Évolution de tes charges (Poids Max par semaine) :") [cite: 37]
+                progression = df_exo.groupby("Semaine")["Poids"].max() [cite: 37]
+                st.line_chart(progression)
+            
+            with st.expander("Voir tout l'historique"):
+                st.dataframe(df_exo[["Semaine", "Séance", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True]), hide_index=True, use_container_width=True) [cite: 38]
