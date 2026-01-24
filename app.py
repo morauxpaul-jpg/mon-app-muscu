@@ -5,7 +5,7 @@ import os
 import gspread
 
 # --- CONFIGURATION MOBILE ---
-st.set_page_config(page_title="App Muscu", layout="centered", page_icon="logo.png")
+st.set_page_config(page_title="App Muscu", layout="centered", page_icon="logo2.png")
 
 # --- DESIGN MODERNE ---
 st.markdown("""
@@ -217,4 +217,5 @@ with tab3:
             with st.expander("Voir tout l'historique"):
                 df_clean = df_exo[["Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True])
                 st.dataframe(df_clean, use_container_width=True, hide_index=True)
+
 
