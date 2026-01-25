@@ -35,10 +35,10 @@ def calc_ratio(weight, reps):
     return weight * (1 + reps / 30)
 
 def style_comparaison(row, hist_prev):
-    if hist_prev.empty or "Série" not in hist_prev.columns:
+    if hist_prev is None or hist_prev.empty or "Série" not in hist_prev.columns:
         return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
-    v, r, o = "background-color: rgba(46,125,50,0.4);", "background-color: rgba(198,40,40,0.4);", "background-color: rgba(255,152,0,0.4);"
+    v, r, o = "background-color: rgba(46,125,50,0.4); color: white;", "background-color: rgba(198,40,40,0.4); color: white;", "background-color: rgba(255,152,0,0.4); color: white;"
     colors = ["", "", "", ""] 
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
@@ -71,16 +71,18 @@ def get_hist():
     return df
 
 def save_hist(df):
-    # FIX ANTI-InvalidJSONError : Remplace NaN par des valeurs vides JSON-compatibles
-    df_clean = df.copy()
-    df_clean = df_clean.fillna("")  # Remplace NaN par du texte vide
+    df_clean = df.copy().fillna("")
     ws_h.clear()
     data = [df_clean.columns.values.tolist()] + df_clean.values.tolist()
     ws_h.update(data, value_input_option='USER_ENTERED')
 
+def save_prog(prog_dict):
+    ws_p.update_acell('A1', json.dumps(prog_dict))
+
 # Init
 df_h = get_hist()
-prog = json.loads(ws_p.acell('A1').value or "{}")
+prog_raw = ws_p.acell('A1').value
+prog = json.loads(prog_raw) if prog_raw else {}
 
 # Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
@@ -92,37 +94,41 @@ tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "�
 with tab1:
     st.subheader("Mes Séances")
     jours = list(prog.keys())
+    if not jours: st.info("Aucune séance créée. Utilise le formulaire en bas !")
+    
     for idx_j, j in enumerate(jours):
         with st.expander(f"⚙️ {j}"):
             c1, c2, c3 = st.columns([1, 1, 1])
             if c1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
                 jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
-                ws_p.update_acell('A1', json.dumps({k: prog[k] for k in jours})); st.rerun()
+                save_prog({k: prog[k] for k in jours}); st.rerun()
             if c3.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
-                del prog[j]; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+                del prog[j]; save_prog(prog); st.rerun()
             st.divider()
             for i, ex in enumerate(prog[j]):
                 col1, col2, col3, col4 = st.columns([6, 1, 1, 1])
                 col1.write(f"**{ex}**")
                 if col2.button("⬆️", key=f"ue_{j}_{i}") and i > 0:
                     prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]
-                    ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+                    save_prog(prog); st.rerun()
                 if col3.button("⬇️", key=f"de_{j}_{i}") and i < len(prog[j])-1:
                     prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]
-                    ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+                    save_prog(prog); st.rerun()
                 if col4.button("🗑️", key=f"rm_{j}_{i}"):
-                    prog[j].pop(i); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
-            nv = st.text_input("Ajouter exo", key=f"in_{j}")
-            if st.button("Valider l'ajout", key=f"bt_{j}") and nv:
-                prog[j].append(nv); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+                    prog[j].pop(i); save_prog(prog); st.rerun()
+            nv = st.text_input("Ajouter un exercice", key=f"in_{j}")
+            if st.button("Valider l'exo", key=f"bt_{j}") and nv:
+                prog[j].append(nv); save_prog(prog); st.rerun()
+    
     st.divider()
-    nvs = st.text_input("Nom de la séance")
+    st.subheader("➕ Créer une nouvelle séance")
+    nvs = st.text_input("Nom de la séance (ex: Push 1)")
     if st.button("Créer la séance") and nvs:
-        prog[nvs] = []; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+        prog[nvs] = []; save_prog(prog); st.rerun()
 
 # --- ONGLET 2 : MA SÉANCE ---
 with tab2:
-    if not prog: st.warning("Crée une séance d'abord !")
+    if not prog: st.warning("⚠️ Ton programme est vide. Crée une séance dans l'onglet 'Programme'.")
     else:
         c_t1, c_t2, c_t3 = st.columns([2, 1, 1])
         choix_s = c_t1.selectbox("Séance :", list(prog.keys()))
@@ -130,54 +136,53 @@ with tab2:
         sem_in = c_t3.number_input("Semaine (1-10)", min_value=1, max_value=10, value=1)
         sem_stk = 0 if sem_in == 10 else sem_in
 
-        if st.button("🚫 Séance Loupée ❌", use_container_width=True):
+        if st.button("🚫 Marquer SÉANCE ENTIÈRE comme loupée", use_container_width=True):
             sk = [{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": e, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupé ❌"} for e in prog[choix_s]]
             save_hist(pd.concat([df_h, pd.DataFrame(sk)], ignore_index=True)); st.rerun()
 
         st.divider()
 
-        exos_session = prog[choix_s]
-        for i, exo in enumerate(exos_session):
+        for i, exo in enumerate(prog[choix_s]):
+            # Header avec flèches de déplacement en cours de séance
             col_name, col_up, col_down = st.columns([8, 1, 1])
             col_name.markdown(f"### 🔹 {exo}")
-            
             if col_up.button("⬆️", key=f"m_up_{exo}_{i}") and i > 0:
-                exos_session[i], exos_session[i-1] = exos_session[i-1], exos_session[i]
-                ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
-            if col_down.button("⬇️", key=f"m_dw_{exo}_{i}") and i < len(exos_session)-1:
-                exos_session[i], exos_session[i+1] = exos_session[i+1], exos_session[i]
-                ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+                prog[choix_s][i], prog[choix_s][i-1] = prog[choix_s][i-1], prog[choix_s][i]
+                save_prog(prog); st.rerun()
+            if col_down.button("⬇️", key=f"m_dw_{exo}_{i}") and i < len(prog[choix_s])-1:
+                prog[choix_s][i], prog[choix_s][i+1] = prog[choix_s][i+1], prog[choix_s][i]
+                save_prog(prog); st.rerun()
 
-            with st.expander(f"Entraînement : {exo}", expanded=True):
-                # FILTRE HISTORIQUE
+            with st.expander(f"Détails de l'exercice : {exo}", expanded=True):
+                # Historique comparatif
                 t_sem, t_cyc = (0, cycle_act - 1) if sem_stk == 1 else (sem_stk - 1, cycle_act)
                 full_h = df_h[(df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)]
                 h_prev = full_h[(full_h["Semaine"] == t_sem) & (full_h["Cycle"] == t_cyc)]
                 
-                # HISTORIQUE X2 AVEC REMARQUES
+                # Affichage des 2 dernières séances
                 last_w = full_h[full_h["Semaine"] < (sem_stk if sem_stk != 0 else 11)]["Semaine"].unique()[:2]
                 if len(last_w) > 0:
+                    st.caption("🔍 Historique (2 dernières fois) :")
                     for w in last_w:
-                        st.caption(f"🔍 S{w} (Cycle {cycle_act if w != 0 else cycle_act-1})")
+                        st.write(f"**Semaine {w}**")
                         st.dataframe(full_h[full_h["Semaine"] == w][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s)]
 
                 if not curr.empty and exo not in st.session_state.editing_exo:
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier / Ajouter une série", key=f"btn_ed_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
+                    if st.button(f"🔄 Modifier / Ajouter", key=f"btn_ed_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
                 else:
                     df_ed = pd.concat([curr[["Série", "Reps", "Poids", "Remarque"]], pd.DataFrame({"Série": [int(curr["Série"].max()+1 if not curr.empty else 1)], "Reps": [0], "Poids": [0.0], "Remarque": [""]})], ignore_index=True)
                     ed = st.data_editor(df_ed, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn(format="%g")})
-                    
-                    cv, ck = st.columns(2)
-                    if cv.button(f"✅ Valider {exo}", key=f"v_{exo}"):
+                    c_v, c_sk = st.columns(2)
+                    if c_v.button(f"✅ Valider {exo}", key=f"v_{exo}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = cycle_act, sem_stk, choix_s, exo
                         mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
                         save_hist(pd.concat([df_h[~mask], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo); st.rerun()
-                    if ck.button(f"🚫 Skip Exo", key=f"sk_{exo}"):
+                    if c_sk.button(f"🚫 Skip Exo", key=f"sk_{exo}"):
                         sk = pd.DataFrame([{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": exo, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫"}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
@@ -190,7 +195,7 @@ with tab3:
         col3.metric("Sem. Actuelle", f"S{sem_stk}")
         
         st.divider()
-        sel_exo = st.selectbox("Exercice :", sorted(df_h["Exercice"].unique()))
+        sel_exo = st.selectbox("Sélectionne un exercice :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_exo].copy()
         if not df_e.empty:
             df_v = df_e[df_e["Poids"] > 0]
