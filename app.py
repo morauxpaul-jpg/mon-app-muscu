@@ -17,7 +17,7 @@ st.markdown(f"""
     </head>
 """, unsafe_allow_html=True)
 
-# --- 2. DESIGN ---
+# --- 2. DESIGN MODERNE ---
 st.markdown("""
 <style>
     .stApp {
@@ -120,15 +120,19 @@ with tab2:
         
         for exo in programme[choix_seance]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                h1 = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle - 1) & (df_history["Séance"] == choix_seance)]
+                h1 = df_history[(df_history["Exercice"] == exo) & 
+                                (df_history["Semaine"] == sem_actuelle - 1) & 
+                                (df_history["Séance"] == choix_seance)]
+                
                 vol_h1 = (h1["Poids"] * h1["Reps"]).sum()
                 if not h1.empty:
                     st.caption(f"🔍 S-1 : {int(vol_h1)} kg total")
                     st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 
-                data_sem = df_history[(df_history["Exercice"] == exo) & (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance)]
+                data_sem = df_history[(df_history["Exercice"] == exo) & 
+                                      (df_history["Semaine"] == sem_actuelle) & 
+                                      (df_history["Séance"] == choix_seance)]
                 
-                # Logique du fix de ligne automatique
                 if not data_sem.empty:
                     existing = data_sem[["Série", "Reps", "Poids", "Remarque"]].copy()
                     next_num = int(existing["Série"].max() + 1)
@@ -137,7 +141,8 @@ with tab2:
                 else:
                     default_sets = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
                 
-                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
+                edited_df = st.data_editor(default_sets, num_rows="dynamic", key=f"grid_{exo}", use_container_width=True, 
+                                           column_config={"Poids": st.column_config.NumberColumn("Poids", format="%g", step=0.1)})
                 
                 c_val, c_skip = st.columns(2)
                 if c_val.button(f"✅ Valider {exo}"):
@@ -152,21 +157,17 @@ with tab2:
                         for t in range(rest_time, 0, -1):
                             t_placeholder.metric("⏳ Temps restant", f"{t}s")
                             time.sleep(1)
-                        # SIGNAL SONORE
-                        st.components.v1.html("""
-                            <audio autoplay>
-                                <source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg">
-                            </audio>
-                        """, height=0)
+                        # Bip sonore HTML
+                        st.components.v1.html("""<audio autoplay><source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg"></audio>""", height=0)
                         t_placeholder.success("💥 Allez, série suivante !")
                     st.rerun()
                 
-                if c_skip.button(f"🚫 Sauter l'exo", key=f"skip_{exo}"):
+                if c_skip.button(f"🚫 Pas de séance", key=f"skip_{exo}"):
                     skip_row = pd.DataFrame({"Semaine": [sem_actuelle], "Séance": [choix_seance], "Exercice": [exo], "Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": ["SÉANCE MANQUÉE ❌"]})
                     mask = (df_history["Semaine"] == sem_actuelle) & (df_history["Séance"] == choix_seance) & (df_history["Exercice"] == exo)
                     save_historique(pd.concat([df_history[~mask], skip_row], ignore_index=True)); st.rerun()
 
-# --- ONGLET 3 : PROGRÈS ---
+# --- ONGLET 3 : PROGRÈS (AVEC REPS DANS LE MAX) ---
 with tab3:
     if df_history.empty: st.info("Fais ton premier entraînement !")
     else:
@@ -183,13 +184,22 @@ with tab3:
         if not df_exo.empty:
             df_valide = df_exo[df_exo["Poids"] > 0]
             if not df_valide.empty:
-                max_charge = df_valide["Poids"].max()
+                # 1. Trouver le record absolu (Poids puis Reps)
+                best_set = df_valide.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
                 df_valide["1RM"] = df_valide.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
+                
                 c_rec, c_1rm = st.columns(2)
-                c_rec.success(f"🏆 Record : **{max_charge} kg**")
+                c_rec.success(f"🏆 Record : **{best_set['Poids']} kg** x **{int(best_set['Reps'])}**")
                 c_1rm.info(f"💪 Force (1RM) : **{round(df_valide['1RM'].max(), 1)} kg**")
-                st.caption("📈 Évolution des charges (Poids Max) :")
+                
+                st.caption("📈 Évolution des charges (Poids Max par semaine) :")
                 st.line_chart(df_exo.groupby("Semaine")["Poids"].max())
+
+                # 2. Tableau récapitulatif par semaine avec les Reps
+                st.caption("⚡ Détails par semaine (Poids Max x Reps)")
+                # On prend la ligne du poids max pour chaque semaine
+                weekly_bests = df_valide.sort_values('Poids', ascending=False).drop_duplicates('Semaine').sort_values('Semaine', ascending=False)
+                st.dataframe(weekly_bests[["Semaine", "Poids", "Reps"]].rename(columns={"Poids": "Poids (kg)", "Reps": "Répétitions"}), hide_index=True, use_container_width=True)
             
             with st.expander("Historique complet"):
                 st.dataframe(df_exo[["Semaine", "Séance", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True]), hide_index=True, use_container_width=True)
