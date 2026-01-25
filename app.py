@@ -71,8 +71,11 @@ def get_hist():
     return df
 
 def save_hist(df):
+    # FIX ANTI-InvalidJSONError : Remplace NaN par des valeurs vides JSON-compatibles
+    df_clean = df.copy()
+    df_clean = df_clean.fillna("")  # Remplace NaN par du texte vide
     ws_h.clear()
-    data = [df.columns.values.tolist()] + df.values.tolist()
+    data = [df_clean.columns.values.tolist()] + df_clean.values.tolist()
     ws_h.update(data, value_input_option='USER_ENTERED')
 
 # Init
@@ -113,7 +116,7 @@ with tab1:
             if st.button("Valider l'ajout", key=f"bt_{j}") and nv:
                 prog[j].append(nv); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
     st.divider()
-    nvs = st.text_input("Nom de la nouvelle séance")
+    nvs = st.text_input("Nom de la séance")
     if st.button("Créer la séance") and nvs:
         prog[nvs] = []; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
@@ -156,20 +159,19 @@ with tab2:
                 if len(last_w) > 0:
                     for w in last_w:
                         st.caption(f"🔍 S{w} (Cycle {cycle_act if w != 0 else cycle_act-1})")
-                        # AJOUT DE LA COLONNE REMARQUE CI-DESSOUS
                         st.dataframe(full_h[full_h["Semaine"] == w][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s)]
 
                 if not curr.empty and exo not in st.session_state.editing_exo:
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier", key=f"btn_ed_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
+                    if st.button(f"🔄 Modifier / Ajouter une série", key=f"btn_ed_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
                 else:
                     df_ed = pd.concat([curr[["Série", "Reps", "Poids", "Remarque"]], pd.DataFrame({"Série": [int(curr["Série"].max()+1 if not curr.empty else 1)], "Reps": [0], "Poids": [0.0], "Remarque": [""]})], ignore_index=True)
                     ed = st.data_editor(df_ed, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn(format="%g")})
                     
                     cv, ck = st.columns(2)
-                    if cv.button(f"✅ Valider", key=f"v_{exo}"):
+                    if cv.button(f"✅ Valider {exo}", key=f"v_{exo}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = cycle_act, sem_stk, choix_s, exo
                         mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
