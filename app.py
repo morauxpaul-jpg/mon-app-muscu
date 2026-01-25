@@ -30,8 +30,35 @@ st.markdown("""
 # --- FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
     if reps <= 0: return 0
-    # Formule de Brzycki : Poids / (1.0278 - (0.0278 * Reps)) ou plus simplement :
     return weight * (1 + reps / 30)
+
+def style_comparaison(row, hist_prev):
+    """Applique les couleurs Vert/Rouge/Orange en comparant à la séance précédente."""
+    if hist_prev is None or hist_prev.empty:
+        return ["", "", "", ""]
+    
+    prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
+    # Couleurs translucides demandées
+    v = "background-color: rgba(46, 125, 50, 0.45); color: white;" # Vert
+    r = "background-color: rgba(198, 40, 40, 0.45); color: white;" # Rouge
+    o = "background-color: rgba(255, 152, 0, 0.45); color: white;" # Orange
+    
+    colors = ["", "", "", ""] # Colonnes: Série, Reps, Poids, Remarque
+    
+    if not prev_set.empty:
+        pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
+        cw, cr = float(row["Poids"]), int(row["Reps"])
+        p_1rm, c_1rm = calc_1rm(pw, pr), calc_1rm(cw, cr)
+        
+        # Logique de comparaison
+        if c_1rm > p_1rm and cw < pw: 
+            colors[1], colors[2] = o, o # Orange si meilleur ratio mais poids plus bas
+        elif cw > pw or (cw == pw and cr > pr): 
+            colors[1], colors[2] = v, v # Vert si progression poids ou reps
+        elif cw < pw or (cw == pw and cr < pr): 
+            colors[1], colors[2] = r, r # Rouge si régression
+            
+    return colors
 
 # --- CONNEXION ---
 @st.cache_resource
@@ -90,7 +117,7 @@ with tab1:
                 name = ex_obj["name"]; nb_sets = ex_obj["sets"]
                 c1, c2, c3, c4, c5 = st.columns([4, 2, 1, 1, 1])
                 c1.write(f"**{name}**")
-                new_s = c2.number_input("Séries", 1, 10, nb_sets, key=f"s_{j}_{i}")
+                new_s = c2.number_input("Séries", 1, 15, nb_sets, key=f"s_{j}_{i}")
                 if new_s != nb_sets:
                     prog[j][i]["sets"] = new_s
                     save_prog(prog); st.rerun()
@@ -101,8 +128,8 @@ with tab1:
                 if c5.button("🗑️", key=f"rm_{j}_{i}"):
                     prog[j].pop(i); save_prog(prog); st.rerun()
             cx, cs = st.columns([3, 1])
-            ni = cx.text_input("Ajouter exo", key=f"ni_{j}")
-            ns = cs.number_input("Sets", 1, 10, 3, key=f"ns_{j}")
+            ni = cx.text_input("Nouvel exo", key=f"ni_{j}")
+            ns = cs.number_input("Sets", 1, 15, 3, key=f"ns_{j}")
             if st.button("Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns}); save_prog(prog); st.rerun()
     st.divider()
@@ -110,7 +137,7 @@ with tab1:
     if st.button("Créer séance") and nvs:
         prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE ---
+# --- TAB 2 : MA SÉANCE (AVEC COULEURS) ---
 with tab2:
     if not prog: st.warning("Crée une séance dans le programme.")
     else:
@@ -122,17 +149,28 @@ with tab2:
 
         for i, ex_obj in enumerate(prog[choix_s]):
             exo = ex_obj["name"]; p_sets = ex_obj["sets"]
-            col_name, col_u, col_d = st.columns([8, 1, 1])
-            col_name.markdown(f"### 🔹 {exo}")
+            st.markdown(f"### 🔹 {exo}")
             
-            if col_u.button("⬆️", key=f"u_{exo}_{i}"):
-                if i > 0: prog[choix_s][i], prog[choix_s][i-1] = prog[choix_s][i-1], prog[choix_s][i]; save_prog(prog); st.rerun()
-            if col_d.button("⬇️", key=f"d_{exo}_{i}"):
-                if i < len(prog[choix_s])-1: prog[choix_s][i], prog[choix_s][i+1] = prog[choix_s][i+1], prog[choix_s][i]; save_prog(prog); st.rerun()
-
-            with st.expander(f"Saisie : {exo}", expanded=True):
+            with st.expander(f"Détails & Saisie : {exo}", expanded=True):
+                # Récupération historique S-1
                 full_exo_h = df_h[(df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)]
+                t_sem, t_cyc = (0, cycle_act - 1) if sem_stk == 1 else (sem_stk - 1, cycle_act)
+                h_prev = full_exo_h[(full_exo_h["Semaine"] == t_sem) & (full_exo_h["Cycle"] == t_cyc)]
+                
+                # Saisie actuelle
                 curr = full_exo_h[(full_exo_h["Semaine"] == sem_stk) & (full_exo_h["Cycle"] == cycle_act)]
+                
+                # Affichage des données validées AVEC COULEURS
+                if not curr.empty:
+                    st.caption("✅ Validé pour cette séance :")
+                    st.dataframe(
+                        curr[["Série", "Reps", "Poids", "Remarque"]]
+                        .style.apply(style_comparaison, axis=1, hist_prev=h_prev)
+                        .format({"Poids": "{:g}"}),
+                        hide_index=True, use_container_width=True
+                    )
+
+                # ÉDITEUR (Cases pré-remplies)
                 df_fixed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                 if not curr.empty:
                     for idx, row in curr.iterrows():
@@ -149,19 +187,17 @@ with tab2:
                     mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
                     save_hist(pd.concat([df_h[~mask], v_rows], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS (PODIUM + 1RM FIX) ---
+# --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
         col1, col2, col3 = st.columns(3)
         col1.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
-        col2.metric("Cycle Actuel", int(df_h["Cycle"].max()))
+        col2.metric("Cycle Max", int(df_h["Cycle"].max()))
         col3.metric("Semaine Max", int(df_h["Semaine"].replace(0, 10).max()))
         
         st.divider()
-        
-        # --- PODIUM ---
         st.subheader("🏆 Podium de Force")
-        df_all_rm = df_h[df_h["Poids"] >= 0].copy()
+        df_all_rm = df_h[(df_h["Poids"] >= 0) & (df_h["Reps"] > 0)].copy()
         df_all_rm["1RM"] = df_all_rm.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
         podium = df_all_rm.groupby("Exercice").agg({"1RM": "max", "Poids": "max", "Reps": "max"}).sort_values(by="1RM", ascending=False).head(3)
         
@@ -172,28 +208,17 @@ with tab3:
                 st.markdown(f"<div class='podium-card'><b>{medals[idx]} {exo_n}</b><br><span style='color:#4A90E2; font-size:20px;'>{row['1RM']:.1f} kg</span><br><small>{row['Poids']:.1f}kg x {int(row['Reps'])}</small></div>", unsafe_allow_html=True)
 
         st.divider()
-        
-        # --- ZOOM EXERCICE ---
         sel_exo = st.selectbox("Zoom sur un exercice :", sorted(df_h["Exercice"].unique()))
         df_zoom = df_h[df_h["Exercice"] == sel_exo].copy()
-        
         if not df_zoom.empty:
             df_valides = df_zoom[(df_zoom["Poids"] > 0) | (df_zoom["Reps"] > 0)].copy()
             if not df_valides.empty:
-                # Calcul Record et 1RM
                 best_row = df_valides.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
                 one_rm_val = calc_1rm(best_row['Poids'], best_row['Reps'])
-                
-                # AFFICHAGE DU 1RM RESTAURÉ
                 c_res1, c_res2 = st.columns(2)
                 c_res1.success(f"🏆 Record : **{best_row['Poids']} kg x {int(best_row['Reps'])}**")
                 c_res2.info(f"💪 Force (1RM) : **{round(one_rm_val, 1)} kg**")
-                
-                # Graphique
                 c_chart = df_valides.groupby(["Cycle", "Semaine"])["Poids"].max().reset_index()
                 c_chart["Point"] = "C" + c_chart["Cycle"].astype(str) + "-S" + c_chart["Semaine"].astype(str)
                 st.line_chart(c_chart.set_index("Point")["Poids"])
-            else:
-                st.info("ℹ️ Aucune performance (Skip uniquement).")
-            
             st.dataframe(df_zoom[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
