@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import json
 import gspread
-from datetime import datetime
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Musculation Tracker", layout="centered", page_icon="logo.png")
@@ -10,7 +9,7 @@ st.set_page_config(page_title="Musculation Tracker", layout="centered", page_ico
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- CSS : DESIGN NÉON & TRANSLUCIDE ---
+# --- CSS : DESIGN & NÉON ---
 st.markdown("""
 <style>
     .stApp {
@@ -21,6 +20,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.05) !important; border-radius: 12px; }
     .stTabs [aria-selected="true"] { background-color: rgba(255, 255, 255, 0.9) !important; color: #0A1931 !important; border-radius: 8px; font-weight: bold; }
+    .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; margin-bottom: 10px; backdrop-filter: blur(5px); }
     div[data-testid="stMetricValue"] { 
         font-size: 32px !important; color: #4A90E2 !important; font-weight: 800; 
         text-shadow: 0 0 15px rgba(74, 144, 226, 0.8) !important; 
@@ -35,22 +35,22 @@ def calc_ratio(weight, reps):
 
 def style_comparaison(row, hist_prev):
     if hist_prev.empty or "Série" not in hist_prev.columns:
-        return ["", "", "", "", ""] # Ajout d'une case vide pour la colonne Date
+        return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
     v, r, o = "background-color: rgba(46,125,50,0.4);", "background-color: rgba(198,40,40,0.4);", "background-color: rgba(255,152,0,0.4);"
-    colors = ["", "", "", "", ""] 
+    colors = ["", "", "", ""] 
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
         cw, cr = float(row["Poids"]), int(row["Reps"])
-        if calc_ratio(cw, cr) > calc_ratio(pw, pr) and cw < pw: colors[2], colors[3] = o, o
-        elif cw > pw: colors[2], colors[3] = v, v
-        elif cw < pw: colors[2], colors[3] = r, r
+        if calc_ratio(cw, cr) > calc_ratio(pw, pr) and cw < pw: colors[1], colors[2] = o, o
+        elif cw > pw: colors[1], colors[2] = v, v
+        elif cw < pw: colors[1], colors[2] = r, r
         elif cw == pw:
-            if cr > pr: colors[2] = v
-            elif cr < pr: colors[2] = r
+            if cr > pr: colors[1] = v
+            elif cr < pr: colors[1] = r
     return colors
 
-# --- CONNEXION & DATA ---
+# --- CONNEXION ---
 @st.cache_resource
 def get_google_sheets():
     creds = dict(st.secrets["gcp_service_account"])
@@ -62,9 +62,8 @@ ws_h, ws_p = get_google_sheets()
 
 def get_hist():
     data = ws_h.get_all_records()
-    if not data: return pd.DataFrame(columns=["Date", "Cycle", "Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
+    if not data: return pd.DataFrame(columns=["Cycle", "Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
     df = pd.DataFrame(data)
-    if "Date" not in df.columns: df.insert(0, "Date", "")
     if "Cycle" not in df.columns: df["Cycle"] = 1
     df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0).astype(float)
     return df
@@ -74,65 +73,74 @@ def save_hist(df):
     data = [df.columns.values.tolist()] + df.values.tolist()
     ws_h.update(data, value_input_option='USER_ENTERED')
 
-# Init
+# --- LOGIQUE DE CYCLE ---
 df_h = get_hist()
 prog = json.loads(ws_p.acell('A1').value or "{}")
 
+# Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
-# --- ONGLET 2 : MA SÉANCE (Capture de la Date) ---
+# --- ONGLET 2 : MA SÉANCE (Reset & Semaine 0) ---
 with tab2:
     if not prog: st.warning("Crée une séance !")
     else:
-        c1, c2, c3 = st.columns([2, 1, 1])
-        choix_s = c1.selectbox("Séance :", list(prog.keys()))
-        cycle_act = c2.number_input("Cycle", min_value=1, value=int(df_h["Cycle"].max() if not df_h.empty else 1))
-        sem_in = c3.number_input("Sem", min_value=1, max_value=10, value=1)
-        sem_stk = 0 if sem_in == 10 else sem_in
+        col_s1, col_s2, col_s3 = st.columns([2, 1, 1])
+        choix_s = col_s1.selectbox("Séance :", list(prog.keys()))
+        cycle_actuel = col_s2.number_input("Cycle", min_value=1, value=int(df_h["Cycle"].max() if not df_h.empty else 1))
+        sem_input = col_s3.number_input("Semaine (1-10)", min_value=1, max_value=10, value=1)
+        
+        # Logique de stockage : Semaine 10 devient 0
+        sem_stockage = 0 if sem_input == 10 else sem_input
+
+        st.info(f"📍 Cycle {cycle_actuel} - Semaine {'0 (Décharge)' if sem_stockage == 0 else sem_stockage}")
 
         for exo in prog[choix_s]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                # Comparaison dynamique
-                t_sem, t_cyc = (0, cycle_act - 1) if sem_stk == 1 else (sem_stk - 1, cycle_act)
-                h_prev = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == t_sem) & (df_h["Cycle"] == t_cyc)]
+                # Trouver la séance précédente pour comparer
+                if sem_stockage == 1:
+                    target_sem, target_cyc = 0, cycle_actuel - 1
+                elif sem_stockage == 0:
+                    target_sem, target_cyc = 9, cycle_actuel
+                else:
+                    target_sem, target_cyc = sem_stockage - 1, cycle_actuel
+
+                h_prev = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == target_sem) & (df_h["Cycle"] == target_cyc)]
                 
-                curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act)]
+                # Affichage historique
+                if not h_prev.empty:
+                    st.caption(f"🔍 Précédent (Cycle {target_cyc} - S{target_sem}) :")
+                    st.dataframe(h_prev[["Série", "Reps", "Poids"]], hide_index=True, use_container_width=True)
+                
+                curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stockage) & (df_h["Cycle"] == cycle_actuel)]
 
                 if not curr.empty and exo not in st.session_state.editing_exo:
-                    st.dataframe(curr[["Date", "Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
+                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
                     if st.button(f"🔄 Modifier", key=f"ed_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
                 else:
+                    # Formulaire de saisie
                     df_ed = pd.concat([curr[["Série", "Reps", "Poids", "Remarque"]], pd.DataFrame({"Série": [int(curr["Série"].max()+1 if not curr.empty else 1)], "Reps": [0], "Poids": [0.0], "Remarque": [""]})], ignore_index=True)
                     ed = st.data_editor(df_ed, num_rows="dynamic", key=f"e_{exo}", use_container_width=True)
                     
                     if st.button(f"✅ Valider {exo}", key=f"v_{exo}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
-                        v["Date"] = datetime.now().strftime("%d/%m/%Y") # DATE AUTOMATIQUE
-                        v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = cycle_act, sem_stk, choix_s, exo
-                        mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
+                        v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = cycle_actuel, sem_stockage, choix_s, exo
+                        mask = (df_h["Semaine"] == sem_stockage) & (df_h["Cycle"] == cycle_actuel) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
                         save_hist(pd.concat([df_h[~mask], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo); st.rerun()
 
-# --- ONGLET 3 : PROGRÈS (Graphique par Date) ---
+# --- ONGLET 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
         col1, col2, col3 = st.columns(3)
         col1.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
         col2.metric("Cycle Actuel", int(df_h["Cycle"].max()))
-        col3.metric("Dernière S.", f"S{sem_stk}")
+        col3.metric("Dernière Semaine", f"S{sem_stockage}")
         
-        st.divider()
         sel_exo = st.selectbox("Zoom Exercice :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_exo].copy()
-        
         if not df_e.empty:
-            # Graphique avec Date en axe X
-            st.caption("📈 Évolution temporelle (JJ/MM/AA)")
-            # On regroupe par date pour avoir le poids max de la journée
-            chart_data = df_e.groupby("Date")["Poids"].max()
-            st.line_chart(chart_data)
-            
-            st.dataframe(df_e[["Date", "Cycle", "Semaine", "Série", "Reps", "Poids"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
+            st.line_chart(df_e.groupby(["Cycle", "Semaine"])["Poids"].max())
+            st.dataframe(df_e[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
