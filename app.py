@@ -6,7 +6,11 @@ import gspread
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Musculation Tracker", layout="centered", page_icon="logo.png")
 
-# --- CSS : COULEURS & DESIGN ---
+# Initialisation du mode édition dans la mémoire de l'app
+if 'editing_exo' not in st.session_state:
+    st.session_state.editing_exo = set()
+
+# --- CSS : DESIGN ---
 st.markdown("""
 <style>
     .stApp {
@@ -28,35 +32,23 @@ def calc_1rm(weight, reps):
 
 def style_comparaison(row, hist_s1):
     prev_set = hist_s1[hist_s1["Série"] == row["Série"]]
-    # Couleurs translucides (rgba)
-    v = "background-color: rgba(46, 125, 50, 0.4); color: white;" # Vert
-    r = "background-color: rgba(198, 40, 40, 0.4); color: white;" # Rouge
-    o = "background-color: rgba(255, 152, 0, 0.4); color: white;" # Orange
-    
-    colors = ["", "", "", ""] # Série, Reps, Poids, Remarque
-    
+    v = "background-color: rgba(46, 125, 50, 0.4); color: white;" # Vert translucide
+    r = "background-color: rgba(198, 40, 40, 0.4); color: white;" # Rouge translucide
+    o = "background-color: rgba(255, 152, 0, 0.4); color: white;" # Orange translucide
+    colors = ["", "", "", ""] 
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
         cw, cr = float(row["Poids"]), int(row["Reps"])
         p_1rm, c_1rm = calc_1rm(pw, pr), calc_1rm(cw, cr)
-        
-        # RÈGLE RATIO (ORANGE) : 1RM monte mais poids baisse
-        if c_1rm > p_1rm and cw < pw:
-            colors[1], colors[2] = o, o
-        # RÈGLE POIDS MONTE (TOUT VERT)
-        elif cw > pw:
-            colors[1], colors[2] = v, v
-        # RÈGLE POIDS BAISSE (TOUT ROUGE)
-        elif cw < pw:
-            colors[1], colors[2] = r, r
-        # RÈGLE POIDS IDENTIQUE (REPS DÉCIDENT)
+        if c_1rm > p_1rm and cw < pw: colors[1], colors[2] = o, o
+        elif cw > pw: colors[1], colors[2] = v, v
+        elif cw < pw: colors[1], colors[2] = r, r
         elif cw == pw:
             if cr > pr: colors[1] = v
             elif cr < pr: colors[1] = r
-            
     return colors
 
-# --- CONNEXION & DONNÉES ---
+# --- CONNEXION ---
 @st.cache_resource
 def get_google_sheets():
     creds = dict(st.secrets["gcp_service_account"])
@@ -78,18 +70,18 @@ def save_hist(df):
     data = [df.columns.values.tolist()] + df.values.tolist()
     ws_h.update(data, value_input_option='USER_ENTERED')
 
-# --- LOGO & NAVIGATION ---
+# --- CHARGEMENT ---
 df_h = get_hist()
 prog = json.loads(ws_p.acell('A1').value or "{}")
 
-# Restaurer le logo en haut
+# LOGO FIXE
 col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
 with col_l2:
     st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
-# --- ONGLET 1 : PROGRAMME (Simplifié) ---
+# --- ONGLET 1 : PROGRAMME ---
 with tab1:
     for jour, exos in prog.items():
         with st.expander(f"⚙️ {jour}"):
@@ -102,7 +94,7 @@ with tab1:
             if st.button("Ajouter", key=f"b_{jour}") and nv:
                 exos.append(nv); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
-# --- ONGLET 2 : MA SÉANCE (LE VISUEL) ---
+# --- ONGLET 2 : MA SÉANCE ---
 with tab2:
     if not prog: st.warning("Crée une séance !")
     else:
@@ -112,28 +104,47 @@ with tab2:
         for exo in prog[choix_s]:
             with st.expander(f"🔹 {exo}", expanded=True):
                 h1 = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem - 1) & (df_h["Séance"] == choix_s)]
-                if not h1.empty:
-                    st.caption(f"🔍 Hier (S{sem-1}) :")
-                    st.dataframe(h1[["Série", "Reps", "Poids"]], hide_index=True, use_container_width=True)
-                
                 curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem) & (df_h["Séance"] == choix_s)]
-                if not curr.empty:
+                
+                # S'il y a des données et qu'on n'est pas en train de modifier
+                if not curr.empty and exo not in st.session_state.editing_exo:
                     st.caption("✅ Résultat (Visual Tracker) :")
-                    # FIX DÉCIMALES + COULEURS
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_s1=h1), 
                                  hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier {exo}", key=f"m_{exo}"):
-                        m = (df_h["Semaine"] == sem) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
-                        save_hist(df_h[~m]); st.rerun()
+                    
+                    if st.button(f"🔄 Modifier / Ajouter une série", key=f"btn_edit_{exo}"):
+                        st.session_state.editing_exo.add(exo)
+                        st.rerun()
+                
+                # Sinon, on affiche l'éditeur
                 else:
-                    df_def = pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
-                    ed = st.data_editor(df_def, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn(format="%g")})
-                    if st.button(f"✅ Valider {exo}", key=f"v_{exo}"):
-                        v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
-                        v["Semaine"], v["Séance"], v["Exercice"] = sem, choix_s, exo
-                        save_hist(pd.concat([df_h, v], ignore_index=True)); st.rerun()
+                    if not curr.empty:
+                        # On pré-remplit avec l'existant + une ligne vide pour la suite
+                        existing = curr[["Série", "Reps", "Poids", "Remarque"]].copy()
+                        next_s = int(existing["Série"].max() + 1)
+                        new_row = pd.DataFrame({"Série": [next_s], "Reps": [0], "Poids": [0.0], "Remarque": [""]})
+                        df_to_edit = pd.concat([existing, new_row], ignore_index=True)
+                    else:
+                        df_to_edit = pd.DataFrame({"Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": [""]})
 
-# --- ONGLET 3 : PROGRÈS (RESTAURÉ) ---
+                    ed = st.data_editor(df_to_edit, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, 
+                                        column_config={"Poids": st.column_config.NumberColumn(format="%g")})
+                    
+                    if st.button(f"✅ Valider {exo}", key=f"v_{exo}"):
+                        valid = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
+                        valid["Semaine"], valid["Séance"], valid["Exercice"] = sem, choix_s, exo
+                        
+                        # Mise à jour de l'historique sans tout supprimer
+                        mask = (df_h["Semaine"] == sem) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
+                        df_final = pd.concat([df_h[~mask], valid], ignore_index=True)
+                        save_hist(df_final)
+                        
+                        # On quitte le mode édition pour cet exercice
+                        if exo in st.session_state.editing_exo:
+                            st.session_state.editing_exo.remove(exo)
+                        st.rerun()
+
+# --- ONGLET 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
         col1, col2, col3 = st.columns(3)
