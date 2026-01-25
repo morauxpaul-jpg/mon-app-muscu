@@ -222,3 +222,4 @@ with tab3:
                 c_chart["Point"] = "C" + c_chart["Cycle"].astype(str) + "-S" + c_chart["Semaine"].astype(str)
                 st.line_chart(c_chart.set_index("Point")["Poids"])
             st.dataframe(df_zoom[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
+
