@@ -112,59 +112,53 @@ with tab1:
             nv = st.text_input("Ajouter exo", key=f"in_{j}")
             if st.button("Valider l'ajout", key=f"bt_{j}") and nv:
                 prog[j].append(nv); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
-    st.divider()
-    nvs = st.text_input("Nouvelle séance")
-    if st.button("Créer la séance") and nvs:
-        prog[nvs] = []; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
-# --- ONGLET 2 : MA SÉANCE (AVEC DÉPLACEMENT DYNAMIQUE) ---
+# --- ONGLET 2 : MA SÉANCE ---
 with tab2:
     if not prog: st.warning("Crée une séance d'abord !")
     else:
         c_t1, c_t2, c_t3 = st.columns([2, 1, 1])
         choix_s = c_t1.selectbox("Séance :", list(prog.keys()))
         cycle_act = c_t2.number_input("Cycle", min_value=1, value=int(df_h["Cycle"].max() if not df_h.empty else 1))
-        sem_in = c_t3.number_input("Sem (1-10)", min_value=1, max_value=10, value=1)
+        sem_in = c_t3.number_input("Semaine (1-10)", min_value=1, max_value=10, value=1)
         sem_stk = 0 if sem_in == 10 else sem_in
 
-        if st.button("🚫 Marquer SÉANCE ENTIÈRE comme loupée", use_container_width=True):
+        if st.button("🚫 Séance Loupée ❌", use_container_width=True):
             sk = [{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": e, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupé ❌"} for e in prog[choix_s]]
             save_hist(pd.concat([df_h, pd.DataFrame(sk)], ignore_index=True)); st.rerun()
 
         st.divider()
 
-        # Liste des exercices de la séance choisie
         exos_session = prog[choix_s]
         for i, exo in enumerate(exos_session):
-            # Header avec boutons de déplacement
             col_name, col_up, col_down = st.columns([8, 1, 1])
             col_name.markdown(f"### 🔹 {exo}")
             
-            if col_up.button("⬆️", key=f"move_up_{exo}_{i}") and i > 0:
+            if col_up.button("⬆️", key=f"m_up_{exo}_{i}") and i > 0:
                 exos_session[i], exos_session[i-1] = exos_session[i-1], exos_session[i]
                 ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
-            if col_down.button("⬇️", key=f"move_down_{exo}_{i}") and i < len(exos_session)-1:
+            if col_down.button("⬇️", key=f"m_dw_{exo}_{i}") and i < len(exos_session)-1:
                 exos_session[i], exos_session[i+1] = exos_session[i+1], exos_session[i]
                 ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
-            with st.expander(f"Détails : {exo}", expanded=True):
-                # Comparaison
+            with st.expander(f"Entraînement : {exo}", expanded=True):
+                # FIX MÉLANGE : On filtre strictement par Séance (choix_s)
                 t_sem, t_cyc = (0, cycle_act - 1) if sem_stk == 1 else (sem_stk - 1, cycle_act)
                 full_h = df_h[(df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)]
                 h_prev = full_h[(full_h["Semaine"] == t_sem) & (full_h["Cycle"] == t_cyc)]
                 
                 # Historique x2
-                last_weeks = full_h[full_h["Semaine"] < (sem_stk if sem_stk != 0 else 11)]["Semaine"].unique()[:2]
-                if len(last_weeks) > 0:
-                    for w in last_weeks:
+                last_w = full_h[full_h["Semaine"] < (sem_stk if sem_stk != 0 else 11)]["Semaine"].unique()[:2]
+                if len(last_w) > 0:
+                    for w in last_w:
                         st.caption(f"🔍 S{w} (Cycle {cycle_act if w != 0 else cycle_act-1})")
                         st.dataframe(full_h[full_h["Semaine"] == w][["Série", "Reps", "Poids"]], hide_index=True, use_container_width=True)
 
-                curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act)]
+                curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s)]
 
                 if not curr.empty and exo not in st.session_state.editing_exo:
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier", key=f"btn_edit_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
+                    if st.button(f"🔄 Modifier", key=f"btn_ed_{exo}"): st.session_state.editing_exo.add(exo); st.rerun()
                 else:
                     df_ed = pd.concat([curr[["Série", "Reps", "Poids", "Remarque"]], pd.DataFrame({"Série": [int(curr["Série"].max()+1 if not curr.empty else 1)], "Reps": [0], "Poids": [0.0], "Remarque": [""]})], ignore_index=True)
                     ed = st.data_editor(df_ed, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn(format="%g")})
@@ -176,7 +170,7 @@ with tab2:
                         mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
                         save_hist(pd.concat([df_h[~mask], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo); st.rerun()
-                    if ck.button(f"🚫 Skip", key=f"sk_{exo}"):
+                    if ck.button(f"🚫 Skip Exo", key=f"sk_{exo}"):
                         sk = pd.DataFrame([{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": exo, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫"}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
@@ -186,7 +180,7 @@ with tab3:
         col1, col2, col3 = st.columns(3)
         col1.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
         col2.metric("Cycle Actuel", int(df_h["Cycle"].max()))
-        col3.metric("Semaine Actuelle", f"S{sem_stk}")
+        col3.metric("Sem. Actuelle", f"S{sem_stk}")
         
         st.divider()
         sel_exo = st.selectbox("Exercice :", sorted(df_h["Exercice"].unique()))
@@ -195,7 +189,12 @@ with tab3:
             df_v = df_e[df_e["Poids"] > 0]
             if not df_v.empty:
                 max_s = df_v.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
-                st.success(f"🏆 Record : **{max_s['Poids']} kg x {int(max_s['Reps'])}** - 1RM : **{round(calc_ratio(max_s['Poids'], max_s['Reps']), 1)} kg**")
-                # Graphique simplifié (Poids max par semaine)
-                st.line_chart(df_e.groupby(["Cycle", "Semaine"])["Poids"].max())
+                st.success(f"🏆 Record : **{max_s['Poids']} kg x {int(max_s['Reps'])}** - Force (1RM) : **{round(calc_ratio(max_s['Poids'], max_s['Reps']), 1)} kg**")
+                
+                # FIX KEYERROR : On aplatit l'index pour le graphique
+                chart_data = df_e.groupby(["Cycle", "Semaine"])["Poids"].max().reset_index()
+                # On crée une colonne combinée pour l'axe X pour que Streamlit ne s'embrouille pas
+                chart_data["Point"] = "C" + chart_data["Cycle"].astype(str) + "-S" + chart_data["Semaine"].astype(str)
+                st.line_chart(chart_data.set_index("Point")["Poids"])
+
             st.dataframe(df_e[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
