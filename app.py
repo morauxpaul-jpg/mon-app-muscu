@@ -30,16 +30,26 @@ def calc_1rm(weight, reps):
     return weight * (1 + reps / 30)
 
 def style_comparaison(row, hist_prev):
+    """Applique le code couleur strict demandé par l'utilisateur."""
     if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
     v = "background-color: rgba(46, 125, 50, 0.45); color: white;" 
     r = "background-color: rgba(198, 40, 40, 0.45); color: white;"
-    colors = ["", "", "", ""] 
+    colors = ["", "", "", ""] # [Série, Reps, Poids, Remarque]
+    
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
         cw, cr = float(row["Poids"]), int(row["Reps"])
-        if cw > pw or (cw == pw and cr > pr): colors[1], colors[2] = v, v
-        elif cw < pw or (cw == pw and cr < pr): colors[1], colors[2] = r, r
+        
+        if cw < pw:
+            colors[1], colors[2] = r, r # moins de poid mettre tout en rouge
+        elif cw > pw:
+            colors[1], colors[2] = v, v # plus de poid mettre tout en vert
+        elif cw == pw:
+            if cr > pr:
+                colors[1] = v # plus de rep mais meme poid; mettre rep en vert
+            elif cr < pr:
+                colors[1] = r # moins de rep et meme poid, mettre just rep en rouge
     return colors
 
 # --- CONNEXION ---
@@ -91,11 +101,14 @@ with tab1:
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
         with st.expander(f"⚙️ {j}"):
-            c_s1, c_s2 = st.columns(2)
-            if c_s1.button(f"⬆️ Monter {j}", key=f"up_s_{j}") and idx_j > 0:
+            c_s1, c_s2, c_s3 = st.columns([1, 1, 1])
+            if c_s1.button("⬆️", key=f"up_s_{j}") and idx_j > 0:
                 jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
                 ws_p.update_acell('A1', json.dumps({k: prog[k] for k in jours})); st.rerun()
-            if c_s2.button(f"🗑️ Supprimer {j}", key=f"del_s_{j}"):
+            if c_s2.button("⬇️", key=f"dw_s_{j}") and idx_j < len(jours)-1:
+                jours[idx_j], jours[idx_j+1] = jours[idx_j+1], jours[idx_j]
+                ws_p.update_acell('A1', json.dumps({k: prog[k] for k in jours})); st.rerun()
+            if c_s3.button("🗑️", key=f"del_s_{j}"):
                 del prog[j]; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
             for i, ex in enumerate(prog[j]):
                 c1, c2, c3, c4, c5 = st.columns([4, 2, 1, 1, 1])
@@ -115,7 +128,7 @@ with tab1:
     if st.button("Créer") and nvs:
         prog[nvs] = []; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (SANS CYCLES) ---
+# --- TAB 2 : MA SÉANCE ---
 with tab2:
     if prog:
         choix_s = st.selectbox("Séance :", list(prog.keys()))
@@ -130,21 +143,31 @@ with tab2:
             st.markdown(f"### 🔹 {exo}")
             
             with st.expander(f"Saisie : {exo}", expanded=True):
-                # 1. HISTORIQUE STRICT (MOINS DE LA SEMAINE ACTUELLE)
+                # 1. HISTORIQUE STRICT
                 full_exo_h = df_h[(df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)]
                 h_only = full_exo_h[full_exo_h["Semaine"] < s_act].sort_values("Semaine", ascending=False)
                 last_s_unique = h_only["Semaine"].unique()[:2]
 
                 if len(last_s_unique) > 0:
-                    st.caption("🔍 Historique (Dernières séances) :")
+                    st.caption("🔍 Historique (2 dernières séances) :")
                     for sp in last_s_unique:
                         st.write(f"**Semaine {sp}**")
                         st.dataframe(h_only[h_only["Semaine"] == sp][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
-                # 2. ÉDITEUR (SAISIE ACTUELLE)
+                # 2. RÉCAPITULATIF VALIDÉ (AVEC NOUVELLES COULEURS)
                 curr = full_exo_h[full_exo_h["Semaine"] == s_act]
                 h_prev = h_only[h_only["Semaine"] == last_s_unique[0]] if len(last_s_unique) > 0 else pd.DataFrame()
 
+                if not curr.empty:
+                    st.caption("✅ Validé pour cette séance (Progression) :")
+                    st.dataframe(
+                        curr[["Série", "Reps", "Poids", "Remarque"]]
+                        .style.apply(style_comparaison, axis=1, hist_prev=h_prev)
+                        .format({"Poids": "{:g}"}),
+                        hide_index=True, use_container_width=True
+                    )
+
+                # 3. ÉDITEUR
                 df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                 if not curr.empty:
                     for _, r in curr.iterrows():
@@ -160,7 +183,7 @@ with tab2:
                     mask = (df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)
                     save_hist(pd.concat([df_h[~mask], v], ignore_index=True)); st.rerun()
                 
-                if c_sk.button(f"🚫 Skip Exo", key=f"sk_{exo}"):
+                if c_sk.button(f"🚫 Skip {exo}", key=f"sk_{exo}"):
                     sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫"}])
                     save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
