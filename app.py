@@ -85,7 +85,7 @@ with col_l2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
-# --- ONGLET 1 : PROGRAMME (RESTAURÉ) ---
+# --- ONGLET 1 : PROGRAMME ---
 with tab1:
     st.subheader("Mes Séances")
     jours = list(prog.keys())
@@ -112,14 +112,10 @@ with tab1:
             nv = st.text_input("Ajouter exo", key=f"in_{j}")
             if st.button("Valider l'ajout", key=f"bt_{j}") and nv:
                 prog[j].append(nv); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
-    
     st.divider()
-    st.subheader("➕ Créer une nouvelle séance")
-    nvs = st.text_input("Nom de la nouvelle séance (ex: Pull 1)")
+    nvs = st.text_input("Nom de la nouvelle séance")
     if st.button("Créer la séance") and nvs:
-        prog[nvs] = []
-        ws_p.update_acell('A1', json.dumps(prog))
-        st.rerun()
+        prog[nvs] = []; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
 # --- ONGLET 2 : MA SÉANCE ---
 with tab2:
@@ -150,15 +146,18 @@ with tab2:
                 ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
             with st.expander(f"Entraînement : {exo}", expanded=True):
+                # FILTRE HISTORIQUE
                 t_sem, t_cyc = (0, cycle_act - 1) if sem_stk == 1 else (sem_stk - 1, cycle_act)
                 full_h = df_h[(df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)]
                 h_prev = full_h[(full_h["Semaine"] == t_sem) & (full_h["Cycle"] == t_cyc)]
                 
+                # HISTORIQUE X2 AVEC REMARQUES
                 last_w = full_h[full_h["Semaine"] < (sem_stk if sem_stk != 0 else 11)]["Semaine"].unique()[:2]
                 if len(last_w) > 0:
                     for w in last_w:
                         st.caption(f"🔍 S{w} (Cycle {cycle_act if w != 0 else cycle_act-1})")
-                        st.dataframe(full_h[full_h["Semaine"] == w][["Série", "Reps", "Poids"]], hide_index=True, use_container_width=True)
+                        # AJOUT DE LA COLONNE REMARQUE CI-DESSOUS
+                        st.dataframe(full_h[full_h["Semaine"] == w][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s)]
 
