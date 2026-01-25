@@ -24,18 +24,6 @@ st.markdown("""
 def calc_1rm(weight, reps):
     return weight * (1 + reps / 30) if reps > 0 else 0
 
-def style_comparaison(row, hist_prev):
-    if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
-    prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
-    v, r = "background-color: rgba(46, 125, 50, 0.45);", "background-color: rgba(198, 40, 40, 0.45);"
-    colors = ["", "", "", ""] 
-    if not prev_set.empty:
-        pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
-        cw, cr = float(row["Poids"]), int(row["Reps"])
-        if cw > pw or (cw == pw and cr > pr): colors[1], colors[2] = v, v
-        elif cw < pw or (cw == pw and cr < pr): colors[1], colors[2] = r, r
-    return colors
-
 # --- CONNEXION ---
 @st.cache_resource
 def get_google_sheets():
@@ -55,6 +43,8 @@ def get_hist():
         df = pd.DataFrame(data)
         df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0).astype(float)
         df["Reps"] = pd.to_numeric(df["Reps"], errors='coerce').fillna(0).astype(int)
+        df["Cycle"] = pd.to_numeric(df["Cycle"], errors='coerce').fillna(1).astype(int)
+        df["Semaine"] = pd.to_numeric(df["Semaine"], errors='coerce').fillna(1).astype(int)
         return df
     except: return pd.DataFrame(columns=["Cycle", "Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque"])
 
@@ -66,22 +56,45 @@ def save_hist(df):
 # Init Data
 df_h = get_hist()
 prog_raw = ws_p.acell('A1').value if ws_p else "{}"
-prog = json.loads(prog_raw) if prog_raw else {}
+try:
+    prog = json.loads(prog_raw)
+    for s in prog:
+        if prog[s] and isinstance(prog[s][0], str):
+            prog[s] = [{"name": name, "sets": 3} for name in prog[s]]
+except: prog = {}
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
 # --- TAB 1 : PROGRAMME ---
 with tab1:
+    st.subheader("Configuration des séances")
     for j in list(prog.keys()):
         with st.expander(f"⚙️ {j}"):
             for i, ex in enumerate(prog[j]):
                 c1, c2, c3 = st.columns([5, 2, 1])
                 c1.write(f"**{ex['name']}**")
-                ex['sets'] = c2.number_input("Sets", 1, 10, ex['sets'], key=f"s_{j}_{i}")
-                if c3.button("🗑️", key=f"d_{j}_{i}"): prog[j].pop(i); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
-            st.button("Sauver", key=f"sv_{j}", on_click=lambda: ws_p.update_acell('A1', json.dumps(prog)))
+                ex['sets'] = c2.number_input("Séries", 1, 12, ex['sets'], key=f"s_{j}_{i}")
+                if c3.button("🗑️", key=f"d_{j}_{i}"): 
+                    prog[j].pop(i)
+                    ws_p.update_acell('A1', json.dumps(prog))
+                    st.rerun()
+            
+            c_add1, c_add2 = st.columns([3, 1])
+            ni = c_add1.text_input("Nouvel exo", key=f"ni_{j}")
+            ns = c_add2.number_input("Sets", 1, 12, 3, key=f"ns_{j}")
+            if st.button("Ajouter l'exercice", key=f"ba_{j}") and ni:
+                prog[j].append({"name": ni, "sets": ns})
+                ws_p.update_acell('A1', json.dumps(prog))
+                st.rerun()
+    
+    st.divider()
+    nvs = st.text_input("➕ Créer une nouvelle séance")
+    if st.button("Créer la séance") and nvs:
+        prog[nvs] = []
+        ws_p.update_acell('A1', json.dumps(prog))
+        st.rerun()
 
-# --- TAB 2 : MA SÉANCE ---
+# --- TAB 2 : MA SÉANCE (RETOUR AU FORMAT SIMPLE) ---
 with tab2:
     if prog:
         choix_s = st.selectbox("Séance :", list(prog.keys()))
@@ -93,8 +106,8 @@ with tab2:
             exo, p_sets = ex_obj["name"], ex_obj["sets"]
             st.markdown(f"### 🔹 {exo}")
             
-            with st.expander(f"Détails : {exo}", expanded=True):
-                # 1. HISTORIQUE STRICT (Exclure session actuelle, max 2)
+            with st.expander(f"Détails & Saisie : {exo}", expanded=True):
+                # 1. HISTORIQUE (Exclure session actuelle, max 2 sessions passées)
                 f_h = df_h[df_h["Exercice"] == exo]
                 h_only = f_h[~((f_h["Cycle"] == c_act) & (f_h["Semaine"] == s_act))].sort_values(["Cycle", "Semaine"], ascending=False)
                 last_sessions = h_only[["Cycle", "Semaine"]].drop_duplicates().head(2)
@@ -102,44 +115,50 @@ with tab2:
                 if not last_sessions.empty:
                     st.caption("🔍 Historique (Dernières séances) :")
                     for _, r_s in last_sessions.iterrows():
-                        c_p, s_p = r_s["Cycle"], r_s["Semaine"]
-                        st.write(f"**Cycle {c_p} - Semaine {s_p}**")
-                        st.dataframe(h_only[(h_only["Cycle"] == c_p) & (h_only["Semaine"] == s_p)][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                        cp, sp = r_s["Cycle"], r_s["Semaine"]
+                        st.write(f"**Cycle {cp} - Semaine {sp}**")
+                        st.dataframe(h_only[(h_only["Cycle"] == cp) & (h_only["Semaine"] == sp)][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
-                # 2. SESSION EN COURS
+                # 2. SESSION EN COURS (L'ÉDITEUR UNIQUEMENT)
                 curr = f_h[(f_h["Cycle"] == c_act) & (f_h["Semaine"] == s_act)]
-                h_prev = h_only[(h_only["Cycle"] == last_sessions.iloc[0]["Cycle"]) & (h_only["Semaine"] == last_sessions.iloc[0]["Semaine"])] if not last_sessions.empty else pd.DataFrame()
 
-                if not curr.empty:
-                    st.caption("✅ Validé pour cette séance :")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_prev).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-
-                # 3. ÉDITEUR
                 df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                 if not curr.empty:
                     for _, r in curr.iterrows():
-                        if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
+                        if r["Série"] <= p_sets: 
+                            df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
                 
-                ed = st.data_editor(df_ed, key=f"ed_{exo}_{s_act}", use_container_width=True)
+                ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo}_{s_act}_{c_act}", use_container_width=True,
+                                    column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                
                 if st.button(f"✅ Valider {exo}", key=f"val_{exo}"):
                     v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                     v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = c_act, s_act, choix_s, exo
-                    save_hist(pd.concat([df_h[~((df_h["Cycle"] == c_act) & (df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo))], v], ignore_index=True)); st.rerun()
+                    # Nettoyer l'existant avant de sauver
+                    mask = (df_h["Cycle"] == c_act) & (df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo)
+                    save_hist(pd.concat([df_h[~mask], v], ignore_index=True))
+                    st.rerun()
 
-# --- TAB 3 : PROGRÈS ---
+# --- TAB 3 : PROGRÈS (FIX CORPS DE POIDS) ---
 with tab3:
     if not df_h.empty:
-        sel = st.selectbox("Exercice :", sorted(df_h["Exercice"].unique()))
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
+        col2.metric("Cycle Actuel", int(df_h["Cycle"].max()))
+        col3.metric("Semaine", s_act)
+        
+        st.divider()
+        sel = st.selectbox("Sélectionne un exercice :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel].copy()
         
-        # FIX : On accepte Reps > 0 même si Poids = 0 (Bodyweight)
+        # FIX : On accepte les perfs si Reps > 0 (pour Dips/Tractions à 0kg)
         df_records = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         
         if not df_records.empty:
             best = df_records.sort_values(["Poids", "Reps"], ascending=False).iloc[0]
             st.success(f"🏆 Record : **{best['Poids']} kg x {int(best['Reps'])}** (1RM théorique: {calc_1rm(best['Poids'], best['Reps']):.1f} kg)")
             
-            # Graphique : Poids max par séance (affiche 0 si c'est du poids du corps)
+            # Graphique : Poids max par séance
             c_data = df_records.groupby(["Cycle", "Semaine"])["Poids"].max().reset_index()
             c_data["Point"] = "C" + c_data["Cycle"].astype(str) + "-S" + c_data["Semaine"].astype(str)
             st.line_chart(c_data.set_index("Point")["Poids"])
