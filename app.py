@@ -20,17 +20,17 @@ st.markdown("""
     }
     div[data-testid="stMetricValue"] { 
         font-size: 32px !important; color: #4A90E2 !important; font-weight: 800; 
-        text-shadow: 0 0 15px rgba(74, 144, 226, 0.8) !important; 
+        text-shadow: 0 0 15px rgba(74, 144, 226, 0.8), 0 0 5px rgba(74, 144, 226, 0.5) !important; 
     }
     .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; backdrop-filter: blur(5px); }
-    .podium-card { background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 15px; border-left: 5px solid #4A90E2; margin-bottom: 10px; }
+    .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; border-top: 3px solid #4A90E2; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
     if reps <= 0: return 0
-    # Formule de Brzycki
+    # Formule de Brzycki : Poids / (1.0278 - (0.0278 * Reps)) ou plus simplement :
     return weight * (1 + reps / 30)
 
 # --- CONNEXION ---
@@ -101,12 +101,12 @@ with tab1:
                 if c5.button("🗑️", key=f"rm_{j}_{i}"):
                     prog[j].pop(i); save_prog(prog); st.rerun()
             cx, cs = st.columns([3, 1])
-            ni = cx.text_input("Nouvel exo", key=f"ni_{j}")
+            ni = cx.text_input("Ajouter exo", key=f"ni_{j}")
             ns = cs.number_input("Sets", 1, 10, 3, key=f"ns_{j}")
             if st.button("Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns}); save_prog(prog); st.rerun()
     st.divider()
-    nvs = st.text_input("➕ Nom de séance")
+    nvs = st.text_input("➕ Créer séance")
     if st.button("Créer séance") and nvs:
         prog[nvs] = []; save_prog(prog); st.rerun()
 
@@ -123,7 +123,7 @@ with tab2:
         for i, ex_obj in enumerate(prog[choix_s]):
             exo = ex_obj["name"]; p_sets = ex_obj["sets"]
             col_name, col_u, col_d = st.columns([8, 1, 1])
-            col_name.markdown(f"### 🔹 {exo}") # Pas de mention des séries ici
+            col_name.markdown(f"### 🔹 {exo}")
             
             if col_u.button("⬆️", key=f"u_{exo}_{i}"):
                 if i > 0: prog[choix_s][i], prog[choix_s][i-1] = prog[choix_s][i-1], prog[choix_s][i]; save_prog(prog); st.rerun()
@@ -149,44 +149,51 @@ with tab2:
                     mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
                     save_hist(pd.concat([df_h[~mask], v_rows], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS ---
+# --- TAB 3 : PROGRÈS (PODIUM + 1RM FIX) ---
 with tab3:
     if not df_h.empty:
         col1, col2, col3 = st.columns(3)
         col1.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
         col2.metric("Cycle Actuel", int(df_h["Cycle"].max()))
-        # FIX SEMAINE : Prend la semaine max de l'historique
         col3.metric("Semaine Max", int(df_h["Semaine"].replace(0, 10).max()))
         
         st.divider()
         
-        # --- SECTION PODIUM ---
-        st.subheader("🏆 Podium de Force (Top 1RM)")
-        df_podium = df_h[df_h["Poids"] >= 0].copy()
-        df_podium["1RM"] = df_podium.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
-        # On garde le meilleur 1RM par exercice
-        best_perfs = df_podium.groupby("Exercice").agg({"1RM": "max", "Poids": "max", "Reps": "max"}).sort_values(by="1RM", ascending=False).head(3)
+        # --- PODIUM ---
+        st.subheader("🏆 Podium de Force")
+        df_all_rm = df_h[df_h["Poids"] >= 0].copy()
+        df_all_rm["1RM"] = df_all_rm.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
+        podium = df_all_rm.groupby("Exercice").agg({"1RM": "max", "Poids": "max", "Reps": "max"}).sort_values(by="1RM", ascending=False).head(3)
         
         p_cols = st.columns(3)
-        icons = ["🥇", "🥈", "🥉"]
-        for idx, (exo_name, row) in enumerate(best_perfs.iterrows()):
+        medals = ["🥇", "🥈", "🥉"]
+        for idx, (exo_n, row) in enumerate(podium.iterrows()):
             with p_cols[idx]:
-                st.markdown(f"""<div class='podium-card'>
-                <b>{icons[idx]} {exo_name}</b><br>
-                {row['1RM']:.1f} kg (théorique)<br>
-                <small>Record: {row['Poids']:.1f}kg x {int(row['Reps'])}</small>
-                </div>""", unsafe_allow_html=True)
+                st.markdown(f"<div class='podium-card'><b>{medals[idx]} {exo_n}</b><br><span style='color:#4A90E2; font-size:20px;'>{row['1RM']:.1f} kg</span><br><small>{row['Poids']:.1f}kg x {int(row['Reps'])}</small></div>", unsafe_allow_html=True)
 
         st.divider()
         
-        sel = st.selectbox("Zoom sur un exercice :", sorted(df_h["Exercice"].unique()))
-        df_e = df_h[df_h["Exercice"] == sel].copy()
-        if not df_e.empty:
-            df_v = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
-            if not df_v.empty:
-                max_s = df_v.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
-                st.info(f"Record Actuel : **{max_s['Poids']} kg x {int(max_s['Reps'])}**")
-                c_data = df_v.groupby(["Cycle", "Semaine"])["Poids"].max().reset_index()
-                c_data["Point"] = "C" + c_data["Cycle"].astype(str) + "-S" + c_data["Semaine"].astype(str)
-                st.line_chart(c_data.set_index("Point")["Poids"])
-            st.dataframe(df_e[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
+        # --- ZOOM EXERCICE ---
+        sel_exo = st.selectbox("Zoom sur un exercice :", sorted(df_h["Exercice"].unique()))
+        df_zoom = df_h[df_h["Exercice"] == sel_exo].copy()
+        
+        if not df_zoom.empty:
+            df_valides = df_zoom[(df_zoom["Poids"] > 0) | (df_zoom["Reps"] > 0)].copy()
+            if not df_valides.empty:
+                # Calcul Record et 1RM
+                best_row = df_valides.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
+                one_rm_val = calc_1rm(best_row['Poids'], best_row['Reps'])
+                
+                # AFFICHAGE DU 1RM RESTAURÉ
+                c_res1, c_res2 = st.columns(2)
+                c_res1.success(f"🏆 Record : **{best_row['Poids']} kg x {int(best_row['Reps'])}**")
+                c_res2.info(f"💪 Force (1RM) : **{round(one_rm_val, 1)} kg**")
+                
+                # Graphique
+                c_chart = df_valides.groupby(["Cycle", "Semaine"])["Poids"].max().reset_index()
+                c_chart["Point"] = "C" + c_chart["Cycle"].astype(str) + "-S" + c_chart["Semaine"].astype(str)
+                st.line_chart(c_chart.set_index("Point")["Poids"])
+            else:
+                st.info("ℹ️ Aucune performance (Skip uniquement).")
+            
+            st.dataframe(df_zoom[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
