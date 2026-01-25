@@ -79,13 +79,13 @@ def save_hist(df):
 df_h = get_hist()
 prog = json.loads(ws_p.acell('A1').value or "{}")
 
-# LOGO
+# Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
-# --- ONGLET 1 : PROGRAMME ---
+# --- ONGLET 1 : PROGRAMME (RESTAURÉ) ---
 with tab1:
     st.subheader("Mes Séances")
     jours = list(prog.keys())
@@ -112,6 +112,14 @@ with tab1:
             nv = st.text_input("Ajouter exo", key=f"in_{j}")
             if st.button("Valider l'ajout", key=f"bt_{j}") and nv:
                 prog[j].append(nv); ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
+    
+    st.divider()
+    st.subheader("➕ Créer une nouvelle séance")
+    nvs = st.text_input("Nom de la nouvelle séance (ex: Pull 1)")
+    if st.button("Créer la séance") and nvs:
+        prog[nvs] = []
+        ws_p.update_acell('A1', json.dumps(prog))
+        st.rerun()
 
 # --- ONGLET 2 : MA SÉANCE ---
 with tab2:
@@ -142,12 +150,10 @@ with tab2:
                 ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
             with st.expander(f"Entraînement : {exo}", expanded=True):
-                # FIX MÉLANGE : On filtre strictement par Séance (choix_s)
                 t_sem, t_cyc = (0, cycle_act - 1) if sem_stk == 1 else (sem_stk - 1, cycle_act)
                 full_h = df_h[(df_h["Exercice"] == exo) & (df_h["Séance"] == choix_s)]
                 h_prev = full_h[(full_h["Semaine"] == t_sem) & (full_h["Cycle"] == t_cyc)]
                 
-                # Historique x2
                 last_w = full_h[full_h["Semaine"] < (sem_stk if sem_stk != 0 else 11)]["Semaine"].unique()[:2]
                 if len(last_w) > 0:
                     for w in last_w:
@@ -191,9 +197,7 @@ with tab3:
                 max_s = df_v.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
                 st.success(f"🏆 Record : **{max_s['Poids']} kg x {int(max_s['Reps'])}** - Force (1RM) : **{round(calc_ratio(max_s['Poids'], max_s['Reps']), 1)} kg**")
                 
-                # FIX KEYERROR : On aplatit l'index pour le graphique
                 chart_data = df_e.groupby(["Cycle", "Semaine"])["Poids"].max().reset_index()
-                # On crée une colonne combinée pour l'axe X pour que Streamlit ne s'embrouille pas
                 chart_data["Point"] = "C" + chart_data["Cycle"].astype(str) + "-S" + chart_data["Semaine"].astype(str)
                 st.line_chart(chart_data.set_index("Point")["Poids"])
 
