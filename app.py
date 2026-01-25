@@ -161,7 +161,7 @@ with tab2:
 
                 if not curr.empty and exo not in st.session_state.editing_exo:
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier / Éditer Remarques", key=f"ed_{exo}"):
+                    if st.button(f"🔄 Modifier", key=f"ed_{exo}"):
                         st.session_state.editing_exo.add(exo); st.rerun()
                 else:
                     # Préparation des données pour l'édition (on garde tout le contenu actuel)
@@ -174,7 +174,7 @@ with tab2:
                     ed = st.data_editor(df_ed, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn(format="%g")})
                     
                     c_v, c_s = st.columns(2)
-                    if c_v.button(f"✅ Valider Modifs", key=f"v_{exo}"):
+                    if c_v.button(f"✅ Valider", key=f"v_{exo}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = cycle_act, sem_stk, choix_s, exo
                         mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
@@ -203,3 +203,4 @@ with tab3:
                 chart_data["Point"] = "C" + chart_data["Cycle"].astype(str) + "-S" + chart_data["Semaine"].astype(str)
                 st.line_chart(chart_data.set_index("Point")["Poids"])
             st.dataframe(df_e[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
+
