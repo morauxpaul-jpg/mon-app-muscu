@@ -31,7 +31,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIQUE DE COULEUR INTERACTIVE ---
+# --- FONCTIONS UTILES ---
+def calc_1rm(weight, reps):
+    if reps <= 0: return 0
+    if reps == 1: return weight
+    return weight * (36 / (37 - reps))
+
+# LOGIQUE DE COULEUR INTERACTIVE (TES RÈGLES)
 def style_comparaison(row, hist_s1):
     prev_set = hist_s1[hist_s1["Série"] == row["Série"]]
     colors = ["", "", "", ""] # Série, Reps, Poids, Remarque
@@ -42,11 +48,11 @@ def style_comparaison(row, hist_s1):
         cw = float(row["Poids"])
         cr = int(row["Reps"])
         
-        # RÈGLE 1 : Poids + lourd mais Reps - élevées -> Les deux verts
+        # RÈGLE 1 : Plus lourd mais moins de reps -> Les deux verts
         if cw > pw and cr < pr:
             colors[1] = "background-color: #2e7d32; color: white;" 
             colors[2] = "background-color: #2e7d32; color: white;"
-        # RÈGLE 2 : Même poids mais Reps + élevées -> Poids normal, Reps vert
+        # RÈGLE 2 : Même poids mais plus de reps -> Poids base, Reps vert
         elif cw == pw and cr > pr:
             colors[1] = "background-color: #2e7d32; color: white;"
         # RÈGLE 3 : Classique (Plus = Vert, Moins = Rouge)
@@ -111,27 +117,26 @@ with tab1:
             nv = st.text_input("Ajouter exo :", key=f"in_{j}")
             if st.button("Ajouter", key=f"bt_{j}") and nv: prog[j].append(nv); save_prog(prog); st.rerun()
 
-# --- ONGLET 2 : SÉANCE (LE COEUR DU SYSTÈME) ---
+# --- ONGLET 2 : SÉANCE ---
 with tab2:
-    if not prog: st.warning("Crée une séance d'abord !")
+    if not prog: st.warning("Crée une séance !")
     else:
         choix_s = st.selectbox("Séance :", list(prog.keys()), label_visibility="collapsed")
         sem = st.number_input("Semaine N°", min_value=1, value=1)
         
         for exo in prog[choix_s]:
             with st.expander(f"🔹 {exo}", expanded=True):
-                # Comparaison dynamique S vs S-1
                 h1 = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem - 1) & (df_h["Séance"] == choix_s)]
-                
                 if not h1.empty:
                     st.caption(f"🔍 Hier (S{sem-1}) :")
+                    # FIX DÉCIMALES ICI
                     st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 
-                # Saisie
                 curr = df_h[(df_h["Exercice"] == exo) & (df_h["Semaine"] == sem) & (df_h["Séance"] == choix_s)]
                 if not curr.empty:
                     st.caption(f"✅ Performance S{sem} (Comparée à S{sem-1}) :")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_s1=h1), 
+                    # FIX DÉCIMALES + COULEURS
+                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_s1=h1), 
                                  hide_index=True, use_container_width=True)
                     if st.button(f"🔄 Modifier {exo}", key=f"mod_{exo}"):
                         m = (df_h["Semaine"] == sem) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
@@ -150,9 +155,36 @@ with tab2:
                         sk = pd.DataFrame({"Semaine": [sem], "Séance": [choix_s], "Exercice": [exo], "Série": [1], "Reps": [0], "Poids": [0.0], "Remarque": ["MANQUÉE ❌"]})
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- ONGLET 3 : PROGRÈS ---
+# --- ONGLET 3 : PROGRÈS (RESTAURÉ) ---
 with tab3:
-    if not df_h.empty:
-        sel = st.selectbox("Exercice :", sorted(df_h["Exercice"].unique()))
-        df_e = df_h[df_h["Exercice"] == sel]
-        st.line_chart(df_e.groupby("Semaine")["Poids"].max())
+    if df_h.empty: st.info("Fais ton premier entraînement !")
+    else:
+        st.subheader("📊 Résumé Global")
+        col1, col2, col3 = st.columns(3)
+        total_p = (df_h["Poids"] * df_h["Reps"]).sum()
+        max_sem = df_h["Semaine"].max()
+        nb_reelles = len(df_h[df_h["Poids"] > 0].groupby(["Semaine", "Séance"]))
+        col1.metric("Semaine Max", f"S{max_sem}")
+        col2.metric("Poids total", f"{int(total_p)} kg")
+        col3.metric("Nb Séances", nb_reelles)
+        st.markdown("---")
+        
+        sel_exo = st.selectbox("Choisis un exercice :", sorted(list(df_h["Exercice"].unique())))
+        df_exo = df_h[df_h["Exercice"] == sel_exo].copy()
+        
+        if not df_exo.empty:
+            df_valide = df_exo[df_exo["Poids"] > 0]
+            if not df_valide.empty:
+                # Calcul Record & 1RM
+                best_set = df_valide.sort_values(by=["Poids", "Reps"], ascending=False).iloc[0]
+                df_valide["1RM"] = df_valide.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
+                
+                c_rec, c_1rm = st.columns(2)
+                c_rec.success(f"🏆 Record : **{best_set['Poids']} kg x {int(best_set['Reps'])}**")
+                c_1rm.info(f"💪 Force (1RM) : **{round(df_valide['1RM'].max(), 1)} kg**")
+                
+                st.caption("📈 Évolution des charges (Poids Max) :")
+                st.line_chart(df_exo.groupby("Semaine")["Poids"].max())
+            
+            with st.expander("Historique complet"):
+                st.dataframe(df_exo[["Semaine", "Séance", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Semaine", "Série"], ascending=[False, True]), hide_index=True, use_container_width=True)
