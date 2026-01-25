@@ -9,7 +9,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : LOOK NÉON ---
+# --- CSS : LOOK NÉON ---
 st.markdown("""
 <style>
     .stApp {
@@ -26,7 +26,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONCTIONS ---
+# --- FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
     if reps <= 0: return 0
     return weight * (1 + reps / 30)
@@ -78,10 +78,15 @@ def save_hist(df):
 def save_prog(prog_dict):
     ws_p.update_acell('A1', json.dumps(prog_dict))
 
-# Load
+# Load Data
 df_h = get_hist()
 prog_raw = ws_p.acell('A1').value if ws_p else "{}"
-try: prog = json.loads(prog_raw) if prog_raw else {}
+try: 
+    prog = json.loads(prog_raw) 
+    # Migration auto si ancien format (liste de strings -> liste d'objets)
+    for s in prog:
+        if prog[s] and isinstance(prog[s][0], str):
+            prog[s] = [{"name": name, "sets": 3} for name in prog[s]]
 except: prog = {}
 
 # Logo
@@ -90,8 +95,9 @@ with col_l2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
-# --- TAB 1 : PROGRAMME ---
+# --- TAB 1 : PROGRAMME (AVEC CHOIX DU NOMBRE DE SÉRIES) ---
 with tab1:
+    st.subheader("Mes Séances")
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
         with st.expander(f"⚙️ {j}"):
@@ -102,28 +108,46 @@ with tab1:
                     save_prog({k: prog[k] for k in jours}); st.rerun()
             if c2.button(f"🗑️ Supprimer {j}", key=f"del_s_{j}"):
                 del prog[j]; save_prog(prog); st.rerun()
-            for i, ex in enumerate(prog[j]):
-                col1, col2, col3, col4 = st.columns([6, 1, 1, 1])
-                col1.write(f"**{ex}**")
-                if col2.button("⬆️", key=f"ue_{j}_{i}") and i > 0:
+            
+            st.divider()
+            for i, ex_obj in enumerate(prog[j]):
+                # On gère l'affichage selon le format (objet ou string pour compatibilité)
+                name = ex_obj["name"] if isinstance(ex_obj, dict) else ex_obj
+                nb_sets = ex_obj["sets"] if isinstance(ex_obj, dict) else 3
+
+                col1, col2, col3, col4, col5 = st.columns([4, 2, 1, 1, 1])
+                col1.write(f"**{name}**")
+                
+                # Input pour changer le nombre de séries
+                new_sets = col2.number_input("Séries", min_value=1, max_value=10, value=nb_sets, key=f"sets_{j}_{i}")
+                if new_sets != nb_sets:
+                    prog[j][i]["sets"] = new_sets
+                    save_prog(prog); st.rerun()
+
+                if col3.button("⬆️", key=f"ue_{j}_{i}") and i > 0:
                     prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]
                     save_prog(prog); st.rerun()
-                if col3.button("⬇️", key=f"de_{j}_{i}") and i < len(prog[j])-1:
+                if col4.button("⬇️", key=f"de_{j}_{i}") and i < len(prog[j])-1:
                     prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]
                     save_prog(prog); st.rerun()
-                if col4.button("🗑️", key=f"rm_{j}_{i}"):
+                if col5.button("🗑️", key=f"rm_{j}_{i}"):
                     prog[j].pop(i); save_prog(prog); st.rerun()
-            nv = st.text_input("Ajouter exo", key=f"in_{j}")
-            if st.button("Valider l'exo", key=f"bt_{j}") and nv:
-                prog[j].append(nv); save_prog(prog); st.rerun()
+            
+            c_n1, c_n2 = st.columns([3, 1])
+            nv_exo = c_n1.text_input("Nouvel exo", key=f"in_{j}")
+            nv_sets = c_n2.number_input("Séries", 1, 10, 3, key=f"in_s_{j}")
+            if st.button("Ajouter", key=f"bt_{j}") and nv_exo:
+                prog[j].append({"name": nv_exo, "sets": nv_sets})
+                save_prog(prog); st.rerun()
+    
     st.divider()
     nvs = st.text_input("➕ Créer séance")
     if st.button("Créer") and nvs:
         prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE ---
+# --- TAB 2 : MA SÉANCE (AVEC LIGNES PRÉ-REMPLIES) ---
 with tab2:
-    if not prog: st.warning("Crée une séance.")
+    if not prog: st.warning("Crée une séance dans l'onglet Programme.")
     else:
         c1, c2, c3 = st.columns([2, 1, 1])
         choix_s = c1.selectbox("Séance :", list(prog.keys()))
@@ -132,12 +156,17 @@ with tab2:
         sem_stk = 0 if sem_in == 10 else sem_in
 
         if st.button("🚫 Séance Loupée ❌", use_container_width=True):
-            sk = [{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": e, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupé ❌"} for e in prog[choix_s]]
+            sk = [{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupé ❌"} for e in prog[choix_s]]
             save_hist(pd.concat([df_h, pd.DataFrame(sk)], ignore_index=True)); st.rerun()
 
-        for i, exo in enumerate(prog[choix_s]):
+        for i, ex_obj in enumerate(prog[choix_s]):
+            exo = ex_obj["name"]
+            planned_sets = ex_obj["sets"]
+
             col_name, col_u, col_d = st.columns([8, 1, 1])
-            col_name.markdown(f"### 🔹 {exo}")
+            col_name.markdown(f"### 🔹 {exo} ({planned_sets} séries)")
+            
+            # Déplacement pendant la séance
             if col_u.button("⬆️", key=f"mu_{exo}_{i}") and i > 0:
                 prog[choix_s][i], prog[choix_s][i-1] = prog[choix_s][i-1], prog[choix_s][i]
                 save_prog(prog); st.rerun()
@@ -157,32 +186,46 @@ with tab2:
                     for w in last_w:
                         st.dataframe(full_exo_h[full_exo_h["Semaine"] == w][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
+                # DONNÉES ACTUELLES
                 curr = full_exo_h[(full_exo_h["Semaine"] == sem_stk) & (full_exo_h["Cycle"] == cycle_act)]
 
-                if not curr.empty and exo not in st.session_state.editing_exo:
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.format({"Poids": "{:g}"}).apply(style_comparaison, axis=1, hist_prev=h_prev), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier", key=f"ed_{exo}"):
-                        st.session_state.editing_exo.add(exo); st.rerun()
+                # CONSTRUCTION DU TABLEAU FIXE
+                # On pré-remplit le tableau avec le nombre de séries choisi dans le programme
+                if curr.empty:
+                    df_display = pd.DataFrame({
+                        "Série": range(1, planned_sets + 1),
+                        "Reps": [0] * planned_sets,
+                        "Poids": [0.0] * planned_sets,
+                        "Remarque": [""] * planned_sets
+                    })
                 else:
-                    # Préparation des données pour l'édition (on garde tout le contenu actuel)
-                    df_ed = curr[["Série", "Reps", "Poids", "Remarque"]].copy() if not curr.empty else pd.DataFrame({"Série": [1, 2, 3], "Reps": [0,0,0], "Poids": [0.0,0.0,0.0], "Remarque": ["","",""]})
-                    # Ajout d'une ligne vide seulement si on n'est pas déjà en train d'éditer une série existante
-                    if curr.empty or len(df_ed) < 6:
-                        new_row = pd.DataFrame({"Série": [int(df_ed["Série"].max()+1 if not df_ed.empty else 1)], "Reps": [0], "Poids": [0.0], "Remarque": [""]})
-                        df_ed = pd.concat([df_ed, new_row], ignore_index=True)
+                    # On fusionne les données saisies avec les lignes vides restantes pour atteindre planned_sets
+                    df_display = curr[["Série", "Reps", "Poids", "Remarque"]].copy()
+                    existing_sets = df_display["Série"].tolist()
+                    for s in range(1, planned_sets + 1):
+                        if s not in existing_sets:
+                            df_display = pd.concat([df_display, pd.DataFrame({"Série": [s], "Reps": [0], "Poids": [0.0], "Remarque": [""]})], ignore_index=True)
+                    df_display = df_display.sort_values("Série").reset_index(drop=True)
 
-                    ed = st.data_editor(df_ed, num_rows="dynamic", key=f"e_{exo}", use_container_width=True, column_config={"Poids": st.column_config.NumberColumn(format="%g")})
+                # ÉDITEUR
+                ed = st.data_editor(df_display, num_rows="fixed", key=f"e_{exo}_{sem_stk}", use_container_width=True, 
+                                    column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                
+                c_v, c_s = st.columns(2)
+                if c_v.button(f"✅ Valider {exo}", key=f"v_{exo}"):
+                    # On ne garde que les lignes où l'utilisateur a mis du poids ou des reps
+                    valid_rows = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
+                    valid_rows["Cycle"], valid_rows["Semaine"], valid_rows["Séance"], valid_rows["Exercice"] = cycle_act, sem_stk, choix_s, exo
                     
-                    c_v, c_s = st.columns(2)
-                    if c_v.button(f"✅ Valider", key=f"v_{exo}"):
-                        v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
-                        v["Cycle"], v["Semaine"], v["Séance"], v["Exercice"] = cycle_act, sem_stk, choix_s, exo
-                        mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
-                        save_hist(pd.concat([df_h[~mask], v], ignore_index=True))
-                        st.session_state.editing_exo.discard(exo); st.rerun()
-                    if c_s.button(f"🚫 Skip Exo", key=f"sk_{exo}"):
-                        sk = pd.DataFrame([{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": exo, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫"}])
-                        save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
+                    # On nettoie l'ancien avant de sauver le nouveau
+                    mask = (df_h["Semaine"] == sem_stk) & (df_h["Cycle"] == cycle_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"] == exo)
+                    save_hist(pd.concat([df_h[~mask], valid_rows], ignore_index=True))
+                    st.success(f"Sauvegardé ! ({exo})")
+                    st.rerun()
+                
+                if c_s.button(f"🚫 Skip Exo", key=f"sk_{exo}"):
+                    sk = pd.DataFrame([{"Cycle": cycle_act, "Semaine": sem_stk, "Séance": choix_s, "Exercice": exo, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫"}])
+                    save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
 # --- TAB 3 : PROGRÈS ---
 with tab3:
@@ -203,4 +246,3 @@ with tab3:
                 chart_data["Point"] = "C" + chart_data["Cycle"].astype(str) + "-S" + chart_data["Semaine"].astype(str)
                 st.line_chart(chart_data.set_index("Point")["Poids"])
             st.dataframe(df_e[["Cycle", "Semaine", "Série", "Reps", "Poids", "Remarque"]].sort_values(by=["Cycle", "Semaine"], ascending=False), hide_index=True)
-
