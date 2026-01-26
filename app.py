@@ -32,36 +32,34 @@ st.markdown("""
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important; 
     }
     
-    /* SYSTÈME DE RANGS JEU VIDÉO */
-    .rank-ladder {
-        display: flex; justify-content: space-between; align-items: center;
-        background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;
-        border: 1px solid #58CCFF; margin-bottom: 30px; position: relative;
+    .victory-banner {
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 127, 0.3), transparent);
+        border: 2px solid #00FF7F; color: #00FF7F; padding: 15px; border-radius: 10px;
+        text-align: center; font-weight: 900; font-size: 24px; text-shadow: 0 0 15px #00FF7F;
+        animation: victory-pulse 1.5s infinite; margin-bottom: 20px;
     }
+    @keyframes victory-pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.02); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+
+    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
+    .recup-card { min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; text-align: center; }
+    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+    .rank-ladder { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #58CCFF; margin-bottom: 30px; }
     .rank-step { text-align: center; flex: 1; opacity: 0.5; font-size: 10px; transition: 0.3s; }
     .rank-step.active { opacity: 1; font-weight: bold; transform: scale(1.1); color: #58CCFF; }
     .rank-step.completed { color: #00FF7F; opacity: 0.8; }
-    
-    .xp-container { width: 100%; margin: 10px 0; }
     .xp-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); }
     .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); box-shadow: 0 0 15px #58CCFF; }
 
-    /* VOLUME BAR */
-    .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid rgba(88, 204, 255, 0.3); }
-    .vol-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; height: 14px; overflow: hidden; margin-top: 8px; }
-    .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; }
-    .vol-overload { background: #00FF7F !important; box-shadow: 0 0 20px #00FF7F !important; }
+    .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; border: 1px solid rgba(88, 204, 255, 0.2); }
+    .vol-bar { height: 12px; border-radius: 6px; background: #58CCFF; transition: width 0.5s ease-in-out; box-shadow: 0 0 10px #58CCFF; }
+    .vol-overload { background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important; }
 
-    /* PODIUM COULEURS */
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
     .podium-gold { border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
     .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
     .podium-bronze { border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); }
     
-    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
-    .recup-card { min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; text-align: center; }
-    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-
     .cyber-analysis { background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; font-size: 0.95rem; }
 </style>
 """, unsafe_allow_html=True)
@@ -124,7 +122,6 @@ def muscle_flappy_game():
         function draw() {
             ctx.fillStyle = '#050A18';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
             ctx.font = "30px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
@@ -137,48 +134,31 @@ def muscle_flappy_game():
                     let gap = 125;
                     pipes.push({ x: canvas.width, topH: Math.floor(Math.random() * (canvas.height - gap - 100)) + 50, gap: gap, passed: false });
                 }
-
                 for (let i = pipes.length - 1; i >= 0; i--) {
                     pipes[i].x -= currentSpeed;
                     ctx.fillStyle = "#FF453A"; 
                     ctx.fillRect(pipes[i].x, 0, 50, pipes[i].topH);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 50, canvas.height);
-
                     if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 50) {
-                        if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) {
-                            gameOver = true;
-                        }
+                        if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) gameOver = true;
                     }
-                    if (!pipes[i].passed && biceps.x > pipes[i].x + 50) {
-                        score++; pipes[i].passed = true;
-                    }
+                    if (!pipes[i].passed && biceps.x > pipes[i].x + 50) { score++; pipes[i].passed = true; }
                     if (pipes[i].x < -60) pipes.splice(i, 1);
                 }
-
                 if (biceps.y > canvas.height || biceps.y < 0) gameOver = true;
             } else if (!gameStarted) {
-                ctx.fillStyle = "white";
-                ctx.font = "18px Courier New";
-                ctx.fillText("TAP POUR SOULEVER", 70, 240);
+                ctx.fillStyle = "white"; ctx.font = "18px Courier New"; ctx.fillText("TAP POUR SOULEVER", 70, 240);
             }
-
             if (gameOver) {
                 if (score > record) { record = score; localStorage.setItem('muscleFlappyRecord', record); }
-                ctx.fillStyle = "rgba(255,69,58,0.5)";
-                ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = "white"; ctx.font = "30px Courier New";
-                ctx.fillText("ÉCHEC CRITIQUE", 45, 220);
-                ctx.font = "15px Courier New";
-                ctx.fillText("Score: " + score + " | Record: " + record, 75, 260);
+                ctx.fillStyle = "rgba(255,69,58,0.5)"; ctx.fillRect(0,0, canvas.width, canvas.height);
+                ctx.fillStyle = "white"; ctx.font = "30px Courier New"; ctx.fillText("ÉCHEC CRITIQUE", 45, 220);
+                ctx.font = "15px Courier New"; ctx.fillText("Score: " + score + " | Record: " + record, 75, 260);
                 ctx.fillText("Clique pour retenter", 75, 290);
             }
-
-            ctx.font = "bold 20px Courier New";
-            ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35);
+            ctx.font = "bold 20px Courier New"; ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35);
             ctx.fillStyle = "#FFD700"; ctx.fillText("MAX: " + record, 180, 35);
-
-            frameCount++;
-            requestAnimationFrame(draw);
+            frameCount++; requestAnimationFrame(draw);
         }
         draw();
     </script>
@@ -224,11 +204,9 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
-# Logo centré
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
-# --- 5. TABS ---
 tab_p, tab_s, tab_st, tab_g = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🕹️ MINI-JEU"])
 
 # --- ONGLET PROGRAMME ---
@@ -238,10 +216,9 @@ with tab_p:
     for idx_j, j in enumerate(jours):
         with st.expander(f"📦 {j}"):
             c_s1, c_s2 = st.columns(2)
-            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}"):
-                if idx_j > 0:
-                    jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
-                    save_prog({k: prog[k] for k in jours}); st.rerun()
+            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
+                jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
+                save_prog({k: prog[k] for k in jours}); st.rerun()
             if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
                 del prog[j]; save_prog(prog); st.rerun()
             for i, ex in enumerate(prog[j]):
@@ -273,7 +250,6 @@ with tab_s:
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
             save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.rerun()
 
-        # RÉCUPÉRATION
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
         html_recup = "<div class='recup-container'>"
@@ -291,7 +267,6 @@ with tab_s:
             html_recup += f"<div class='recup-card'><small>{m.upper()}</small><br><span class='status-dot' style='background-color:{sc}'></span><b style='color:{sc}; font-size:10px;'>{lab}</b></div>"
         st.markdown(html_recup + "</div>", unsafe_allow_html=True)
 
-        # VOLUME BAR
         vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
@@ -307,13 +282,11 @@ with tab_s:
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
-                # --- REMISE DU RECORD ET 1RM ---
                 if not f_h.empty:
                     best_w = f_h["Poids"].max()
                     best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
                     st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
-                
-                # --- HISTORIQUE (S-1 PUIS S-2) ---
+
                 if s_act > 1:
                     h1 = f_h[f_h["Semaine"] == s_act - 1]
                     if not h1.empty:
@@ -326,7 +299,7 @@ with tab_s:
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = f_h[f_h["Semaine"] == s_act]
-                # DEBUG SKIP : L'exo ne doit pas être considéré comme à réinitialiser si c'est un SKIP
+                # DEBUG SKIP : On ignore le reset si c'est un SKIP
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
@@ -339,18 +312,14 @@ with tab_s:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
                     ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
-                    
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed.copy(); v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
-                    
-                    # DEBUG SKIP : On nettoie d'abord les anciennes lignes de la semaine pour cet exo
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
-                        st.rerun()
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
 
 # --- ONGLET PROGRÈS ---
 with tab_st:
@@ -395,7 +364,11 @@ with tab_st:
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
+            # --- REMISE DU RECORD ET 1RM DANS LE ZOOM ---
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
+            c1r, c2r = st.columns(2)
+            c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**")
+            c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
             with st.expander("📊 Estimation Rep Max"):
                 ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
