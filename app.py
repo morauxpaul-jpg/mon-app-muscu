@@ -11,7 +11,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-PREMIUM COMPLET ---
+# --- 2. CSS : DESIGN CYBER-PREMIUM ---
 st.markdown("""
 <style>
     .stApp {
@@ -35,11 +35,11 @@ st.markdown("""
         background: rgba(10, 25, 50, 0.7) !important; color: #FFFFFF !important; transition: all 0.3s ease-out;
     }
     .stButton>button:hover { border-color: #58CCFF !important; box-shadow: 0 0 15px rgba(88, 204, 255, 0.5); transform: translateY(-2px); }
-    .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #4A90E2; }
+    .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
     .podium-gold { border-color: #FFD700 !important; background: rgba(255, 215, 0, 0.05) !important; }
     .podium-silver { border-color: #C0C0C0 !important; background: rgba(192, 192, 192, 0.05) !important; }
     .podium-bronze { border-color: #CD7F32 !important; background: rgba(205, 127, 50, 0.05) !important; }
-    .pr-alert { color: #00FF7F; font-weight: bold; text-shadow: 0 0 15px #00FF7F; padding: 15px; border: 2px solid #00FF7F; border-radius: 10px; text-align: center; background: rgba(0, 255, 127, 0.1); margin-bottom: 15px; }
+    .pr-alert { color: #58CCFF; font-weight: bold; text-shadow: 0 0 15px #58CCFF; padding: 15px; border: 2px solid #58CCFF; border-radius: 10px; text-align: center; background: rgba(88, 204, 255, 0.1); margin-bottom: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -53,7 +53,7 @@ def get_rep_estimations(one_rm):
 def style_comparaison(row, hist_prev):
     if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
-    v, r = "background-color: rgba(0, 255, 127, 0.2); color: #00FF7F;", "background-color: rgba(255, 69, 58, 0.2); color: #FF453A;"
+    v, r = "background-color: rgba(0, 210, 255, 0.2); color: #58CCFF;", "background-color: rgba(255, 69, 58, 0.2); color: #FF453A;"
     colors = ["", "", "", ""] 
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
@@ -111,13 +111,13 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
 
-# --- OPTION RESET SÉCURISÉ ---
+# --- MAINTENANCE SIDEBAR ---
 with st.sidebar:
-    st.title("🛡️ Maintenance")
-    if st.button("🗑️ Reset Dates (Heatmap)"):
+    st.title("⚙️ Maintenance")
+    if st.button("🚨 RÉINITIALISER CALENDRIER"):
         df_h["Date"] = ""
         save_hist(df_h)
-        st.success("Calendrier réinitialisé !"); st.rerun()
+        st.success("Toutes les dates ont été effacées !"); st.rerun()
 
 # Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
@@ -132,8 +132,8 @@ with tab1:
     for idx_j, j in enumerate(jours):
         with st.expander(f"📦 {j}"):
             c_s1, c_s2 = st.columns(2)
-            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}"):
-                if idx_j > 0: jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]; save_prog({k: prog[k] for k in jours}); st.rerun()
+            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
+                jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]; save_prog({k: prog[k] for k in jours}); st.rerun()
             if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
                 del prog[j]; save_prog(prog); st.rerun()
             for i, ex in enumerate(prog[j]):
@@ -149,19 +149,19 @@ with tab1:
                     prog[j].pop(i); save_prog(prog); st.rerun()
             st.divider()
             cx, cm, cs = st.columns([3, 2, 1])
-            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            ni, nm, ns = cx.text_input("Nouveau mouvement", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
-    nvs = st.text_input("➕ Créer une nouvelle séance")
-    if st.button("🎯 Valider Création") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
+    nvs = st.text_input("➕ Nom de la nouvelle séance")
+    if st.button("🎯 Créer") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
 # --- TAB 2 : MA SÉANCE ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
         c_h1, c_h2 = st.columns([3, 1])
-        choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        choix_s = c_h1.selectbox("Séance du jour :", list(prog.keys()))
+        s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
@@ -203,22 +203,20 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        st.markdown("### 📅 ACTIVITÉ (Lundi → Dimanche)")
-        # --- HEATMAP CYBER FRANÇAISE ---
+        st.markdown("### 📅 ACTIVITÉ CYBER (Lun → Dim)")
+        # --- HEATMAP CYBER BLUE ---
         end_d = datetime.now(); start_d = end_d - timedelta(days=140)
         date_range = pd.date_range(start=start_d, end=end_d)
         df_act = df_h[df_h["Date"] != ""].copy()
         df_act["Date"] = pd.to_datetime(df_act["Date"])
         daily_count = df_act.groupby("Date")["Séance"].nunique().reindex(date_range, fill_value=0)
         
-        # Mapping jours français (index 0 = Lundi pour Plotly)
         jours_fr = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
-        
         fig = go.Figure(data=go.Heatmap(
             z=daily_count.values,
             x=[d.strftime("%V") for d in date_range],
             y=[jours_fr[d.weekday()] for d in date_range],
-            colorscale=[[0, 'rgba(255,255,255,0.03)'], [0.5, '#00FF7F'], [1, '#58CCFF']],
+            colorscale=[[0, 'rgba(255,255,255,0.03)'], [1, '#58CCFF']],
             showscale=False, xgap=4, ygap=4,
             hovertemplate="Le %{text}<br>Séances: %{z}<extra></extra>",
             text=[d.strftime("%d/%m/%Y") for d in date_range]
@@ -227,7 +225,7 @@ with tab3:
             height=250, margin=dict(l=0, r=0, t=10, b=0),
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, categoryarray=jours_fr, categoryorder="array")
+            yaxis=dict(showgrid=False, zeroline=False, categoryarray=jours_fr, categoryorder="array", autorange="reversed")
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
