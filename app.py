@@ -32,39 +32,36 @@ st.markdown("""
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important; 
     }
     
-    /* BANNIÈRE DE VICTOIRE */
-    .victory-banner {
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 127, 0.3), transparent);
-        border: 2px solid #00FF7F; color: #00FF7F; padding: 15px; border-radius: 10px;
-        text-align: center; font-weight: 900; font-size: 24px; text-shadow: 0 0 15px #00FF7F;
-        animation: victory-pulse 1.5s infinite; margin-bottom: 20px;
+    /* SYSTÈME DE RANGS JEU VIDÉO */
+    .rank-ladder {
+        display: flex; justify-content: space-between; align-items: center;
+        background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;
+        border: 1px solid #58CCFF; margin-bottom: 30px; position: relative;
     }
-    @keyframes victory-pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.02); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
-
-    /* RÉCUPÉRATION */
-    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
-    .recup-card { min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; text-align: center; }
-    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-
-    /* RANGS */
-    .rank-ladder { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #58CCFF; margin-bottom: 30px; }
     .rank-step { text-align: center; flex: 1; opacity: 0.5; font-size: 10px; transition: 0.3s; }
     .rank-step.active { opacity: 1; font-weight: bold; transform: scale(1.1); color: #58CCFF; }
     .rank-step.completed { color: #00FF7F; opacity: 0.8; }
+    
+    .xp-container { width: 100%; margin: 10px 0; }
     .xp-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); }
     .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); box-shadow: 0 0 15px #58CCFF; }
 
     /* VOLUME BAR */
-    .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; border: 1px solid rgba(88, 204, 255, 0.2); }
-    .vol-bar { height: 12px; border-radius: 6px; background: #58CCFF; transition: width 0.5s ease-in-out; box-shadow: 0 0 10px #58CCFF; }
-    .vol-overload { background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important; }
+    .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid rgba(88, 204, 255, 0.3); }
+    .vol-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; height: 14px; overflow: hidden; margin-top: 8px; }
+    .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; }
+    .vol-overload { background: #00FF7F !important; box-shadow: 0 0 20px #00FF7F !important; }
 
-    /* PODIUM */
+    /* PODIUM COULEURS */
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
     .podium-gold { border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
     .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
     .podium-bronze { border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); }
     
+    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
+    .recup-card { min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; text-align: center; }
+    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
     .cyber-analysis { background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; font-size: 0.95rem; }
 </style>
 """, unsafe_allow_html=True)
@@ -96,8 +93,6 @@ def style_comparaison(row, hist_prev):
 
 def muscle_flappy_game():
     st.markdown("### 🕹️ MUSCLE FLAPPY : EVOLUTION")
- 
-    
     game_html = """
     <div id="game-container" style="text-align: center;">
         <canvas id="flappyCanvas" width="320" height="480" style="border: 2px solid #FF453A; border-radius: 15px; background: #050A18; cursor: pointer; touch-action: none;"></canvas>
@@ -105,8 +100,6 @@ def muscle_flappy_game():
     <script>
         const canvas = document.getElementById('flappyCanvas');
         const ctx = canvas.getContext('2d');
-        
-        // PARAMÈTRES DE BASE
         let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.35, velocity: 0, lift: -6 };
         let pipes = []; let frameCount = 0; let score = 0; 
         let gameOver = false; let gameStarted = false;
@@ -132,46 +125,33 @@ def muscle_flappy_game():
             ctx.fillStyle = '#050A18';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // DESSIN DU BICEPS
             ctx.font = "30px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
             if (gameStarted && !gameOver) {
                 biceps.velocity += biceps.gravity;
                 biceps.y += biceps.velocity;
-
-                // ACCÉLÉRATION : +0.2 de vitesse tous les 5 points
                 let currentSpeed = baseSpeed + (Math.floor(score / 5) * 0.2);
-
-                // GÉNÉRATION OBSTACLES (ajusté selon vitesse)
                 let spawnRate = Math.max(50, 80 - Math.floor(score / 2));
                 if (frameCount % spawnRate === 0) {
                     let gap = 125;
-                    let minH = 50;
-                    let topH = Math.floor(Math.random() * (canvas.height - gap - minH*2)) + minH;
-                    pipes.push({ x: canvas.width, topH: topH, gap: gap, passed: false });
+                    pipes.push({ x: canvas.width, topH: Math.floor(Math.random() * (canvas.height - gap - 100)) + 50, gap: gap, passed: false });
                 }
 
                 for (let i = pipes.length - 1; i >= 0; i--) {
                     pipes[i].x -= currentSpeed;
-                    
                     ctx.fillStyle = "#FF453A"; 
                     ctx.fillRect(pipes[i].x, 0, 50, pipes[i].topH);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 50, canvas.height);
 
-                    // COLLISION
                     if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 50) {
                         if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) {
                             gameOver = true;
                         }
                     }
-
-                    // SCORE (Détection robuste)
                     if (!pipes[i].passed && biceps.x > pipes[i].x + 50) {
-                        score++;
-                        pipes[i].passed = true;
+                        score++; pipes[i].passed = true;
                     }
-
                     if (pipes[i].x < -60) pipes.splice(i, 1);
                 }
 
@@ -183,21 +163,16 @@ def muscle_flappy_game():
             }
 
             if (gameOver) {
-                if (score > record) {
-                    record = score;
-                    localStorage.setItem('muscleFlappyRecord', record);
-                }
+                if (score > record) { record = score; localStorage.setItem('muscleFlappyRecord', record); }
                 ctx.fillStyle = "rgba(255,69,58,0.5)";
                 ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = "white";
-                ctx.font = "30px Courier New";
+                ctx.fillStyle = "white"; ctx.font = "30px Courier New";
                 ctx.fillText("ÉCHEC CRITIQUE", 45, 220);
                 ctx.font = "15px Courier New";
                 ctx.fillText("Score: " + score + " | Record: " + record, 75, 260);
                 ctx.fillText("Clique pour retenter", 75, 290);
             }
 
-            // UI SCORES
             ctx.font = "bold 20px Courier New";
             ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35);
             ctx.fillStyle = "#FFD700"; ctx.fillText("MAX: " + record, 180, 35);
@@ -321,7 +296,7 @@ with tab_s:
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
             ratio = min(vol_curr / vol_prev, 1.2)
-            st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div style='width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 5px;'><div class='vol-bar {"vol-overload" if ratio >= 1 else ""}' style='width: {min(ratio*100, 100)}%;'></div></div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div class='vol-bar-bg'><div class='vol-bar-fill {"vol-overload" if vol_curr >= vol_prev else ""}' style='width: {min(ratio*100, 100)}%;'></div></div></div>""", unsafe_allow_html=True)
 
         st.divider()
 
@@ -331,6 +306,12 @@ with tab_s:
                 var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
+                
+                # --- REMISE DU RECORD ET 1RM ---
+                if not f_h.empty:
+                    best_w = f_h["Poids"].max()
+                    best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
+                    st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
                 
                 # --- HISTORIQUE (S-1 PUIS S-2) ---
                 if s_act > 1:
@@ -345,7 +326,8 @@ with tab_s:
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = f_h[f_h["Semaine"] == s_act]
-                is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0)
+                # DEBUG SKIP : L'exo ne doit pas être considéré comme à réinitialiser si c'est un SKIP
+                is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
@@ -363,9 +345,12 @@ with tab_s:
                         v = ed.copy(); v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
+                    
+                    # DEBUG SKIP : On nettoie d'abord les anciennes lignes de la semaine pour cet exo
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                        st.rerun()
 
 # --- ONGLET PROGRÈS ---
 with tab_st:
@@ -377,9 +362,7 @@ with tab_st:
         prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "MAX")
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
-        
         st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
-
         st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy(); df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
@@ -387,12 +370,10 @@ with tab_st:
         for m in labels:
             m_max = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
             scores.append(min((m_max / standards[m]) * 100, 110))
-        
         fig_r = go.Figure(data=go.Scatterpolar(r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)'))
         fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig_r, use_container_width=True, config={'staticPlot': True})
 
-        # ANALYSE
         if any(s > 0 for s in scores):
             top_m = labels[scores.index(max(scores))]
             valid_scores = [(s, labels[idx]) for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
@@ -403,7 +384,6 @@ with tab_st:
             else: msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
             if scores[labels.index("Jambes")] == 0: msg += " Il faudra penser à les travailler un jour..."
             st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
-
         st.markdown("### 🏅 Hall of Fame")
         m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
@@ -412,7 +392,6 @@ with tab_st:
             p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
-        
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
@@ -429,7 +408,3 @@ with tab_st:
 # --- ONGLET MINI-JEU ---
 with tab_g:
     muscle_flappy_game()
-
-
-
-
