@@ -36,7 +36,6 @@ st.markdown("""
     }
     .stButton>button:hover { border-color: #58CCFF !important; box-shadow: 0 0 15px rgba(88, 204, 255, 0.5); transform: translateY(-2px); }
     
-    /* BADGE DE RANG RPG */
     .rank-badge {
         background: linear-gradient(90deg, #0A1931, #162C4E);
         padding: 15px; border-radius: 12px; border: 2px solid #58CCFF;
@@ -44,7 +43,6 @@ st.markdown("""
     }
     .rank-name { color: #58CCFF; font-size: 24px; font-weight: 900; text-transform: uppercase; }
 
-    /* JAUGE DE VOLUME FIXÉE */
     .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid rgba(88, 204, 255, 0.3); }
     .vol-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; height: 14px; overflow: hidden; margin-top: 8px; }
     .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; box-shadow: 0 0 10px #58CCFF; }
@@ -55,7 +53,15 @@ st.markdown("""
     .podium-gold { border-color: #FFD700 !important; }
     .podium-silver { border-color: #C0C0C0 !important; }
     .podium-bronze { border-color: #CD7F32 !important; }
-    .pr-alert { color: #00FF7F; font-weight: bold; text-shadow: 0 0 15px #00FF7F; padding: 15px; border: 2px solid #00FF7F; border-radius: 10px; text-align: center; background: rgba(0, 255, 127, 0.1); margin-bottom: 15px; }
+    
+    .cyber-analysis {
+        background: rgba(88, 204, 255, 0.05);
+        border-left: 4px solid #58CCFF;
+        padding: 15px;
+        border-radius: 0 10px 10px 0;
+        margin-top: -10px;
+        margin-bottom: 20px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -166,9 +172,9 @@ with tab1:
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
     nvs = st.text_input("➕ Nom nouvelle séance")
-    if st.button("🎯 Créer séance") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
+    if st.button("🎯 Créer") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (AVEC JAUGE FIXED) ---
+# --- TAB 2 : MA SÉANCE ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
@@ -180,16 +186,9 @@ with tab2:
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         
         if vol_prev > 0:
-            ratio = min(vol_curr / vol_prev, 1.0) # Visuel bridé à 100%
+            ratio = min(vol_curr / vol_prev, 1.0)
             color_class = "vol-overload" if vol_curr >= vol_prev else ""
-            st.markdown(f"""
-            <div class='vol-container'>
-                <small>⚡ Volume Session : <b>{int(vol_curr)} kg</b> (Cible : {int(vol_prev)} kg)</small>
-                <div class='vol-bar-bg'>
-                    <div class='vol-bar-fill {color_class}' style='width: {ratio*100}%;'></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class='vol-container'><small>⚡ Volume Session : <b>{int(vol_curr)} kg</b> (Cible : {int(vol_prev)} kg)</small><div class='vol-bar-bg'><div class='vol-bar-fill {color_class}' style='width: {ratio*100}%;'></div></div></div>""", unsafe_allow_html=True)
 
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
@@ -209,9 +208,9 @@ with tab2:
                 
                 curr = f_h[f_h["Semaine"] == s_act]
                 if not curr.empty and exo_final not in st.session_state.editing_exo:
-                    st.markdown("##### ✅ Données validées")
+                    st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_only[h_only["Semaine"] == last_s[0]] if len(last_s) > 0 else pd.DataFrame()).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier {exo_base}", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
+                    if st.button(f"🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
                     df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
@@ -222,15 +221,14 @@ with tab2:
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         if not v.empty:
                             new_1rm, old_1rm = max(v.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)), max(f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)) if not f_h.empty else 0
-                            if new_1rm > old_1rm and old_1rm > 0: st.balloons(); st.markdown(f"<div class='pr-alert'>🚀 NEW RECORD : {round(new_1rm, 1)}kg !</div>", unsafe_allow_html=True)
+                            if new_1rm > old_1rm and old_1rm > 0: st.balloons()
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
 
-# --- TAB 3 : PROGRÈS (RANK & CYBER CHART) ---
+# --- TAB 3 : PROGRÈS (AVEC ANALYSE RADAR) ---
 with tab3:
     if not df_h.empty:
-        # --- CALCUL DU RANG RPG ---
         vol_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         if vol_tot < 5000: rank, r_color = "RECRUE NÉON", "#E0E0E0"
         elif vol_tot < 25000: rank, r_color = "CYBER-SOLDAT", "#58CCFF"
@@ -238,24 +236,34 @@ with tab3:
         elif vol_tot < 200000: rank, r_color = "TITAN D'ACIER", "#FFD700"
         else: rank, r_color = "LÉGENDE CYBERNÉTIQUE", "#00FF7F"
 
-        st.markdown(f"""<div class='rank-badge'>
-            <small>STATUT ACTUEL</small><br>
-            <span class='rank-name' style='color:{r_color}; text-shadow: 0 0 10px {r_color};'>{rank}</span><br>
-            <small>{vol_tot:,} kg cumulés</small>
-        </div>""".replace(',', ' '), unsafe_allow_html=True)
+        st.markdown(f"""<div class='rank-badge'><small>STATUT ACTUEL</small><br><span class='rank-name' style='color:{r_color}; text-shadow: 0 0 10px {r_color};'>{rank}</span><br><small>{vol_tot:,} kg cumulés</small></div>""".replace(',', ' '), unsafe_allow_html=True)
 
         st.markdown("### 🕸️ Radar d'Équilibre Cyber")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy()
         df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
-        scores = []
-        labels = list(standards.keys())
+        scores, labels = [], list(standards.keys())
         for m in labels:
             max_rm = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
             scores.append(min((max_rm / standards[m]) * 100, 110) if max_rm > 0 else 0)
+        
         fig_r = go.Figure(data=go.Scatterpolar(r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)'))
         fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(gridcolor="rgba(255,255,255,0.1)", color="white")), showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False})
+
+        # --- NOUVEAU TEXTE D'ANALYSE DYNAMIQUE ---
+        if any(s > 0 for s in scores):
+            top_idx = scores.index(max(scores))
+            low_idx = scores.index(min(scores))
+            ecart = max(scores) - min(scores)
+            
+            ana_text = f"🛡️ **Analyseur de Profil** : "
+            if ecart < 25:
+                ana_text += "Ton profil est **équilibré**. Tes ratios de force sont cohérents."
+            else:
+                ana_text += f"Ton profil est **spécialisé**. Tes **{labels[top_idx]}** dominent ton ADN de force, tandis que les **{labels[low_idx]}** présentent un potentiel d'optimisation."
+            
+            st.markdown(f"<div class='cyber-analysis'>{ana_text}</div>", unsafe_allow_html=True)
 
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{vol_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         
@@ -274,7 +282,6 @@ with tab3:
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c_res1, c_res2 = st.columns(2); c_res1.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c_res2.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
             
-            # --- NOUVEAU GRAPHIQUE PLOTLY CYBER ---
             st.markdown("##### 📈 Évolution de Puissance")
             c_data = df_rec.groupby("Semaine")["Poids"].max().reset_index()
             fig_l = go.Figure()
