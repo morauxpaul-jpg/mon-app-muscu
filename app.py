@@ -168,7 +168,7 @@ with tab_session:
             save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.toast("Séance marquée comme manquée."); st.rerun()
 
         # RÉCUPÉRATION
-        st.markdown("### ⚡ ÉTAT DES SYSTÈMES")
+        st.markdown("### ⚡ RÉCUPÉRATION")
         rec_m = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
         html_rec = "<div class='recup-container'>"
         for m in rec_m:
@@ -253,7 +253,7 @@ with tab_stats:
         
         st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
 
-        st.markdown("### 🕸️ Radar d'Équilibre Cyber")
+        st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy()
         df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
@@ -301,3 +301,4 @@ with tab_stats:
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
             st.line_chart(df_rec.groupby("Semaine")["Poids"].max())
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
+
