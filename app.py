@@ -102,7 +102,7 @@ with col_l2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS"])
 
-# --- TAB 1 : PROGRAMME ---
+# --- TAB 1 : PROGRAMME (DÉPLACEMENT & CRÉATION RÉTABLIS) ---
 with tab1:
     st.markdown("## ⚙️ Configuration")
     jours = list(prog.keys())
@@ -133,10 +133,19 @@ with tab1:
                     if i < len(prog[j])-1: prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]; save_prog(prog); st.rerun()
                 if c5.button("🗑️", key=f"rm_{j}_{i}"):
                     prog[j].pop(i); save_prog(prog); st.rerun()
+            
+            st.divider()
             ni = st.text_input("Ajouter exo", key=f"ni_{j}")
             ns = st.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns}); save_prog(prog); st.rerun()
+    
+    # OPTION CRÉER UNE SÉANCE RESTAURÉE
+    st.markdown("---")
+    st.markdown("### 🆕 Nouvelle Session")
+    nvs = st.text_input("Nom de la séance (ex: Push 1, Pull...)")
+    if st.button("🎯 Créer la séance") and nvs:
+        prog[nvs] = []; save_prog(prog); st.rerun()
 
 # --- TAB 2 : MA SÉANCE ---
 with tab2:
