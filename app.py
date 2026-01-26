@@ -70,6 +70,7 @@ def calc_1rm(weight, reps):
     return weight * (1 + reps / 30) if reps > 0 else 0
 
 def get_rep_estimations(one_rm):
+    """Calcule le poids estimé pour différents nombres de répétitions."""
     return {r: round(one_rm * pct, 1) for r, pct in {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
 def get_base_name(full_name):
@@ -304,6 +305,6 @@ with tab_st:
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
             fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
-            st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
+            # CHANGEMENT : config={'staticPlot': True} pour bloquer l'interaction
+            st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
-
