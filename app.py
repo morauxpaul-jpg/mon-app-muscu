@@ -11,7 +11,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-PREMIUM ---
+# --- 2. CSS : DESIGN CYBER-PREMIUM COMPLET ---
 st.markdown("""
 <style>
     .stApp {
@@ -39,7 +39,6 @@ st.markdown("""
     .podium-gold { border-color: #FFD700 !important; background: rgba(255, 215, 0, 0.05) !important; }
     .podium-silver { border-color: #C0C0C0 !important; background: rgba(192, 192, 192, 0.05) !important; }
     .podium-bronze { border-color: #CD7F32 !important; background: rgba(205, 127, 50, 0.05) !important; }
-    .pr-alert { color: #58CCFF; font-weight: bold; text-shadow: 0 0 15px #58CCFF; padding: 15px; border: 2px solid #58CCFF; border-radius: 10px; text-align: center; background: rgba(88, 204, 255, 0.1); margin-bottom: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,13 +110,15 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
 
-# --- MAINTENANCE SIDEBAR ---
+# --- MAINTENANCE SIDEBAR (RESET FORCE) ---
 with st.sidebar:
     st.title("⚙️ Maintenance")
     if st.button("🚨 RÉINITIALISER CALENDRIER"):
+        # On vide la colonne Date dans le DataFrame local
         df_h["Date"] = ""
+        # On force la sauvegarde complète pour écraser le Google Sheet
         save_hist(df_h)
-        st.success("Toutes les dates ont été effacées !"); st.rerun()
+        st.success("Données nettoyées ! Redémarrage..."); st.rerun()
 
 # Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
@@ -149,7 +150,7 @@ with tab1:
                     prog[j].pop(i); save_prog(prog); st.rerun()
             st.divider()
             cx, cm, cs = st.columns([3, 2, 1])
-            ni, nm, ns = cx.text_input("Nouveau mouvement", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
     nvs = st.text_input("➕ Nom de la nouvelle séance")
@@ -160,7 +161,7 @@ with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
         c_h1, c_h2 = st.columns([3, 1])
-        choix_s = c_h1.selectbox("Séance du jour :", list(prog.keys()))
+        choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
         s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
@@ -195,7 +196,7 @@ with tab2:
                         if not v.empty:
                             new_1rm = max(v.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1))
                             old_1rm = max(f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)) if not f_h.empty else 0
-                            if new_1rm > old_1rm and old_1rm > 0: st.balloons(); st.markdown(f"<div class='pr-alert'>🚀 NOUVEAU RECORD : {round(new_1rm, 1)}kg !</div>", unsafe_allow_html=True)
+                            if new_1rm > old_1rm and old_1rm > 0: st.balloons()
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
@@ -203,8 +204,8 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        st.markdown("### 📅 ACTIVITÉ CYBER (Lun → Dim)")
-        # --- HEATMAP CYBER BLUE ---
+        st.markdown("### 📅 ACTIVITÉ CYBER (Lundi → Dimanche)")
+        # --- HEATMAP CYBER BLUE (TOP-DOWN) ---
         end_d = datetime.now(); start_d = end_d - timedelta(days=140)
         date_range = pd.date_range(start=start_d, end=end_d)
         df_act = df_h[df_h["Date"] != ""].copy()
@@ -216,13 +217,13 @@ with tab3:
             z=daily_count.values,
             x=[d.strftime("%V") for d in date_range],
             y=[jours_fr[d.weekday()] for d in date_range],
-            colorscale=[[0, 'rgba(255,255,255,0.03)'], [1, '#58CCFF']],
+            colorscale=[[0, 'rgba(255,255,255,0.03)'], [1, '#58CCFF']], # Cyber Blue pur
             showscale=False, xgap=4, ygap=4,
             hovertemplate="Le %{text}<br>Séances: %{z}<extra></extra>",
             text=[d.strftime("%d/%m/%Y") for d in date_range]
         ))
         fig.update_layout(
-            height=250, margin=dict(l=0, r=0, t=10, b=0),
+            height=280, margin=dict(l=0, r=0, t=10, b=0),
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, categoryarray=jours_fr, categoryorder="array", autorange="reversed")
