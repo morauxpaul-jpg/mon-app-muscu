@@ -30,19 +30,17 @@ st.markdown("""
         font-family: 'Courier New', monospace; font-size: 38px !important; color: #58CCFF !important; 
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important; 
     }
-    
-    /* SYSTÈME DE RANGS JEU VIDÉO */
-    .rank-ladder {
-        display: flex; justify-content: space-between; align-items: center;
-        background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;
-        border: 1px solid #58CCFF; margin-bottom: 30px; position: relative;
+    .stButton>button {
+        border-radius: 8px !important; border: 1px solid rgba(74, 144, 226, 0.5) !important;
+        background: rgba(10, 25, 50, 0.7) !important; color: #FFFFFF !important; transition: all 0.3s ease-out;
     }
-    .rank-step { text-align: center; flex: 1; opacity: 0.5; font-size: 10px; transition: 0.3s; }
-    .rank-step.active { opacity: 1; font-weight: bold; transform: scale(1.1); color: #58CCFF; }
-    .rank-step.completed { color: #00FF7F; opacity: 0.8; }
-    .xp-container { width: 100%; margin: 10px 0; }
-    .xp-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); }
-    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); box-shadow: 0 0 15px #58CCFF; }
+    .stButton>button:hover { border-color: #58CCFF !important; box-shadow: 0 0 15px rgba(88, 204, 255, 0.5); transform: translateY(-2px); }
+    
+    /* XP BAR */
+    .rank-container { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 2px solid #58CCFF; margin-bottom: 25px; text-align: center; }
+    .rank-name { color: #58CCFF; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; display: block; }
+    .xp-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 8px; height: 18px; margin-top: 10px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); box-shadow: 0 0 10px #58CCFF; }
 
     /* VOLUME BAR */
     .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid rgba(88, 204, 255, 0.3); }
@@ -55,7 +53,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONCTIONS TECHNIQUES ---
+# --- FONCTIONS ---
 def calc_1rm(weight, reps):
     return weight * (1 + reps / 30) if reps > 0 else 0
 
@@ -80,7 +78,7 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-# --- DATA ---
+# --- CONNEXION ---
 @st.cache_resource
 def get_gs():
     try:
@@ -120,15 +118,17 @@ try:
             if "muscle" not in exo: exo["muscle"] = "Autre"
 except: prog = {}
 
+# Mapping Dynamique
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
+# Logo
 col_logo1, col_logo2, col_logo3 = st.columns([1, 1.8, 1])
 with col_logo2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS"])
 
-# --- TAB 1 ---
+# --- TAB 1 : PROGRAMME ---
 with tab1:
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
@@ -164,6 +164,7 @@ with tab2:
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
         s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
+        # JAUGE VOLUME
         vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
@@ -177,6 +178,7 @@ with tab2:
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
+                # --- HISTORIQUE VERTICAL DYNAMIQUE ---
                 if s_act > 1:
                     st.caption(f"📅 Historique de {exo_final}")
                     if s_act > 2:
@@ -184,6 +186,7 @@ with tab2:
                         if not h2.empty:
                             st.caption("Semaine S-2")
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    
                     h1 = f_h[f_h["Semaine"] == s_act - 1]
                     if not h1.empty:
                         st.caption("Semaine S-1")
@@ -191,6 +194,7 @@ with tab2:
                 else:
                     st.info("Semaine 1 : Établissez vos marques !")
 
+                # --- SAISIE / RÉSULTAT ---
                 curr = f_h[f_h["Semaine"] == s_act]
                 h_prev = f_h[f_h["Semaine"] == s_act - 1] if s_act > 1 else pd.DataFrame()
 
@@ -203,6 +207,7 @@ with tab2:
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
+                    
                     ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
                     
                     c_v, c_sk = st.columns(2)
@@ -218,42 +223,18 @@ with tab2:
                         sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS (SYSTEM RPG) ---
+# --- TAB 3 : PROGRÈS (RANKS & RADAR) ---
 with tab3:
     if not df_h.empty:
-        # --- LOGIQUE XP & RANKS RPG ---
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers = [0, 5000, 25000, 75000, 200000, 500000]
         noms = ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
-        
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
-        
-        prev_rank = noms[idx-1] if idx > 0 else "DEBUTANT"
-        curr_rank = noms[idx]
-        next_rank = noms[idx+1] if idx < len(noms)-1 else "LEVEL MAX"
-        
-        next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
+        cur_rank, next_p = noms[idx], paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         
-        # VISUEL LADDER
-        st.markdown(f"""
-        <div style='text-align: center; margin-bottom: 5px;'><small style='color:#58CCFF;'>Séquence de Carrière</small></div>
-        <div class='rank-ladder'>
-            <div class='rank-step completed'><small>PASSÉ</small><br>{prev_rank}</div>
-            <div style='font-size: 20px; color: #58CCFF;'>➡️</div>
-            <div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_rank}</span></div>
-            <div style='font-size: 20px; color: #58CCFF;'>➡️</div>
-            <div class='rank-step'><small>PROCHAIN</small><br>{next_rank}</div>
-        </div>
-        <div class='xp-container'>
-            <div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div>
-            <div style='display:flex; justify-content: space-between;'>
-                <small style='color:#00FF7F;'>{v_tot:,} kg</small>
-                <small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small>
-            </div>
-        </div>
-        """.replace(',', ' '), unsafe_allow_html=True)
+        st.markdown(f"""<div class='rank-container'><span style='font-size:12px; color:#58CCFF;'>NIVEAU {idx+1}</span><br><span class='rank-name'>{cur_rank}</span><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><small style='color:#58CCFF;'>{v_tot:,} / {next_p:,} kg pour le prochain palier</small></div>""".replace(',', ' '), unsafe_allow_html=True)
 
         st.markdown("### 🕸️ Radar d'Équilibre Cyber")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
@@ -270,10 +251,10 @@ with tab3:
 
         if any(s > 0 for s in scores):
             top, low = labels[scores.index(max(scores))], labels[scores.index(min(scores))]
-            msg = f"🛡️ **Analyseur de Profil** : "
-            if (max(scores) - min(scores)) < 25: msg += "Ton profil est équilibré. Tes ratios de force sont cohérents."
-            else: msg += f"Ton profil est spécialisé. Tes {top} dominent ton ADN de force, tandis que les {low} présentent un potentiel d'optimisation."
-            st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
+            ana = f"🛡️ **Analyseur de Profil** : "
+            if (max(scores) - min(scores)) < 25: ana += "Profil équilibré. Ratios de force cohérents."
+            else: ana += f"Profil spécialisé. Tes {top} dominent, tandis que les {low} sont à optimiser."
+            st.markdown(f"<div class='cyber-analysis'>{ana}</div>", unsafe_allow_html=True)
 
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{v_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         
