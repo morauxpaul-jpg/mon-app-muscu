@@ -96,7 +96,7 @@ def style_comparaison(row, hist_prev):
 
 def muscle_flappy_game():
     st.markdown("### 🕹️ MUSCLE FLAPPY : EVOLUTION")
-    st.caption("Le jeu accélère tous les 5 points ! Bats ton record ! ⚡")
+ 
     
     game_html = """
     <div id="game-container" style="text-align: center;">
@@ -299,7 +299,7 @@ with tab_s:
             save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.rerun()
 
         # RÉCUPÉRATION
-        st.markdown("### ⚡ ÉTAT DES SYSTÈMES")
+        st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
         html_recup = "<div class='recup-container'>"
         for m in recup_cols:
@@ -429,6 +429,7 @@ with tab_st:
 # --- ONGLET MINI-JEU ---
 with tab_g:
     muscle_flappy_game()
+
 
 
 
