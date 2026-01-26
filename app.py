@@ -10,7 +10,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : LOOK NÉON CYBER-PREMIUM ---
+# --- 2. CSS : DESIGN CYBER-PREMIUM COMPLET ---
 st.markdown("""
 <style>
     .stApp {
@@ -64,7 +64,7 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-# --- CONNEXION GOOGLE ---
+# --- CONNEXION ---
 @st.cache_resource
 def get_google_sheets():
     try:
@@ -80,10 +80,9 @@ def get_hist():
     try:
         data = ws_h.get_all_records()
         df = pd.DataFrame(data)
-        # Nettoyage et complétion des données anciennes
+        # Garantir toutes les colonnes nécessaires
         for col in ["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque", "Muscle", "Date"]:
             if col not in df.columns: df[col] = "" if col in ["Remarque", "Muscle", "Date", "Séance", "Exercice"] else 0
-        df["Muscle"] = df["Muscle"].apply(lambda x: "Autre" if str(x).strip() == "" else x)
         df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0).astype(float)
         df["Reps"] = pd.to_numeric(df["Reps"], errors='coerce').fillna(0).astype(int)
         df["Semaine"] = pd.to_numeric(df["Semaine"], errors='coerce').fillna(1).astype(int)
@@ -107,8 +106,20 @@ try:
             if "muscle" not in exo: exo["muscle"] = "Autre"
 except: prog = {}
 
-col_logo1, col_logo2, col_logo3 = st.columns([1, 1.8, 1])
-with col_logo2: st.image("logo.png", use_container_width=True)
+# --- MAPPING MUSCLE DYNAMIQUE ---
+# On crée un dictionnaire de correspondance Exercice -> Muscle basé sur le Programme actuel
+muscle_mapping = {}
+for s in prog:
+    for ex in prog[s]:
+        muscle_mapping[ex["name"]] = ex.get("muscle", "Autre")
+
+# On applique ce mapping à l'historique pour corriger les anciennes données
+df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
+df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
+
+# Logo
+col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
+with col_l2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS"])
 
@@ -136,7 +147,7 @@ with tab1:
                     prog[j].pop(i); save_prog(prog); st.rerun()
             st.divider()
             cx, cm, cs = st.columns([3, 2, 1])
-            ni = cx.text_input("Nouvel exo", key=f"ni_{j}")
+            ni = cx.text_input("Ajouter exo", key=f"ni_{j}")
             nm = cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}")
             ns = cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
@@ -144,16 +155,17 @@ with tab1:
     nvs = st.text_input("➕ Créer une nouvelle séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (FIX DOUBLONS & POULIE) ---
+# --- TAB 2 : MA SÉANCE (FIX DOUBLE AFFICHAGE) ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
         c_h1, c_h2 = st.columns([3, 1])
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk_rows = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
             save_hist(pd.concat([df_h, pd.DataFrame(sk_rows)], ignore_index=True)); st.rerun()
+
         for i, ex_obj in enumerate(prog[choix_s]):
             exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj["sets"], ex_obj.get("muscle", "Autre")
             with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
@@ -165,12 +177,15 @@ with tab2:
                 if len(last_s) > 0:
                     st.caption("🔍 Historique :")
                     st.dataframe(pd.concat([h_only[h_only["Semaine"] == s] for s in last_s])[["Semaine", "Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                
                 curr = f_h[f_h["Semaine"] == s_act]
                 h_prev = h_only[h_only["Semaine"] == last_s[0]] if len(last_s) > 0 else pd.DataFrame()
+                
+                # AFFICHAGE EXCLUSIF : RÉSUMÉ OU ÉDITEUR
                 if not curr.empty and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_prev).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
+                    if st.button(f"🔄 Modifier {exo_base}", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
                     df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
@@ -190,15 +205,17 @@ with tab2:
                         sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS (HEATMAP & PODIUM FIX) ---
+# --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        st.markdown("### 📅 ACTIVITÉ (Derniers 30 jours)")
-        active_dates = set(df_h[df_h["Date"] != ""]["Date"])
+        st.markdown("### 📅 RÉGULARITÉ (Heatmap)")
+        activity_dates = set(df_h[df_h["Date"] != ""]["Date"])
         today = datetime.now()
-        squares = [("🟩" if (today - timedelta(days=d)).strftime("%Y-%m-%d") in active_dates else "⬜") for d in range(29, -1, -1)]
+        squares = [("🟩" if (today - timedelta(days=d)).strftime("%Y-%m-%d") in activity_dates else "⬜") for d in range(29, -1, -1)]
         st.write(" ".join(squares))
+        
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
+        
         st.markdown("### 🏅 Hall of Fame")
         m_filter = st.multiselect("Filtrer par muscle :", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], default=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"])
         df_p = df_h[(df_h["Reps"] > 0) & (df_h["Muscle"].isin(m_filter))].copy()
@@ -208,6 +225,7 @@ with tab3:
             p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
+
         st.divider(); sel = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
