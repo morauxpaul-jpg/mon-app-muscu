@@ -50,7 +50,7 @@ st.markdown("""
     .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; }
     .vol-overload { background: #00FF7F !important; box-shadow: 0 0 20px #00FF7F !important; }
 
-    /* PODIUM COULEURS */
+    /* PODIUM COULEURS RESTAUREES */
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
     .podium-gold { border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
     .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
@@ -189,11 +189,11 @@ with tab2:
                     if s_act > 2:
                         h2 = f_h[f_h["Semaine"] == s_act - 2]
                         if not h2.empty:
-                            st.caption(f"📅 Semaine S-2 ({s_act-2})")
+                            st.caption("📅 Semaine S-2")
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                     h1 = f_h[f_h["Semaine"] == s_act - 1]
                     if not h1.empty:
-                        st.caption(f"📅 Semaine S-1 ({s_act-1})")
+                        st.caption("📅 Semaine S-1")
                         st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = f_h[f_h["Semaine"] == s_act]
@@ -226,7 +226,7 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        # LOGIQUE XP & RANKS
+        # XP & RANKS
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers = [0, 5000, 25000, 75000, 200000, 500000]
         noms = ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
@@ -247,11 +247,14 @@ with tab3:
         </div>
         <div class='xp-container'>
             <div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div>
-            <div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div>
+            <div style='display:flex; justify-content: space-between;'>
+                <small style='color:#00FF7F;'>{v_tot:,} kg</small>
+                <small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small>
+            </div>
         </div>
         """.replace(',', ' '), unsafe_allow_html=True)
 
-        st.markdown("### 🕸️ Radar d'Équilibre")
+        st.markdown("### 🕸️ Radar d'Équilibre Cyber")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy()
         df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
@@ -264,9 +267,34 @@ with tab3:
         fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False})
 
+        # --- ANALYSE DYNAMIQUE ---
         if any(s > 0 for s in scores):
-            top, low = labels[scores.index(max(scores))], labels[scores.index(min(scores))]
-            st.markdown(f"<div class='cyber-analysis'>🛡️ <b>Analyseur de Profil</b> : Ton profil est actuellement dominé par tes {top}. Pour un équilibre parfait, concentre-toi sur tes points les plus bas du radar ({low}).</div>", unsafe_allow_html=True)
+            # Identifier le point fort
+            top_idx = scores.index(max(scores))
+            top_m = labels[top_idx]
+            
+            # Identifier le vrai point faible (le plus bas score NON-NUL, excluant les jambes à 0)
+            non_zero_scores = [s for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
+            if non_zero_scores:
+                min_val = min(non_zero_scores)
+                low_idx = scores.index(min_val)
+                low_m = labels[low_idx]
+                gap = max(scores) - min_val
+                
+                # Niveau de déséquilibre
+                if gap < 15: lvl = "Faible"
+                elif gap < 30: lvl = "Moyen"
+                else: lvl = "Élevé"
+                
+                msg = f"🛡️ **Analyseur de Profil** : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé **{lvl}**."
+            else:
+                msg = f"🛡️ **Analyseur de Profil** : Ton profil est dominé par tes {top_m}."
+            
+            # Note sur les jambes si aucune séance
+            if scores[labels.index("Jambes")] == 0:
+                msg += " Il faudra penser à les travailler un jour..."
+            
+            st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
 
         # PODIUM HALL OF FAME (Restauration Couleurs)
         st.markdown("### 🏅 Hall of Fame")
@@ -296,4 +324,3 @@ with tab3:
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
             st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
-
