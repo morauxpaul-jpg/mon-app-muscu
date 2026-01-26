@@ -11,7 +11,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-RPG ---
+# --- 2. CSS : DESIGN CYBER-RPG COMPLET ---
 st.markdown("""
 <style>
     .stApp {
@@ -50,16 +50,22 @@ st.markdown("""
     .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; }
     .vol-overload { background: #00FF7F !important; box-shadow: 0 0 20px #00FF7F !important; }
 
+    /* PODIUM COULEURS */
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
+    .podium-gold { border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+    .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
+    .podium-bronze { border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); }
+    
     .cyber-analysis { background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; font-size: 0.95rem; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONCTIONS TECHNIQUES ---
+# --- 3. FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
     return weight * (1 + reps / 30) if reps > 0 else 0
 
 def get_rep_estimations(one_rm):
+    """Calcule le poids estimé pour différents nombres de répétitions."""
     return {r: round(one_rm * pct, 1) for r, pct in {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
 def get_base_name(full_name):
@@ -80,7 +86,7 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-# --- DATA ---
+# --- 4. CONNEXION ---
 @st.cache_resource
 def get_gs():
     try:
@@ -128,7 +134,7 @@ with col_logo2: st.image("logo.png", use_container_width=True)
 
 tab1, tab2, tab3 = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS"])
 
-# --- TAB 1 ---
+# --- TAB 1 : PROGRAMME ---
 with tab1:
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
@@ -141,7 +147,7 @@ with tab1:
             for i, ex in enumerate(prog[j]):
                 c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
                 c1.write(f"**{ex['name']}**")
-                ex['sets'] = c2.number_input("Sets", 1, 15, ex['sets'], key=f"p_s_{j}_{i}")
+                ex['sets'] = c2.number_input("Sets", 1, 15, ex.get('sets', 3), key=f"p_s_{j}_{i}")
                 ex['muscle'] = c3.selectbox("Muscle", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], index=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"].index(ex.get("muscle", "Autre")), key=f"m_{j}_{i}")
                 if c4.button("⬆️", key=f"ue_{j}_{i}"):
                     if i > 0: prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]; save_prog(prog); st.rerun()
@@ -157,13 +163,14 @@ with tab1:
     nvs = st.text_input("➕ Créer séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (HISTORIQUE VERTICAL) ---
+# --- TAB 2 : MA SÉANCE ---
 with tab2:
     if prog:
         c_h1, c_h2 = st.columns([3, 1])
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
         s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
+        # JAUGE VOLUME
         vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
@@ -171,25 +178,23 @@ with tab2:
             st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div class='vol-bar-bg'><div class='vol-bar-fill {"vol-overload" if vol_curr >= vol_prev else ""}' style='width: {ratio*100}%;'></div></div></div>""", unsafe_allow_html=True)
 
         for i, ex_obj in enumerate(prog[choix_s]):
-            exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj["sets"], ex_obj.get("muscle", "Autre")
+            exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
             with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
                 var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
+                # HISTORIQUE VERTICAL STRICT
                 if s_act > 1:
-                    st.caption(f"📅 Historique de {exo_final}")
                     if s_act > 2:
                         h2 = f_h[f_h["Semaine"] == s_act - 2]
                         if not h2.empty:
-                            st.caption("Semaine S-2")
+                            st.caption(f"📅 Semaine S-2 ({s_act-2})")
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                     h1 = f_h[f_h["Semaine"] == s_act - 1]
                     if not h1.empty:
-                        st.caption("Semaine S-1")
+                        st.caption(f"📅 Semaine S-1 ({s_act-1})")
                         st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-                else:
-                    st.info("Semaine 1 : Établissez vos marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
                 h_prev = f_h[f_h["Semaine"] == s_act - 1] if s_act > 1 else pd.DataFrame()
@@ -218,40 +223,31 @@ with tab2:
                         sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS (SYSTEM RPG) ---
+# --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        # --- LOGIQUE XP & RANKS RPG ---
+        # LOGIQUE XP & RANKS
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers = [0, 5000, 25000, 75000, 200000, 500000]
         noms = ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
-        
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
-        
-        prev_rank = noms[idx-1] if idx > 0 else "DEBUTANT"
-        curr_rank = noms[idx]
-        next_rank = noms[idx+1] if idx < len(noms)-1 else "LEVEL MAX"
-        
+        prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "MAX")
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         
-        # VISUEL LADDER
         st.markdown(f"""
         <div style='text-align: center; margin-bottom: 5px;'><small style='color:#58CCFF;'>Séquence de Carrière</small></div>
         <div class='rank-ladder'>
-            <div class='rank-step completed'><small>PASSÉ</small><br>{prev_rank}</div>
+            <div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div>
             <div style='font-size: 20px; color: #58CCFF;'>➡️</div>
-            <div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_rank}</span></div>
+            <div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div>
             <div style='font-size: 20px; color: #58CCFF;'>➡️</div>
-            <div class='rank-step'><small>PROCHAIN</small><br>{next_rank}</div>
+            <div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div>
         </div>
         <div class='xp-container'>
             <div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div>
-            <div style='display:flex; justify-content: space-between;'>
-                <small style='color:#00FF7F;'>{v_tot:,} kg</small>
-                <small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small>
-            </div>
+            <div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div>
         </div>
         """.replace(',', ' '), unsafe_allow_html=True)
 
@@ -265,34 +261,38 @@ with tab3:
             scores.append(min((m_max / standards[m]) * 100, 110))
         
         fig_r = go.Figure(data=go.Scatterpolar(r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)'))
-        fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
+        fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False})
 
         if any(s > 0 for s in scores):
             top, low = labels[scores.index(max(scores))], labels[scores.index(min(scores))]
-            msg = f"🛡️ **Analyseur de Profil** : "
-            if (max(scores) - min(scores)) < 25: msg += "Ton profil est équilibré. Tes ratios de force sont cohérents."
-            else: msg += f"Ton profil est spécialisé. Tes {top} dominent ton ADN de force, tandis que les {low} présentent un potentiel d'optimisation."
-            st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='cyber-analysis'>🛡️ <b>Analyseur de Profil</b> : Ton profil est actuellement dominé par tes {top}. Pour un équilibre cybernétique parfait, concentre-toi sur tes points les plus bas du radar ({low}).</div>", unsafe_allow_html=True)
 
-        c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{v_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
-        
+        # PODIUM HALL OF FAME (Restauration Couleurs)
         st.markdown("### 🏅 Hall of Fame")
-        m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
+        m_filt = st.multiselect("Filtrer muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
         if not df_p_filt.empty:
             podium = df_p_filt.groupby("Exercice").agg({"1RM": "max"}).sort_values(by="1RM", ascending=False).head(3)
-            p_cols = st.columns(3); meds, clss = ["🥇", "🥈", "🥉"], ["podium-gold", "podium-silver", "podium-bronze"]
+            p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
         
-        st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
+        # ZOOM MOUVEMENT (Restauration Estimations)
+        st.divider()
+        sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c1r, c2r = st.columns(2); c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
+            
+            # Module Rep Max restauré
+            with st.expander("📊 Estimation Rep Max (Charges de travail)"):
+                ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
+                for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
+                
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
-            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='lines+markers', line=dict(color='#58CCFF', width=4), marker=dict(size=10, color='#00FF7F')))
+            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
             st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
