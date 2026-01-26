@@ -49,8 +49,13 @@ def calc_1rm(weight, reps):
 def get_rep_estimations(one_rm):
     return {r: round(one_rm * pct, 1) for r, pct in {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
+def get_base_name(full_name):
+    """Extrait le nom de l'exercice en ignorant la variante entre parenthèses."""
+    if "(" in full_name:
+        return full_name.split("(")[0].strip()
+    return full_name
+
 def style_comparaison(row, hist_prev):
-    """Logique de couleur : Vert pour progression, Rouge pour régression."""
     if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
     v, r = "background-color: rgba(0, 255, 127, 0.2); color: #00FF7F;", "background-color: rgba(255, 69, 58, 0.2); color: #FF453A;"
@@ -58,14 +63,14 @@ def style_comparaison(row, hist_prev):
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
         cw, cr = float(row["Poids"]), int(row["Reps"])
-        if cw < pw: colors[1], colors[2] = r, r # Moins de poids
-        elif cw > pw: colors[1], colors[2] = v, v # Plus de poids
+        if cw < pw: colors[1], colors[2] = r, r
+        elif cw > pw: colors[1], colors[2] = v, v
         elif cw == pw:
-            if cr > pr: colors[1] = v # Plus de reps
-            elif cr < pr: colors[1] = r # Moins de reps
+            if cr > pr: colors[1] = v
+            elif cr < pr: colors[1] = r
     return colors
 
-# --- CONNEXION GOOGLE SHEETS ---
+# --- CONNEXION ---
 @st.cache_resource
 def get_google_sheets():
     try:
@@ -107,10 +112,10 @@ try:
             if "muscle" not in exo: exo["muscle"] = "Autre"
 except: prog = {}
 
-# --- MAPPING MUSCLE DYNAMIQUE ---
-# Applique le muscle défini dans le programme à tout l'historique
+# --- MAPPING MUSCLE AVEC EXTRACTION DU NOM DE BASE ---
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
-df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
+# On applique le mapping sur le nom de base pour corriger l'historique
+df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"])
 df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
 
 # Logo
@@ -149,13 +154,13 @@ with tab1:
     nvs = st.text_input("➕ Nom nouvelle séance")
     if st.button("🎯 Créer séance") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (AVEC VERT NÉON & EXCLUSIVITÉ) ---
+# --- TAB 2 : MA SÉANCE (AVEC MAPPING VARIANTE) ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
         c_h1, c_h2 = st.columns([3, 1])
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
@@ -187,8 +192,7 @@ with tab2:
                     if st.button(f"💾 Enregistrer {exo_base}", key=f"sv_{exo_final}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         if not v.empty:
-                            new_1rm = max(v.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1))
-                            old_1rm = max(f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)) if not f_h.empty else 0
+                            new_1rm, old_1rm = max(v.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)), max(f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)) if not f_h.empty else 0
                             if new_1rm > old_1rm and old_1rm > 0: st.balloons(); st.markdown(f"<div class='pr-alert'>🚀 NEW RECORD : {round(new_1rm, 1)}kg !</div>", unsafe_allow_html=True)
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
@@ -197,7 +201,7 @@ with tab2:
                         sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS (PODIUM MAPPÉ) ---
+# --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
