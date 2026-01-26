@@ -251,7 +251,7 @@ with tab3:
         </div>
         """.replace(',', ' '), unsafe_allow_html=True)
 
-        st.markdown("### 🕸️ Radar d'Équilibre Cyber")
+        st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy()
         df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
@@ -266,7 +266,7 @@ with tab3:
 
         if any(s > 0 for s in scores):
             top, low = labels[scores.index(max(scores))], labels[scores.index(min(scores))]
-            st.markdown(f"<div class='cyber-analysis'>🛡️ <b>Analyseur de Profil</b> : Ton profil est actuellement dominé par tes {top}. Pour un équilibre cybernétique parfait, concentre-toi sur tes points les plus bas du radar ({low}).</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='cyber-analysis'>🛡️ <b>Analyseur de Profil</b> : Ton profil est actuellement dominé par tes {top}. Pour un équilibre parfait, concentre-toi sur tes points les plus bas du radar ({low}).</div>", unsafe_allow_html=True)
 
         # PODIUM HALL OF FAME (Restauration Couleurs)
         st.markdown("### 🏅 Hall of Fame")
@@ -296,3 +296,4 @@ with tab3:
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
             st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
+
