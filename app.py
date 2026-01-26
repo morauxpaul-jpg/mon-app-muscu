@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import gspread
 from datetime import datetime, timedelta
+import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="logo.png")
@@ -10,7 +11,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-PREMIUM COMPLET ---
+# --- 2. CSS : DESIGN CYBER-PREMIUM ---
 st.markdown("""
 <style>
     .stApp {
@@ -105,12 +106,11 @@ try:
             if "muscle" not in exo: exo["muscle"] = "Autre"
 except: prog = {}
 
-# --- MAPPING MUSCLE DYNAMIQUE ---
+# --- MAPPING MUSCLE ---
 muscle_mapping = {}
 for s in prog:
     for ex in prog[s]:
         muscle_mapping[ex["name"]] = ex.get("muscle", "Autre")
-
 df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
 df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
 
@@ -152,7 +152,7 @@ with tab1:
     nvs = st.text_input("➕ Créer une nouvelle séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (BANC AJOUTÉ) ---
+# --- TAB 2 : MA SÉANCE ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
@@ -201,16 +201,44 @@ with tab2:
                         sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS ---
+# --- TAB 3 : PROGRÈS (AVEC NOUVELLE HEATMAP PLOTLY) ---
 with tab3:
     if not df_h.empty:
-        st.markdown("### 📅 RÉGULARITÉ")
-        active_dates = set(df_h[df_h["Date"] != ""]["Date"])
-        today = datetime.now()
-        squares = [("🟩" if (today - timedelta(days=d)).strftime("%Y-%m-%d") in active_dates else "⬜") for d in range(29, -1, -1)]
-        st.write(" ".join(squares))
+        st.markdown("### 📅 ACTIVITÉ CYBER")
         
-        c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
+        # --- LOGIQUE HEATMAP INTERACTIVE ---
+        # 1. On crée une grille de dates pour les 6 derniers mois
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=180)
+        date_range = pd.date_range(start=start_date, end=end_date)
+        
+        # 2. On compte les séances par jour dans l'historique
+        df_act = df_h[df_h["Date"] != ""].copy()
+        df_act["Date"] = pd.to_datetime(df_act["Date"])
+        daily_count = df_act.groupby("Date")["Séance"].nunique().reindex(date_range, fill_value=0)
+        
+        # 3. Création du graphique Plotly
+        fig = go.Figure(data=go.Heatmap(
+            z=daily_count.values,
+            x=[d.strftime("%V") for d in date_range], # Numéro de semaine
+            y=[d.strftime("%a") for d in date_range], # Nom du jour
+            colorscale=[[0, 'rgba(255,255,255,0.05)'], [0.5, '#00FF7F'], [1, '#58CCFF']],
+            showscale=False, xgap=3, ygap=3, hoverongaps=False,
+            hovertemplate="Le %{text}<br>Séances: %{z}<extra></extra>",
+            text=[d.strftime("%d/%m/%Y") for d in date_range]
+        ))
+        
+        fig.update_layout(
+            height=200, margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, autorange="reversed")
+        )
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+        c1, c2 = st.columns(2)
+        c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' '))
+        c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         
         st.markdown("### 🏅 Hall of Fame")
         m_filter = st.multiselect("Filtrer par muscle :", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], default=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"])
