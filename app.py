@@ -227,18 +227,14 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        # --- LOGIQUE XP & RANKS RPG ---
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers = [0, 5000, 25000, 75000, 200000, 500000]
         noms = ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
-        
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
-        
         prev_rank = noms[idx-1] if idx > 0 else "DEBUTANT"
         curr_rank = noms[idx]
         next_rank = noms[idx+1] if idx < len(noms)-1 else "LEVEL MAX"
-        
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         
@@ -254,10 +250,10 @@ with tab3:
             scores.append(min((m_max / standards[m]) * 100, 110))
         
         fig_r = go.Figure(data=go.Scatterpolar(r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)'))
-        fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
-        st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False})
+        # FIX MOBILE : Désactivation du zoom/déplacement pour le scroll
+        fig_r.update_layout(dragmode=False, polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
+        st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
-        # --- ANALYSE DYNAMIQUE ---
         if any(s > 0 for s in scores):
             top_m = labels[scores.index(max(scores))]
             valid_scores = [(s, labels[idx]) for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
@@ -265,18 +261,16 @@ with tab3:
                 min_val, low_m = min(valid_scores, key=lambda x: x[0])
                 gap = max(scores) - min_val
                 lvl = "Faible" if gap < 15 else ("Moyen" if gap < 30 else "Élevé")
-                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé {lvl}."
-            else:
-                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
-            if scores[labels.index("Jambes")] == 0:
-                msg += " Il faudra penser à les travailler un jour..."
+                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé **{lvl}**."
+            else: msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
+            if scores[labels.index("Jambes")] == 0: msg += " Il faudra penser à les travailler un jour..."
             st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
 
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{v_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         
-        # PODIUM HALL OF FAME (Restauration Couleurs & Aide Visuelle)
+        # HALL OF FAME AVEC EXPLICATION 1RM
         st.markdown("### 🏅 Hall of Fame")
-        st.caption("🏆 Les poids indiqués correspondent à votre **1RM Estimé** (Charge maximale théorique pour 1 répétition).")
+        st.info("💡 Les poids indiqués sur le podium correspondent à ton **1RM Estimé** : le poids maximal théorique que tu pourrais soulever sur une seule répétition complète.")
         m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
         if not df_p_filt.empty:
@@ -285,17 +279,19 @@ with tab3:
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
         
-        # ZOOM MOUVEMENT (Restauration Estimations)
+        # ZOOM MOUVEMENT AVEC TABLEAU REP MAX
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c1r, c2r = st.columns(2); c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
+            
             with st.expander("📊 Estimation Rep Max (Charges de travail)"):
                 ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
+                
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
-            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
+            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='lines+markers', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
             st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
