@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import gspread
 from datetime import datetime
+import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="logo.png")
@@ -39,6 +40,11 @@ st.markdown("""
     .podium-silver { border-color: #C0C0C0 !important; background: rgba(192, 192, 192, 0.05) !important; }
     .podium-bronze { border-color: #CD7F32 !important; background: rgba(205, 127, 50, 0.05) !important; }
     .pr-alert { color: #00FF7F; font-weight: bold; text-shadow: 0 0 15px #00FF7F; padding: 15px; border: 2px solid #00FF7F; border-radius: 10px; text-align: center; background: rgba(0, 255, 127, 0.1); margin-bottom: 15px; }
+    
+    /* STYLE JAUGE VOLUME */
+    .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; margin-top: 10px; border: 1px solid rgba(88, 204, 255, 0.2); }
+    .vol-bar { height: 12px; border-radius: 6px; background: #58CCFF; transition: width 0.5s ease-in-out; box-shadow: 0 0 10px #58CCFF; }
+    .vol-overload { background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -50,9 +56,7 @@ def get_rep_estimations(one_rm):
     return {r: round(one_rm * pct, 1) for r, pct in {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
 def get_base_name(full_name):
-    """Extrait le nom de l'exercice en ignorant la variante entre parenthèses."""
-    if "(" in full_name:
-        return full_name.split("(")[0].strip()
+    if "(" in full_name: return full_name.split("(")[0].strip()
     return full_name
 
 def style_comparaison(row, hist_prev):
@@ -112,13 +116,12 @@ try:
             if "muscle" not in exo: exo["muscle"] = "Autre"
 except: prog = {}
 
-# --- MAPPING MUSCLE AVEC EXTRACTION DU NOM DE BASE ---
+# Mapping Muscle Dynamique
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
-# On applique le mapping sur le nom de base pour corriger l'historique
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"])
 df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
 
-# Logo
+# Logo centré
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
@@ -154,7 +157,7 @@ with tab1:
     nvs = st.text_input("➕ Nom nouvelle séance")
     if st.button("🎯 Créer séance") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (AVEC MAPPING VARIANTE) ---
+# --- TAB 2 : MA SÉANCE (AVEC JAUGE VOLUME) ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
@@ -162,6 +165,22 @@ with tab2:
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
+        # CALCUL JAUGE VOLUME
+        vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
+        vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
+        
+        if vol_prev > 0:
+            ratio = min(vol_curr / vol_prev, 1.2)
+            color_class = "vol-overload" if ratio >= 1 else ""
+            st.markdown(f"""
+            <div class='vol-container'>
+                <small>⚡ Progression Volume Session : {int(vol_curr)} / {int(vol_prev)} kg</small>
+                <div style='width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 5px;'>
+                    <div class='vol-bar {color_class}' style='width: {ratio*100}%;'></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
             save_hist(pd.concat([df_h, pd.DataFrame(sk)], ignore_index=True)); st.rerun()
@@ -180,7 +199,7 @@ with tab2:
                 
                 curr = f_h[f_h["Semaine"] == s_act]
                 if not curr.empty and exo_final not in st.session_state.editing_exo:
-                    st.markdown("##### ✅ Validé (Progression)")
+                    st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_only[h_only["Semaine"] == last_s[0]] if len(last_s) > 0 else pd.DataFrame()).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
                     if st.button(f"🔄 Modifier {exo_base}", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
@@ -197,30 +216,47 @@ with tab2:
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
-                    if st.button(f"⏩ Skip Exo", key=f"sk_{exo_final}"):
-                        sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                        save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS ---
+# --- TAB 3 : PROGRÈS (AVEC RADAR DE FORCE) ---
 with tab3:
     if not df_h.empty:
-        c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
-        st.markdown("### 🏅 Hall of Fame")
-        m_filter = st.multiselect("Filtrer par muscle :", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], default=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"])
-        df_p = df_h[(df_h["Reps"] > 0) & (df_h["Muscle"].isin(m_filter))].copy()
+        st.markdown("### 🕸️ Radar d'Équilibre Cyber")
+        
+        # CALCUL SCORES RADAR (Normalisé par Standards Athlétiques)
+        standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
+        df_p = df_h[df_h["Reps"] > 0].copy()
         df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
-        if not df_p.empty:
-            podium = df_p.groupby("Exercice").agg({"1RM": "max"}).sort_values(by="1RM", ascending=False).head(3)
+        
+        scores = []
+        labels = list(standards.keys())
+        for m in labels:
+            max_rm = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
+            # Score de 0 à 100 (cap à 110 pour l'esthétique)
+            score = min((max_rm / standards[m]) * 100, 110) if max_rm > 0 else 0
+            scores.append(score)
+            
+        fig = go.Figure(data=go.Scatterpolar(
+            r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself',
+            line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)',
+            marker=dict(size=8, color='#58CCFF')
+        ))
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"),
+                       angularaxis=dict(gridcolor="rgba(255,255,255,0.1)", color="white")),
+            showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=40, r=40, t=20, b=20), height=350
+        )
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+        c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
+        
+        st.markdown("### 🏅 Hall of Fame")
+        m_filter = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
+        df_p_filt = df_p[df_p["Muscle"].isin(m_filter)]
+        if not df_p_filt.empty:
+            podium = df_p_filt.groupby("Exercice").agg({"1RM": "max"}).sort_values(by="1RM", ascending=False).head(3)
             p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
-        st.divider(); sel = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
-        df_e = df_h[df_h["Exercice"] == sel].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
-        if not df_rec.empty:
-            best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
-            c_r1, c_r2 = st.columns(2); c_r1.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c_r2.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
-            with st.expander("📊 Estimation Rep Max"):
-                ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
-                for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
-            st.line_chart(df_rec.groupby("Semaine")["Poids"].max())
-        st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
+        
+        st.divider(); sel = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique
