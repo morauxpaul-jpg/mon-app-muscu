@@ -122,7 +122,7 @@ df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).filln
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
-# --- TABS ---
+# --- TABS (Ordre original) ---
 tab_prog, tab_session, tab_stats = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS"])
 
 # --- ONGLET 1 : PROGRAMME ---
@@ -182,7 +182,7 @@ with tab_session:
                         if diff < 1: sc, lab = "#FF0000", "REPAR."
                         elif diff < 2: sc, lab = "#FFA500", "RECON."
                     except: pass
-            html_rec += f"<div class='recup-card'><small>{m.upper()}</small><br><span class='status-dot' style='background-color:{sc}'></span><b style='color:{sc}; font-size:10px;'>{lab}</b></div>"
+            html_rec += f"<div class='recup-card'><small>{m.upper()}</small><br><span class='status-dot' style='background-color:{status_color}'></span><b style='color:{sc}; font-size:10px;'>{lab}</b></div>"
         st.markdown(html_rec + "</div>", unsafe_allow_html=True)
 
         # VOLUME BAR
@@ -201,17 +201,22 @@ with tab_session:
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
-                # --- HISTORIQUE CHRONOLOGIQUE (S-2 PUIS S-1) ---
+                # --- HISTORIQUE CHRONOLOGIQUE (INVERSION S-1 PUIS S-2) ---
                 if s_act > 1:
+                    # Affichage de S-1 en premier
+                    h1 = f_h[f_h["Semaine"] == s_act - 1]
+                    if not h1.empty:
+                        st.caption(f"📅 Semaine S-1")
+                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    
+                    # Puis affichage de S-2
                     if s_act > 2:
                         h2 = f_h[f_h["Semaine"] == s_act - 2]
                         if not h2.empty:
                             st.caption(f"📅 Semaine S-2")
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-                    h1 = f_h[f_h["Semaine"] == s_act - 1]
-                    if not h1.empty:
-                        st.caption(f"📅 Semaine S-1")
-                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                else:
+                    st.info("Semaine 1 : Établissez vos marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0)
@@ -234,7 +239,6 @@ with tab_session:
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
                     
-                    # BOUTON SKIP EXO
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
@@ -301,5 +305,3 @@ with tab_stats:
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
             st.line_chart(df_rec.groupby("Semaine")["Poids"].max())
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
-
-
