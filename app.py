@@ -125,89 +125,14 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
-# Logo centré comme dans GitHub
+# Logo centré
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
-# --- TABS (Lancement direct sur MA SÉANCE) ---
-tab_session, tab_prog, tab_stats = st.tabs(["🏋️‍♂️ MA SÉANCE", "📅 PROGRAMME", "📈 PROGRÈS"])
+# --- REORDER TABS (Programme d'abord, land on Séance) ---
+tab_prog, tab_session, tab_stats = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS"])
 
-# --- ONGLET 1 : MA SÉANCE (RESTAURÉ INTÉGRALEMENT) ---
-with tab_session:
-    if prog:
-        c_h1, c_h2 = st.columns([3, 1])
-        choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
-        
-        # RÉCUPÉRATION : RESET SI NOUVELLE SEMAINE
-        st.markdown("### ⚡ ÉTAT DES SYSTÈMES")
-        rec_m = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
-        html_rec = "<div class='recup-container'>"
-        for m in rec_m:
-            # Si aucune donnée CETTE semaine pour ce muscle, il est "PRET"
-            trained_this_week = df_h[(df_h["Muscle"] == m) & (df_h["Semaine"] == s_act)]
-            sc, lab = "#00FF7F", "PRET"
-            if not trained_this_week.empty:
-                last_d = trained_this_week["Date"].max()
-                if pd.notna(last_d) and last_d != "":
-                    try:
-                        diff = (datetime.now() - datetime.strptime(last_d, "%Y-%m-%d")).days
-                        if diff < 1: sc, lab = "#FF0000", "REPAR."
-                        elif diff < 2: sc, lab = "#FFA500", "RECON."
-                    except: pass
-            html_rec += f"<div class='recup-card'><small>{m.upper()}</small><br><span class='status-dot' style='background-color:{sc}'></span><b style='color:{sc}; font-size:10px;'>{lab}</b></div>"
-        st.markdown(html_rec + "</div>", unsafe_allow_html=True)
-
-        # BARRE VOLUME RESTAURÉE
-        vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
-        vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
-        if vol_prev > 0:
-            ratio = min(vol_curr / vol_prev, 1.2)
-            st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div style='width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 5px;'><div class='vol-bar {"vol-overload" if ratio >= 1 else ""}' style='width: {min(ratio*100, 100)}%;'></div></div></div>""", unsafe_allow_html=True)
-
-        st.divider()
-
-        for i, ex_obj in enumerate(prog[choix_s]):
-            exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
-            with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
-                var = st.selectbox("Équipement", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
-                exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
-                f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
-                
-                # HISTORIQUE CHRONOLOGIQUE (S-2 PUIS S-1)
-                if s_act > 1:
-                    if s_act > 2:
-                        h2 = f_h[f_h["Semaine"] == s_act - 2]
-                        if not h2.empty:
-                            st.caption(f"📅 Semaine S-2")
-                            st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-                    h1 = f_h[f_h["Semaine"] == s_act - 1]
-                    if not h1.empty:
-                        st.caption(f"📅 Semaine S-1")
-                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-
-                curr = f_h[f_h["Semaine"] == s_act]
-                # LOGIQUE RESET SI ZERO
-                is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0)
-
-                if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
-                    st.markdown("##### ✅ Validé")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=f_h[f_h["Semaine"] == s_act-1]).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
-                else:
-                    df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
-                    if not curr.empty:
-                        for _, r in curr.iterrows():
-                            if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-                    ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
-                    
-                    if st.button("💾 Enregistrer", key=f"sv_{exo_final}"):
-                        v = ed.copy()
-                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                        st.session_state.editing_exo.discard(exo_final); st.rerun()
-
-# --- ONGLET 2 : PROGRAMME (RESTAURÉ INTÉGRALEMENT) ---
+# --- TAB PROGRAMME ---
 with tab_prog:
     st.markdown("## ⚙️ Configuration")
     jours = list(prog.keys())
@@ -237,16 +162,90 @@ with tab_prog:
     nvs = st.text_input("➕ Créer séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- ONGLET 3 : PROGRÈS (RESTAURÉ INTÉGRALEMENT) ---
+# --- TAB MA SÉANCE ---
+with tab_session:
+    if prog:
+        c_h1, c_h2 = st.columns([3, 1])
+        choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
+        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        
+        # RÉCUPÉRATION
+        st.markdown("### ⚡ ÉTAT DES SYSTÈMES")
+        recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
+        html_recup = "<div class='recup-container'>"
+        for m in recup_cols:
+            trained_this_week = df_h[(df_h["Muscle"] == m) & (df_h["Semaine"] == s_act)]
+            status_color, label = "#00FF7F", "PRET"
+            if not trained_this_week.empty:
+                last_d = trained_this_week["Date"].max()
+                if pd.notna(last_d) and last_d != "":
+                    try:
+                        diff = (datetime.now() - datetime.strptime(last_d, "%Y-%m-%d")).days
+                        if diff < 1: status_color, label = "#FF0000", "REPAR."
+                        elif diff < 2: status_color, label = "#FFA500", "RECON."
+                    except: pass
+            html_recup += f"<div class='recup-card'><small>{m.upper()}</small><br><span class='status-dot' style='background-color:{status_color}'></span><b style='color:{status_color}; font-size:10px;'>{label}</b></div>"
+        st.markdown(html_recup + "</div>", unsafe_allow_html=True)
+
+        # VOLUME BAR
+        vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
+        vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
+        if vol_prev > 0:
+            ratio = min(vol_curr / vol_prev, 1.2)
+            st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div style='width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 5px;'><div class='vol-bar {"vol-overload" if ratio >= 1 else ""}' style='width: {min(ratio*100, 100)}%;'></div></div></div>""", unsafe_allow_html=True)
+
+        st.divider()
+
+        for i, ex_obj in enumerate(prog[choix_s]):
+            exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
+            with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
+                var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
+                exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
+                f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
+                
+                # --- HISTORIQUE (S-1 PUIS S-2) ---
+                if s_act > 1:
+                    h1 = f_h[f_h["Semaine"] == s_act - 1]
+                    if not h1.empty:
+                        st.caption(f"📅 Semaine S-1")
+                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    if s_act > 2:
+                        h2 = f_h[f_h["Semaine"] == s_act - 2]
+                        if not h2.empty:
+                            st.caption(f"📅 Semaine S-2")
+                            st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                else:
+                    st.info("Semaine 1 : Établissez vos marques !")
+
+                curr = f_h[f_h["Semaine"] == s_act]
+                is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0)
+
+                if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
+                    st.markdown("##### ✅ Validé")
+                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=f_h[f_h["Semaine"] == s_act-1]).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
+                    if st.button(f"🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
+                else:
+                    df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
+                    if not curr.empty:
+                        for _, r in curr.iterrows():
+                            if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
+                    ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                    
+                    if st.button("💾 Enregistrer", key=f"sv_{exo_final}"):
+                        v = ed.copy()
+                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
+                        st.session_state.editing_exo.discard(exo_final); st.rerun()
+
+# --- TAB PROGRÈS ---
 with tab_stats:
     if not df_h.empty:
-        # LOGIQUE XP & RANKS
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers, noms = [0, 5000, 25000, 75000, 200000, 500000], ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
-        prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < 5 else "MAX")
-        next_p = paliers[idx+1] if idx < 5 else paliers[-1]
+        prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "MAX")
+        next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         
         st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
@@ -264,14 +263,12 @@ with tab_stats:
         fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
-        # ANALYSE
         if any(s > 0 for s in scores):
             top_m = labels[scores.index(max(scores))]
             valid_scores = [(s, labels[idx]) for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
             if valid_scores:
                 min_val, low_m = min(valid_scores, key=lambda x: x[0])
-                gap = max(scores) - min_val
-                lvl = "Faible" if gap < 15 else ("Moyen" if gap < 30 else "Élevé")
+                lvl = "Faible" if (max(scores)-min_val) < 15 else ("Moyen" if (max(scores)-min_val) < 30 else "Élevé")
                 msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé {lvl}."
             else: msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
             if scores[labels.index("Jambes")] == 0: msg += " Il faudra penser à les travailler un jour..."
@@ -280,7 +277,7 @@ with tab_stats:
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{v_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         
         st.markdown("### 🏅 Hall of Fame")
-        st.info("💡 Les poids correspondent à ton **1RM Estimé**.")
+        st.info("💡 Les poids correspondent à ton 1RM Estimé.")
         m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
         if not df_p_filt.empty:
@@ -297,8 +294,5 @@ with tab_stats:
             with st.expander("📊 Estimation Rep Max"):
                 ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
-            fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
-            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
-            fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
-            st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
+            st.line_chart(df_rec.groupby("Semaine")["Poids"].max())
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
