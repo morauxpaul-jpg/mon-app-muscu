@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import gspread
-from datetime import datetime, timedelta
-import plotly.graph_objects as go
+from datetime import datetime
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="logo.png")
@@ -11,7 +10,7 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-PREMIUM COMPLET ---
+# --- 2. CSS : DESIGN CYBER-PREMIUM ---
 st.markdown("""
 <style>
     .stApp {
@@ -39,6 +38,7 @@ st.markdown("""
     .podium-gold { border-color: #FFD700 !important; background: rgba(255, 215, 0, 0.05) !important; }
     .podium-silver { border-color: #C0C0C0 !important; background: rgba(192, 192, 192, 0.05) !important; }
     .podium-bronze { border-color: #CD7F32 !important; background: rgba(205, 127, 50, 0.05) !important; }
+    .pr-alert { color: #00FF7F; font-weight: bold; text-shadow: 0 0 15px #00FF7F; padding: 15px; border: 2px solid #00FF7F; border-radius: 10px; text-align: center; background: rgba(0, 255, 127, 0.1); margin-bottom: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -50,21 +50,22 @@ def get_rep_estimations(one_rm):
     return {r: round(one_rm * pct, 1) for r, pct in {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
 def style_comparaison(row, hist_prev):
+    """Logique de couleur : Vert pour progression, Rouge pour régression."""
     if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
-    v, r = "background-color: rgba(0, 210, 255, 0.2); color: #58CCFF;", "background-color: rgba(255, 69, 58, 0.2); color: #FF453A;"
+    v, r = "background-color: rgba(0, 255, 127, 0.2); color: #00FF7F;", "background-color: rgba(255, 69, 58, 0.2); color: #FF453A;"
     colors = ["", "", "", ""] 
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
         cw, cr = float(row["Poids"]), int(row["Reps"])
-        if cw < pw: colors[1], colors[2] = r, r
-        elif cw > pw: colors[1], colors[2] = v, v
+        if cw < pw: colors[1], colors[2] = r, r # Moins de poids
+        elif cw > pw: colors[1], colors[2] = v, v # Plus de poids
         elif cw == pw:
-            if cr > pr: colors[1] = v
-            elif cr < pr: colors[1] = r
+            if cr > pr: colors[1] = v # Plus de reps
+            elif cr < pr: colors[1] = r # Moins de reps
     return colors
 
-# --- CONNEXION ---
+# --- CONNEXION GOOGLE SHEETS ---
 @st.cache_resource
 def get_google_sheets():
     try:
@@ -106,19 +107,11 @@ try:
             if "muscle" not in exo: exo["muscle"] = "Autre"
 except: prog = {}
 
-# Mapping Muscle Dynamique
+# --- MAPPING MUSCLE DYNAMIQUE ---
+# Applique le muscle défini dans le programme à tout l'historique
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
-
-# --- MAINTENANCE SIDEBAR (RESET FORCE) ---
-with st.sidebar:
-    st.title("⚙️ Maintenance")
-    if st.button("🚨 RÉINITIALISER CALENDRIER"):
-        # On vide la colonne Date dans le DataFrame local
-        df_h["Date"] = ""
-        # On force la sauvegarde complète pour écraser le Google Sheet
-        save_hist(df_h)
-        st.success("Données nettoyées ! Redémarrage..."); st.rerun()
+df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
 
 # Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
@@ -153,10 +146,10 @@ with tab1:
             ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
-    nvs = st.text_input("➕ Nom de la nouvelle séance")
-    if st.button("🎯 Créer") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
+    nvs = st.text_input("➕ Nom nouvelle séance")
+    if st.button("🎯 Créer séance") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE ---
+# --- TAB 2 : MA SÉANCE (AVEC VERT NÉON & EXCLUSIVITÉ) ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
@@ -182,54 +175,31 @@ with tab2:
                 
                 curr = f_h[f_h["Semaine"] == s_act]
                 if not curr.empty and exo_final not in st.session_state.editing_exo:
-                    st.markdown("##### ✅ Validé")
+                    st.markdown("##### ✅ Validé (Progression)")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_only[h_only["Semaine"] == last_s[0]] if len(last_s) > 0 else pd.DataFrame()).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-                    if st.button(f"🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
+                    if st.button(f"🔄 Modifier {exo_base}", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
                     df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
                     ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
-                    if st.button(f"💾 Enregistrer", key=f"sv_{exo_final}"):
+                    if st.button(f"💾 Enregistrer {exo_base}", key=f"sv_{exo_final}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         if not v.empty:
                             new_1rm = max(v.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1))
                             old_1rm = max(f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)) if not f_h.empty else 0
-                            if new_1rm > old_1rm and old_1rm > 0: st.balloons()
+                            if new_1rm > old_1rm and old_1rm > 0: st.balloons(); st.markdown(f"<div class='pr-alert'>🚀 NEW RECORD : {round(new_1rm, 1)}kg !</div>", unsafe_allow_html=True)
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
+                    if st.button(f"⏩ Skip Exo", key=f"sk_{exo_final}"):
+                        sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
+                        save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
-# --- TAB 3 : PROGRÈS ---
+# --- TAB 3 : PROGRÈS (PODIUM MAPPÉ) ---
 with tab3:
     if not df_h.empty:
-        st.markdown("### 📅 ACTIVITÉ CYBER (Lundi → Dimanche)")
-        # --- HEATMAP CYBER BLUE (TOP-DOWN) ---
-        end_d = datetime.now(); start_d = end_d - timedelta(days=140)
-        date_range = pd.date_range(start=start_d, end=end_d)
-        df_act = df_h[df_h["Date"] != ""].copy()
-        df_act["Date"] = pd.to_datetime(df_act["Date"])
-        daily_count = df_act.groupby("Date")["Séance"].nunique().reindex(date_range, fill_value=0)
-        
-        jours_fr = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
-        fig = go.Figure(data=go.Heatmap(
-            z=daily_count.values,
-            x=[d.strftime("%V") for d in date_range],
-            y=[jours_fr[d.weekday()] for d in date_range],
-            colorscale=[[0, 'rgba(255,255,255,0.03)'], [1, '#58CCFF']], # Cyber Blue pur
-            showscale=False, xgap=4, ygap=4,
-            hovertemplate="Le %{text}<br>Séances: %{z}<extra></extra>",
-            text=[d.strftime("%d/%m/%Y") for d in date_range]
-        ))
-        fig.update_layout(
-            height=280, margin=dict(l=0, r=0, t=10, b=0),
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, categoryarray=jours_fr, categoryorder="array", autorange="reversed")
-        )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         st.markdown("### 🏅 Hall of Fame")
         m_filter = st.multiselect("Filtrer par muscle :", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], default=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"])
@@ -240,7 +210,6 @@ with tab3:
             p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
-        
         st.divider(); sel = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
