@@ -121,7 +121,7 @@ muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in 
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"])
 df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
 
-# Logo centré
+# Logo
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
@@ -151,11 +151,11 @@ with tab1:
                     prog[j].pop(i); save_prog(prog); st.rerun()
             st.divider()
             cx, cm, cs = st.columns([3, 2, 1])
-            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            ni, nm, ns = cx.text_input("Nouveau mouvement", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
-    nvs = st.text_input("➕ Nom nouvelle séance")
-    if st.button("🎯 Créer séance") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
+    nvs = st.text_input("➕ Créer une nouvelle séance")
+    if st.button("🎯 Créer") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
 # --- TAB 2 : MA SÉANCE (AVEC JAUGE VOLUME) ---
 with tab2:
@@ -172,14 +172,7 @@ with tab2:
         if vol_prev > 0:
             ratio = min(vol_curr / vol_prev, 1.2)
             color_class = "vol-overload" if ratio >= 1 else ""
-            st.markdown(f"""
-            <div class='vol-container'>
-                <small>⚡ Progression Volume Session : {int(vol_curr)} / {int(vol_prev)} kg</small>
-                <div style='width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 5px;'>
-                    <div class='vol-bar {color_class}' style='width: {ratio*100}%;'></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class='vol-container'><small>⚡ Progression Volume Session : {int(vol_curr)} / {int(vol_prev)} kg</small><div style='width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 5px;'><div class='vol-bar {color_class}' style='width: {ratio*100}%;'></div></div></div>""", unsafe_allow_html=True)
 
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
@@ -212,40 +205,25 @@ with tab2:
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
                         if not v.empty:
                             new_1rm, old_1rm = max(v.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)), max(f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)) if not f_h.empty else 0
-                            if new_1rm > old_1rm and old_1rm > 0: st.balloons(); st.markdown(f"<div class='pr-alert'>🚀 NEW RECORD : {round(new_1rm, 1)}kg !</div>", unsafe_allow_html=True)
+                            if new_1rm > old_1rm and old_1rm > 0: st.balloons()
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final); st.rerun()
 
-# --- TAB 3 : PROGRÈS (AVEC RADAR DE FORCE) ---
+# --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
         st.markdown("### 🕸️ Radar d'Équilibre Cyber")
-        
-        # CALCUL SCORES RADAR (Normalisé par Standards Athlétiques)
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy()
         df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
-        
         scores = []
         labels = list(standards.keys())
         for m in labels:
             max_rm = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
-            # Score de 0 à 100 (cap à 110 pour l'esthétique)
-            score = min((max_rm / standards[m]) * 100, 110) if max_rm > 0 else 0
-            scores.append(score)
-            
-        fig = go.Figure(data=go.Scatterpolar(
-            r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself',
-            line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)',
-            marker=dict(size=8, color='#58CCFF')
-        ))
-        fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"),
-                       angularaxis=dict(gridcolor="rgba(255,255,255,0.1)", color="white")),
-            showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=40, r=40, t=20, b=20), height=350
-        )
+            scores.append(min((max_rm / standards[m]) * 100, 110) if max_rm > 0 else 0)
+        fig = go.Figure(data=go.Scatterpolar(r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)'))
+        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(gridcolor="rgba(255,255,255,0.1)", color="white")), showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
@@ -259,4 +237,13 @@ with tab3:
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
         
-        st.divider(); sel = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique
+        st.divider(); sel = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
+        df_e = df_h[df_h["Exercice"] == sel].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
+        if not df_rec.empty:
+            best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
+            c_r1, c_r2 = st.columns(2); c_r1.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c_r2.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
+            with st.expander("📊 Estimation Rep Max"):
+                ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
+                for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
+            st.line_chart(df_rec.groupby("Semaine")["Poids"].max())
+        st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
