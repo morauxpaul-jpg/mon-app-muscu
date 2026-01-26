@@ -96,39 +96,100 @@ def style_comparaison(row, hist_prev):
 
 def muscle_flappy_game():
     st.markdown("### 🕹️ MUSCLE FLAPPY")
+    st.caption("Appuie pour sauter et éviter les barres !")
+    
     game_html = """
     <div id="game-container" style="text-align: center;">
-        <canvas id="flappyCanvas" width="320" height="480" style="border: 2px solid #58CCFF; border-radius: 15px; background: #050A18; cursor: pointer;"></canvas>
+        <canvas id="flappyCanvas" width="320" height="480" style="border: 2px solid #58CCFF; border-radius: 15px; background: #050A18; cursor: pointer; touch-action: none;"></canvas>
     </div>
     <script>
         const canvas = document.getElementById('flappyCanvas');
         const ctx = canvas.getContext('2d');
-        let biceps = { x: 50, y: 150, w: 35, h: 35, gravity: 0.25, velocity: 0, lift: -5 };
-        let pipes = []; let frameCount = 0; let score = 0; let gameOver = false;
-        function reset() { biceps.y = 150; biceps.velocity = 0; pipes = []; score = 0; frameCount = 0; gameOver = false; }
-        canvas.addEventListener('mousedown', () => { if (gameOver) reset(); else biceps.velocity += biceps.lift; });
-        function draw() {
-            ctx.fillStyle = '#050A18'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.font = "30px Arial"; ctx.fillText("💪", biceps.x, biceps.y);
-            if (!gameOver) {
-                biceps.velocity += biceps.gravity; biceps.y += biceps.velocity;
-                if (frameCount % 90 === 0) { pipes.push({ x: canvas.width, topH: Math.floor(Math.random() * (canvas.height / 2)), gap: 130 }); }
-                for (let i = pipes.length - 1; i >= 0; i--) {
-                    pipes[i].x -= 2; ctx.fillStyle = "#58CCFF";
-                    ctx.fillRect(pipes[i].x, 0, 40, pipes[i].topH);
-                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 40, canvas.height);
-                    if (biceps.x + 25 > pipes[i].x && biceps.x < pipes[i].x + 40) {
-                        if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap) gameOver = true;
-                    }
-                    if (pipes[i].x === 10) score++;
-                    if (pipes[i].x < -40) pipes.splice(i, 1);
-                }
-                if (biceps.y > canvas.height || biceps.y < 0) gameOver = true;
+        
+        let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.25, velocity: 0, lift: -4.5 };
+        let pipes = []; let frameCount = 0; let score = 0; 
+        let gameOver = false;
+        let gameStarted = false;
+
+        function reset() {
+            biceps.y = 150; biceps.velocity = 0; pipes = []; score = 0; frameCount = 0; 
+            gameOver = false; gameStarted = false;
+        }
+
+        function handleAction(e) {
+            e.preventDefault();
+            if (gameOver) {
+                reset();
+            } else if (!gameStarted) {
+                gameStarted = true;
+                biceps.velocity = biceps.lift;
             } else {
-                ctx.fillStyle = "white"; ctx.font = "20px Arial"; ctx.fillText("GAME OVER", 110, 200);
+                biceps.velocity = biceps.lift;
             }
-            ctx.fillStyle = "#00FF7F"; ctx.font = "20px Arial"; ctx.fillText("SCORE: " + score, 10, 30);
-            frameCount++; requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('mousedown', handleAction);
+        canvas.addEventListener('touchstart', handleAction, {passive: false});
+
+        function draw() {
+            ctx.fillStyle = '#050A18';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Biceps
+            ctx.font = "30px Arial";
+            ctx.fillText("💪", biceps.x, biceps.y);
+            
+            if (gameStarted && !gameOver) {
+                biceps.velocity += biceps.gravity;
+                biceps.y += biceps.velocity;
+
+                if (frameCount % 90 === 0) {
+                    let gap = 140;
+                    let minH = 50;
+                    let topH = Math.floor(Math.random() * (canvas.height - gap - minH)) + minH;
+                    pipes.push({ x: canvas.width, topH: topH, gap: gap });
+                }
+
+                for (let i = pipes.length - 1; i >= 0; i--) {
+                    pipes[i].x -= 2.5;
+                    ctx.fillStyle = "#58CCFF";
+                    ctx.fillRect(pipes[i].x, 0, 45, pipes[i].topH);
+                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 45, canvas.height);
+
+                    // Collision plus précise
+                    if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 45) {
+                        if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) {
+                            gameOver = true;
+                        }
+                    }
+
+                    if (pipes[i].x === 0) score++;
+                    if (pipes[i].x < -50) pipes.splice(i, 1);
+                }
+
+                if (biceps.y > canvas.height || biceps.y < 0) gameOver = true;
+            } else if (!gameStarted) {
+                ctx.fillStyle = "white";
+                ctx.font = "18px Courier New";
+                ctx.fillText("CLIQUE POUR SOULEVER", 55, 240);
+            }
+
+            if (gameOver) {
+                ctx.fillStyle = "rgba(255,0,0,0.5)";
+                ctx.fillRect(0,0, canvas.width, canvas.height);
+                ctx.fillStyle = "white";
+                ctx.font = "30px Courier New";
+                ctx.fillText("ÉCHEC CRITIQUE", 45, 220);
+                ctx.font = "15px Courier New";
+                ctx.fillText("Clique pour retenter", 75, 260);
+            }
+
+            ctx.fillStyle = "#00FF7F";
+            ctx.font = "20px Courier New";
+            ctx.fillText("SCORE: " + score, 15, 35);
+
+            frameCount++;
+            requestAnimationFrame(draw);
         }
         draw();
     </script>
@@ -354,3 +415,4 @@ with tab_st:
 # --- ONGLET MINI-JEU ---
 with tab_g:
     muscle_flappy_game()
+
