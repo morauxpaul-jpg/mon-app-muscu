@@ -95,8 +95,8 @@ def style_comparaison(row, hist_prev):
     return colors
 
 def muscle_flappy_game():
-    st.markdown("### 🕹️ MUSCLE FLAPPY : MODE HARDCORE")
-    st.caption("Gravité augmentée ! Vitesse doublée ! Bats ton record ! 💀")
+    st.markdown("### 🕹️ MUSCLE FLAPPY : EVOLUTION")
+    st.caption("Le jeu accélère tous les 5 points ! Bats ton record ! ⚡")
     
     game_html = """
     <div id="game-container" style="text-align: center;">
@@ -106,29 +106,23 @@ def muscle_flappy_game():
         const canvas = document.getElementById('flappyCanvas');
         const ctx = canvas.getContext('2d');
         
-        // PARAMÈTRES HARDCORE
+        // PARAMÈTRES DE BASE
         let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.35, velocity: 0, lift: -6 };
         let pipes = []; let frameCount = 0; let score = 0; 
-        let gameOver = false;
-        let gameStarted = false;
-        // RÉCUPÉRATION DU RECORD LOCAL
+        let gameOver = false; let gameStarted = false;
+        let baseSpeed = 3.5;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
 
         function reset() {
             biceps.y = 150; biceps.velocity = 0; pipes = []; score = 0; frameCount = 0; 
-            gameOver = false; gameStarted = false;
+            gameOver = false; gameStarted = false; baseSpeed = 3.5;
         }
 
         function handleAction(e) {
             e.preventDefault();
-            if (gameOver) {
-                reset();
-            } else if (!gameStarted) {
-                gameStarted = true;
-                biceps.velocity = biceps.lift;
-            } else {
-                biceps.velocity = biceps.lift;
-            }
+            if (gameOver) { reset(); } 
+            else if (!gameStarted) { gameStarted = true; biceps.velocity = biceps.lift; } 
+            else { biceps.velocity = biceps.lift; }
         }
 
         canvas.addEventListener('mousedown', handleAction);
@@ -138,6 +132,7 @@ def muscle_flappy_game():
             ctx.fillStyle = '#050A18';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // DESSIN DU BICEPS
             ctx.font = "30px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
@@ -145,29 +140,38 @@ def muscle_flappy_game():
                 biceps.velocity += biceps.gravity;
                 biceps.y += biceps.velocity;
 
-                // GÉNÉRATION PLUS RAPIDE (toutes les 70 frames)
-                if (frameCount % 70 === 0) {
-                    let gap = 125; // GAP PLUS ÉTROIT
+                // ACCÉLÉRATION : +0.2 de vitesse tous les 5 points
+                let currentSpeed = baseSpeed + (Math.floor(score / 5) * 0.2);
+
+                // GÉNÉRATION OBSTACLES (ajusté selon vitesse)
+                let spawnRate = Math.max(50, 80 - Math.floor(score / 2));
+                if (frameCount % spawnRate === 0) {
+                    let gap = 125;
                     let minH = 50;
-                    let topH = Math.floor(Math.random() * (canvas.height - gap - minH)) + minH;
-                    pipes.push({ x: canvas.width, topH: topH, gap: gap });
+                    let topH = Math.floor(Math.random() * (canvas.height - gap - minH*2)) + minH;
+                    pipes.push({ x: canvas.width, topH: topH, gap: gap, passed: false });
                 }
 
                 for (let i = pipes.length - 1; i >= 0; i--) {
-                    pipes[i].x -= 3.5; // VITESSE AUGMENTÉE
+                    pipes[i].x -= currentSpeed;
                     
-                    // COULEUR BARRE EN ROUGE SI DIFFICILE
                     ctx.fillStyle = "#FF453A"; 
                     ctx.fillRect(pipes[i].x, 0, 50, pipes[i].topH);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 50, canvas.height);
 
+                    // COLLISION
                     if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 50) {
                         if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) {
                             gameOver = true;
                         }
                     }
 
-                    if (pipes[i].x === 0) score++;
+                    // SCORE (Détection robuste)
+                    if (!pipes[i].passed && biceps.x > pipes[i].x + 50) {
+                        score++;
+                        pipes[i].passed = true;
+                    }
+
                     if (pipes[i].x < -60) pipes.splice(i, 1);
                 }
 
@@ -175,11 +179,10 @@ def muscle_flappy_game():
             } else if (!gameStarted) {
                 ctx.fillStyle = "white";
                 ctx.font = "18px Courier New";
-                ctx.fillText("TAP POUR SOULEVER", 55, 240);
+                ctx.fillText("TAP POUR SOULEVER", 70, 240);
             }
 
             if (gameOver) {
-                // SAUVEGARDE DU RECORD
                 if (score > record) {
                     record = score;
                     localStorage.setItem('muscleFlappyRecord', record);
@@ -191,12 +194,13 @@ def muscle_flappy_game():
                 ctx.fillText("ÉCHEC CRITIQUE", 45, 220);
                 ctx.font = "15px Courier New";
                 ctx.fillText("Score: " + score + " | Record: " + record, 75, 260);
+                ctx.fillText("Clique pour retenter", 75, 290);
             }
 
-            // AFFICHAGE SCORE ET RECORD
-            ctx.font = "20px Courier New";
-            ctx.fillStyle = "#00FF7F"; ctx.fillText("SCORE: " + score, 15, 35);
-            ctx.fillStyle = "#FFD700"; ctx.fillText("RECORD: " + record, 180, 35);
+            // UI SCORES
+            ctx.font = "bold 20px Courier New";
+            ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35);
+            ctx.fillStyle = "#FFD700"; ctx.fillText("MAX: " + record, 180, 35);
 
             frameCount++;
             requestAnimationFrame(draw);
@@ -425,5 +429,6 @@ with tab_st:
 # --- ONGLET MINI-JEU ---
 with tab_g:
     muscle_flappy_game()
+
 
 
