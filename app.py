@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import gspread
-from datetime import datetime, timedelta
+from datetime import datetime
 import plotly.graph_objects as go
 
 # --- 1. CONFIGURATION PAGE ---
@@ -31,30 +31,7 @@ st.markdown("""
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important; 
     }
     
-    /* STYLE MODE BOSS */
-    .boss-alert {
-        background: rgba(255, 0, 0, 0.15);
-        border: 2px solid #FF0000;
-        color: #FF0000;
-        padding: 10px;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: 900;
-        text-shadow: 0 0 15px #FF0000;
-        animation: pulse-red 1s infinite;
-        margin-bottom: 15px;
-        letter-spacing: 2px;
-    }
-    @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
-    /* STYLE RÉCUPÉRATION */
-    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
-    .recup-card { 
-        min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 10px; padding: 8px; text-align: center;
-    }
-    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-
+    /* SYSTÈME DE RANGS JEU VIDÉO */
     .rank-ladder {
         display: flex; justify-content: space-between; align-items: center;
         background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;
@@ -67,11 +44,13 @@ st.markdown("""
     .xp-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); }
     .xp-bar-fill { height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); box-shadow: 0 0 15px #58CCFF; }
 
+    /* VOLUME BAR */
     .vol-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid rgba(88, 204, 255, 0.3); }
     .vol-bar-bg { width: 100%; background: rgba(255,255,255,0.1); border-radius: 6px; height: 14px; overflow: hidden; margin-top: 8px; }
     .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; }
     .vol-overload { background: #00FF7F !important; box-shadow: 0 0 20px #00FF7F !important; }
 
+    /* PODIUM COULEURS */
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
     .podium-gold { border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
     .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
@@ -187,57 +166,44 @@ with tab1:
 # --- TAB 2 : MA SÉANCE ---
 with tab2:
     if prog:
-        # --- STATUT DE RÉCUPÉRATION (FIXED) ---
-        st.markdown("### ⚡ ÉTAT DES SYSTÈMES (RÉCUP)")
-        recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
-        html_recup = "<div class='recup-container'>"
-        for m in recup_cols:
-            last_date_str = df_h[df_h["Muscle"] == m]["Date"].max()
-            status_color = "#00FF7F" # Green
-            label = "PRET"
-            # Correction TypeError : On vérifie que la date n'est pas nulle et est une chaîne
-            if pd.notna(last_date_str) and isinstance(last_date_str, str) and last_date_str != "":
-                try:
-                    last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
-                    diff = datetime.now() - last_date
-                    if diff.days < 1: 
-                        status_color = "#FF0000" # Red
-                        label = "REPAR."
-                    elif diff.days < 2: 
-                        status_color = "#FFA500" # Orange
-                        label = "RECON."
-                except: pass
-            html_recup += f"<div class='recup-card'><small>{m.upper()}</small><br><span class='status-dot' style='background-color:{status_color}'></span><b style='color:{status_color}; font-size:10px;'>{label}</b></div>"
-        st.markdown(html_recup + "</div>", unsafe_allow_html=True)
-
         c_h1, c_h2 = st.columns([3, 1])
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
+        # JAUGE VOLUME
         vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
             ratio = min(vol_curr / vol_prev, 1.0)
             st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div class='vol-bar-bg'><div class='vol-bar-fill {"vol-overload" if vol_curr >= vol_prev else ""}' style='width: {ratio*100}%;'></div></div></div>""", unsafe_allow_html=True)
 
+        st.divider() # Séparation entre la barre volume et le premier exo
+
         for i, ex_obj in enumerate(prog[choix_s]):
             exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
             with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
                 var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
-                f_h = df_h[(df_h["Exercice"] == exo_final)]
+                
+                # FIX : Filtrer par séance pour éviter de confondre l'historique d'exercices partagés (ex: Push 1 vs Push 2)
+                f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
                 # HISTORIQUE VERTICAL STRICT
                 if s_act > 1:
+                    # Affichage Semaine S-2 en premier
                     if s_act > 2:
                         h2 = f_h[f_h["Semaine"] == s_act - 2]
                         if not h2.empty:
-                            st.caption("📅 Semaine S-2")
+                            st.caption(f"📅 Semaine S-2 ({s_act-2})")
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    
+                    # Affichage Semaine S-1 (juste au-dessus de la saisie actuelle)
                     h1 = f_h[f_h["Semaine"] == s_act - 1]
                     if not h1.empty:
-                        st.caption("📅 Semaine S-1")
+                        st.caption(f"📅 Semaine S-1 ({s_act-1})")
                         st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                else:
+                    st.info("Semaine 1 : Établissez vos marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
                 h_prev = f_h[f_h["Semaine"] == s_act - 1] if s_act > 1 else pd.DataFrame()
@@ -251,15 +217,8 @@ with tab2:
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-                    
                     ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
                     
-                    # --- MODE BOSS (DÉTECTION RECORD) ---
-                    max_current_weight = ed["Poids"].max()
-                    hist_max_weight = f_h["Poids"].max() if not f_h.empty else 0
-                    if max_current_weight > hist_max_weight and hist_max_weight > 0:
-                        st.markdown("<div class='boss-alert'>⚠️ BOSS DETECTED : TENTATIVE DE RECORD PERSONNEL ! ⚠️</div>", unsafe_allow_html=True)
-
                     c_v, c_sk = st.columns(2)
                     if c_v.button(f"💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed[(ed["Poids"] > 0) | (ed["Reps"] > 0)].copy()
@@ -276,17 +235,22 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        # LOGIQUE XP & RANKS
+        # --- LOGIQUE XP & RANKS RPG ---
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers = [0, 5000, 25000, 75000, 200000, 500000]
         noms = ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
+        
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
-        prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DEBUTANT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "LEVEL MAX")
+        
+        prev_rank = noms[idx-1] if idx > 0 else "DEBUTANT"
+        curr_rank = noms[idx]
+        next_rank = noms[idx+1] if idx < len(noms)-1 else "LEVEL MAX"
+        
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         
-        st.markdown(f"""<div style='text-align: center; margin-bottom: 5px;'><small style='color:#58CCFF;'>Séquence de Carrière</small></div><div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
+        st.markdown(f"""<div style='text-align: center; margin-bottom: 5px;'><small style='color:#58CCFF;'>Séquence de Carrière</small></div><div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_rank}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_rank}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_rank}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
 
         st.markdown("### 🕸️ Radar d'Équilibre Cyber")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
@@ -301,7 +265,7 @@ with tab3:
         fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
         st.plotly_chart(fig_r, use_container_width=True, config={'displayModeBar': False})
 
-        # ANALYSE DYNAMIQUE
+        # --- ANALYSE DYNAMIQUE ---
         if any(s > 0 for s in scores):
             top_m = labels[scores.index(max(scores))]
             valid_scores = [(s, labels[idx]) for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
@@ -310,15 +274,17 @@ with tab3:
                 gap = max(scores) - min_val
                 lvl = "Faible" if gap < 15 else ("Moyen" if gap < 30 else "Élevé")
                 msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé {lvl}."
-            else: msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
-            if scores[labels.index("Jambes")] == 0: msg += " Il faudra penser à les travailler un jour..."
+            else:
+                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
+            if scores[labels.index("Jambes")] == 0:
+                msg += " Il faudra penser à les travailler un jour..."
             st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
 
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{v_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
         
-        # PODIUM HALL OF FAME
+        # PODIUM HALL OF FAME (Restauration Couleurs & Aide Visuelle)
         st.markdown("### 🏅 Hall of Fame")
-        st.caption("🏆 Les poids indiqués correspondent à votre **1RM Estimé**.")
+        st.caption("🏆 Les poids indiqués correspondent à votre **1RM Estimé** (Charge maximale théorique pour 1 répétition).")
         m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
         if not df_p_filt.empty:
@@ -327,13 +293,13 @@ with tab3:
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
         
-        # ZOOM MOUVEMENT
+        # ZOOM MOUVEMENT (Restauration Estimations)
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c1r, c2r = st.columns(2); c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
-            with st.expander("📊 Estimation Rep Max"):
+            with st.expander("📊 Estimation Rep Max (Charges de travail)"):
                 ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
