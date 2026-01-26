@@ -80,7 +80,6 @@ def get_hist():
     try:
         data = ws_h.get_all_records()
         df = pd.DataFrame(data)
-        # Garantir toutes les colonnes nécessaires
         for col in ["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque", "Muscle", "Date"]:
             if col not in df.columns: df[col] = "" if col in ["Remarque", "Muscle", "Date", "Séance", "Exercice"] else 0
         df["Poids"] = pd.to_numeric(df["Poids"], errors='coerce').fillna(0.0).astype(float)
@@ -107,13 +106,11 @@ try:
 except: prog = {}
 
 # --- MAPPING MUSCLE DYNAMIQUE ---
-# On crée un dictionnaire de correspondance Exercice -> Muscle basé sur le Programme actuel
 muscle_mapping = {}
 for s in prog:
     for ex in prog[s]:
         muscle_mapping[ex["name"]] = ex.get("muscle", "Autre")
 
-# On applique ce mapping à l'historique pour corriger les anciennes données
 df_h["Muscle"] = df_h["Exercice"].map(muscle_mapping).fillna(df_h["Muscle"])
 df_h["Muscle"] = df_h["Muscle"].replace("", "Autre")
 
@@ -155,13 +152,13 @@ with tab1:
     nvs = st.text_input("➕ Créer une nouvelle séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (FIX DOUBLE AFFICHAGE) ---
+# --- TAB 2 : MA SÉANCE (BANC AJOUTÉ) ---
 with tab2:
     if prog:
         st.markdown("## ⚡ Ma Session")
         c_h1, c_h2 = st.columns([3, 1])
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         if st.button("🚫 SÉANCE LOUPÉE", use_container_width=True):
             sk_rows = [{"Semaine": s_act, "Séance": choix_s, "Exercice": e["name"], "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "Loupée ❌", "Muscle": e.get("muscle", "Autre"), "Date": datetime.now().strftime("%Y-%m-%d")} for e in prog[choix_s]]
             save_hist(pd.concat([df_h, pd.DataFrame(sk_rows)], ignore_index=True)); st.rerun()
@@ -169,7 +166,7 @@ with tab2:
         for i, ex_obj in enumerate(prog[choix_s]):
             exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj["sets"], ex_obj.get("muscle", "Autre")
             with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
-                var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
+                var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 h_only = f_h[f_h["Semaine"] < s_act].sort_values("Semaine", ascending=False)
@@ -181,7 +178,6 @@ with tab2:
                 curr = f_h[f_h["Semaine"] == s_act]
                 h_prev = h_only[h_only["Semaine"] == last_s[0]] if len(last_s) > 0 else pd.DataFrame()
                 
-                # AFFICHAGE EXCLUSIF : RÉSUMÉ OU ÉDITEUR
                 if not curr.empty and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_prev).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
@@ -208,10 +204,10 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        st.markdown("### 📅 RÉGULARITÉ (Heatmap)")
-        activity_dates = set(df_h[df_h["Date"] != ""]["Date"])
+        st.markdown("### 📅 RÉGULARITÉ")
+        active_dates = set(df_h[df_h["Date"] != ""]["Date"])
         today = datetime.now()
-        squares = [("🟩" if (today - timedelta(days=d)).strftime("%Y-%m-%d") in activity_dates else "⬜") for d in range(29, -1, -1)]
+        squares = [("🟩" if (today - timedelta(days=d)).strftime("%Y-%m-%d") in active_dates else "⬜") for d in range(29, -1, -1)]
         st.write(" ".join(squares))
         
         c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{int((df_h['Poids'] * df_h['Reps']).sum()):,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
