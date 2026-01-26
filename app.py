@@ -168,7 +168,7 @@ with tab_session:
             save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.toast("Séance marquée comme manquée."); st.rerun()
 
         # RÉCUPÉRATION
-        st.markdown("### ⚡ RÉCUPÉRATION")
+        st.markdown("### 🔋 RÉCUPÉRATION")
         rec_m = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
         html_rec = "<div class='recup-container'>"
         for m in rec_m:
@@ -301,4 +301,5 @@ with tab_stats:
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
             st.line_chart(df_rec.groupby("Semaine")["Poids"].max())
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
+
 
