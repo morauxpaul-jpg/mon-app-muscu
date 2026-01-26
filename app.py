@@ -6,7 +6,7 @@ import gspread
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="logo.png")
 
-# --- 2. CSS : LOOK NÉON ---
+# --- 2. CSS : LOOK NÉON & DESIGN ---
 st.markdown("""
 <style>
     .stApp {
@@ -20,27 +20,27 @@ st.markdown("""
         text-shadow: 0 0 15px rgba(74, 144, 226, 0.8) !important; 
     }
     .stExpander { background-color: rgba(10, 25, 49, 0.6) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; backdrop-filter: blur(5px); }
+    .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; border-top: 3px solid #4A90E2; text-align: center; margin-bottom: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONCTIONS ---
+# --- FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
     if reps <= 0: return 0
     return weight * (1 + reps / 30)
 
 def style_comparaison(row, hist_prev):
+    """Applique le code couleur Vert/Rouge comparé à la séance précédente."""
     if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
-    v, r = "background-color: rgba(46, 125, 50, 0.45); color: white;", "background-color: rgba(198, 40, 40, 0.45); color: white;"
+    v = "background-color: rgba(46, 125, 50, 0.45); color: white;" 
+    r = "background-color: rgba(198, 40, 40, 0.45); color: white;"
     colors = ["", "", "", ""] 
     if not prev_set.empty:
         pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
         cw, cr = float(row["Poids"]), int(row["Reps"])
-        if cw < pw: colors[1], colors[2] = r, r
-        elif cw > pw: colors[1], colors[2] = v, v
-        elif cw == pw:
-            if cr > pr: colors[1] = v
-            elif cr < pr: colors[1] = r
+        if cw > pw or (cw == pw and cr > pr): colors[1], colors[2] = v, v
+        elif cw < pw or (cw == pw and cr < pr): colors[1], colors[2] = r, r
     return colors
 
 # --- CONNEXION ---
@@ -86,7 +86,7 @@ except: prog = {}
 
 tab1, tab2, tab3 = st.tabs(["📅 Programme", "🏋️‍♂️ Ma Séance", "📈 Progrès"])
 
-# --- TAB 1 : PROGRAMME (RÉORGANISATION RESTAURÉE) ---
+# --- TAB 1 : PROGRAMME (RÉORGANISATION SÉANCES ET EXOS) ---
 with tab1:
     st.subheader("Configuration des séances")
     jours = list(prog.keys())
@@ -117,7 +117,7 @@ with tab1:
     if st.button("Créer") and nvs:
         prog[nvs] = []; ws_p.update_acell('A1', json.dumps(prog)); st.rerun()
 
-# --- TAB 2 : MA SÉANCE (AVEC VARIANTES & SKIP) ---
+# --- TAB 2 : MA SÉANCE (AVEC VARIANTE "MACHINE" SIMPLIFIÉE) ---
 with tab2:
     if prog:
         choix_s = st.selectbox("Séance :", list(prog.keys()))
@@ -132,34 +132,33 @@ with tab2:
             st.markdown(f"### 🔹 {exo_base}")
             
             with st.expander(f"Détails & Saisie : {exo_base}", expanded=True):
-                # OPTION VARIANTE
-                variante = st.selectbox("Équipement utilisé :", ["Standard", "Barre", "Haltères", "Machine A", "Machine B", "Lesté"], key=f"var_{exo_base}_{i}")
+                # OPTION VARIANTE SIMPLIFIÉE
+                variante = st.selectbox("Équipement utilisé :", ["Standard", "Barre", "Haltères", "Machine", "Lesté"], key=f"var_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({variante})" if variante != "Standard" else exo_base
 
-                # HISTORIQUE SÉCURISÉ
+                # HISTORIQUE STRICT (Même séance / Semaine passée / Même variante)
                 full_exo_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 h_only = full_exo_h[full_exo_h["Semaine"] < s_act].sort_values("Semaine", ascending=False)
                 last_s = h_only["Semaine"].unique()[:2]
 
                 if len(last_s) > 0:
-                    st.caption(f"🔍 Historique pour la variante : **{variante}**")
+                    st.caption(f"🔍 Historique (Variante : **{variante}**) :")
                     for sp in last_s:
                         st.write(f"**Semaine {sp}**")
                         st.dataframe(h_only[h_only["Semaine"] == sp][["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
-                # ÉDITEUR
+                # ÉDITEUR ET COULEURS
                 curr = full_exo_h[full_exo_h["Semaine"] == s_act]
                 h_prev = h_only[h_only["Semaine"] == last_s[0]] if len(last_s) > 0 else pd.DataFrame()
+
+                if not curr.empty:
+                    st.caption("📈 Progression (Comparée à la séance précédente) :")
+                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_prev).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
 
                 df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                 if not curr.empty:
                     for _, r in curr.iterrows():
                         if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-                
-                # TABLEAU RÉCAPITULATIF COLORÉ
-                if not curr.empty:
-                    st.caption("📈 Progression pour cette séance :")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=h_prev).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
 
                 ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True,
                                     column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
@@ -171,16 +170,16 @@ with tab2:
                     mask = (df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)
                     save_hist(pd.concat([df_h[~mask], v], ignore_index=True)); st.rerun()
                 
-                if c_sk.button(f"🚫 Skip Exo", key=f"sk_{exo_base}"):
+                if c_sk.button(f"🚫 Skip {exo_base}", key=f"sk_{exo_base}"):
                     sk = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫"}])
                     save_hist(pd.concat([df_h, sk], ignore_index=True)); st.rerun()
 
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        col_v, col_s = st.columns(2)
-        col_v.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
-        col_s.metric("Semaine Max", int(df_h["Semaine"].max()))
+        col_vol, col_sem = st.columns(2)
+        col_vol.metric("Volume Total", f"{int((df_h['Poids'] * df_h['Reps']).sum())} kg")
+        col_sem.metric("Semaine Max", int(df_h["Semaine"].max()))
         
         st.subheader("🏆 Podium de Force")
         df_p = df_h[df_h["Reps"] > 0].copy()
