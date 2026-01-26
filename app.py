@@ -50,7 +50,7 @@ st.markdown("""
     .vol-bar-fill { height: 100%; border-radius: 6px; background: #58CCFF; transition: width 0.8s ease-in-out; }
     .vol-overload { background: #00FF7F !important; box-shadow: 0 0 20px #00FF7F !important; }
 
-    /* PODIUM COULEURS RESTAUREES */
+    /* PODIUM COULEURS */
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
     .podium-gold { border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
     .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
@@ -170,7 +170,6 @@ with tab2:
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
         s_act = c_h2.number_input("Semaine", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
-        # JAUGE VOLUME
         vol_curr = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]["Reps"]).sum()
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
@@ -195,6 +194,8 @@ with tab2:
                     if not h1.empty:
                         st.caption("📅 Semaine S-1")
                         st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                else:
+                    st.info("Semaine 1 : Établissez vos marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
                 h_prev = f_h[f_h["Semaine"] == s_act - 1] if s_act > 1 else pd.DataFrame()
@@ -226,7 +227,7 @@ with tab2:
 # --- TAB 3 : PROGRÈS ---
 with tab3:
     if not df_h.empty:
-        # XP & RANKS
+        # LOGIQUE XP & RANKS
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers = [0, 5000, 25000, 75000, 200000, 500000]
         noms = ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
@@ -269,36 +270,27 @@ with tab3:
 
         # --- ANALYSE DYNAMIQUE ---
         if any(s > 0 for s in scores):
-            # Identifier le point fort
-            top_idx = scores.index(max(scores))
-            top_m = labels[top_idx]
+            top_m = labels[scores.index(max(scores))]
+            # Trouver le vrai point faible (hors jambes à 0)
+            valid_scores = [(s, labels[idx]) for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
             
-            # Identifier le vrai point faible (le plus bas score NON-NUL, excluant les jambes à 0)
-            non_zero_scores = [s for idx, s in enumerate(scores) if s > 0 and labels[idx] != "Jambes"]
-            if non_zero_scores:
-                min_val = min(non_zero_scores)
-                low_idx = scores.index(min_val)
-                low_m = labels[low_idx]
+            if valid_scores:
+                min_val, low_m = min(valid_scores, key=lambda x: x[0])
                 gap = max(scores) - min_val
-                
-                # Niveau de déséquilibre
-                if gap < 15: lvl = "Faible"
-                elif gap < 30: lvl = "Moyen"
-                else: lvl = "Élevé"
-                
-                msg = f"🛡️ **Analyseur de Profil** : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé **{lvl}**."
+                lvl = "Faible" if gap < 15 else ("Moyen" if gap < 30 else "Élevé")
+                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé {lvl}."
             else:
-                msg = f"🛡️ **Analyseur de Profil** : Ton profil est dominé par tes {top_m}."
+                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
             
-            # Note sur les jambes si aucune séance
             if scores[labels.index("Jambes")] == 0:
                 msg += " Il faudra penser à les travailler un jour..."
-            
             st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
 
+        c1, c2 = st.columns(2); c1.metric("VOL. TOTAL", f"{v_tot:,} kg".replace(',', ' ')); c2.metric("SEMAINE MAX", int(df_h["Semaine"].max()))
+        
         # PODIUM HALL OF FAME (Restauration Couleurs)
         st.markdown("### 🏅 Hall of Fame")
-        m_filt = st.multiselect("Filtrer muscle :", labels + ["Autre"], default=labels + ["Autre"])
+        m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
         if not df_p_filt.empty:
             podium = df_p_filt.groupby("Exercice").agg({"1RM": "max"}).sort_values(by="1RM", ascending=False).head(3)
@@ -314,13 +306,12 @@ with tab3:
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c1r, c2r = st.columns(2); c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**"); c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
             
-            # Module Rep Max restauré
             with st.expander("📊 Estimation Rep Max (Charges de travail)"):
                 ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
                 for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
                 
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
-            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
+            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='lines+markers', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
             st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
