@@ -103,61 +103,30 @@ def muscle_flappy_game():
         let gameOver = false; let gameStarted = false;
         let baseSpeed = 3.5;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
-
-        function reset() {
-            biceps.y = 150; biceps.velocity = 0; pipes = []; score = 0; frameCount = 0; 
-            gameOver = false; gameStarted = false; baseSpeed = 3.5;
-        }
-
-        function handleAction(e) {
-            e.preventDefault();
-            if (gameOver) { reset(); } 
-            else if (!gameStarted) { gameStarted = true; biceps.velocity = biceps.lift; } 
-            else { biceps.velocity = biceps.lift; }
-        }
-
+        function reset() { biceps.y = 150; biceps.velocity = 0; pipes = []; score = 0; frameCount = 0; gameOver = false; gameStarted = false; baseSpeed = 3.5; }
+        function handleAction(e) { e.preventDefault(); if (gameOver) { reset(); } else if (!gameStarted) { gameStarted = true; biceps.velocity = biceps.lift; } else { biceps.velocity = biceps.lift; } }
         canvas.addEventListener('mousedown', handleAction);
         canvas.addEventListener('touchstart', handleAction, {passive: false});
-
         function draw() {
-            ctx.fillStyle = '#050A18';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.font = "30px Arial";
-            ctx.fillText("💪", biceps.x, biceps.y);
-            
+            ctx.fillStyle = '#050A18'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = "30px Arial"; ctx.fillText("💪", biceps.x, biceps.y);
             if (gameStarted && !gameOver) {
-                biceps.velocity += biceps.gravity;
-                biceps.y += biceps.velocity;
+                biceps.velocity += biceps.gravity; biceps.y += biceps.velocity;
                 let currentSpeed = baseSpeed + (Math.floor(score / 5) * 0.2);
                 let spawnRate = Math.max(50, 80 - Math.floor(score / 2));
-                if (frameCount % spawnRate === 0) {
-                    let gap = 125;
-                    pipes.push({ x: canvas.width, topH: Math.floor(Math.random() * (canvas.height - gap - 100)) + 50, gap: gap, passed: false });
-                }
+                if (frameCount % spawnRate === 0) { pipes.push({ x: canvas.width, topH: Math.floor(Math.random() * (canvas.height - 225)) + 50, gap: 125, passed: false }); }
                 for (let i = pipes.length - 1; i >= 0; i--) {
-                    pipes[i].x -= currentSpeed;
-                    ctx.fillStyle = "#FF453A"; 
+                    pipes[i].x -= currentSpeed; ctx.fillStyle = "#FF453A"; 
                     ctx.fillRect(pipes[i].x, 0, 50, pipes[i].topH);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 50, canvas.height);
-                    if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 50) {
-                        if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) gameOver = true;
-                    }
+                    if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 50) { if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) gameOver = true; }
                     if (!pipes[i].passed && biceps.x > pipes[i].x + 50) { score++; pipes[i].passed = true; }
                     if (pipes[i].x < -60) pipes.splice(i, 1);
                 }
                 if (biceps.y > canvas.height || biceps.y < 0) gameOver = true;
-            } else if (!gameStarted) {
-                ctx.fillStyle = "white"; ctx.font = "18px Courier New"; ctx.fillText("TAP POUR SOULEVER", 70, 240);
-            }
-            if (gameOver) {
-                if (score > record) { record = score; localStorage.setItem('muscleFlappyRecord', record); }
-                ctx.fillStyle = "rgba(255,69,58,0.5)"; ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = "white"; ctx.font = "30px Courier New"; ctx.fillText("ÉCHEC CRITIQUE", 45, 220);
-                ctx.font = "15px Courier New"; ctx.fillText("Score: " + score + " | Record: " + record, 75, 260);
-                ctx.fillText("Clique pour retenter", 75, 290);
-            }
-            ctx.font = "bold 20px Courier New"; ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35);
-            ctx.fillStyle = "#FFD700"; ctx.fillText("MAX: " + record, 180, 35);
+            } else if (!gameStarted) { ctx.fillStyle = "white"; ctx.font = "18px Courier New"; ctx.fillText("TAP POUR SOULEVER", 70, 240); }
+            if (gameOver) { if (score > record) { record = score; localStorage.setItem('muscleFlappyRecord', record); } ctx.fillStyle = "rgba(255,69,58,0.5)"; ctx.fillRect(0,0, canvas.width, canvas.height); ctx.fillStyle = "white"; ctx.font = "30px Courier New"; ctx.fillText("ÉCHEC CRITIQUE", 45, 220); ctx.font = "15px Courier New"; ctx.fillText("Score: " + score + " | Record: " + record, 75, 260); ctx.fillText("Clique pour retenter", 75, 290); }
+            ctx.font = "bold 20px Courier New"; ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35); ctx.fillStyle = "#FFD700"; ctx.fillText("MAX: " + record, 180, 35);
             frameCount++; requestAnimationFrame(draw);
         }
         draw();
@@ -287,19 +256,19 @@ with tab_s:
                     best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
                     st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
 
+                # --- HISTORIQUE CHRONOLOGIQUE RECTIFIÉ (S-2 PUIS S-1) ---
                 if s_act > 1:
-                    h1 = f_h[f_h["Semaine"] == s_act - 1]
-                    if not h1.empty:
-                        st.caption("📅 Semaine S-1")
-                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                     if s_act > 2:
                         h2 = f_h[f_h["Semaine"] == s_act - 2]
                         if not h2.empty:
                             st.caption("📅 Semaine S-2")
                             st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    h1 = f_h[f_h["Semaine"] == s_act - 1]
+                    if not h1.empty:
+                        st.caption("📅 Semaine S-1")
+                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
 
                 curr = f_h[f_h["Semaine"] == s_act]
-                # DEBUG SKIP : On ignore le reset si c'est un SKIP
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
@@ -361,10 +330,11 @@ with tab_st:
             p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
+        
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
-            # --- REMISE DU RECORD ET 1RM DANS LE ZOOM ---
+            # --- RÉTABLISSEMENT DES RECORDS DANS LE ZOOM ---
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c1r, c2r = st.columns(2)
             c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**")
