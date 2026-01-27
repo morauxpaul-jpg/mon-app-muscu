@@ -173,6 +173,7 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
+# Logo centré
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
@@ -256,24 +257,26 @@ with tab_s:
                     best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
                     st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
 
-                # --- HISTORIQUE CHRONOLOGIQUE RECTIFIÉ (S-2 PUIS S-1) ---
-                if s_act > 1:
-                    if s_act > 2:
-                        h2 = f_h[f_h["Semaine"] == s_act - 2]
-                        if not h2.empty:
-                            st.caption("📅 Semaine S-2")
-                            st.dataframe(h2[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-                    h1 = f_h[f_h["Semaine"] == s_act - 1]
-                    if not h1.empty:
-                        st.caption("📅 Semaine S-1")
-                        st.dataframe(h1[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                # --- HISTORIQUE CHRONOLOGIQUE ROBUSTE ---
+                hist_weeks = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
+                if hist_weeks:
+                    weeks_to_show = hist_weeks[-2:] # On affiche les 2 dernières connues
+                    for w_num in weeks_to_show:
+                        h_data = f_h[f_h["Semaine"] == w_num]
+                        st.caption(f"📅 Semaine {w_num}")
+                        st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                else:
+                    st.info("Semaine 1 : Établissez vos marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
+                last_w_num = hist_weeks[-1] if hist_weeks else None
+                hist_prev_df = f_h[f_h["Semaine"] == last_w_num] if last_w_num is not None else pd.DataFrame()
+                
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=f_h[f_h["Semaine"] == s_act-1]).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
+                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
                     if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
                     df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
