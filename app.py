@@ -161,7 +161,7 @@ st.markdown("""
     
     .game-selector {
         background: rgba(255,255,255,0.03);
-        border: 2px solid #58CCFF;
+        border: 2px solid rgba(88, 204, 255, 0.3);
         border-radius: 12px;
         padding: 20px;
         margin: 15px 0;
@@ -174,6 +174,13 @@ st.markdown("""
         background: rgba(88, 204, 255, 0.15);
         transform: scale(1.02);
         box-shadow: 0 0 25px rgba(88, 204, 255, 0.4);
+        border-color: #58CCFF;
+    }
+    
+    .game-selected {
+        background: rgba(88, 204, 255, 0.2) !important;
+        border-color: #58CCFF !important;
+        box-shadow: 0 0 30px rgba(88, 204, 255, 0.6) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -210,26 +217,26 @@ def muscle_flappy_game():
     st.caption("Tape pour faire sauter le muscle et évite les obstacles !")
     
     game_html = """
-    <div style="text-align: center;">
-        <canvas id="flappyCanvas" width="350" height="500" style="border: 3px solid #FF453A; border-radius: 15px; background: linear-gradient(180deg, #0a1628 0%, #050A18 100%); cursor: pointer; touch-action: none; box-shadow: 0 0 30px rgba(255, 69, 58, 0.3);"></canvas>
+    <div style="text-align: center; max-width: 100%;">
+        <canvas id="flappyCanvas" width="300" height="450" style="border: 3px solid #FF453A; border-radius: 15px; background: linear-gradient(180deg, #0a1628 0%, #050A18 100%); cursor: pointer; touch-action: none; box-shadow: 0 0 30px rgba(255, 69, 58, 0.3); max-width: 100%;"></canvas>
     </div>
     <script>
         const canvas = document.getElementById('flappyCanvas');
         const ctx = canvas.getContext('2d');
-        let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.4, velocity: 0, lift: -7, rotation: 0 };
+        let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.5, velocity: 0, lift: -8 };
         let pipes = []; 
         let frameCount = 0; 
         let score = 0; 
         let particles = [];
         let gameOver = false; 
         let gameStarted = false;
-        let baseSpeed = 4;
+        let baseSpeed = 5;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
         
         function reset() { 
-            biceps.y = 200; biceps.velocity = 0; biceps.rotation = 0;
+            biceps.y = 200; biceps.velocity = 0;
             pipes = []; score = 0; frameCount = 0; particles = [];
-            gameOver = false; gameStarted = false; baseSpeed = 4; 
+            gameOver = false; gameStarted = false; baseSpeed = 5; 
         }
         
         function createParticles(x, y, color) {
@@ -290,32 +297,25 @@ def muscle_flappy_game():
                 if(p.life <= 0) particles.splice(i, 1);
             }
             
-            // Joueur avec rotation
-            ctx.save();
-            ctx.translate(biceps.x + 15, biceps.y);
-            biceps.rotation = Math.min(Math.max(biceps.velocity * 4, -25), 90);
-            ctx.rotate(biceps.rotation * Math.PI / 180);
-            
-            // Effet de glow
+            // Joueur simple sans rotation
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#58CCFF';
             ctx.font = "35px Arial";
-            ctx.fillText("💪", -18, 10);
+            ctx.fillText("💪", biceps.x, biceps.y);
             ctx.shadowBlur = 0;
-            ctx.restore();
             
             if (gameStarted && !gameOver) {
                 biceps.velocity += biceps.gravity; 
                 biceps.y += biceps.velocity;
                 
-                let currentSpeed = baseSpeed + (Math.floor(score / 5) * 0.3);
-                let spawnRate = Math.max(55, 90 - Math.floor(score / 2));
+                let currentSpeed = baseSpeed + (Math.floor(score / 4) * 0.4);
+                let spawnRate = Math.max(45, 75 - Math.floor(score / 2));
                 
                 if (frameCount % spawnRate === 0) { 
                     pipes.push({ 
                         x: canvas.width, 
-                        topH: Math.floor(Math.random() * (canvas.height - 250)) + 60, 
-                        gap: 140, 
+                        topH: Math.floor(Math.random() * (canvas.height - 220)) + 60, 
+                        gap: 120, 
                         passed: false 
                     }); 
                 }
@@ -415,21 +415,21 @@ def muscle_flappy_game():
         draw();
     </script>
     """
-    components.html(game_html, height=550)
+    components.html(game_html, height=490)
 
 def rep_crusher_game():
     st.markdown("### 🏋️ REP CRUSHER : FORCE ULTIME")
     st.caption("Déplace la barre pour attraper les disques. Maintiens pour soulever !")
     
     game_html = """
-    <div style="text-align: center;">
-        <canvas id="repCanvas" width="350" height="500" style="border: 3px solid #00FF7F; border-radius: 15px; background: linear-gradient(180deg, #0a1628 0%, #050A18 100%); cursor: pointer; touch-action: none; box-shadow: 0 0 30px rgba(0, 255, 127, 0.3);"></canvas>
+    <div style="text-align: center; max-width: 100%;">
+        <canvas id="repCanvas" width="300" height="450" style="border: 3px solid #00FF7F; border-radius: 15px; background: linear-gradient(180deg, #0a1628 0%, #050A18 100%); cursor: pointer; touch-action: none; box-shadow: 0 0 30px rgba(0, 255, 127, 0.3); max-width: 100%;"></canvas>
     </div>
     <script>
         const canvas2 = document.getElementById('repCanvas');
         const ctx2 = canvas2.getContext('2d');
         
-        let barbell = { x: 155, y: 420, w: 90, h: 12, targetY: 420, liftPower: 0 };
+        let barbell = { x: 130, y: 380, w: 90, h: 12, targetY: 380, liftPower: 0 };
         let plates = [];
         let score = 0;
         let combo = 0;
@@ -437,22 +437,22 @@ def rep_crusher_game():
         let gameOver = false;
         let gameStarted = false;
         let frameCount = 0;
-        let speed = 2.5;
+        let speed = 3.5;
         let powerBar = 0;
         let isCharging = false;
-        let mouseX = 175;
+        let mouseX = 150;
         
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
         
         function reset() {
-            barbell = { x: 155, y: 420, w: 90, h: 12, targetY: 420, liftPower: 0 };
+            barbell = { x: 130, y: 380, w: 90, h: 12, targetY: 380, liftPower: 0 };
             plates = [];
             score = 0;
             combo = 0;
             gameOver = false;
             gameStarted = false;
             frameCount = 0;
-            speed = 2.5;
+            speed = 3.5;
             powerBar = 0;
             isCharging = false;
         }
@@ -535,8 +535,8 @@ def rep_crusher_game():
             }
             
             if (gameStarted && !gameOver) {
-                // Vitesse adaptative
-                speed = 2.5 + (score / 12);
+                // Vitesse adaptative plus rapide
+                speed = 3.5 + (score / 8);
                 
                 // Charge de la barre
                 if (isCharging) {
@@ -555,12 +555,12 @@ def rep_crusher_game():
                     barbell.liftPower *= 0.90;
                     if (barbell.liftPower < 0.3) {
                         barbell.liftPower = 0;
-                        barbell.targetY = 420;
+                        barbell.targetY = 380;
                     }
                 }
                 
-                // Spawn disques
-                if (frameCount % Math.max(35, 80 - score * 2) === 0) {
+                // Spawn disques plus rapide
+                if (frameCount % Math.max(30, 65 - score * 2) === 0) {
                     spawnPlate();
                 }
                 
@@ -727,7 +727,7 @@ def rep_crusher_game():
         draw();
     </script>
     """
-    components.html(game_html, height=550)
+    components.html(game_html, height=490)
 
 
 # --- 5. CONNEXION ---
@@ -958,38 +958,39 @@ with tab_g:
     st.markdown("## 🎮 ARCADE CYBER-FITNESS")
     st.markdown("*Deux jeux pour tester tes réflexes pendant les temps de repos !*")
     
+    # Initialiser le jeu sélectionné dans session state
+    if 'selected_game' not in st.session_state:
+        st.session_state.selected_game = "💪 Muscle Flappy"
+    
     col_g1, col_g2 = st.columns(2)
     
     with col_g1:
-        st.markdown("""
-        <div class='game-selector'>
+        if st.button("", key="btn_flappy", use_container_width=True):
+            st.session_state.selected_game = "💪 Muscle Flappy"
+        selected_class = "game-selected" if st.session_state.selected_game == "💪 Muscle Flappy" else ""
+        st.markdown(f"""
+        <div class='game-selector {selected_class}' style='margin-top: -45px; pointer-events: none;'>
             <h3 style='text-align: center; color: #FF453A; margin: 0;'>💪 MUSCLE FLAPPY</h3>
             <p style='text-align: center; font-size: 13px; margin: 5px 0; color: #aaa;'>Esquive les obstacles !</p>
-            <p style='text-align: center; font-size: 11px; color: #888;'>⚡ Difficulté progressive</p>
+            <p style='text-align: center; font-size: 11px; color: #888;'>⚡ Plus difficile et rapide</p>
         </div>
         """, unsafe_allow_html=True)
         
     with col_g2:
-        st.markdown("""
-        <div class='game-selector'>
+        if st.button("", key="btn_crusher", use_container_width=True):
+            st.session_state.selected_game = "🏋️ Rep Crusher"
+        selected_class = "game-selected" if st.session_state.selected_game == "🏋️ Rep Crusher" else ""
+        st.markdown(f"""
+        <div class='game-selector {selected_class}' style='margin-top: -45px; pointer-events: none;'>
             <h3 style='text-align: center; color: #00FF7F; margin: 0;'>🏋️ REP CRUSHER</h3>
             <p style='text-align: center; font-size: 13px; margin: 5px 0; color: #aaa;'>Attrape les disques !</p>
-            <p style='text-align: center; font-size: 11px; color: #888;'>🔥 Système de combo</p>
+            <p style='text-align: center; font-size: 11px; color: #888;'>🔥 Spawn plus rapide</p>
         </div>
         """, unsafe_allow_html=True)
     
-    st.divider()
-    
-    game_choice = st.radio(
-        "Sélectionne ton jeu :", 
-        ["💪 Muscle Flappy", "🏋️ Rep Crusher"], 
-        horizontal=True, 
-        label_visibility="collapsed"
-    )
-    
     st.markdown("---")
     
-    if game_choice == "💪 Muscle Flappy":
+    if st.session_state.selected_game == "💪 Muscle Flappy":
         muscle_flappy_game()
     else:
         rep_crusher_game()
