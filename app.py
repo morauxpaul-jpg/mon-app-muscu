@@ -11,26 +11,34 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
-if 'active_quests' not in st.session_state:
-    st.session_state.active_quests = {}
-if 'completed_quests' not in st.session_state:
-    st.session_state.completed_quests = []
-if 'quest_notifications' not in st.session_state:
-    st.session_state.quest_notifications = []
 
-# --- 2. CSS : DESIGN CYBER-RPG COMPLET + ANIMATIONS ---
+# --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
 st.markdown("""
 <style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    @keyframes glow {
+        0%, 100% { box-shadow: 0 0 5px #58CCFF; }
+        50% { box-shadow: 0 0 20px #58CCFF, 0 0 30px #58CCFF; }
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateX(-20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+    
     .stApp {
         background: radial-gradient(circle at 50% 0%, rgba(10, 50, 100, 0.4) 0%, transparent 50%),
                     linear-gradient(180deg, #050A18 0%, #000000 100%);
         background-attachment: fixed; color: #F0F2F6;
-        animation: bgPulse 10s infinite alternate;
-    }
-    
-    @keyframes bgPulse {
-        0% { filter: brightness(1); }
-        100% { filter: brightness(1.1); }
     }
     
     .stExpander {
@@ -38,444 +46,138 @@ st.markdown("""
         border: 1px solid rgba(74, 144, 226, 0.3) !important;
         border-radius: 15px !important; backdrop-filter: blur(10px);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important; margin-bottom: 15px;
-        transition: all 0.3s ease;
-        animation: fadeInUp 0.5s ease-out;
-    }
-    
-    .stExpander:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 40px rgba(88, 204, 255, 0.3) !important;
-        border-color: rgba(88, 204, 255, 0.6) !important;
-    }
-    
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        animation: slideIn 0.3s ease-out;
     }
     
     h1, h2, h3 { 
-        letter-spacing: 1.5px; 
-        text-transform: uppercase; 
-        color: #FFFFFF; 
+        letter-spacing: 1.5px; text-transform: uppercase; color: #FFFFFF; 
         text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-        animation: titleGlow 2s ease-in-out infinite alternate;
-    }
-    
-    @keyframes titleGlow {
-        from { text-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 10px rgba(88, 204, 255, 0.3); }
-        to { text-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 20px rgba(88, 204, 255, 0.6); }
+        animation: slideIn 0.5s ease-out;
     }
     
     div[data-testid="stMetricValue"] { 
         font-family: 'Courier New', monospace; font-size: 38px !important; color: #58CCFF !important; 
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important;
-        animation: metricPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes metricPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-    
-    /* QUEST SYSTEM STYLES */
-    .quest-panel {
-        background: linear-gradient(135deg, rgba(88, 204, 255, 0.1) 0%, rgba(0, 255, 127, 0.05) 100%);
-        border: 2px solid #58CCFF;
-        border-radius: 15px;
-        padding: 25px;
-        margin: 20px 0;
-        position: relative;
-        overflow: hidden;
-        animation: fadeInUp 0.6s ease-out;
-    }
-    
-    .quest-panel::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(88, 204, 255, 0.1), transparent);
-        animation: questShimmer 3s linear infinite;
-    }
-    
-    @keyframes questShimmer {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .quest-header {
-        font-family: 'Courier New', monospace;
-        font-size: 1.8rem;
-        font-weight: 900;
-        color: #FFD60A;
-        margin-bottom: 20px;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        text-shadow: 0 0 10px rgba(255, 214, 10, 0.5);
-        position: relative;
-        z-index: 1;
-        animation: questHeaderPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes questHeaderPulse {
-        0%, 100% { text-shadow: 0 0 10px rgba(255, 214, 10, 0.5); }
-        50% { text-shadow: 0 0 20px rgba(255, 214, 10, 0.8), 0 0 30px rgba(255, 214, 10, 0.4); }
-    }
-    
-    .quest-item {
-        background: rgba(255, 255, 255, 0.05);
-        border-left: 4px solid #FF453A;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-        position: relative;
-        z-index: 1;
-        animation: slideInLeft 0.5s ease-out;
-    }
-    
-    @keyframes slideInLeft {
-        from {
-            opacity: 0;
-            transform: translateX(-30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-    
-    .quest-item:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-left-color: #00FF7F;
-        transform: translateX(10px);
-        box-shadow: 0 5px 20px rgba(0, 255, 127, 0.3);
-    }
-    
-    .quest-item.completed {
-        border-left-color: #00FF7F;
-        opacity: 0.8;
-        animation: completedPulse 1s ease-in-out;
-    }
-    
-    @keyframes completedPulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); background: rgba(0, 255, 127, 0.2); }
-        100% { transform: scale(1); }
-    }
-    
-    .quest-title {
-        font-family: 'Courier New', monospace;
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #58CCFF;
-        margin-bottom: 8px;
-        text-shadow: 0 0 5px rgba(88, 204, 255, 0.3);
-    }
-    
-    .quest-desc {
-        font-size: 0.95rem;
-        color: #E8EDF4;
-        opacity: 0.9;
-        margin-bottom: 10px;
-    }
-    
-    .quest-reward {
-        font-family: 'Courier New', monospace;
-        color: #FFD60A;
-        font-size: 1rem;
-        font-weight: 700;
-        text-shadow: 0 0 5px rgba(255, 214, 10, 0.3);
-    }
-    
-    .quest-progress {
-        width: 100%;
-        height: 10px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        overflow: hidden;
-        margin-top: 10px;
-        position: relative;
-    }
-    
-    .quest-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #FF453A, #00FF7F);
-        transition: width 0.8s ease-out;
-        box-shadow: 0 0 15px rgba(0, 255, 127, 0.6);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .quest-progress-fill::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-        animation: progressShimmer 2s infinite;
-    }
-    
-    @keyframes progressShimmer {
-        to { left: 100%; }
-    }
-    
-    /* NOTIFICATION SYSTEM */
-    .notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #FF453A, #00FF7F);
-        color: white;
-        padding: 20px 30px;
-        border-radius: 10px;
-        font-family: 'Courier New', monospace;
-        font-weight: 700;
-        font-size: 1.1rem;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 127, 0.4);
-        animation: notificationSlideIn 0.5s ease-out, notificationPulse 2s ease-in-out infinite;
-        z-index: 9999;
-    }
-    
-    @keyframes notificationSlideIn {
-        from { 
-            transform: translateX(400px); 
-            opacity: 0; 
-        }
-        to { 
-            transform: translateX(0); 
-            opacity: 1; 
-        }
-    }
-    
-    @keyframes notificationPulse {
-        0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 127, 0.4); }
-        50% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 255, 127, 0.8); }
+        animation: pulse 2s infinite;
     }
     
     .rank-ladder { 
         display: flex; justify-content: space-between; align-items: center; 
         background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; 
         border: 1px solid #58CCFF; margin-bottom: 30px;
-        animation: fadeInUp 0.7s ease-out;
+        animation: glow 3s infinite;
     }
     
     .rank-step { 
         text-align: center; flex: 1; opacity: 0.5; font-size: 10px; 
-        transition: all 0.5s ease;
-        animation: fadeIn 1s ease-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        transition: all 0.3s ease;
     }
     
     .rank-step.active { 
-        opacity: 1; font-weight: bold; transform: scale(1.2); color: #58CCFF;
-        animation: rankBounce 1s ease-in-out infinite;
+        opacity: 1; font-weight: bold; transform: scale(1.15); color: #58CCFF;
+        animation: float 2s ease-in-out infinite;
     }
     
-    @keyframes rankBounce {
-        0%, 100% { transform: scale(1.2) translateY(0); }
-        50% { transform: scale(1.2) translateY(-10px); }
-    }
-    
-    .rank-step.completed { 
-        color: #00FF7F; opacity: 0.8;
-        animation: completedGlow 2s ease-in-out infinite;
-    }
-    
-    @keyframes completedGlow {
-        0%, 100% { text-shadow: 0 0 5px rgba(0, 255, 127, 0.3); }
-        50% { text-shadow: 0 0 15px rgba(0, 255, 127, 0.6); }
-    }
+    .rank-step.completed { color: #00FF7F; opacity: 0.8; }
     
     .xp-bar-bg { 
         width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; 
-        height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3);
-        animation: fadeIn 0.8s ease-out;
+        height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); 
     }
     
     .xp-bar-fill { 
         height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); 
         box-shadow: 0 0 15px #58CCFF;
         transition: width 1s ease-out;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .xp-bar-fill::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-        animation: xpShimmer 2s infinite;
-    }
-    
-    @keyframes xpShimmer {
-        to { left: 100%; }
     }
 
     .vol-container { 
         background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; 
         border: 1px solid rgba(88, 204, 255, 0.2);
-        animation: fadeInUp 0.6s ease-out;
+        animation: slideIn 0.5s ease-out;
     }
     
     .vol-bar { 
         height: 12px; border-radius: 6px; background: #58CCFF; 
-        transition: width 0.8s ease-in-out; 
-        box-shadow: 0 0 10px #58CCFF;
-        animation: volumeGrow 1s ease-out;
-    }
-    
-    @keyframes volumeGrow {
-        from { width: 0; }
+        transition: width 0.8s ease-in-out; box-shadow: 0 0 10px #58CCFF; 
     }
     
     .vol-overload { 
-        background: #00FF7F !important; 
-        box-shadow: 0 0 15px #00FF7F !important;
-        animation: overloadPulse 1s ease-in-out infinite;
-    }
-    
-    @keyframes overloadPulse {
-        0%, 100% { box-shadow: 0 0 15px #00FF7F; }
-        50% { box-shadow: 0 0 25px #00FF7F, 0 0 35px rgba(0, 255, 127, 0.4); }
+        background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important;
+        animation: pulse 1.5s infinite;
     }
 
     .podium-card { 
         background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; 
         text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF;
-        transition: all 0.3s ease;
-        animation: fadeInUp 0.5s ease-out;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     
     .podium-card:hover {
-        transform: translateY(-8px) scale(1.05);
-        box-shadow: 0 15px 40px rgba(88, 204, 255, 0.3);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(88, 204, 255, 0.4);
     }
     
     .podium-gold { 
-        border-color: #FFD700 !important; 
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
-        animation: goldShine 2s ease-in-out infinite;
-    }
-    
-    @keyframes goldShine {
-        0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
-        50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.5); }
+        border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        animation: glow 2s infinite;
     }
     
     .podium-silver { 
-        border-color: #C0C0C0 !important; 
-        box-shadow: 0 0 15px rgba(192, 192, 192, 0.2);
-        animation: silverShine 2s ease-in-out infinite;
-    }
-    
-    @keyframes silverShine {
-        0%, 100% { box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
-        50% { box-shadow: 0 0 30px rgba(192, 192, 192, 0.5); }
+        border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); 
     }
     
     .podium-bronze { 
-        border-color: #CD7F32 !important; 
-        box-shadow: 0 0 15px rgba(205, 127, 50, 0.2);
-        animation: bronzeShine 2s ease-in-out infinite;
-    }
-    
-    @keyframes bronzeShine {
-        0%, 100% { box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); }
-        50% { box-shadow: 0 0 30px rgba(205, 127, 50, 0.5); }
+        border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); 
     }
     
     .recup-container { 
-        display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px;
-        animation: fadeIn 0.8s ease-out;
+        display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; 
     }
     
     .recup-card { 
         min-width: 90px; background: rgba(255,255,255,0.05); 
         border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; 
         padding: 8px; text-align: center;
-        transition: all 0.3s ease;
-        animation: cardFloat 3s ease-in-out infinite;
+        transition: transform 0.2s ease;
     }
     
     .recup-card:hover {
-        transform: translateY(-5px) scale(1.05);
-        box-shadow: 0 8px 20px rgba(88, 204, 255, 0.3);
-        border-color: #58CCFF;
-    }
-    
-    @keyframes cardFloat {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-3px); }
+        transform: scale(1.05);
     }
     
     .status-dot { 
         height: 10px; width: 10px; border-radius: 50%; 
         display: inline-block; margin-right: 5px;
-        animation: dotPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes dotPulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.2); }
+        animation: pulse 2s infinite;
     }
 
     .cyber-analysis { 
         background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; 
         padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; 
         font-size: 0.95rem;
-        animation: slideInLeft 0.6s ease-out;
+        animation: slideIn 0.6s ease-out;
     }
     
-    /* Button animations */
-    .stButton > button {
-        transition: all 0.3s ease;
-        animation: fadeIn 0.5s ease-out;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(88, 204, 255, 0.4);
-    }
-    
-    .stButton > button:active {
-        transform: translateY(0);
-        box-shadow: 0 4px 10px rgba(88, 204, 255, 0.2);
-    }
-    
-    /* Tab animations */
-    .stTabs [data-baseweb="tab"] {
+    .game-selector {
+        background: rgba(255,255,255,0.03);
+        border: 2px solid #58CCFF;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
+        text-align: center;
+        cursor: pointer;
         transition: all 0.3s ease;
     }
     
-    .stTabs [data-baseweb="tab"]:hover {
-        transform: translateY(-2px);
-    }
-    
-    /* Data editor animations */
-    .stDataFrame {
-        animation: fadeInUp 0.5s ease-out;
+    .game-selector:hover {
+        background: rgba(88, 204, 255, 0.15);
+        transform: scale(1.02);
+        box-shadow: 0 0 25px rgba(88, 204, 255, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 # --- 3. FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
@@ -502,231 +204,531 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-# --- 4. QUEST SYSTEM ---
-QUEST_TEMPLATES = {
-    "weekly_warrior": {
-        "title": "🔥 GUERRIER HEBDOMADAIRE",
-        "description": "Complète 4 séances cette semaine",
-        "reward": "+500 XP",
-        "type": "weekly",
-        "target": 4,
-        "icon": "🏆"
-    },
-    "volume_king": {
-        "title": "👑 ROI DU VOLUME",
-        "description": "Atteins 10,000kg de volume total en une séance",
-        "reward": "+750 XP",
-        "type": "session",
-        "target": 10000,
-        "icon": "💪"
-    },
-    "consistency": {
-        "title": "⚡ CONSISTANCE",
-        "description": "Entraîne-toi 3 jours d'affilée",
-        "reward": "+300 XP",
-        "type": "streak",
-        "target": 3,
-        "icon": "🔥"
-    },
-    "pr_hunter": {
-        "title": "🎯 CHASSEUR DE PR",
-        "description": "Bats 3 records personnels cette semaine",
-        "reward": "+1000 XP",
-        "type": "weekly",
-        "target": 3,
-        "icon": "⚡"
-    },
-    "balanced": {
-        "title": "⚖️ ÉQUILIBRE PARFAIT",
-        "description": "Entraîne tous les groupes musculaires cette semaine",
-        "reward": "+600 XP",
-        "type": "weekly",
-        "target": 6,
-        "icon": "🎭"
-    },
-    "endurance": {
-        "title": "🔋 ENDURANCE",
-        "description": "Fais une série de 15+ reps",
-        "reward": "+200 XP",
-        "type": "session",
-        "target": 15,
-        "icon": "⚡"
-    },
-    "heavy_lifter": {
-        "title": "⚡ PUISSANCE BRUTE",
-        "description": "Soulève 100kg+ en une série",
-        "reward": "+400 XP",
-        "type": "session",
-        "target": 100,
-        "icon": "💥"
-    }
-}
-
-def check_quest_progress(df_h, current_week):
-    """Vérifie la progression des quêtes"""
-    notifications = []
-    
-    # Initialiser les quêtes actives si nécessaire
-    if not st.session_state.active_quests:
-        st.session_state.active_quests = {
-            "weekly_warrior": {"progress": 0, "completed": False},
-            "volume_king": {"progress": 0, "completed": False},
-            "consistency": {"progress": 0, "completed": False},
-            "pr_hunter": {"progress": 0, "completed": False},
-            "balanced": {"progress": 0, "completed": False},
-            "endurance": {"progress": 0, "completed": False},
-            "heavy_lifter": {"progress": 0, "completed": False}
-        }
-    
-    # Weekly Warrior: Séances complétées cette semaine
-    sessions_this_week = df_h[df_h["Semaine"] == current_week]["Séance"].nunique()
-    if sessions_this_week > st.session_state.active_quests["weekly_warrior"]["progress"]:
-        st.session_state.active_quests["weekly_warrior"]["progress"] = sessions_this_week
-        if sessions_this_week >= QUEST_TEMPLATES["weekly_warrior"]["target"] and not st.session_state.active_quests["weekly_warrior"]["completed"]:
-            st.session_state.active_quests["weekly_warrior"]["completed"] = True
-            notifications.append("🏆 QUÊTE COMPLÉTÉE: GUERRIER HEBDOMADAIRE +500 XP!")
-            if "🏆 GUERRIER HEBDOMADAIRE" not in st.session_state.completed_quests:
-                st.session_state.completed_quests.append("🏆 GUERRIER HEBDOMADAIRE")
-    
-    # Volume King: Volume max en une séance
-    df_sessions = df_h[df_h["Semaine"] == current_week].groupby("Séance").apply(lambda x: (x["Poids"] * x["Reps"]).sum())
-    if not df_sessions.empty:
-        max_volume = df_sessions.max()
-        if pd.notna(max_volume) and max_volume > st.session_state.active_quests["volume_king"]["progress"]:
-            st.session_state.active_quests["volume_king"]["progress"] = int(max_volume)
-            if max_volume >= QUEST_TEMPLATES["volume_king"]["target"] and not st.session_state.active_quests["volume_king"]["completed"]:
-                st.session_state.active_quests["volume_king"]["completed"] = True
-                notifications.append("👑 QUÊTE COMPLÉTÉE: ROI DU VOLUME +750 XP!")
-                if "👑 ROI DU VOLUME" not in st.session_state.completed_quests:
-                    st.session_state.completed_quests.append("👑 ROI DU VOLUME")
-    
-    # Balanced: Groupes musculaires entraînés
-    muscles_trained = df_h[df_h["Semaine"] == current_week]["Muscle"].nunique()
-    if muscles_trained > st.session_state.active_quests["balanced"]["progress"]:
-        st.session_state.active_quests["balanced"]["progress"] = muscles_trained
-        if muscles_trained >= QUEST_TEMPLATES["balanced"]["target"] and not st.session_state.active_quests["balanced"]["completed"]:
-            st.session_state.active_quests["balanced"]["completed"] = True
-            notifications.append("⚖️ QUÊTE COMPLÉTÉE: ÉQUILIBRE PARFAIT +600 XP!")
-            if "⚖️ ÉQUILIBRE PARFAIT" not in st.session_state.completed_quests:
-                st.session_state.completed_quests.append("⚖️ ÉQUILIBRE PARFAIT")
-    
-    # Endurance: Série de 15+ reps
-    max_reps = df_h[df_h["Semaine"] == current_week]["Reps"].max()
-    if pd.notna(max_reps) and max_reps > st.session_state.active_quests["endurance"]["progress"]:
-        st.session_state.active_quests["endurance"]["progress"] = int(max_reps)
-        if max_reps >= QUEST_TEMPLATES["endurance"]["target"] and not st.session_state.active_quests["endurance"]["completed"]:
-            st.session_state.active_quests["endurance"]["completed"] = True
-            notifications.append("🔋 QUÊTE COMPLÉTÉE: ENDURANCE +200 XP!")
-            if "🔋 ENDURANCE" not in st.session_state.completed_quests:
-                st.session_state.completed_quests.append("🔋 ENDURANCE")
-    
-    # Heavy Lifter: 100kg+ en une série
-    max_weight = df_h[df_h["Semaine"] == current_week]["Poids"].max()
-    if pd.notna(max_weight) and max_weight > st.session_state.active_quests["heavy_lifter"]["progress"]:
-        st.session_state.active_quests["heavy_lifter"]["progress"] = float(max_weight)
-        if max_weight >= QUEST_TEMPLATES["heavy_lifter"]["target"] and not st.session_state.active_quests["heavy_lifter"]["completed"]:
-            st.session_state.active_quests["heavy_lifter"]["completed"] = True
-            notifications.append("⚡ QUÊTE COMPLÉTÉE: PUISSANCE BRUTE +400 XP!")
-            if "⚡ PUISSANCE BRUTE" not in st.session_state.completed_quests:
-                st.session_state.completed_quests.append("⚡ PUISSANCE BRUTE")
-    
-    # PR Hunter: Records battus cette semaine
-    pr_count = 0
-    for exercise in df_h["Exercice"].unique():
-        df_ex = df_h[df_h["Exercice"] == exercise]
-        prev_weeks = df_ex[df_ex["Semaine"] < current_week]
-        curr_week_data = df_ex[df_ex["Semaine"] == current_week]
-        
-        if not prev_weeks.empty and not curr_week_data.empty:
-            prev_best = prev_weeks["Poids"].max()
-            curr_best = curr_week_data["Poids"].max()
-            if curr_best > prev_best:
-                pr_count += 1
-    
-    if pr_count > st.session_state.active_quests["pr_hunter"]["progress"]:
-        st.session_state.active_quests["pr_hunter"]["progress"] = pr_count
-        if pr_count >= QUEST_TEMPLATES["pr_hunter"]["target"] and not st.session_state.active_quests["pr_hunter"]["completed"]:
-            st.session_state.active_quests["pr_hunter"]["completed"] = True
-            notifications.append("🎯 QUÊTE COMPLÉTÉE: CHASSEUR DE PR +1000 XP!")
-            if "🎯 CHASSEUR DE PR" not in st.session_state.completed_quests:
-                st.session_state.completed_quests.append("🎯 CHASSEUR DE PR")
-    
-    return notifications
-
-def display_quest_panel():
-    """Affiche le panneau de quêtes"""
-    st.markdown('<div class="quest-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="quest-header">⚡ MISSIONS ACTIVES ⚡</div>', unsafe_allow_html=True)
-    
-    for quest_id, quest_data in QUEST_TEMPLATES.items():
-        if quest_id in st.session_state.active_quests:
-            progress = st.session_state.active_quests[quest_id]["progress"]
-            target = quest_data["target"]
-            completed = st.session_state.active_quests[quest_id]["completed"]
-            progress_pct = min((progress / target) * 100, 100)
-            
-            quest_class = "quest-item completed" if completed else "quest-item"
-            
-            st.markdown(f"""
-            <div class="{quest_class}">
-                <div class="quest-title">{quest_data["icon"]} {quest_data["title"]}</div>
-                <div class="quest-desc">{quest_data["description"]}</div>
-                <div class="quest-reward">Récompense: {quest_data["reward"]}</div>
-                <div class="quest-progress">
-                    <div class="quest-progress-fill" style="width: {progress_pct}%"></div>
-                </div>
-                <small style="color: #E8EDF4; opacity: 0.7; margin-top: 5px; display: block;">
-                    Progression: {progress} / {target} {'✅' if completed else ''}
-                </small>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-
+# --- 4. JEUX CYBER ---
 def muscle_flappy_game():
-    st.markdown("### 🕹️ MUSCLE FLAPPY : EVOLUTION")
+    st.markdown("### 💪 MUSCLE FLAPPY : EVOLUTION")
+    st.caption("Tape pour faire sauter le muscle et évite les obstacles !")
+    
     game_html = """
-    <div id="game-container" style="text-align: center;">
-        <canvas id="flappyCanvas" width="320" height="480" style="border: 2px solid #FF453A; border-radius: 15px; background: #050A18; cursor: pointer; touch-action: none;"></canvas>
+    <div style="text-align: center;">
+        <canvas id="flappyCanvas" width="350" height="500" style="border: 3px solid #FF453A; border-radius: 15px; background: linear-gradient(180deg, #0a1628 0%, #050A18 100%); cursor: pointer; touch-action: none; box-shadow: 0 0 30px rgba(255, 69, 58, 0.3);"></canvas>
     </div>
     <script>
         const canvas = document.getElementById('flappyCanvas');
         const ctx = canvas.getContext('2d');
-        let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.35, velocity: 0, lift: -6 };
-        let pipes = []; let frameCount = 0; let score = 0; 
-        let gameOver = false; let gameStarted = false;
-        let baseSpeed = 3.5;
+        let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.4, velocity: 0, lift: -7, rotation: 0 };
+        let pipes = []; 
+        let frameCount = 0; 
+        let score = 0; 
+        let particles = [];
+        let gameOver = false; 
+        let gameStarted = false;
+        let baseSpeed = 4;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
-        function reset() { biceps.y = 150; biceps.velocity = 0; pipes = []; score = 0; frameCount = 0; gameOver = false; gameStarted = false; baseSpeed = 3.5; }
-        function handleAction(e) { e.preventDefault(); if (gameOver) { reset(); } else if (!gameStarted) { gameStarted = true; biceps.velocity = biceps.lift; } else { biceps.velocity = biceps.lift; } }
+        
+        function reset() { 
+            biceps.y = 200; biceps.velocity = 0; biceps.rotation = 0;
+            pipes = []; score = 0; frameCount = 0; particles = [];
+            gameOver = false; gameStarted = false; baseSpeed = 4; 
+        }
+        
+        function createParticles(x, y, color) {
+            for(let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 40,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+        
+        function handleAction(e) { 
+            e.preventDefault(); 
+            if (gameOver) { 
+                reset(); 
+            } else if (!gameStarted) { 
+                gameStarted = true; 
+                biceps.velocity = biceps.lift;
+                createParticles(biceps.x + 15, biceps.y, '#58CCFF');
+            } else { 
+                biceps.velocity = biceps.lift;
+                createParticles(biceps.x + 15, biceps.y, '#58CCFF');
+            } 
+        }
+        
         canvas.addEventListener('mousedown', handleAction);
         canvas.addEventListener('touchstart', handleAction, {passive: false});
+        
         function draw() {
-            ctx.fillStyle = '#050A18'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.font = "30px Arial"; ctx.fillText("💪", biceps.x, biceps.y);
-            if (gameStarted && !gameOver) {
-                biceps.velocity += biceps.gravity; biceps.y += biceps.velocity;
-                let currentSpeed = baseSpeed + (Math.floor(score / 5) * 0.2);
-                let spawnRate = Math.max(50, 80 - Math.floor(score / 2));
-                if (frameCount % spawnRate === 0) { pipes.push({ x: canvas.width, topH: Math.floor(Math.random() * (canvas.height - 225)) + 50, gap: 125, passed: false }); }
-                for (let i = pipes.length - 1; i >= 0; i--) {
-                    pipes[i].x -= currentSpeed; ctx.fillStyle = "#FF453A"; 
-                    ctx.fillRect(pipes[i].x, 0, 50, pipes[i].topH);
-                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 50, canvas.height);
-                    if (biceps.x + 20 > pipes[i].x && biceps.x < pipes[i].x + 50) { if (biceps.y - 20 < pipes[i].topH || biceps.y > pipes[i].topH + pipes[i].gap - 10) gameOver = true; }
-                    if (!pipes[i].passed && biceps.x > pipes[i].x + 50) { score++; pipes[i].passed = true; }
-                    if (pipes[i].x < -60) pipes.splice(i, 1);
+            // Background étoilé
+            ctx.fillStyle = '#050A18';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Étoiles
+            if(frameCount % 3 === 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                for(let i = 0; i < 5; i++) {
+                    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
                 }
-                if (biceps.y > canvas.height || biceps.y < 0) gameOver = true;
-            } else if (!gameStarted) { ctx.fillStyle = "white"; ctx.font = "18px Courier New"; ctx.fillText("TAP POUR SOULEVER", 70, 240); }
-            if (gameOver) { if (score > record) { record = score; localStorage.setItem('muscleFlappyRecord', record); } ctx.fillStyle = "rgba(255,69,58,0.5)"; ctx.fillRect(0,0, canvas.width, canvas.height); ctx.fillStyle = "white"; ctx.font = "30px Courier New"; ctx.fillText("ÉCHEC CRITIQUE", 45, 220); ctx.font = "15px Courier New"; ctx.fillText("Score: " + score + " | Record: " + record, 75, 260); ctx.fillText("Clique pour retenter", 75, 290); }
-            ctx.font = "bold 20px Courier New"; ctx.fillStyle = "#00FF7F"; ctx.fillText("XP: " + score, 15, 35); ctx.fillStyle = "#FFD700"; ctx.fillText("MAX: " + record, 180, 35);
-            frameCount++; requestAnimationFrame(draw);
+            }
+            
+            // Particules
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                p.vy += 0.1;
+                let alpha = Math.floor((p.life / 40) * 255).toString(16).padStart(2, '0');
+                ctx.fillStyle = p.color + alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+            
+            // Joueur avec rotation
+            ctx.save();
+            ctx.translate(biceps.x + 15, biceps.y);
+            biceps.rotation = Math.min(Math.max(biceps.velocity * 4, -25), 90);
+            ctx.rotate(biceps.rotation * Math.PI / 180);
+            
+            // Effet de glow
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#58CCFF';
+            ctx.font = "35px Arial";
+            ctx.fillText("💪", -18, 10);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+            
+            if (gameStarted && !gameOver) {
+                biceps.velocity += biceps.gravity; 
+                biceps.y += biceps.velocity;
+                
+                let currentSpeed = baseSpeed + (Math.floor(score / 5) * 0.3);
+                let spawnRate = Math.max(55, 90 - Math.floor(score / 2));
+                
+                if (frameCount % spawnRate === 0) { 
+                    pipes.push({ 
+                        x: canvas.width, 
+                        topH: Math.floor(Math.random() * (canvas.height - 250)) + 60, 
+                        gap: 140, 
+                        passed: false 
+                    }); 
+                }
+                
+                for (let i = pipes.length - 1; i >= 0; i--) {
+                    pipes[i].x -= currentSpeed;
+                    
+                    // Pipes avec gradient
+                    let gradient = ctx.createLinearGradient(pipes[i].x, 0, pipes[i].x + 55, 0);
+                    gradient.addColorStop(0, "#FF453A");
+                    gradient.addColorStop(0.5, "#FF0000");
+                    gradient.addColorStop(1, "#8B0000");
+                    ctx.fillStyle = gradient;
+                    
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#FF453A';
+                    
+                    ctx.fillRect(pipes[i].x, 0, 55, pipes[i].topH);
+                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 55, canvas.height);
+                    
+                    // Bordures
+                    ctx.fillStyle = '#8B0000';
+                    ctx.fillRect(pipes[i].x, pipes[i].topH - 25, 55, 25);
+                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 55, 25);
+                    
+                    ctx.shadowBlur = 0;
+                    
+                    // Collision
+                    if (biceps.x + 25 > pipes[i].x && biceps.x + 5 < pipes[i].x + 55) { 
+                        if (biceps.y - 15 < pipes[i].topH || biceps.y + 15 > pipes[i].topH + pipes[i].gap) {
+                            gameOver = true;
+                            createParticles(biceps.x + 15, biceps.y, '#FF453A');
+                        }
+                    }
+                    
+                    if (!pipes[i].passed && biceps.x > pipes[i].x + 55) { 
+                        score++; 
+                        pipes[i].passed = true;
+                        createParticles(pipes[i].x + 27, canvas.height / 2, '#00FF7F');
+                    }
+                    
+                    if (pipes[i].x < -70) pipes.splice(i, 1);
+                }
+                
+                if (biceps.y > canvas.height - 15 || biceps.y < 15) {
+                    gameOver = true;
+                    createParticles(biceps.x + 15, biceps.y, '#FF453A');
+                }
+            } else if (!gameStarted) { 
+                ctx.fillStyle = "white"; 
+                ctx.font = "bold 20px Courier New"; 
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#58CCFF';
+                ctx.fillText("⚡ MUSCLE FLAPPY ⚡", 60, 220);
+                ctx.font = "16px Courier New";
+                ctx.fillText("CLIQUE POUR DÉMARRER", 75, 260);
+                ctx.font = "12px Courier New";
+                ctx.fillText("Tape pour faire sauter le muscle", 65, 290);
+                ctx.shadowBlur = 0;
+            }
+            
+            if (gameOver) { 
+                if (score > record) { 
+                    record = score; 
+                    localStorage.setItem('muscleFlappyRecord', record); 
+                } 
+                ctx.fillStyle = "rgba(255,69,58,0.8)"; 
+                ctx.fillRect(0,0, canvas.width, canvas.height); 
+                ctx.fillStyle = "white"; 
+                ctx.font = "bold 32px Courier New";
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#FF453A';
+                ctx.fillText("GAME OVER", 85, 210);
+                ctx.font = "18px Courier New";
+                ctx.shadowBlur = 6;
+                ctx.fillText("Score: " + score, 135, 260); 
+                ctx.fillText("Record: " + record, 125, 290); 
+                ctx.font = "14px Courier New";
+                ctx.fillText("Clique pour recommencer", 85, 330);
+                ctx.shadowBlur = 0;
+            }
+            
+            // UI
+            ctx.font = "bold 22px Courier New"; 
+            ctx.fillStyle = "#00FF7F";
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = '#00FF7F';
+            ctx.fillText("⚡ " + score, 20, 40);
+            ctx.fillStyle = "#FFD700";
+            ctx.shadowColor = '#FFD700';
+            ctx.fillText("🏆 " + record, 240, 40);
+            ctx.shadowBlur = 0;
+            
+            frameCount++; 
+            requestAnimationFrame(draw);
         }
         draw();
     </script>
     """
-    components.html(game_html, height=520)
+    components.html(game_html, height=550)
+
+def rep_crusher_game():
+    st.markdown("### 🏋️ REP CRUSHER : FORCE ULTIME")
+    st.caption("Déplace la barre pour attraper les disques. Maintiens pour soulever !")
+    
+    game_html = """
+    <div style="text-align: center;">
+        <canvas id="repCanvas" width="350" height="500" style="border: 3px solid #00FF7F; border-radius: 15px; background: linear-gradient(180deg, #0a1628 0%, #050A18 100%); cursor: pointer; touch-action: none; box-shadow: 0 0 30px rgba(0, 255, 127, 0.3);"></canvas>
+    </div>
+    <script>
+        const canvas2 = document.getElementById('repCanvas');
+        const ctx2 = canvas2.getContext('2d');
+        
+        let barbell = { x: 155, y: 420, w: 90, h: 12, targetY: 420, liftPower: 0 };
+        let plates = [];
+        let score = 0;
+        let combo = 0;
+        let maxCombo = localStorage.getItem('repCrusherMaxCombo') || 0;
+        let gameOver = false;
+        let gameStarted = false;
+        let frameCount = 0;
+        let speed = 2.5;
+        let powerBar = 0;
+        let isCharging = false;
+        let mouseX = 175;
+        
+        const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
+        
+        function reset() {
+            barbell = { x: 155, y: 420, w: 90, h: 12, targetY: 420, liftPower: 0 };
+            plates = [];
+            score = 0;
+            combo = 0;
+            gameOver = false;
+            gameStarted = false;
+            frameCount = 0;
+            speed = 2.5;
+            powerBar = 0;
+            isCharging = false;
+        }
+        
+        function spawnPlate() {
+            plates.push({
+                x: Math.random() * (canvas2.width - 50) + 25,
+                y: -40,
+                w: 45,
+                h: 32,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                caught: false,
+                spin: 0
+            });
+        }
+        
+        function handleMouseDown(e) {
+            e.preventDefault();
+            if (gameOver) {
+                reset();
+            } else if (!gameStarted) {
+                gameStarted = true;
+                spawnPlate();
+            } else {
+                isCharging = true;
+            }
+        }
+        
+        function handleMouseUp(e) {
+            e.preventDefault();
+            if (isCharging && gameStarted && !gameOver) {
+                barbell.targetY = Math.max(150, barbell.y - powerBar * 2.5);
+                barbell.liftPower = powerBar / 8;
+                isCharging = false;
+                powerBar = 0;
+            }
+        }
+        
+        canvas2.addEventListener('mousedown', handleMouseDown);
+        canvas2.addEventListener('touchstart', handleMouseDown, {passive: false});
+        canvas2.addEventListener('mouseup', handleMouseUp);
+        canvas2.addEventListener('touchend', handleMouseUp, {passive: false});
+        canvas2.addEventListener('mousemove', (e) => {
+            if (gameStarted && !gameOver) {
+                const rect = canvas2.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                barbell.x = mouseX - barbell.w / 2;
+                barbell.x = Math.max(10, Math.min(barbell.x, canvas2.width - barbell.w - 10));
+            }
+        });
+        canvas2.addEventListener('touchmove', (e) => {
+            if (gameStarted && !gameOver) {
+                const rect = canvas2.getBoundingClientRect();
+                const touch = e.touches[0];
+                mouseX = touch.clientX - rect.left;
+                barbell.x = mouseX - barbell.w / 2;
+                barbell.x = Math.max(10, Math.min(barbell.x, canvas2.width - barbell.w - 10));
+            }
+        }, {passive: false});
+        
+        function draw() {
+            // Background
+            ctx2.fillStyle = '#050A18';
+            ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+            
+            // Grille cyber
+            ctx2.strokeStyle = 'rgba(88, 204, 255, 0.08)';
+            ctx2.lineWidth = 1;
+            for(let i = 0; i < canvas2.width; i += 40) {
+                ctx2.beginPath();
+                ctx2.moveTo(i, 0);
+                ctx2.lineTo(i, canvas2.height);
+                ctx2.stroke();
+            }
+            for(let i = 0; i < canvas2.height; i += 40) {
+                ctx2.beginPath();
+                ctx2.moveTo(0, i);
+                ctx2.lineTo(canvas2.width, i);
+                ctx2.stroke();
+            }
+            
+            if (gameStarted && !gameOver) {
+                // Vitesse adaptative
+                speed = 2.5 + (score / 12);
+                
+                // Charge de la barre
+                if (isCharging) {
+                    powerBar = Math.min(powerBar + 4, 100);
+                }
+                
+                // Mouvement de la barre
+                if (barbell.y < barbell.targetY) {
+                    barbell.y += 10;
+                    if (barbell.y >= barbell.targetY) {
+                        barbell.y = barbell.targetY;
+                        barbell.liftPower = 0;
+                    }
+                } else if (barbell.liftPower > 0) {
+                    barbell.y -= barbell.liftPower;
+                    barbell.liftPower *= 0.90;
+                    if (barbell.liftPower < 0.3) {
+                        barbell.liftPower = 0;
+                        barbell.targetY = 420;
+                    }
+                }
+                
+                // Spawn disques
+                if (frameCount % Math.max(35, 80 - score * 2) === 0) {
+                    spawnPlate();
+                }
+                
+                // Disques
+                for (let i = plates.length - 1; i >= 0; i--) {
+                    let plate = plates[i];
+                    
+                    if (!plate.caught) {
+                        plate.y += speed;
+                        plate.spin += 0.1;
+                        
+                        // Collision
+                        if (plate.y + plate.h > barbell.y && 
+                            plate.y < barbell.y + barbell.h &&
+                            plate.x + plate.w > barbell.x && 
+                            plate.x < barbell.x + barbell.w) {
+                            plate.caught = true;
+                            score++;
+                            combo++;
+                            maxCombo = Math.max(combo, maxCombo);
+                            localStorage.setItem('repCrusherMaxCombo', maxCombo);
+                        }
+                        
+                        // Raté
+                        if (plate.y > canvas2.height) {
+                            plates.splice(i, 1);
+                            if (combo > 0) combo = 0;
+                            if (score > 0) gameOver = true;
+                            continue;
+                        }
+                    } else {
+                        // Disques attrapés
+                        plate.y = barbell.y - plate.h - 2;
+                        plate.x = barbell.x + barbell.w / 2 - plate.w / 2;
+                        
+                        // Disparaît en haut
+                        if (barbell.liftPower > 0 && barbell.y < 200) {
+                            plates.splice(i, 1);
+                            continue;
+                        }
+                    }
+                    
+                    // Dessiner le disque
+                    ctx2.save();
+                    ctx2.translate(plate.x + plate.w/2, plate.y + plate.h/2);
+                    if(!plate.caught) ctx2.rotate(plate.spin);
+                    
+                    ctx2.shadowBlur = 18;
+                    ctx2.shadowColor = plate.color;
+                    
+                    // Disque avec effet 3D
+                    ctx2.fillStyle = plate.color;
+                    ctx2.fillRect(-plate.w/2, -plate.h/2, plate.w, plate.h);
+                    
+                    ctx2.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx2.fillRect(-plate.w/2 + 5, -plate.h/2 + 5, plate.w - 10, plate.h - 10);
+                    
+                    ctx2.shadowBlur = 0;
+                    ctx2.fillStyle = 'white';
+                    ctx2.font = 'bold 14px Arial';
+                    ctx2.fillText('20kg', -18, 5);
+                    
+                    ctx2.restore();
+                }
+                
+                // Barre
+                ctx2.shadowBlur = 25;
+                ctx2.shadowColor = '#00FF7F';
+                
+                // Corps de la barre
+                let gradient = ctx2.createLinearGradient(barbell.x, 0, barbell.x + barbell.w, 0);
+                gradient.addColorStop(0, '#00FF7F');
+                gradient.addColorStop(0.5, '#00DD00');
+                gradient.addColorStop(1, '#00FF7F');
+                ctx2.fillStyle = gradient;
+                ctx2.fillRect(barbell.x, barbell.y, barbell.w, barbell.h);
+                
+                // Embouts
+                ctx2.fillStyle = '#008800';
+                ctx2.fillRect(barbell.x - 12, barbell.y - 8, 12, 28);
+                ctx2.fillRect(barbell.x + barbell.w, barbell.y - 8, 12, 28);
+                
+                ctx2.shadowBlur = 0;
+                
+                // Barre de puissance
+                if (isCharging) {
+                    ctx2.fillStyle = 'rgba(255,255,255,0.15)';
+                    ctx2.fillRect(15, canvas2.height - 40, canvas2.width - 30, 25);
+                    
+                    let powerGrad = ctx2.createLinearGradient(15, 0, 15 + powerBar * (canvas2.width - 30) / 100, 0);
+                    powerGrad.addColorStop(0, '#58CCFF');
+                    powerGrad.addColorStop(0.5, '#00FF7F');
+                    powerGrad.addColorStop(1, '#FFD700');
+                    ctx2.fillStyle = powerGrad;
+                    ctx2.fillRect(15, canvas2.height - 40, powerBar * (canvas2.width - 30) / 100, 25);
+                    
+                    ctx2.fillStyle = 'white';
+                    ctx2.font = 'bold 13px Arial';
+                    ctx2.fillText('⚡ MAINTIENS POUR CHARGER ⚡', 55, canvas2.height - 48);
+                }
+                
+                // Combo indicator
+                if (combo >= 3) {
+                    ctx2.fillStyle = '#FFD700';
+                    ctx2.font = 'bold 16px Arial';
+                    ctx2.shadowBlur = 10;
+                    ctx2.shadowColor = '#FFD700';
+                    ctx2.fillText('🔥 COMBO x' + combo + ' 🔥', canvas2.width/2 - 55, 70);
+                    ctx2.shadowBlur = 0;
+                }
+                
+            } else if (!gameStarted) {
+                ctx2.fillStyle = 'white';
+                ctx2.font = 'bold 20px Courier New';
+                ctx2.shadowBlur = 8;
+                ctx2.shadowColor = '#00FF7F';
+                ctx2.fillText('🏋️ REP CRUSHER 🏋️', 65, 220);
+                ctx2.font = '15px Courier New';
+                ctx2.fillText('CLIQUE POUR COMMENCER', 70, 260);
+                ctx2.font = '11px Courier New';
+                ctx2.fillText('Déplace la barre pour attraper', 75, 290);
+                ctx2.fillText('Maintiens pour soulever', 95, 310);
+                ctx2.shadowBlur = 0;
+            }
+            
+            if (gameOver) {
+                ctx2.fillStyle = 'rgba(255, 69, 58, 0.85)';
+                ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+                
+                ctx2.fillStyle = 'white';
+                ctx2.font = 'bold 30px Courier New';
+                ctx2.shadowBlur = 12;
+                ctx2.shadowColor = '#FF453A';
+                ctx2.fillText('DISQUE RATÉ !', 75, 210);
+                
+                ctx2.font = '18px Courier New';
+                ctx2.shadowBlur = 6;
+                ctx2.fillText('Reps: ' + score, 135, 260);
+                ctx2.fillText('Max Combo: ' + maxCombo, 105, 290);
+                ctx2.font = '14px Courier New';
+                ctx2.fillText('Clique pour recommencer', 85, 330);
+                ctx2.shadowBlur = 0;
+            }
+            
+            // UI Score
+            ctx2.font = 'bold 20px Courier New';
+            ctx2.fillStyle = '#00FF7F';
+            ctx2.shadowBlur = 6;
+            ctx2.shadowColor = '#00FF7F';
+            ctx2.fillText('💪 ' + score, 20, 35);
+            
+            ctx2.fillStyle = '#FFD700';
+            ctx2.shadowColor = '#FFD700';
+            ctx2.fillText('🔥 ' + combo, 20, 60);
+            
+            ctx2.fillStyle = '#58CCFF';
+            ctx2.shadowColor = '#58CCFF';
+            ctx2.fillText('🏆 ' + maxCombo, 240, 35);
+            ctx2.shadowBlur = 0;
+            
+            frameCount++;
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+    """
+    components.html(game_html, height=550)
+
 
 # --- 5. CONNEXION ---
 @st.cache_resource
@@ -770,31 +772,7 @@ df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).filln
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
-# Check quest progress and show notifications
-current_week = int(df_h["Semaine"].max() if not df_h.empty else 1)
-quest_notifs = check_quest_progress(df_h, current_week)
-if quest_notifs:
-    for notif in quest_notifs:
-        st.markdown(f'<div class="notification">{notif}</div>', unsafe_allow_html=True)
-
-tab_q, tab_s, tab_p, tab_st, tab_g = st.tabs(["⚡ QUÊTES", "🏋️‍♂️ MA SÉANCE", "📅 PROGRAMME", "📈 PROGRÈS", "🕹️ MINI-JEU"])
-
-# --- ONGLET QUÊTES ---
-with tab_q:
-    st.markdown("## ⚡ SYSTÈME DE QUÊTES")
-    display_quest_panel()
-    
-    st.markdown("---")
-    st.markdown("### 🏆 HISTORIQUE DES SUCCÈS")
-    if st.session_state.completed_quests:
-        for idx, quest in enumerate(st.session_state.completed_quests):
-            st.markdown(f"""
-            <div style='background: rgba(0, 255, 127, 0.1); border-left: 4px solid #00FF7F; padding: 10px; margin-bottom: 10px; border-radius: 5px; animation: fadeInUp 0.5s ease-out {idx * 0.1}s;'>
-                ✅ {quest}
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.info("Aucune quête complétée pour le moment. Continue à t'entraîner!")
+tab_p, tab_s, tab_st, tab_g = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
 
 # --- ONGLET PROGRAMME ---
 with tab_p:
@@ -827,12 +805,13 @@ with tab_p:
     nvs = st.text_input("➕ Créer séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
+
 # --- ONGLET MA SÉANCE ---
 with tab_s:
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
-        s_act = c_h2.number_input("Semaine actuelle", 1, 52, current_week)
+        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         if c_h3.button("🚩 Séance Manquée", use_container_width=True):
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
             save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.rerun()
@@ -858,7 +837,7 @@ with tab_s:
         vol_prev = (df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Poids"] * df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act - 1)]["Reps"]).sum()
         if vol_prev > 0:
             ratio = min(vol_curr / vol_prev, 1.2)
-            st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div class='xp-bar-bg'><div class='vol-bar {"vol-overload" if vol_curr >= vol_prev else ""}' style='width: {min(ratio*100, 100)}%;'></div></div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class='vol-container'><small>⚡ Volume : <b>{int(vol_curr)} / {int(vol_prev)} kg</b></small><div class='xp-bar-bg'><div class='xp-bar-fill {"vol-overload" if vol_curr >= vol_prev else ""}' style='width: {min(ratio*100, 100)}%;'></div></div></div>""", unsafe_allow_html=True)
 
         st.divider()
 
@@ -914,6 +893,7 @@ with tab_s:
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
 
+
 # --- ONGLET PROGRÈS ---
 with tab_st:
     if not df_h.empty:
@@ -925,6 +905,7 @@ with tab_st:
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
+        
         st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
         df_p = df_h[df_h["Reps"] > 0].copy(); df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
@@ -946,6 +927,7 @@ with tab_st:
             else: msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
             if scores[labels.index("Jambes")] == 0: msg += " Il faudra penser à les travailler un jour..."
             st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
+        
         st.markdown("### 🏅 Hall of Fame")
         m_filt = st.multiselect("Filtrer par muscle :", labels + ["Autre"], default=labels + ["Autre"])
         df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
@@ -971,6 +953,46 @@ with tab_st:
             st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
 
-# --- ONGLET MINI-JEU ---
+# --- ONGLET ARCADE ---
 with tab_g:
-    muscle_flappy_game()
+    st.markdown("## 🎮 ARCADE CYBER-FITNESS")
+    st.markdown("*Deux jeux pour tester tes réflexes pendant les temps de repos !*")
+    
+    col_g1, col_g2 = st.columns(2)
+    
+    with col_g1:
+        st.markdown("""
+        <div class='game-selector'>
+            <h3 style='text-align: center; color: #FF453A; margin: 0;'>💪 MUSCLE FLAPPY</h3>
+            <p style='text-align: center; font-size: 13px; margin: 5px 0; color: #aaa;'>Esquive les obstacles !</p>
+            <p style='text-align: center; font-size: 11px; color: #888;'>⚡ Difficulté progressive</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col_g2:
+        st.markdown("""
+        <div class='game-selector'>
+            <h3 style='text-align: center; color: #00FF7F; margin: 0;'>🏋️ REP CRUSHER</h3>
+            <p style='text-align: center; font-size: 13px; margin: 5px 0; color: #aaa;'>Attrape les disques !</p>
+            <p style='text-align: center; font-size: 11px; color: #888;'>🔥 Système de combo</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    game_choice = st.radio(
+        "Sélectionne ton jeu :", 
+        ["💪 Muscle Flappy", "🏋️ Rep Crusher"], 
+        horizontal=True, 
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("---")
+    
+    if game_choice == "💪 Muscle Flappy":
+        muscle_flappy_game()
+    else:
+        rep_crusher_game()
+    
+    st.markdown("---")
+    st.caption("💡 Astuce : Les records sont sauvegardés localement dans ton navigateur !")
