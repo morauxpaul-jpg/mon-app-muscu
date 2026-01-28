@@ -276,7 +276,7 @@ def muscle_flappy_game():
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Joueur simple sans effets
-            ctx.font = "35px Arial";
+            ctx.font = "40px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
             if (gameStarted && !gameOver) {
@@ -289,8 +289,8 @@ def muscle_flappy_game():
                 if (frameCount % spawnRate === 0) { 
                     pipes.push({ 
                         x: canvas.width, 
-                        topH: Math.floor(Math.random() * (canvas.height - 220)) + 60, 
-                        gap: 120, 
+                        topH: Math.floor(Math.random() * (canvas.height - 280)) + 80, 
+                        gap: 150, 
                         passed: false 
                     }); 
                 }
@@ -300,38 +300,38 @@ def muscle_flappy_game():
                     
                     // Pipes simples
                     ctx.fillStyle = "#FF453A";
-                    ctx.fillRect(pipes[i].x, 0, 55, pipes[i].topH);
-                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 55, canvas.height);
+                    ctx.fillRect(pipes[i].x, 0, 65, pipes[i].topH);
+                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, canvas.height);
                     
                     // Bordures
                     ctx.fillStyle = '#AA0000';
-                    ctx.fillRect(pipes[i].x, pipes[i].topH - 20, 55, 20);
-                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 55, 20);
+                    ctx.fillRect(pipes[i].x, pipes[i].topH - 25, 65, 25);
+                    ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, 25);
                     
                     // Collision
-                    if (biceps.x + 25 > pipes[i].x && biceps.x + 5 < pipes[i].x + 55) { 
-                        if (biceps.y - 15 < pipes[i].topH || biceps.y + 15 > pipes[i].topH + pipes[i].gap) {
+                    if (biceps.x + 30 > pipes[i].x && biceps.x + 5 < pipes[i].x + 65) { 
+                        if (biceps.y - 20 < pipes[i].topH || biceps.y + 20 > pipes[i].topH + pipes[i].gap) {
                             gameOver = true;
                         }
                     }
                     
-                    if (!pipes[i].passed && biceps.x > pipes[i].x + 55) { 
+                    if (!pipes[i].passed && biceps.x > pipes[i].x + 65) { 
                         score++; 
                         pipes[i].passed = true;
                     }
                     
-                    if (pipes[i].x < -70) pipes.splice(i, 1);
+                    if (pipes[i].x < -80) pipes.splice(i, 1);
                 }
                 
-                if (biceps.y > canvas.height - 15 || biceps.y < 15) {
+                if (biceps.y > canvas.height - 20 || biceps.y < 20) {
                     gameOver = true;
                 }
             } else if (!gameStarted) { 
                 ctx.fillStyle = "white"; 
-                ctx.font = "bold 18px Arial"; 
-                ctx.fillText("MUSCLE FLAPPY", 80, 220);
-                ctx.font = "14px Arial";
-                ctx.fillText("Clique pour démarrer", 75, 250);
+                ctx.font = "bold 22px Arial"; 
+                ctx.fillText("MUSCLE FLAPPY", 100, 260);
+                ctx.font = "16px Arial";
+                ctx.fillText("Clique pour démarrer", 105, 300);
             }
             
             if (gameOver) { 
@@ -342,21 +342,21 @@ def muscle_flappy_game():
                 ctx.fillStyle = "rgba(255,69,58,0.8)"; 
                 ctx.fillRect(0,0, canvas.width, canvas.height); 
                 ctx.fillStyle = "white"; 
-                ctx.font = "bold 28px Arial";
-                ctx.fillText("GAME OVER", 70, 210);
-                ctx.font = "16px Arial";
-                ctx.fillText("Score: " + score, 110, 250); 
-                ctx.fillText("Record: " + record, 105, 280); 
-                ctx.font = "13px Arial";
-                ctx.fillText("Clique pour recommencer", 70, 320);
+                ctx.font = "bold 32px Arial";
+                ctx.fillText("GAME OVER", 95, 250);
+                ctx.font = "18px Arial";
+                ctx.fillText("Score: " + score, 140, 300); 
+                ctx.fillText("Record: " + record, 135, 330); 
+                ctx.font = "15px Arial";
+                ctx.fillText("Clique pour recommencer", 95, 380);
             }
             
             // UI Score
-            ctx.font = "bold 20px Arial"; 
+            ctx.font = "bold 22px Arial"; 
             ctx.fillStyle = "#00FF7F";
-            ctx.fillText("⚡ " + score, 20, 35);
+            ctx.fillText("⚡ " + score, 25, 40);
             ctx.fillStyle = "#FFD700";
-            ctx.fillText("🏆 " + record, 220, 35);
+            ctx.fillText("🏆 " + record, 270, 40);
             
             frameCount++; 
             requestAnimationFrame(draw);
@@ -364,20 +364,20 @@ def muscle_flappy_game():
         draw();
     </script>
     """
-    components.html(game_html, height=460)
+    components.html(game_html, height=580)
 
 def rep_crusher_game():
     st.markdown("### 🏋️ REP CRUSHER")
     
     game_html = """
-    <div style="text-align: center; width: 100%; max-width: 320px; margin: 0 auto;">
-        <canvas id="repCanvas" width="280" height="420" style="
+    <div style="text-align: center; width: 100%; max-width: 400px; margin: 0 auto;">
+        <canvas id="repCanvas" width="360" height="540" style="
             border: 2px solid #00FF7F; 
             border-radius: 10px; 
             background: #050A18;
             width: 100%;
             height: auto;
-            max-width: 280px;
+            max-width: 360px;
             display: block;
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
@@ -390,7 +390,7 @@ def rep_crusher_game():
         // Désactiver le zoom
         canvas2.style.touchAction = 'none';
         
-        let barbell = { x: 115, y: 350, w: 80, h: 10, targetY: 350, liftPower: 0 };
+        let barbell = { x: 140, y: 470, w: 100, h: 12, targetY: 470, liftPower: 0 };
         let plates = [];
         let score = 0;
         let combo = 0;
@@ -406,7 +406,7 @@ def rep_crusher_game():
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
         
         function reset() {
-            barbell = { x: 115, y: 350, w: 80, h: 10, targetY: 350, liftPower: 0 };
+            barbell = { x: 140, y: 470, w: 100, h: 12, targetY: 470, liftPower: 0 };
             plates = [];
             score = 0;
             combo = 0;
@@ -420,10 +420,10 @@ def rep_crusher_game():
         
         function spawnPlate() {
             plates.push({
-                x: Math.random() * (canvas2.width - 45) + 22,
-                y: -35,
-                w: 40,
-                h: 28,
+                x: Math.random() * (canvas2.width - 55) + 28,
+                y: -40,
+                w: 50,
+                h: 35,
                 color: colors[Math.floor(Math.random() * colors.length)],
                 caught: false
             });
@@ -502,7 +502,7 @@ def rep_crusher_game():
                     barbell.liftPower *= 0.90;
                     if (barbell.liftPower < 0.3) {
                         barbell.liftPower = 0;
-                        barbell.targetY = 350;
+                        barbell.targetY = 470;
                     }
                 }
                 
@@ -543,7 +543,7 @@ def rep_crusher_game():
                         plate.x = barbell.x + barbell.w / 2 - plate.w / 2;
                         
                         // Disparaît en haut
-                        if (barbell.liftPower > 0 && barbell.y < 180) {
+                        if (barbell.liftPower > 0 && barbell.y < 220) {
                             plates.splice(i, 1);
                             continue;
                         }
@@ -554,11 +554,11 @@ def rep_crusher_game():
                     ctx2.fillRect(plate.x, plate.y, plate.w, plate.h);
                     
                     ctx2.fillStyle = 'rgba(0,0,0,0.3)';
-                    ctx2.fillRect(plate.x + 5, plate.y + 5, plate.w - 10, plate.h - 10);
+                    ctx2.fillRect(plate.x + 6, plate.y + 6, plate.w - 12, plate.h - 12);
                     
                     ctx2.fillStyle = 'white';
-                    ctx2.font = 'bold 12px Arial';
-                    ctx2.fillText('20kg', plate.x + 8, plate.y + 18);
+                    ctx2.font = 'bold 14px Arial';
+                    ctx2.fillText('20kg', plate.x + 10, plate.y + 22);
                 }
                 
                 // Barre simple
@@ -567,35 +567,35 @@ def rep_crusher_game():
                 
                 // Embouts
                 ctx2.fillStyle = '#00AA00';
-                ctx2.fillRect(barbell.x - 10, barbell.y - 6, 10, 22);
-                ctx2.fillRect(barbell.x + barbell.w, barbell.y - 6, 10, 22);
+                ctx2.fillRect(barbell.x - 12, barbell.y - 8, 12, 28);
+                ctx2.fillRect(barbell.x + barbell.w, barbell.y - 8, 12, 28);
                 
                 // Barre de puissance simplifiée
                 if (isCharging) {
                     ctx2.fillStyle = 'rgba(255,255,255,0.2)';
-                    ctx2.fillRect(10, canvas2.height - 35, canvas2.width - 20, 20);
+                    ctx2.fillRect(15, canvas2.height - 45, canvas2.width - 30, 25);
                     
                     ctx2.fillStyle = '#00FF7F';
-                    ctx2.fillRect(10, canvas2.height - 35, powerBar * (canvas2.width - 20) / 100, 20);
+                    ctx2.fillRect(15, canvas2.height - 45, powerBar * (canvas2.width - 30) / 100, 25);
                     
                     ctx2.fillStyle = 'white';
-                    ctx2.font = 'bold 11px Arial';
-                    ctx2.fillText('MAINTIENS', canvas2.width/2 - 35, canvas2.height - 43);
+                    ctx2.font = 'bold 13px Arial';
+                    ctx2.fillText('MAINTIENS', canvas2.width/2 - 42, canvas2.height - 53);
                 }
                 
                 // Combo
                 if (combo >= 3) {
                     ctx2.fillStyle = '#FFD700';
-                    ctx2.font = 'bold 14px Arial';
-                    ctx2.fillText('🔥 x' + combo, canvas2.width/2 - 25, 60);
+                    ctx2.font = 'bold 18px Arial';
+                    ctx2.fillText('🔥 x' + combo, canvas2.width/2 - 30, 75);
                 }
                 
             } else if (!gameStarted) {
                 ctx2.fillStyle = 'white';
-                ctx2.font = 'bold 16px Arial';
-                ctx2.fillText('REP CRUSHER', 80, 200);
-                ctx2.font = '12px Arial';
-                ctx2.fillText('Clique pour démarrer', 70, 230);
+                ctx2.font = 'bold 20px Arial';
+                ctx2.fillText('REP CRUSHER', 110, 250);
+                ctx2.font = '14px Arial';
+                ctx2.fillText('Clique pour démarrer', 105, 290);
             }
             
             if (gameOver) {
@@ -603,26 +603,26 @@ def rep_crusher_game():
                 ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
                 
                 ctx2.fillStyle = 'white';
-                ctx2.font = 'bold 24px Arial';
-                ctx2.fillText('DISQUE RATÉ !', 60, 190);
+                ctx2.font = 'bold 28px Arial';
+                ctx2.fillText('DISQUE RATÉ !', 90, 240);
                 
+                ctx2.font = '16px Arial';
+                ctx2.fillText('Reps: ' + score, 145, 290);
+                ctx2.fillText('Max Combo: ' + maxCombo, 120, 320);
                 ctx2.font = '14px Arial';
-                ctx2.fillText('Reps: ' + score, 105, 230);
-                ctx2.fillText('Max Combo: ' + maxCombo, 85, 255);
-                ctx2.font = '12px Arial';
-                ctx2.fillText('Clique pour recommencer', 60, 290);
+                ctx2.fillText('Clique pour recommencer', 95, 370);
             }
             
             // UI Score
-            ctx2.font = 'bold 16px Arial';
+            ctx2.font = 'bold 20px Arial';
             ctx2.fillStyle = '#00FF7F';
-            ctx2.fillText('💪 ' + score, 15, 30);
+            ctx2.fillText('💪 ' + score, 20, 38);
             
             ctx2.fillStyle = '#FFD700';
-            ctx2.fillText('🔥 ' + combo, 15, 50);
+            ctx2.fillText('🔥 ' + combo, 20, 63);
             
             ctx2.fillStyle = '#58CCFF';
-            ctx2.fillText('🏆 ' + maxCombo, 210, 30);
+            ctx2.fillText('🏆 ' + maxCombo, 270, 38);
             
             frameCount++;
             requestAnimationFrame(draw);
@@ -630,7 +630,7 @@ def rep_crusher_game():
         draw();
     </script>
     """
-    components.html(game_html, height=460)
+    components.html(game_html, height=580)
 
 
 # --- 5. CONNEXION ---
