@@ -216,14 +216,14 @@ def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
     
     game_html = """
-    <div style="text-align: center; width: 100%; max-width: 320px; margin: 0 auto;">
-        <canvas id="flappyCanvas" width="400" height="500" style="
+    <div style="text-align: center; width: 100%; max-width: 400px; margin: 0 auto;">
+        <canvas id="flappyCanvas" width="360" height="540" style="
             border: 2px solid #FF453A; 
             border-radius: 10px; 
             background: #050A18;
             width: 100%;
             height: auto;
-            max-width: 280px;
+            max-width: 360px;
             display: block;
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
@@ -236,7 +236,7 @@ def muscle_flappy_game():
         // Désactiver le zoom sur double-tap
         canvas.style.touchAction = 'none';
         
-        let biceps = { x: 50, y: 150, w: 30, h: 30, gravity: 0.5, velocity: 0, lift: -8 };
+        let biceps = { x: 60, y: 200, w: 35, h: 35, gravity: 0.5, velocity: 0, lift: -8 };
         let pipes = []; 
         let frameCount = 0; 
         let score = 0; 
@@ -276,7 +276,7 @@ def muscle_flappy_game():
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Joueur simple sans effets
-            ctx.font = "30px Arial";
+            ctx.font = "35px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
             if (gameStarted && !gameOver) {
@@ -888,5 +888,3 @@ with tab_g:
     
     st.markdown("---")
     st.caption("💡 Records sauvegardés dans le navigateur")
-
-
