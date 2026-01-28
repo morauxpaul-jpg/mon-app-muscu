@@ -217,7 +217,7 @@ def muscle_flappy_game():
     
     game_html = """
     <div style="text-align: center; width: 100%; max-width: 320px; margin: 0 auto;">
-        <canvas id="flappyCanvas" width="280" height="420" style="
+        <canvas id="flappyCanvas" width="300" height="420" style="
             border: 2px solid #FF453A; 
             border-radius: 10px; 
             background: #050A18;
@@ -276,7 +276,7 @@ def muscle_flappy_game():
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Joueur simple sans effets
-            ctx.font = "35px Arial";
+            ctx.font = "25px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
             if (gameStarted && !gameOver) {
@@ -888,3 +888,4 @@ with tab_g:
     
     st.markdown("---")
     st.caption("💡 Records sauvegardés dans le navigateur")
+
