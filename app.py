@@ -56,6 +56,11 @@ st.markdown("""
     .vol-overload { background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important; }
 
     .podium-card { background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF; }
+    .podium-gold { border-color: #FFD700 !important; }
+    .podium-silver { border-color: #C0C0C0 !important; }
+    .podium-bronze { border-color: #CD7F32 !important; }
+    
+    .cyber-analysis { background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; font-size: 0.95rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -251,7 +256,7 @@ with tab_s:
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
-                # --- NEURAL COACH LOGIC ---
+                # --- NEURAL COACH ---
                 hist_weeks = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
                 if hist_weeks:
                     last_w_perf = f_h[f_h["Semaine"] == hist_weeks[-1]]
@@ -276,16 +281,19 @@ with tab_s:
                 hist_prev_df = f_h[f_h["Semaine"] == last_w_num] if last_w_num is not None else pd.DataFrame()
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
+                editor_key = f"ed_{exo_final}_{s_act}"
+
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
+                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
+                        st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
                     df_base = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_base.loc[df_base["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-                    ed = st.data_editor(df_base, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                    ed = st.data_editor(df_base, num_rows="fixed", key=editor_key, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed.copy(); v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
@@ -301,14 +309,13 @@ with tab_st:
         paliers, noms = [0, 5000, 25000, 75000, 200000, 500000], ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
-        prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "MAX")
+        prev_rank, curr_rank, next_rank = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "MAX")
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         
-        # --- AVATAR ÉVOLUTIF ---
         st.markdown(f"""<div class='avatar-container'><div class='avatar-frame'>{get_avatar(idx)}</div><small style='color:#58CCFF;'>Système Bio-Numérique de Classe {idx+1}</small></div>""", unsafe_allow_html=True)
-
-        st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_rank}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_rank}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
+        st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_rank}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_rank}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_rank}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
+        
         st.markdown("### 🕸️ Radar d'Équilibre")
         df_p = df_h[df_h["Reps"] > 0].copy(); df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
         scores, labels = [], ["Jambes", "Dos", "Pecs", "Épaules", "Bras", "Abdos"]
@@ -321,15 +328,21 @@ with tab_st:
 
         st.markdown("### 🏅 Hall of Fame")
         podium = df_p.groupby("Exercice").agg({"1RM": "max"}).sort_values(by="1RM", ascending=False).head(3)
-        p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
+        p_cols = st.columns(3); meds = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"]
         for i, (ex_n, row) in enumerate(podium.iterrows()):
             with p_cols[i]: st.markdown(f"<div class='podium-card'><small>{meds[i]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
         
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
+            # --- AFFICHAGE RECORDS ZOOM ---
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
-            st.success(f"🏆 RECORD RÉEL : **{best['Poids']}kg x {int(best['Reps'])}** | ⚡ 1RM ESTIMÉ : **{one_rm:.1f} kg**")
+            c1r, c2r = st.columns(2)
+            c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**")
+            c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
+            with st.expander("📊 Estimation Rep Max"):
+                ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
+                for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
             fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3)))
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
