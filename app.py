@@ -12,13 +12,9 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS & META MOBILE : DESIGN CYBER-RPG ---
+# --- 2. CSS : DESIGN CYBER-RPG COMPLET ---
 st.markdown("""
 <style>
-    /* META POUR APPARENCE APP NATIVE */
-    @media screen {
-        :root { --st-app-background: #050A18; }
-    }
     .stApp {
         background: radial-gradient(circle at 50% 0%, rgba(10, 50, 100, 0.4) 0%, transparent 50%),
                     linear-gradient(180deg, #050A18 0%, #000000 100%);
@@ -36,18 +32,6 @@ st.markdown("""
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important; 
     }
     
-    .victory-banner {
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 127, 0.3), transparent);
-        border: 2px solid #00FF7F; color: #00FF7F; padding: 15px; border-radius: 10px;
-        text-align: center; font-weight: 900; font-size: 24px; text-shadow: 0 0 15px #00FF7F;
-        animation: victory-pulse 1.5s infinite; margin-bottom: 20px;
-    }
-    @keyframes victory-pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.02); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
-
-    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
-    .recup-card { min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; text-align: center; }
-    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-
     .rank-ladder { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 1px solid #58CCFF; margin-bottom: 30px; }
     .rank-step { text-align: center; flex: 1; opacity: 0.5; font-size: 10px; transition: 0.3s; }
     .rank-step.active { opacity: 1; font-weight: bold; transform: scale(1.1); color: #58CCFF; }
@@ -64,11 +48,12 @@ st.markdown("""
     .podium-silver { border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); }
     .podium-bronze { border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); }
     
+    .recup-container { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
+    .recup-card { min-width: 90px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; text-align: center; }
+    .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
     .cyber-analysis { background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; font-size: 0.95rem; }
 </style>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 """, unsafe_allow_html=True)
 
 # --- 3. FONCTIONS TECHNIQUES ---
@@ -180,7 +165,6 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
-# Logo centré
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2: st.image("logo.png", use_container_width=True)
 
@@ -264,7 +248,6 @@ with tab_s:
                     best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
                     st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
 
-                # --- HISTORIQUE CHRONOLOGIQUE ROBUSTE ---
                 hist_weeks = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
                 if hist_weeks:
                     weeks_to_show = hist_weeks[-2:]
@@ -281,39 +264,31 @@ with tab_s:
                 
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
-                # --- FIX REFRESH MOBILE : PERSISTANCE DU DRAFT ---
                 editor_key = f"ed_{exo_final}_{s_act}"
-                
+
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
                     if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
-                        st.session_state.editing_exo.add(exo_final)
-                        st.rerun()
+                        st.session_state.editing_exo.add(exo_final); st.rerun()
                 else:
-                    # On prépare les données de base (Sheet ou Zéros)
                     df_base = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_base.loc[df_base["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
                     
-                    # On utilise le draft en session s'il existe pour éviter de perdre les données au refresh
-                    input_data = st.session_state.get(editor_key, df_base)
-                    
-                    ed = st.data_editor(input_data, num_rows="fixed", key=editor_key, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                    # FIX: On ne force plus la lecture manuelle de session_state ici pour éviter l'AttributeError. 
+                    # Streamlit restaure l'état tout seul si la clé 'editor_key' est identique.
+                    ed = st.data_editor(df_base, num_rows="fixed", key=editor_key, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
                     
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed.copy(); v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                        st.session_state.editing_exo.discard(exo_final)
-                        if editor_key in st.session_state: del st.session_state[editor_key] # Nettoyage draft
-                        st.rerun()
+                        st.session_state.editing_exo.discard(exo_final); st.rerun()
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
-                        if editor_key in st.session_state: del st.session_state[editor_key]
-                        st.rerun()
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
 
 # --- ONGLET PROGRÈS ---
 with tab_st:
