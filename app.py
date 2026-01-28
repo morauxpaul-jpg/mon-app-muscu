@@ -284,12 +284,12 @@ def muscle_flappy_game():
                 biceps.y += biceps.velocity;
                 
                 let currentSpeed = baseSpeed + (Math.floor(score / 4) * 0.4);
-                let spawnRate = Math.max(45, 75 - Math.floor(score / 2));
                 
-                if (frameCount % spawnRate === 0) { 
+                // Spawn constant avec espacement fixe
+                if (frameCount % 60 === 0) { 
                     pipes.push({ 
                         x: canvas.width, 
-                        topH: Math.floor(Math.random() * (canvas.height - 280)) + 80, 
+                        topH: Math.floor(Math.random() * (canvas.height - 300)) + 100, 
                         gap: 150, 
                         passed: false 
                     }); 
@@ -399,9 +399,7 @@ def rep_crusher_game():
         let gameStarted = false;
         let frameCount = 0;
         let speed = 3.5;
-        let powerBar = 0;
-        let isCharging = false;
-        let mouseX = 150;
+        let mouseX = 180;
         
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
         
@@ -414,13 +412,11 @@ def rep_crusher_game():
             gameStarted = false;
             frameCount = 0;
             speed = 3.5;
-            powerBar = 0;
-            isCharging = false;
         }
         
         function spawnPlate() {
             plates.push({
-                x: Math.random() * (canvas2.width - 55) + 28,
+                x: Math.random() * (canvas2.width - 120) + 60,
                 y: -40,
                 w: 50,
                 h: 35,
@@ -436,19 +432,11 @@ def rep_crusher_game():
             } else if (!gameStarted) {
                 gameStarted = true;
                 spawnPlate();
-            } else {
-                isCharging = true;
             }
         }
         
         function handleMouseUp(e) {
             e.preventDefault();
-            if (isCharging && gameStarted && !gameOver) {
-                barbell.targetY = Math.max(150, barbell.y - powerBar * 2.5);
-                barbell.liftPower = powerBar / 8;
-                isCharging = false;
-                powerBar = 0;
-            }
         }
         
         canvas2.addEventListener('mousedown', handleMouseDown);
@@ -485,27 +473,6 @@ def rep_crusher_game():
                 // Vitesse adaptative plus rapide
                 speed = 3.5 + (score / 8);
                 
-                // Charge de la barre
-                if (isCharging) {
-                    powerBar = Math.min(powerBar + 4, 100);
-                }
-                
-                // Mouvement de la barre
-                if (barbell.y < barbell.targetY) {
-                    barbell.y += 10;
-                    if (barbell.y >= barbell.targetY) {
-                        barbell.y = barbell.targetY;
-                        barbell.liftPower = 0;
-                    }
-                } else if (barbell.liftPower > 0) {
-                    barbell.y -= barbell.liftPower;
-                    barbell.liftPower *= 0.90;
-                    if (barbell.liftPower < 0.3) {
-                        barbell.liftPower = 0;
-                        barbell.targetY = 470;
-                    }
-                }
-                
                 // Spawn disques plus rapide
                 if (frameCount % Math.max(30, 65 - score * 2) === 0) {
                     spawnPlate();
@@ -538,15 +505,9 @@ def rep_crusher_game():
                             continue;
                         }
                     } else {
-                        // Disques attrapés
+                        // Disques attrapés restent sur la barre
                         plate.y = barbell.y - plate.h - 2;
                         plate.x = barbell.x + barbell.w / 2 - plate.w / 2;
-                        
-                        // Disparaît en haut
-                        if (barbell.liftPower > 0 && barbell.y < 220) {
-                            plates.splice(i, 1);
-                            continue;
-                        }
                     }
                     
                     // Dessiner le disque simplement
@@ -569,19 +530,6 @@ def rep_crusher_game():
                 ctx2.fillStyle = '#00AA00';
                 ctx2.fillRect(barbell.x - 12, barbell.y - 8, 12, 28);
                 ctx2.fillRect(barbell.x + barbell.w, barbell.y - 8, 12, 28);
-                
-                // Barre de puissance simplifiée
-                if (isCharging) {
-                    ctx2.fillStyle = 'rgba(255,255,255,0.2)';
-                    ctx2.fillRect(15, canvas2.height - 45, canvas2.width - 30, 25);
-                    
-                    ctx2.fillStyle = '#00FF7F';
-                    ctx2.fillRect(15, canvas2.height - 45, powerBar * (canvas2.width - 30) / 100, 25);
-                    
-                    ctx2.fillStyle = 'white';
-                    ctx2.font = 'bold 13px Arial';
-                    ctx2.fillText('MAINTIENS', canvas2.width/2 - 42, canvas2.height - 53);
-                }
                 
                 // Combo
                 if (combo >= 3) {
