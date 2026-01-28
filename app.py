@@ -12,9 +12,13 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-RPG COMPLET ---
+# --- 2. CSS & META MOBILE : DESIGN CYBER-RPG ---
 st.markdown("""
 <style>
+    /* META POUR APPARENCE APP NATIVE */
+    @media screen {
+        :root { --st-app-background: #050A18; }
+    }
     .stApp {
         background: radial-gradient(circle at 50% 0%, rgba(10, 50, 100, 0.4) 0%, transparent 50%),
                     linear-gradient(180deg, #050A18 0%, #000000 100%);
@@ -62,6 +66,9 @@ st.markdown("""
     
     .cyber-analysis { background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; font-size: 0.95rem; }
 </style>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 """, unsafe_allow_html=True)
 
 # --- 3. FONCTIONS TECHNIQUES ---
@@ -260,7 +267,7 @@ with tab_s:
                 # --- HISTORIQUE CHRONOLOGIQUE ROBUSTE ---
                 hist_weeks = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
                 if hist_weeks:
-                    weeks_to_show = hist_weeks[-2:] # On affiche les 2 dernières connues
+                    weeks_to_show = hist_weeks[-2:]
                     for w_num in weeks_to_show:
                         h_data = f_h[f_h["Semaine"] == w_num]
                         st.caption(f"📅 Semaine {w_num}")
@@ -274,24 +281,39 @@ with tab_s:
                 
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
+                # --- FIX REFRESH MOBILE : PERSISTANCE DU DRAFT ---
+                editor_key = f"ed_{exo_final}_{s_act}"
+                
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
-                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): st.session_state.editing_exo.add(exo_final); st.rerun()
+                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
+                        st.session_state.editing_exo.add(exo_final)
+                        st.rerun()
                 else:
-                    df_ed = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
+                    # On prépare les données de base (Sheet ou Zéros)
+                    df_base = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
                         for _, r in curr.iterrows():
-                            if r["Série"] <= p_sets: df_ed.loc[df_ed["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-                    ed = st.data_editor(df_ed, num_rows="fixed", key=f"ed_{exo_final}_{s_act}", use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                            if r["Série"] <= p_sets: df_base.loc[df_base["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
+                    
+                    # On utilise le draft en session s'il existe pour éviter de perdre les données au refresh
+                    input_data = st.session_state.get(editor_key, df_base)
+                    
+                    ed = st.data_editor(input_data, num_rows="fixed", key=editor_key, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                    
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed.copy(); v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                        st.session_state.editing_exo.discard(exo_final); st.rerun()
+                        st.session_state.editing_exo.discard(exo_final)
+                        if editor_key in st.session_state: del st.session_state[editor_key] # Nettoyage draft
+                        st.rerun()
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                        if editor_key in st.session_state: del st.session_state[editor_key]
+                        st.rerun()
 
 # --- ONGLET PROGRÈS ---
 with tab_st:
@@ -337,7 +359,6 @@ with tab_st:
         st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
         df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
         if not df_rec.empty:
-            # --- RÉTABLISSEMENT DES RECORDS DANS LE ZOOM ---
             best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
             c1r, c2r = st.columns(2)
             c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**")
