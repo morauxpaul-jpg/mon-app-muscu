@@ -12,6 +12,23 @@ st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon=
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
+st.markdown("""
+    <style>
+        /* Masque tout le superflu de Streamlit */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        
+        /* Supprime les marges pour coller aux bords de l'écran */
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 0rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
 st.markdown("""
 <style>
@@ -852,4 +869,5 @@ with tab_g:
     
     st.markdown("---")
     st.caption("💡 Records sauvegardés dans le navigateur")
+
 
