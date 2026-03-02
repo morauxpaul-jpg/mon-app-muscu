@@ -7,7 +7,9 @@ import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
 # --- 1. CONFIGURATION PAGE ---
-st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="💪")
+col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
+with col_l2: 
+    st.image("logo.png", use_container_width=True)
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
