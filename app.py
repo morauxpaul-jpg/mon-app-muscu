@@ -566,11 +566,14 @@ def get_gs():
     try:
         # Check if running on Railway (env vars) or locally (secrets.toml)
         if os.getenv('GCP_PROJECT_ID'):
+            # Fix private key: replace literal \n with actual newlines
+            private_key = os.getenv('GCP_PRIVATE_KEY', '').replace('\\n', '\n')
+            
             creds = {
                 "type": os.getenv('GCP_TYPE'),
                 "project_id": os.getenv('GCP_PROJECT_ID'),
                 "private_key_id": os.getenv('GCP_PRIVATE_KEY_ID'),
-                "private_key": os.getenv('GCP_PRIVATE_KEY'),
+                "private_key": private_key,  # ← Utilise la clé corrigée
                 "client_email": os.getenv('GCP_CLIENT_EMAIL'),
                 "client_id": os.getenv('GCP_CLIENT_ID'),
                 "auth_uri": os.getenv('GCP_AUTH_URI'),
