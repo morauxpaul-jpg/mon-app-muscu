@@ -14,9 +14,35 @@ with col_l2:
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
+# --- 2. CONFIGURATION PWA & DESIGN CYBER-RPG (VERSION FUSIONNÉE) ---
 st.markdown("""
+<head>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+
 <style>
+    /* 1. SUPPRESSION DES ÉLÉMENTS WEB STREAMLIT (Look "Vraie App") */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Empêche le rafraîchissement accidentel en glissant vers le bas sur mobile */
+    body {
+        overscroll-behavior-y: contain;
+    }
+
+    /* Ajustement des marges pour coller aux bords du téléphone */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* 2. TES ANIMATIONS CYBER-RPG */
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.6; }
@@ -37,6 +63,7 @@ st.markdown("""
         50% { transform: translateY(-10px); }
     }
     
+    /* 3. DESIGN GLOBAL */
     .stApp {
         background: radial-gradient(circle at 50% 0%, rgba(10, 50, 100, 0.4) 0%, transparent 50%),
                     linear-gradient(180deg, #050A18 0%, #000000 100%);
