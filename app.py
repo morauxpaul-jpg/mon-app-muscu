@@ -185,6 +185,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- LOGO & CLEAN UI ---
+st.markdown("""
+    <style>
+        /* Masquer le menu Streamlit (Hamburger) */
+        #MainMenu {visibility: hidden;}
+        /* Masquer le footer "Made with Streamlit" */
+        footer {visibility: hidden;}
+        /* Masquer le header (bandeau blanc en haut) */
+        header {visibility: hidden;}
+        /* Supprimer l'espace vide en haut */
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- 3. FONCTIONS TECHNIQUES ---
 def calc_1rm(weight, reps):
@@ -836,3 +852,4 @@ with tab_g:
     
     st.markdown("---")
     st.caption("💡 Records sauvegardés dans le navigateur")
+
