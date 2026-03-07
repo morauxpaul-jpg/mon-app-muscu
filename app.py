@@ -5,18 +5,33 @@ import gspread
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
+import time
 
 # --- 1. CONFIGURATION PAGE ---
-col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
-with col_l2: 
-    st.image("logo.png", use_container_width=True)
+st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="💪")
+
+# Initialiser les paramètres de l'app
+if 'settings' not in st.session_state:
+    st.session_state.settings = {
+        'rest_timer_enabled': True,
+        'rest_duration': 90,
+        'auto_collapse': True,
+        'show_1rm': True,
+        'show_previous_weeks': 2,
+        'sound_enabled': False,
+        'compact_mode': False,
+        'auto_save': False,
+        'theme_animations': True
+    }
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
+if 'rest_timer' not in st.session_state:
+    st.session_state.rest_timer = {'active': False, 'end_time': None, 'exercise': ''}
+
 # --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
-st.markdown("""
-<style>
+animations_css = """
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.6; }
@@ -36,154 +51,160 @@ st.markdown("""
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-10px); }
     }
+""" if st.session_state.settings['theme_animations'] else ""
+
+st.markdown(f"""
+<style>
+    {animations_css}
     
-    .stApp {
+    .stApp {{
         background: radial-gradient(circle at 50% 0%, rgba(10, 50, 100, 0.4) 0%, transparent 50%),
                     linear-gradient(180deg, #050A18 0%, #000000 100%);
         background-attachment: fixed; color: #F0F2F6;
-    }
+    }}
     
-    .stExpander {
+    .stExpander {{
         background: rgba(255, 255, 255, 0.03) !important;
         border: 1px solid rgba(74, 144, 226, 0.3) !important;
         border-radius: 15px !important; backdrop-filter: blur(10px);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important; margin-bottom: 15px;
-        animation: slideIn 0.3s ease-out;
-    }
+        {'animation: slideIn 0.3s ease-out;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    h1, h2, h3 { 
+    h1, h2, h3 {{ 
         letter-spacing: 1.5px; text-transform: uppercase; color: #FFFFFF; 
         text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-        animation: slideIn 0.5s ease-out;
-    }
+        {'animation: slideIn 0.5s ease-out;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    div[data-testid="stMetricValue"] { 
+    div[data-testid="stMetricValue"] {{ 
         font-family: 'Courier New', monospace; font-size: 38px !important; color: #58CCFF !important; 
         font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important;
-        animation: pulse 2s infinite;
-    }
+        {'animation: pulse 2s infinite;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    .rank-ladder { 
+    .rank-ladder {{ 
         display: flex; justify-content: space-between; align-items: center; 
         background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; 
         border: 1px solid #58CCFF; margin-bottom: 30px;
-        animation: glow 3s infinite;
-    }
+        {'animation: glow 3s infinite;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    .rank-step { 
+    .rank-step {{ 
         text-align: center; flex: 1; opacity: 0.5; font-size: 10px; 
         transition: all 0.3s ease;
-    }
+    }}
     
-    .rank-step.active { 
+    .rank-step.active {{ 
         opacity: 1; font-weight: bold; transform: scale(1.15); color: #58CCFF;
-        animation: float 2s ease-in-out infinite;
-    }
+        {'animation: float 2s ease-in-out infinite;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    .rank-step.completed { color: #00FF7F; opacity: 0.8; }
+    .rank-step.completed {{ color: #00FF7F; opacity: 0.8; }}
     
-    .xp-bar-bg { 
+    .xp-bar-bg {{ 
         width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; 
         height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); 
-    }
+    }}
     
-    .xp-bar-fill { 
+    .xp-bar-fill {{ 
         height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); 
         box-shadow: 0 0 15px #58CCFF;
         transition: width 1s ease-out;
-    }
+    }}
 
-    .vol-container { 
+    .vol-container {{ 
         background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; 
         border: 1px solid rgba(88, 204, 255, 0.2);
-        animation: slideIn 0.5s ease-out;
-    }
+        {'animation: slideIn 0.5s ease-out;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    .vol-bar { 
+    .vol-bar {{ 
         height: 12px; border-radius: 6px; background: #58CCFF; 
         transition: width 0.8s ease-in-out; box-shadow: 0 0 10px #58CCFF; 
-    }
+    }}
     
-    .vol-overload { 
+    .vol-overload {{ 
         background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important;
-        animation: pulse 1.5s infinite;
-    }
+        {'animation: pulse 1.5s infinite;' if st.session_state.settings['theme_animations'] else ''}
+    }}
 
-    .podium-card { 
+    .podium-card {{ 
         background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; 
         text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
+    }}
     
-    .podium-card:hover {
+    .podium-card:hover {{
         transform: translateY(-5px);
         box-shadow: 0 10px 30px rgba(88, 204, 255, 0.4);
-    }
+    }}
     
-    .podium-gold { 
+    .podium-gold {{ 
         border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
-        animation: glow 2s infinite;
-    }
+        {'animation: glow 2s infinite;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    .podium-silver { 
+    .podium-silver {{ 
         border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); 
-    }
+    }}
     
-    .podium-bronze { 
+    .podium-bronze {{ 
         border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); 
-    }
+    }}
     
-    .recup-container { 
+    .recup-container {{ 
         display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; 
-    }
+    }}
     
-    .recup-card { 
+    .recup-card {{ 
         min-width: 90px; background: rgba(255,255,255,0.05); 
         border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; 
         padding: 8px; text-align: center;
         transition: transform 0.2s ease;
-    }
+    }}
     
-    .recup-card:hover {
+    .recup-card:hover {{
         transform: scale(1.05);
-    }
+    }}
     
-    .status-dot { 
+    .status-dot {{ 
         height: 10px; width: 10px; border-radius: 50%; 
         display: inline-block; margin-right: 5px;
-        animation: pulse 2s infinite;
-    }
+        {'animation: pulse 2s infinite;' if st.session_state.settings['theme_animations'] else ''}
+    }}
 
-    .cyber-analysis { 
+    .cyber-analysis {{ 
         background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; 
         padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; 
         font-size: 0.95rem;
-        animation: slideIn 0.6s ease-out;
-    }
+        {'animation: slideIn 0.6s ease-out;' if st.session_state.settings['theme_animations'] else ''}
+    }}
     
-    .game-selector {
-        background: rgba(255,255,255,0.03);
-        border: 2px solid rgba(88, 204, 255, 0.3);
-        border-radius: 12px;
+    .timer-display {{
+        background: linear-gradient(135deg, #FF453A, #FF6B6B);
+        border: 2px solid #FF453A;
+        border-radius: 15px;
         padding: 20px;
-        margin: 15px 0;
         text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
+        margin: 20px 0;
+        box-shadow: 0 10px 30px rgba(255, 69, 58, 0.3);
+    }}
     
-    .game-selector:hover {
-        background: rgba(88, 204, 255, 0.15);
-        transform: scale(1.02);
-        box-shadow: 0 0 25px rgba(88, 204, 255, 0.4);
-        border-color: #58CCFF;
-    }
+    .timer-text {{
+        font-family: 'Courier New', monospace;
+        font-size: 3rem;
+        font-weight: 900;
+        color: white;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        margin: 0;
+    }}
     
-    .game-selected {
-        background: rgba(88, 204, 255, 0.2) !important;
-        border-color: #58CCFF !important;
-        box-shadow: 0 0 30px rgba(88, 204, 255, 0.6) !important;
-    }
+    .timer-label {{
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-top: 10px;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -213,7 +234,49 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-# --- 4. JEUX CYBER ---
+def start_rest_timer(duration, exercise_name):
+    """Démarre un timer de repos"""
+    st.session_state.rest_timer = {
+        'active': True,
+        'end_time': time.time() + duration,
+        'exercise': exercise_name
+    }
+
+def get_timer_remaining():
+    """Retourne le temps restant du timer"""
+    if st.session_state.rest_timer['active']:
+        remaining = st.session_state.rest_timer['end_time'] - time.time()
+        if remaining <= 0:
+            st.session_state.rest_timer['active'] = False
+            return 0
+        return int(remaining)
+    return 0
+
+def display_rest_timer():
+    """Affiche le timer de repos s'il est actif"""
+    if st.session_state.rest_timer['active']:
+        remaining = get_timer_remaining()
+        if remaining > 0:
+            mins = remaining // 60
+            secs = remaining % 60
+            st.markdown(f"""
+            <div class='timer-display'>
+                <div class='timer-text'>⏱️ {mins:02d}:{secs:02d}</div>
+                <div class='timer-label'>Repos en cours - {st.session_state.rest_timer['exercise']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.success(f"✅ Repos terminé ! Prêt pour la série suivante de {st.session_state.rest_timer['exercise']}")
+            if st.session_state.settings['sound_enabled']:
+                st.markdown("""
+                <audio autoplay>
+                    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZRQ0PVqzn77BdGAg+ltryxnMpBSuBzvLaiTYIGWm98OScTgwOUKnk9bl0IQU3jtXzzH4yBCF2xPDekUAKFF6069+rVxcJRaDk8bhwKAU0iNPz1IY0Bx5uxO/knEYND1Wr5/K1biAFN47W89GAMwQhd8fv45NGDBBbsOjyulwYCUag5fK8cikFM4fU89SCNQY=" type="audio/wav">
+                </audio>
+                """, unsafe_allow_html=True)
+
+# --- 4. JEUX CYBER (VITESSE RALENTIE) ---
 def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
     
@@ -237,19 +300,19 @@ def muscle_flappy_game():
         
         canvas.style.touchAction = 'none';
         
-        let biceps = { x: 60, y: 200, w: 35, h: 35, gravity: 0.5, velocity: 0, lift: -8 };
+        let biceps = { x: 60, y: 200, w: 35, h: 35, gravity: 0.35, velocity: 0, lift: -6 };
         let pipes = []; 
         let frameCount = 0; 
         let score = 0; 
         let gameOver = false; 
         let gameStarted = false;
-        let baseSpeed = 5;
+        let baseSpeed = 3;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
         
         function reset() { 
             biceps.y = 200; biceps.velocity = 0;
             pipes = []; score = 0; frameCount = 0;
-            gameOver = false; gameStarted = false; baseSpeed = 5; 
+            gameOver = false; gameStarted = false; baseSpeed = 3; 
         }
         
         function handleAction(e) { 
@@ -280,7 +343,7 @@ def muscle_flappy_game():
                 biceps.velocity += biceps.gravity; 
                 biceps.y += biceps.velocity;
                 
-                let currentSpeed = baseSpeed + (Math.floor(score / 4) * 0.4);
+                let currentSpeed = baseSpeed + (Math.floor(score / 10) * 0.3);
                 
                 if (frameCount % 60 === 0) { 
                     pipes.push({ 
@@ -389,7 +452,7 @@ def rep_crusher_game():
         let gameOver = false;
         let gameStarted = false;
         let frameCount = 0;
-        let speed = 3.5;
+        let speed = 2.5;
         let mouseX = 180;
         
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
@@ -402,7 +465,7 @@ def rep_crusher_game():
             gameOver = false;
             gameStarted = false;
             frameCount = 0;
-            speed = 3.5;
+            speed = 2.5;
         }
         
         function spawnPlate() {
@@ -460,7 +523,7 @@ def rep_crusher_game():
             ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
             
             if (gameStarted && !gameOver) {
-                speed = 3.5 + (score / 8);
+                speed = 2.5 + (score / 15);
                 
                 if (frameCount % Math.max(30, 65 - score * 2) === 0) {
                     spawnPlate();
@@ -575,7 +638,7 @@ def get_gs():
                 "type": os.getenv('GCP_TYPE'),
                 "project_id": os.getenv('GCP_PROJECT_ID'),
                 "private_key_id": os.getenv('GCP_PRIVATE_KEY_ID'),
-                "private_key": private_key,  # ← Utilise la clé corrigée
+                "private_key": private_key,
                 "client_email": os.getenv('GCP_CLIENT_EMAIL'),
                 "client_id": os.getenv('GCP_CLIENT_ID'),
                 "auth_uri": os.getenv('GCP_AUTH_URI'),
@@ -622,48 +685,128 @@ except: prog = {}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
+# Logo
+col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
+with col_l2: 
+    st.image("logo.png")
+
 st.title("💪 MUSCU TRACKER PRO")
 
-tab_p, tab_s, tab_st, tab_g = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
+# ORDRE MODIFIÉ : MA SÉANCE EN PREMIER
+tab_s, tab_p, tab_st, tab_g, tab_opt = st.tabs(["🏋️‍♂️ MA SÉANCE", "📅 PROGRAMME", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"])
 
-# --- ONGLET PROGRAMME ---
-with tab_p:
-    st.markdown("## ⚙️ Configuration")
-    jours = list(prog.keys())
-    for idx_j, j in enumerate(jours):
-        with st.expander(f"📦 {j}"):
-            c_s1, c_s2 = st.columns(2)
-            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
-                jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
-                save_prog({k: prog[k] for k in jours}); st.rerun()
-            if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
-                del prog[j]; save_prog(prog); st.rerun()
-            for i, ex in enumerate(prog[j]):
-                c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
-                c1.write(f"**{ex['name']}**")
-                ex['sets'] = c2.number_input("Sets", 1, 15, ex.get('sets', 3), key=f"p_s_{j}_{i}")
-                ex['muscle'] = c3.selectbox("Muscle", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], index=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"].index(ex.get("muscle", "Autre")), key=f"m_{j}_{i}")
-                if c4.button("⬆️", key=f"ue_{j}_{i}"):
-                    if i > 0: prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]; save_prog(prog); st.rerun()
-                if c5.button("⬇️", key=f"de_{j}_{i}"):
-                    if i < len(prog[j])-1: prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]; save_prog(prog); st.rerun()
-                if c6.button("🗑️", key=f"rm_{j}_{i}"):
-                    prog[j].pop(i); save_prog(prog); st.rerun()
-            st.divider()
-            cx, cm, cs = st.columns([3, 2, 1])
-            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
-            if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
-                prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
-    nvs = st.text_input("➕ Créer séance")
-    if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
+# --- ONGLET OPTIONS (NOUVEAU !) ---
+with tab_opt:
+    st.markdown("## ⚙️ PARAMÈTRES DE L'APPLICATION")
+    
+    st.markdown("### ⏱️ Timer de Repos")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        st.session_state.settings['rest_timer_enabled'] = st.checkbox(
+            "Activer le timer de repos", 
+            value=st.session_state.settings['rest_timer_enabled'],
+            help="Affiche un compte à rebours entre les séries"
+        )
+    with col_t2:
+        st.session_state.settings['rest_duration'] = st.number_input(
+            "Durée du repos (secondes)", 
+            min_value=30, 
+            max_value=300, 
+            value=st.session_state.settings['rest_duration'],
+            step=15,
+            disabled=not st.session_state.settings['rest_timer_enabled']
+        )
+    
+    st.markdown("### 📊 Affichage")
+    col_a1, col_a2 = st.columns(2)
+    with col_a1:
+        st.session_state.settings['show_1rm'] = st.checkbox(
+            "Afficher le 1RM estimé", 
+            value=st.session_state.settings['show_1rm'],
+            help="Montre le poids maximal estimé pour 1 répétition"
+        )
+        st.session_state.settings['auto_collapse'] = st.checkbox(
+            "Réduire auto après validation", 
+            value=st.session_state.settings['auto_collapse'],
+            help="Réduit automatiquement l'exercice après enregistrement"
+        )
+        st.session_state.settings['compact_mode'] = st.checkbox(
+            "Mode compact", 
+            value=st.session_state.settings['compact_mode'],
+            help="Interface plus condensée avec moins d'espaces"
+        )
+    with col_a2:
+        st.session_state.settings['show_previous_weeks'] = st.selectbox(
+            "Semaines d'historique à afficher",
+            options=[0, 1, 2, 3, 4],
+            index=st.session_state.settings['show_previous_weeks'],
+            help="Nombre de semaines précédentes à montrer dans l'historique"
+        )
+        st.session_state.settings['theme_animations'] = st.checkbox(
+            "Animations du thème", 
+            value=st.session_state.settings['theme_animations'],
+            help="Active les animations CSS (glow, pulse, etc.)"
+        )
+    
+    st.markdown("### 🔔 Notifications")
+    st.session_state.settings['sound_enabled'] = st.checkbox(
+        "Son fin de timer", 
+        value=st.session_state.settings['sound_enabled'],
+        help="Joue un son quand le timer de repos se termine"
+    )
+    
+    st.markdown("### 💾 Enregistrement")
+    st.session_state.settings['auto_save'] = st.checkbox(
+        "Sauvegarde automatique (Expérimental)", 
+        value=st.session_state.settings['auto_save'],
+        help="⚠️ Sauvegarde à chaque modification (peut ralentir l'app)"
+    )
+    if st.session_state.settings['auto_save']:
+        st.warning("⚠️ Mode expérimental : La sauvegarde auto peut causer des ralentissements")
+    
+    st.divider()
+    if st.button("🔄 Réinitialiser les paramètres", type="secondary"):
+        st.session_state.settings = {
+            'rest_timer_enabled': True,
+            'rest_duration': 90,
+            'auto_collapse': True,
+            'show_1rm': True,
+            'show_previous_weeks': 2,
+            'sound_enabled': False,
+            'compact_mode': False,
+            'auto_save': False,
+            'theme_animations': True
+        }
+        st.success("✅ Paramètres réinitialisés !")
+        st.rerun()
 
-
-# --- ONGLET MA SÉANCE ---
+# --- ONGLET MA SÉANCE (AMÉLIORÉ) ---
 with tab_s:
+    # Afficher le timer de repos s'il est actif
+    if st.session_state.settings['rest_timer_enabled']:
+        display_rest_timer()
+    
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
-        choix_s = c_h1.selectbox("Séance :", list(prog.keys()))
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        
+        # AUTO-SÉLECTION DE LA DERNIÈRE SÉANCE EN COURS
+        def get_current_session():
+            for seance in prog.keys():
+                seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
+                if seance_data.empty:
+                    return seance
+                # Compter les exos validés vs total
+                exos_prog = len([ex for ex in prog[seance]])
+                exos_done = len(seance_data[seance_data["Poids"] > 0]["Exercice"].unique())
+                if exos_done < exos_prog:
+                    return seance
+            return list(prog.keys())[0] if prog else None
+
+        default_s = get_current_session()
+        s_index = list(prog.keys()).index(default_s) if default_s and default_s in prog.keys() else 0
+        choix_s = c_h1.selectbox("Séance :", list(prog.keys()), index=s_index)
+        
         if c_h3.button("🚩 Séance Manquée", use_container_width=True):
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
             save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.rerun()
@@ -695,24 +838,56 @@ with tab_s:
 
         for i, ex_obj in enumerate(prog[choix_s]):
             exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
-            with st.expander(f"🔹 {exo_base.upper()}", expanded=True):
-                var = st.selectbox("Équipement :", ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"], key=f"v_{exo_base}_{i}")
+            
+            # SAUVEGARDER VARIANTE D'EXERCICE
+            variants = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
+            last_var_data = df_h[df_h["Exercice"].str.contains(exo_base, regex=False, na=False) & (df_h["Séance"] == choix_s)]
+            if not last_var_data.empty:
+                last_exo_name = last_var_data.iloc[-1]["Exercice"]
+                if "(" in last_exo_name:
+                    last_var = last_exo_name.split("(")[1].replace(")", "")
+                    var_index = variants.index(last_var) if last_var in variants else 0
+                else:
+                    var_index = 0
+            else:
+                var_index = 0
+            
+            # AUTO-RÉDUIRE EXPANDER APRÈS VALIDATION
+            curr_all = df_h[(df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) & (df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
+            exo_completed = not curr_all.empty and (curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0)
+            
+            if st.session_state.settings['auto_collapse']:
+                expanded_state = not exo_completed or exo_base in [e.split("(")[0].strip() for e in st.session_state.editing_exo]
+            else:
+                expanded_state = True
+            
+            with st.expander(f"🔹 {exo_base.upper()}", expanded=expanded_state):
+                var = st.selectbox("Équipement :", variants, index=var_index, key=f"v_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
+                
+                # Message si variante différente
+                all_variants = df_h[df_h["Exercice"].str.contains(exo_base, regex=False, na=False) & (df_h["Séance"] == choix_s)]["Exercice"].unique()
+                if len(all_variants) > 1:
+                    st.caption(f"ℹ️ Cet exercice a été fait avec {len(all_variants)} variantes différentes")
                 
                 if not f_h.empty:
                     best_w = f_h["Poids"].max()
                     best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
-                    st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
+                    
+                    if st.session_state.settings['show_1rm']:
+                        st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
+                    else:
+                        st.caption(f"🏆 Record : **{best_w:g}kg**")
 
                 hist_weeks = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
-                if hist_weeks:
-                    weeks_to_show = hist_weeks[-2:]
+                if hist_weeks and st.session_state.settings['show_previous_weeks'] > 0:
+                    weeks_to_show = hist_weeks[-st.session_state.settings['show_previous_weeks']:]
                     for w_num in weeks_to_show:
                         h_data = f_h[f_h["Semaine"] == w_num]
                         st.caption(f"📅 Semaine {w_num}")
                         st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
-                else:
+                elif not hist_weeks:
                     st.info("Semaine 1 : Établissez vos marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
@@ -734,16 +909,68 @@ with tab_s:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_base.loc[df_base["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
                     
-                    ed = st.data_editor(df_base, num_rows="fixed", key=editor_key, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(disabled=True), "Poids": st.column_config.NumberColumn(format="%g")})
+                    # DÉSACTIVER RÉARRANGEMENT DES COLONNES
+                    ed = st.data_editor(
+                        df_base, 
+                        num_rows="dynamic",  # Permet d'ajouter des lignes
+                        key=editor_key, 
+                        use_container_width=True,
+                        column_config={
+                            "Série": st.column_config.NumberColumn(disabled=True), 
+                            "Poids": st.column_config.NumberColumn(format="%g")
+                        },
+                        column_order=["Série", "Reps", "Poids", "Remarque"],  # Fixe l'ordre
+                        hide_index=True
+                    )
                     
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
-                        v = ed.copy(); v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
+                        v = ed.copy()
+                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                        st.session_state.editing_exo.discard(exo_final); st.rerun()
+                        st.session_state.editing_exo.discard(exo_final)
+                        
+                        # Démarrer le timer de repos si activé et si ce n'est pas la dernière série
+                        completed_sets = len(v[v["Poids"] > 0])
+                        if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
+                            start_rest_timer(st.session_state.settings['rest_duration'], exo_base)
+                        
+                        st.rerun()
+                        
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
+
+# --- ONGLET PROGRAMME ---
+with tab_p:
+    st.markdown("## ⚙️ Configuration")
+    jours = list(prog.keys())
+    for idx_j, j in enumerate(jours):
+        with st.expander(f"📦 {j}"):
+            c_s1, c_s2 = st.columns(2)
+            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
+                jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
+                save_prog({k: prog[k] for k in jours}); st.rerun()
+            if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
+                del prog[j]; save_prog(prog); st.rerun()
+            for i, ex in enumerate(prog[j]):
+                c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
+                c1.write(f"**{ex['name']}**")
+                ex['sets'] = c2.number_input("Sets", 1, 15, ex.get('sets', 3), key=f"p_s_{j}_{i}")
+                ex['muscle'] = c3.selectbox("Muscle", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], index=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"].index(ex.get("muscle", "Autre")), key=f"m_{j}_{i}")
+                if c4.button("⬆️", key=f"ue_{j}_{i}"):
+                    if i > 0: prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]; save_prog(prog); st.rerun()
+                if c5.button("⬇️", key=f"de_{j}_{i}"):
+                    if i < len(prog[j])-1: prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]; save_prog(prog); st.rerun()
+                if c6.button("🗑️", key=f"rm_{j}_{i}"):
+                    prog[j].pop(i); save_prog(prog); st.rerun()
+            st.divider()
+            cx, cm, cs = st.columns([3, 2, 1])
+            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
+                prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
+    nvs = st.text_input("➕ Créer séance")
+    if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
 
 # --- ONGLET PROGRÈS ---
