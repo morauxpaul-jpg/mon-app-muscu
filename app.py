@@ -19,16 +19,24 @@ if 'settings' not in st.session_state:
         'show_1rm': True,
         'show_previous_weeks': 2,
         'sound_enabled': False,
-        'compact_mode': False,
         'auto_save': False,
-        'theme_animations': True
+        'theme_animations': True,
+        'show_suggestions': True,
+        'show_session_stats': True
     }
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
 if 'rest_timer' not in st.session_state:
-    st.session_state.rest_timer = {'active': False, 'end_time': None, 'exercise': ''}
+    st.session_state.rest_timer = {'active': False, 'start_time': None, 'duration': 90, 'exercise': ''}
+
+if 'session_start_time' not in st.session_state:
+    st.session_state.session_start_time = None
+
+# Pour tracker les changements du data_editor
+if 'last_editor_state' not in st.session_state:
+    st.session_state.last_editor_state = {}
 
 # --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
 animations_css = """
@@ -181,29 +189,48 @@ st.markdown(f"""
         {'animation: slideIn 0.6s ease-out;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
-    .timer-display {{
+    .timer-compact {{
         background: linear-gradient(135deg, #FF453A, #FF6B6B);
         border: 2px solid #FF453A;
-        border-radius: 15px;
-        padding: 20px;
+        border-radius: 10px;
+        padding: 10px 15px;
         text-align: center;
-        margin: 20px 0;
-        box-shadow: 0 10px 30px rgba(255, 69, 58, 0.3);
+        margin: 10px 0;
+        box-shadow: 0 5px 15px rgba(255, 69, 58, 0.3);
+        display: inline-block;
+        min-width: 200px;
     }}
     
     .timer-text {{
         font-family: 'Courier New', monospace;
-        font-size: 3rem;
+        font-size: 1.8rem;
         font-weight: 900;
         color: white;
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         margin: 0;
     }}
     
     .timer-label {{
-        font-size: 1rem;
+        font-size: 0.8rem;
         color: rgba(255, 255, 255, 0.9);
-        margin-top: 10px;
+        margin-top: 5px;
+    }}
+    
+    .suggestion-box {{
+        background: rgba(0, 255, 127, 0.1);
+        border-left: 4px solid #00FF7F;
+        padding: 10px;
+        border-radius: 0 8px 8px 0;
+        margin: 10px 0;
+        font-size: 0.9rem;
+    }}
+    
+    .stat-card {{
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid rgba(88, 204, 255, 0.2);
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -238,45 +265,40 @@ def start_rest_timer(duration, exercise_name):
     """Démarre un timer de repos"""
     st.session_state.rest_timer = {
         'active': True,
-        'end_time': time.time() + duration,
+        'start_time': time.time(),
+        'duration': duration,
         'exercise': exercise_name
     }
 
 def get_timer_remaining():
     """Retourne le temps restant du timer"""
     if st.session_state.rest_timer['active']:
-        remaining = st.session_state.rest_timer['end_time'] - time.time()
+        elapsed = time.time() - st.session_state.rest_timer['start_time']
+        remaining = st.session_state.rest_timer['duration'] - elapsed
         if remaining <= 0:
             st.session_state.rest_timer['active'] = False
             return 0
         return int(remaining)
     return 0
 
-def display_rest_timer():
-    """Affiche le timer de repos s'il est actif"""
-    if st.session_state.rest_timer['active']:
-        remaining = get_timer_remaining()
-        if remaining > 0:
-            mins = remaining // 60
-            secs = remaining % 60
-            st.markdown(f"""
-            <div class='timer-display'>
-                <div class='timer-text'>⏱️ {mins:02d}:{secs:02d}</div>
-                <div class='timer-label'>Repos en cours - {st.session_state.rest_timer['exercise']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            time.sleep(1)
-            st.rerun()
+def suggest_weight(exercise_name, df_hist, current_week):
+    """Suggère un poids basé sur l'historique"""
+    prev_data = df_hist[(df_hist["Exercice"] == exercise_name) & (df_hist["Semaine"] == current_week - 1)]
+    if not prev_data.empty:
+        last_weight = prev_data["Poids"].max()
+        last_reps = prev_data[prev_data["Poids"] == last_weight]["Reps"].max()
+        
+        if last_reps >= 12:
+            return last_weight + 2.5, "Augmente de 2.5kg (tu as fait 12+ reps)"
+        elif last_reps >= 10:
+            return last_weight + 1.25, "Augmente de 1.25kg (tu progresses bien)"
+        elif last_reps >= 8:
+            return last_weight, "Garde le même poids (vise 10+ reps)"
         else:
-            st.success(f"✅ Repos terminé ! Prêt pour la série suivante de {st.session_state.rest_timer['exercise']}")
-            if st.session_state.settings['sound_enabled']:
-                st.markdown("""
-                <audio autoplay>
-                    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZRQ0PVqzn77BdGAg+ltryxnMpBSuBzvLaiTYIGWm98OScTgwOUKnk9bl0IQU3jtXzzH4yBCF2xPDekUAKFF6069+rVxcJRaDk8bhwKAU0iNPz1IY0Bx5uxO/knEYND1Wr5/K1biAFN47W89GAMwQhd8fv45NGDBBbsOjyulwYCUag5fK8cikFM4fU89SCNQY=" type="audio/wav">
-                </audio>
-                """, unsafe_allow_html=True)
+            return last_weight - 2.5, "Réduis de 2.5kg (priorise la technique)"
+    return None, None
 
-# --- 4. JEUX CYBER (VITESSE RALENTIE) ---
+# --- 4. JEUX CYBER (VITESSE BIEN RALENTIE) ---
 def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
     
@@ -300,19 +322,19 @@ def muscle_flappy_game():
         
         canvas.style.touchAction = 'none';
         
-        let biceps = { x: 60, y: 200, w: 35, h: 35, gravity: 0.35, velocity: 0, lift: -6 };
+        let biceps = { x: 60, y: 200, w: 35, h: 35, gravity: 0.25, velocity: 0, lift: -5.5 };
         let pipes = []; 
         let frameCount = 0; 
         let score = 0; 
         let gameOver = false; 
         let gameStarted = false;
-        let baseSpeed = 3;
+        let baseSpeed = 2;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
         
         function reset() { 
             biceps.y = 200; biceps.velocity = 0;
             pipes = []; score = 0; frameCount = 0;
-            gameOver = false; gameStarted = false; baseSpeed = 3; 
+            gameOver = false; gameStarted = false; baseSpeed = 2; 
         }
         
         function handleAction(e) { 
@@ -343,13 +365,20 @@ def muscle_flappy_game():
                 biceps.velocity += biceps.gravity; 
                 biceps.y += biceps.velocity;
                 
-                let currentSpeed = baseSpeed + (Math.floor(score / 10) * 0.3);
+                let currentSpeed = baseSpeed + (Math.floor(score / 15) * 0.2);
                 
-                if (frameCount % 60 === 0) { 
+                if (frameCount % 90 === 0) { 
+                    let minGap = 160;
+                    let maxGap = 180;
+                    let gap = Math.floor(Math.random() * (maxGap - minGap + 1)) + minGap;
+                    let minTop = 80;
+                    let maxTop = canvas.height - gap - 80;
+                    let topH = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+                    
                     pipes.push({ 
                         x: canvas.width, 
-                        topH: Math.floor(Math.random() * (canvas.height - 300)) + 100, 
-                        gap: 150, 
+                        topH: topH, 
+                        gap: gap, 
                         passed: false 
                     }); 
                 }
@@ -452,7 +481,7 @@ def rep_crusher_game():
         let gameOver = false;
         let gameStarted = false;
         let frameCount = 0;
-        let speed = 2.5;
+        let speed = 1.8;
         let mouseX = 180;
         
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
@@ -465,7 +494,7 @@ def rep_crusher_game():
             gameOver = false;
             gameStarted = false;
             frameCount = 0;
-            speed = 2.5;
+            speed = 1.8;
         }
         
         function spawnPlate() {
@@ -523,9 +552,9 @@ def rep_crusher_game():
             ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
             
             if (gameStarted && !gameOver) {
-                speed = 2.5 + (score / 15);
+                speed = 1.8 + (score / 20);
                 
-                if (frameCount % Math.max(30, 65 - score * 2) === 0) {
+                if (frameCount % Math.max(40, 80 - score * 1.5) === 0) {
                     spawnPlate();
                 }
                 
@@ -629,9 +658,7 @@ import os
 @st.cache_resource
 def get_gs():
     try:
-        # Check if running on Railway (env vars) or locally (secrets.toml)
         if os.getenv('GCP_PROJECT_ID'):
-            # Fix private key: replace literal \n with actual newlines
             private_key = os.getenv('GCP_PRIVATE_KEY', '').replace('\\n', '\n')
             
             creds = {
@@ -658,6 +685,15 @@ def get_gs():
 
 ws_h, ws_p = get_gs()
 
+@st.cache_data(ttl=300)  # Cache 5 minutes pour éviter quota exceeded
+def get_prog():
+    """Récupère le programme depuis Google Sheets avec cache"""
+    try:
+        prog_raw = ws_p.acell('A1').value if ws_p else "{}"
+        return json.loads(prog_raw)
+    except:
+        return {}
+
 def get_hist():
     try:
         data = ws_h.get_all_records()
@@ -676,11 +712,10 @@ def save_hist(df):
 
 def save_prog(prog_dict):
     ws_p.update_acell('A1', json.dumps(prog_dict))
+    get_prog.clear()  # Clear cache après modification
 
 df_h = get_hist()
-prog_raw = ws_p.acell('A1').value if ws_p else "{}"
-try: prog = json.loads(prog_raw)
-except: prog = {}
+prog = get_prog()
 
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
@@ -692,10 +727,23 @@ with col_l2:
 
 st.title("💪 MUSCU TRACKER PRO")
 
-# ORDRE MODIFIÉ : MA SÉANCE EN PREMIER
-tab_s, tab_p, tab_st, tab_g, tab_opt = st.tabs(["🏋️‍♂️ MA SÉANCE", "📅 PROGRAMME", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"])
+# Tabs avec ordre visuel normal mais defaultdans le query param
+tab_p, tab_s, tab_st, tab_g, tab_opt = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"])
 
-# --- ONGLET OPTIONS (NOUVEAU !) ---
+# JavaScript pour sélectionner le 2ème tab par défaut (MA SÉANCE)
+st.markdown("""
+<script>
+window.addEventListener('load', function() {
+    const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+    if (tabs.length > 1 && !sessionStorage.getItem('tab_selected')) {
+        tabs[1].click();
+        sessionStorage.setItem('tab_selected', 'true');
+    }
+});
+</script>
+""", unsafe_allow_html=True)
+
+# --- ONGLET OPTIONS ---
 with tab_opt:
     st.markdown("## ⚙️ PARAMÈTRES DE L'APPLICATION")
     
@@ -730,22 +778,27 @@ with tab_opt:
             value=st.session_state.settings['auto_collapse'],
             help="Réduit automatiquement l'exercice après enregistrement"
         )
-        st.session_state.settings['compact_mode'] = st.checkbox(
-            "Mode compact", 
-            value=st.session_state.settings['compact_mode'],
-            help="Interface plus condensée avec moins d'espaces"
+        st.session_state.settings['show_suggestions'] = st.checkbox(
+            "Suggestions de charge", 
+            value=st.session_state.settings['show_suggestions'],
+            help="Affiche des recommandations de poids basées sur ton historique"
         )
     with col_a2:
         st.session_state.settings['show_previous_weeks'] = st.selectbox(
             "Semaines d'historique à afficher",
             options=[0, 1, 2, 3, 4],
             index=st.session_state.settings['show_previous_weeks'],
-            help="Nombre de semaines précédentes à montrer dans l'historique"
+            help="Nombre de semaines précédentes à montrer"
         )
         st.session_state.settings['theme_animations'] = st.checkbox(
             "Animations du thème", 
             value=st.session_state.settings['theme_animations'],
             help="Active les animations CSS (glow, pulse, etc.)"
+        )
+        st.session_state.settings['show_session_stats'] = st.checkbox(
+            "Statistiques de séance", 
+            value=st.session_state.settings['show_session_stats'],
+            help="Affiche les stats en temps réel pendant la séance"
         )
     
     st.markdown("### 🔔 Notifications")
@@ -757,12 +810,12 @@ with tab_opt:
     
     st.markdown("### 💾 Enregistrement")
     st.session_state.settings['auto_save'] = st.checkbox(
-        "Sauvegarde automatique (Expérimental)", 
+        "Sauvegarde automatique", 
         value=st.session_state.settings['auto_save'],
-        help="⚠️ Sauvegarde à chaque modification (peut ralentir l'app)"
+        help="⚡ Sauvegarde automatiquement quand une série complète est remplie"
     )
     if st.session_state.settings['auto_save']:
-        st.warning("⚠️ Mode expérimental : La sauvegarde auto peut causer des ralentissements")
+        st.info("ℹ️ Avec la sauvegarde auto, le bouton Enregistrer disparaît et la sauvegarde se fait dès qu'une série est complète (Poids ET Reps remplis)")
     
     st.divider()
     if st.button("🔄 Réinitialiser les paramètres", type="secondary"):
@@ -773,33 +826,79 @@ with tab_opt:
             'show_1rm': True,
             'show_previous_weeks': 2,
             'sound_enabled': False,
-            'compact_mode': False,
             'auto_save': False,
-            'theme_animations': True
+            'theme_animations': True,
+            'show_suggestions': True,
+            'show_session_stats': True
         }
         st.success("✅ Paramètres réinitialisés !")
         st.rerun()
 
-# --- ONGLET MA SÉANCE (AMÉLIORÉ) ---
+# --- ONGLET MA SÉANCE (OPTIMISÉ) ---
 with tab_s:
-    # Afficher le timer de repos s'il est actif
-    if st.session_state.settings['rest_timer_enabled']:
-        display_rest_timer()
+    # Timer de repos NON-BLOQUANT
+    if st.session_state.settings['rest_timer_enabled'] and st.session_state.rest_timer['active']:
+        timer_placeholder = st.empty()
+        remaining = get_timer_remaining()
+        
+        if remaining > 0:
+            mins = remaining // 60
+            secs = remaining % 60
+            
+            with timer_placeholder.container():
+                col_timer1, col_timer2, col_timer3 = st.columns([1, 2, 1])
+                with col_timer2:
+                    st.markdown(f"""
+                    <div class='timer-compact'>
+                        <div class='timer-text'>⏱️ {mins:02d}:{secs:02d}</div>
+                        <div class='timer-label'>{st.session_state.rest_timer['exercise']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    col_pause1, col_pause2 = st.columns(2)
+                    if col_pause1.button("⏸️ Pause", key="pause_timer"):
+                        st.session_state.rest_timer['active'] = False
+                        st.rerun()
+                    if col_pause2.button("⏭️ Skip", key="skip_timer"):
+                        st.session_state.rest_timer['active'] = False
+                        st.rerun()
+            
+            # Auto-refresh timer
+            time.sleep(1)
+            st.rerun()
+        else:
+            with timer_placeholder.container():
+                st.success(f"✅ Repos terminé ! Prêt pour la série suivante")
+                if st.session_state.settings['sound_enabled']:
+                    st.markdown("""
+                    <audio autoplay>
+                        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZRQ0PVqzn77BdGAg+ltryxnMpBSuBzvLaiTYIGWm98OScTgwOUKnk9bl0IQU3jtXzzH4yBCF2xPDekUAKFF6069+rVxcJRaDk8bhwKAU0iNPz1IY0Bx5uxO/knEYND1Wr5/K1biAFN47W89GAMwQhd8fv45NGDBBbsOjyulwYCUag5fK8cikFM4fU89SCNQY=" type="audio/wav">
+                    </audio>
+                    """, unsafe_allow_html=True)
+            time.sleep(2)
+            st.session_state.rest_timer['active'] = False
+            st.rerun()
     
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
-        # AUTO-SÉLECTION DE LA DERNIÈRE SÉANCE EN COURS
+        # Démarrer le chrono de séance
+        if st.session_state.session_start_time is None:
+            st.session_state.session_start_time = time.time()
+        
+        # AUTO-SÉLECTION AVEC PRISE EN COMPTE DES SKIPS
         def get_current_session():
             for seance in prog.keys():
                 seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
                 if seance_data.empty:
                     return seance
-                # Compter les exos validés vs total
+                
+                # Compter les exos (validés ou skippés)
                 exos_prog = len([ex for ex in prog[seance]])
-                exos_done = len(seance_data[seance_data["Poids"] > 0]["Exercice"].unique())
-                if exos_done < exos_prog:
+                exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
+                
+                if exos_done_or_skipped < exos_prog:
                     return seance
             return list(prog.keys())[0] if prog else None
 
@@ -809,7 +908,30 @@ with tab_s:
         
         if c_h3.button("🚩 Séance Manquée", use_container_width=True):
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
-            save_hist(pd.concat([df_h, m_rec], ignore_index=True)); st.rerun()
+            save_hist(pd.concat([df_h, m_rec], ignore_index=True))
+            st.rerun()
+
+        # STATISTIQUES DE SÉANCE
+        if st.session_state.settings['show_session_stats']:
+            elapsed_time = int(time.time() - st.session_state.session_start_time) if st.session_state.session_start_time else 0
+            session_mins = elapsed_time // 60
+            session_secs = elapsed_time % 60
+            
+            current_session_data = df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
+            exos_done = len(current_session_data[current_session_data["Poids"] > 0]["Exercice"].unique())
+            total_exos = len(prog[choix_s])
+            volume_today = int((current_session_data["Poids"] * current_session_data["Reps"]).sum())
+            
+            col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+            with col_s1:
+                st.markdown(f"<div class='stat-card'><small>⏱️ Temps</small><br><b>{session_mins}:{session_secs:02d}</b></div>", unsafe_allow_html=True)
+            with col_s2:
+                st.markdown(f"<div class='stat-card'><small>✅ Exercices</small><br><b>{exos_done}/{total_exos}</b></div>", unsafe_allow_html=True)
+            with col_s3:
+                st.markdown(f"<div class='stat-card'><small>📦 Volume</small><br><b>{volume_today} kg</b></div>", unsafe_allow_html=True)
+            with col_s4:
+                progress_pct = int((exos_done / total_exos) * 100) if total_exos > 0 else 0
+                st.markdown(f"<div class='stat-card'><small>📊 Avancement</small><br><b>{progress_pct}%</b></div>", unsafe_allow_html=True)
 
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
@@ -839,7 +961,7 @@ with tab_s:
         for i, ex_obj in enumerate(prog[choix_s]):
             exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
             
-            # SAUVEGARDER VARIANTE D'EXERCICE
+            # SAUVEGARDER VARIANTE
             variants = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
             last_var_data = df_h[df_h["Exercice"].str.contains(exo_base, regex=False, na=False) & (df_h["Séance"] == choix_s)]
             if not last_var_data.empty:
@@ -852,9 +974,9 @@ with tab_s:
             else:
                 var_index = 0
             
-            # AUTO-RÉDUIRE EXPANDER APRÈS VALIDATION
+            # AUTO-RÉDUIRE EXPANDER
             curr_all = df_h[(df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) & (df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
-            exo_completed = not curr_all.empty and (curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0)
+            exo_completed = not curr_all.empty and ((curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0) or curr_all["Remarque"].str.contains("SKIP", na=False).any())
             
             if st.session_state.settings['auto_collapse']:
                 expanded_state = not exo_completed or exo_base in [e.split("(")[0].strip() for e in st.session_state.editing_exo]
@@ -866,10 +988,16 @@ with tab_s:
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
-                # Message si variante différente
+                # Message variante différente
                 all_variants = df_h[df_h["Exercice"].str.contains(exo_base, regex=False, na=False) & (df_h["Séance"] == choix_s)]["Exercice"].unique()
                 if len(all_variants) > 1:
-                    st.caption(f"ℹ️ Cet exercice a été fait avec {len(all_variants)} variantes différentes")
+                    st.caption(f"ℹ️ Exercice pratiqué avec {len(all_variants)} variantes différentes")
+                
+                # Suggestions de charge
+                if st.session_state.settings['show_suggestions']:
+                    suggested_weight, suggestion_msg = suggest_weight(exo_final, df_h, s_act)
+                    if suggested_weight:
+                        st.markdown(f"<div class='suggestion-box'>💡 {suggestion_msg}</div>", unsafe_allow_html=True)
                 
                 if not f_h.empty:
                     best_w = f_h["Poids"].max()
@@ -888,7 +1016,7 @@ with tab_s:
                         st.caption(f"📅 Semaine {w_num}")
                         st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 elif not hist_weeks:
-                    st.info("Semaine 1 : Établissez vos marques !")
+                    st.info("Semaine 1 : Établis tes marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
                 last_w_num = hist_weeks[-1] if hist_weeks else None
@@ -902,44 +1030,81 @@ with tab_s:
                     st.markdown("##### ✅ Validé")
                     st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
                     if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
-                        st.session_state.editing_exo.add(exo_final); st.rerun()
+                        st.session_state.editing_exo.add(exo_final)
+                        st.rerun()
                 else:
                     df_base = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             if r["Série"] <= p_sets: df_base.loc[df_base["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
                     
-                    # DÉSACTIVER RÉARRANGEMENT DES COLONNES
                     ed = st.data_editor(
                         df_base, 
-                        num_rows="dynamic",  # Permet d'ajouter des lignes
+                        num_rows="dynamic",
                         key=editor_key, 
                         use_container_width=True,
                         column_config={
                             "Série": st.column_config.NumberColumn(disabled=True), 
                             "Poids": st.column_config.NumberColumn(format="%g")
                         },
-                        column_order=["Série", "Reps", "Poids", "Remarque"],  # Fixe l'ordre
+                        column_order=["Série", "Reps", "Poids", "Remarque"],
                         hide_index=True
                     )
                     
-                    c_save, c_skip = st.columns(2)
-                    if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
-                        v = ed.copy()
-                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                        st.session_state.editing_exo.discard(exo_final)
+                    # SAUVEGARDE AUTOMATIQUE
+                    if st.session_state.settings['auto_save']:
+                        # Vérifier si une série complète vient d'être remplie
+                        current_state = ed.to_dict()
+                        last_state = st.session_state.last_editor_state.get(editor_key, {})
                         
-                        # Démarrer le timer de repos si activé et si ce n'est pas la dernière série
-                        completed_sets = len(v[v["Poids"] > 0])
-                        if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
-                            start_rest_timer(st.session_state.settings['rest_duration'], exo_base)
+                        # Détecter nouvelle série complète
+                        for idx, row in ed.iterrows():
+                            if row["Poids"] > 0 and row["Reps"] > 0:
+                                # Vérifier si c'est nouveau
+                                if editor_key not in last_state or idx >= len(last_state.get("Poids", [])) or last_state["Poids"][idx] == 0:
+                                    # Nouvelle série complète détectée → Sauvegarder
+                                    v = ed.copy()
+                                    v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
+                                    save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
+                                    st.session_state.editing_exo.discard(exo_final)
+                                    
+                                    # Démarrer timer si pas la dernière série
+                                    completed_sets = len(v[v["Poids"] > 0])
+                                    if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
+                                        start_rest_timer(st.session_state.settings['rest_duration'], exo_base)
+                                    
+                                    st.success(f"✅ Série {int(row['Série'])} enregistrée automatiquement !")
+                                    time.sleep(1)
+                                    st.rerun()
                         
-                        st.rerun()
+                        # Sauvegarder l'état actuel
+                        st.session_state.last_editor_state[editor_key] = current_state
                         
-                    if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
-                        v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True)); st.rerun()
+                        # Bouton Skip uniquement
+                        if st.button("⏩ Skip Exo", key=f"sk_{exo_final}", use_container_width=True):
+                            v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
+                            save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                            st.rerun()
+                    else:
+                        # MODE MANUEL avec bouton Enregistrer
+                        c_save, c_skip = st.columns(2)
+                        if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
+                            v = ed.copy()
+                            v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
+                            save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
+                            st.session_state.editing_exo.discard(exo_final)
+                            
+                            # Démarrer timer
+                            completed_sets = len(v[(v["Poids"] > 0) & (v["Reps"] > 0)])
+                            if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
+                                start_rest_timer(st.session_state.settings['rest_duration'], exo_base)
+                            
+                            st.rerun()
+                            
+                        if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
+                            v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
+                            save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                            st.rerun()
 
 # --- ONGLET PROGRAMME ---
 with tab_p:
@@ -950,9 +1115,12 @@ with tab_p:
             c_s1, c_s2 = st.columns(2)
             if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
                 jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
-                save_prog({k: prog[k] for k in jours}); st.rerun()
+                save_prog({k: prog[k] for k in jours})
+                st.rerun()
             if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
-                del prog[j]; save_prog(prog); st.rerun()
+                del prog[j]
+                save_prog(prog)
+                st.rerun()
             for i, ex in enumerate(prog[j]):
                 c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
                 c1.write(f"**{ex['name']}**")
