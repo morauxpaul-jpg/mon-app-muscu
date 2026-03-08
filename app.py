@@ -5,7 +5,6 @@ import gspread
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
-import time
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="💪")
@@ -21,22 +20,19 @@ if 'settings' not in st.session_state:
         'sound_enabled': False,
         'auto_save': False,
         'theme_animations': True,
-        'show_suggestions': True,
         'show_session_stats': True
     }
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-if 'rest_timer' not in st.session_state:
-    st.session_state.rest_timer = {'active': False, 'start_time': None, 'duration': 90, 'exercise': ''}
-
-if 'session_start_time' not in st.session_state:
-    st.session_state.session_start_time = None
-
 # Pour tracker les changements du data_editor
 if 'last_editor_state' not in st.session_state:
     st.session_state.last_editor_state = {}
+
+# Navigation custom
+if 'current_tab' not in st.session_state:
+    st.session_state.current_tab = 'seance'  # Par défaut sur SÉANCE
 
 # --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
 animations_css = """
@@ -189,42 +185,6 @@ st.markdown(f"""
         {'animation: slideIn 0.6s ease-out;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
-    .timer-compact {{
-        background: linear-gradient(135deg, #FF453A, #FF6B6B);
-        border: 2px solid #FF453A;
-        border-radius: 10px;
-        padding: 10px 15px;
-        text-align: center;
-        margin: 10px 0;
-        box-shadow: 0 5px 15px rgba(255, 69, 58, 0.3);
-        display: inline-block;
-        min-width: 200px;
-    }}
-    
-    .timer-text {{
-        font-family: 'Courier New', monospace;
-        font-size: 1.8rem;
-        font-weight: 900;
-        color: white;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        margin: 0;
-    }}
-    
-    .timer-label {{
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.9);
-        margin-top: 5px;
-    }}
-    
-    .suggestion-box {{
-        background: rgba(0, 255, 127, 0.1);
-        border-left: 4px solid #00FF7F;
-        padding: 10px;
-        border-radius: 0 8px 8px 0;
-        margin: 10px 0;
-        font-size: 0.9rem;
-    }}
-    
     .stat-card {{
         background: rgba(255, 255, 255, 0.05);
         border-radius: 10px;
@@ -261,44 +221,91 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-def start_rest_timer(duration, exercise_name):
-    """Démarre un timer de repos"""
-    st.session_state.rest_timer = {
-        'active': True,
-        'start_time': time.time(),
-        'duration': duration,
-        'exercise': exercise_name
-    }
-
-def get_timer_remaining():
-    """Retourne le temps restant du timer"""
-    if st.session_state.rest_timer['active']:
-        elapsed = time.time() - st.session_state.rest_timer['start_time']
-        remaining = st.session_state.rest_timer['duration'] - elapsed
-        if remaining <= 0:
-            st.session_state.rest_timer['active'] = False
-            return 0
-        return int(remaining)
-    return 0
-
-def suggest_weight(exercise_name, df_hist, current_week):
-    """Suggère un poids basé sur l'historique"""
-    prev_data = df_hist[(df_hist["Exercice"] == exercise_name) & (df_hist["Semaine"] == current_week - 1)]
-    if not prev_data.empty:
-        last_weight = prev_data["Poids"].max()
-        last_reps = prev_data[prev_data["Poids"] == last_weight]["Reps"].max()
+def display_rest_timer(duration_seconds, exercise_name, sound_enabled):
+    """Affiche un timer JavaScript pur qui ne bloque pas Streamlit"""
+    timer_html = f"""
+    <div id="timer-container" style="
+        background: linear-gradient(135deg, #FF453A, #FF6B6B);
+        border: 2px solid #FF453A;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        margin: 15px auto;
+        max-width: 300px;
+        box-shadow: 0 5px 15px rgba(255, 69, 58, 0.3);
+    ">
+        <div id="timer-display" style="
+            font-family: 'Courier New', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            margin: 0;
+        ">⏱️ --:--</div>
+        <div style="
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 8px;
+        ">{exercise_name}</div>
+        <button onclick="stopTimer()" style="
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        ">⏭️ Terminer</button>
+    </div>
+    
+    <script>
+        let timeLeft = {duration_seconds};
+        let timerInterval = null;
+        let soundEnabled = {str(sound_enabled).lower()};
         
-        if last_reps >= 12:
-            return last_weight + 2.5, "Augmente de 2.5kg (tu as fait 12+ reps)"
-        elif last_reps >= 10:
-            return last_weight + 1.25, "Augmente de 1.25kg (tu progresses bien)"
-        elif last_reps >= 8:
-            return last_weight, "Garde le même poids (vise 10+ reps)"
-        else:
-            return last_weight - 2.5, "Réduis de 2.5kg (priorise la technique)"
-    return None, None
+        function updateDisplay() {{
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            document.getElementById('timer-display').textContent = 
+                `⏱️ ${{mins.toString().padStart(2, '0')}}:${{secs.toString().padStart(2, '0')}}`;
+        }}
+        
+        function stopTimer() {{
+            if (timerInterval) {{
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }}
+            document.getElementById('timer-container').style.display = 'none';
+        }}
+        
+        function startTimer() {{
+            updateDisplay();
+            timerInterval = setInterval(function() {{
+                timeLeft--;
+                updateDisplay();
+                
+                if (timeLeft <= 0) {{
+                    clearInterval(timerInterval);
+                    document.getElementById('timer-display').textContent = '✅ Terminé !';
+                    document.getElementById('timer-display').style.color = '#00FF7F';
+                    
+                    if (soundEnabled) {{
+                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZRQ0PVqzn77BdGAg+ltryxnMpBSuBzvLaiTYIGWm98OScTgwOUKnk9bl0IQU3jtXzzH4yBCF2xPDekUAKFF6069+rVxcJRaDk8bhwKAU0iNPz1IY0Bx5uxO/knEYND1Wr5/K1biAFN47W89GAMwQhd8fv45NGDBBbsOjyulwYCUag5fK8cikFM4fU89SCNQY=');
+                        audio.play();
+                    }}
+                    
+                    setTimeout(stopTimer, 3000);
+                }}
+            }}, 1000);
+        }}
+        
+        startTimer();
+    </script>
+    """
+    components.html(timer_html, height=150)
 
-# --- 4. JEUX CYBER (VITESSE BIEN RALENTIE) ---
+# --- 4. JEUX CYBER (GRAVITÉ FLAPPY CORRIGÉE) ---
 def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
     
@@ -322,7 +329,17 @@ def muscle_flappy_game():
         
         canvas.style.touchAction = 'none';
         
-        let biceps = { x: 60, y: 200, w: 35, h: 35, gravity: 0.25, velocity: 0, lift: -5.5 };
+        // VRAIE GRAVITÉ FLAPPY BIRD
+        let biceps = { 
+            x: 60, 
+            y: 200, 
+            w: 35, 
+            h: 35, 
+            gravity: 0.4,      // Gravité naturelle
+            velocity: 0, 
+            lift: -7.5,        // Force de saut
+            maxVelocity: 10    // Vitesse max de chute
+        };
         let pipes = []; 
         let frameCount = 0; 
         let score = 0; 
@@ -332,9 +349,13 @@ def muscle_flappy_game():
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
         
         function reset() { 
-            biceps.y = 200; biceps.velocity = 0;
-            pipes = []; score = 0; frameCount = 0;
-            gameOver = false; gameStarted = false; baseSpeed = 2; 
+            biceps.y = 200; 
+            biceps.velocity = 0;
+            pipes = []; 
+            score = 0; 
+            frameCount = 0;
+            gameOver = false; 
+            gameStarted = false; 
         }
         
         function handleAction(e) { 
@@ -358,22 +379,25 @@ def muscle_flappy_game():
             ctx.fillStyle = '#050A18';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Dessiner le joueur
             ctx.font = "40px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
             if (gameStarted && !gameOver) {
-                biceps.velocity += biceps.gravity; 
+                // PHYSIQUE FLAPPY
+                biceps.velocity += biceps.gravity;
+                biceps.velocity = Math.min(biceps.velocity, biceps.maxVelocity);
                 biceps.y += biceps.velocity;
                 
-                let currentSpeed = baseSpeed + (Math.floor(score / 15) * 0.2);
+                // Vitesse progressive
+                let currentSpeed = baseSpeed + (Math.floor(score / 20) * 0.15);
                 
-                if (frameCount % 90 === 0) { 
-                    let minGap = 160;
-                    let maxGap = 180;
-                    let gap = Math.floor(Math.random() * (maxGap - minGap + 1)) + minGap;
-                    let minTop = 80;
-                    let maxTop = canvas.height - gap - 80;
-                    let topH = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+                // Générer obstacles - BIEN ESPACÉS
+                if (frameCount % 120 === 0) {  // Toutes les 120 frames = ~2 secondes
+                    let gap = 170;  // Gap plus large
+                    let minTop = 100;
+                    let maxTop = canvas.height - gap - 100;
+                    let topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
                     
                     pipes.push({ 
                         x: canvas.width, 
@@ -383,9 +407,11 @@ def muscle_flappy_game():
                     }); 
                 }
                 
+                // Dessiner et gérer obstacles
                 for (let i = pipes.length - 1; i >= 0; i--) {
                     pipes[i].x -= currentSpeed;
                     
+                    // Dessiner tuyaux
                     ctx.fillStyle = "#FF453A";
                     ctx.fillRect(pipes[i].x, 0, 65, pipes[i].topH);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, canvas.height);
@@ -394,20 +420,24 @@ def muscle_flappy_game():
                     ctx.fillRect(pipes[i].x, pipes[i].topH - 25, 65, 25);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, 25);
                     
+                    // Collision
                     if (biceps.x + 30 > pipes[i].x && biceps.x + 5 < pipes[i].x + 65) { 
                         if (biceps.y - 20 < pipes[i].topH || biceps.y + 20 > pipes[i].topH + pipes[i].gap) {
                             gameOver = true;
                         }
                     }
                     
+                    // Score
                     if (!pipes[i].passed && biceps.x > pipes[i].x + 65) { 
                         score++; 
                         pipes[i].passed = true;
                     }
                     
+                    // Supprimer hors écran
                     if (pipes[i].x < -80) pipes.splice(i, 1);
                 }
                 
+                // Collision sol/plafond
                 if (biceps.y > canvas.height - 20 || biceps.y < 20) {
                     gameOver = true;
                 }
@@ -436,6 +466,7 @@ def muscle_flappy_game():
                 ctx.fillText("Clique pour recommencer", 95, 380);
             }
             
+            // Affichage scores
             ctx.font = "bold 22px Arial"; 
             ctx.fillStyle = "#00FF7F";
             ctx.fillText("⚡ " + score, 25, 40);
@@ -473,7 +504,7 @@ def rep_crusher_game():
         
         canvas2.style.touchAction = 'none';
         
-        let barbell = { x: 140, y: 470, w: 100, h: 12, targetY: 470, liftPower: 0 };
+        let barbell = { x: 140, y: 470, w: 100, h: 12 };
         let plates = [];
         let score = 0;
         let combo = 0;
@@ -481,20 +512,20 @@ def rep_crusher_game():
         let gameOver = false;
         let gameStarted = false;
         let frameCount = 0;
-        let speed = 1.8;
+        let speed = 1.5;
         let mouseX = 180;
         
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
         
         function reset() {
-            barbell = { x: 140, y: 470, w: 100, h: 12, targetY: 470, liftPower: 0 };
+            barbell = { x: 140, y: 470, w: 100, h: 12 };
             plates = [];
             score = 0;
             combo = 0;
             gameOver = false;
             gameStarted = false;
             frameCount = 0;
-            speed = 1.8;
+            speed = 1.5;
         }
         
         function spawnPlate() {
@@ -518,14 +549,8 @@ def rep_crusher_game():
             }
         }
         
-        function handleMouseUp(e) {
-            e.preventDefault();
-        }
-        
         canvas2.addEventListener('mousedown', handleMouseDown);
         canvas2.addEventListener('touchstart', handleMouseDown, {passive: false});
-        canvas2.addEventListener('mouseup', handleMouseUp);
-        canvas2.addEventListener('touchend', handleMouseUp, {passive: false});
         
         canvas2.addEventListener('mousemove', (e) => {
             if (gameStarted && !gameOver) {
@@ -552,9 +577,9 @@ def rep_crusher_game():
             ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
             
             if (gameStarted && !gameOver) {
-                speed = 1.8 + (score / 20);
+                speed = 1.5 + (score / 25);
                 
-                if (frameCount % Math.max(40, 80 - score * 1.5) === 0) {
+                if (frameCount % Math.max(45, 90 - score * 1.5) === 0) {
                     spawnPlate();
                 }
                 
@@ -685,7 +710,7 @@ def get_gs():
 
 ws_h, ws_p = get_gs()
 
-@st.cache_data(ttl=300)  # Cache 5 minutes pour éviter quota exceeded
+@st.cache_data(ttl=300)
 def get_prog():
     """Récupère le programme depuis Google Sheets avec cache"""
     try:
@@ -712,7 +737,7 @@ def save_hist(df):
 
 def save_prog(prog_dict):
     ws_p.update_acell('A1', json.dumps(prog_dict))
-    get_prog.clear()  # Clear cache après modification
+    get_prog.clear()
 
 df_h = get_hist()
 prog = get_prog()
@@ -727,24 +752,18 @@ with col_l2:
 
 st.title("💪 MUSCU TRACKER PRO")
 
-# Tabs avec ordre visuel normal mais defaultdans le query param
-tab_p, tab_s, tab_st, tab_g, tab_opt = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"])
+# NAVIGATION CUSTOM avec boutons radio
+tab_choice = st.radio(
+    "Navigation",
+    ["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"],
+    index=1,  # Par défaut sur MA SÉANCE (index 1)
+    horizontal=True,
+    label_visibility="collapsed",
+    key="tab_navigation"
+)
 
-# JavaScript pour sélectionner le 2ème tab par défaut (MA SÉANCE)
-st.markdown("""
-<script>
-window.addEventListener('load', function() {
-    const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
-    if (tabs.length > 1 && !sessionStorage.getItem('tab_selected')) {
-        tabs[1].click();
-        sessionStorage.setItem('tab_selected', 'true');
-    }
-});
-</script>
-""", unsafe_allow_html=True)
-
-# --- ONGLET OPTIONS ---
-with tab_opt:
+# Containers conditionnels
+if tab_choice == "⚙️ OPTIONS":
     st.markdown("## ⚙️ PARAMÈTRES DE L'APPLICATION")
     
     st.markdown("### ⏱️ Timer de Repos")
@@ -778,10 +797,10 @@ with tab_opt:
             value=st.session_state.settings['auto_collapse'],
             help="Réduit automatiquement l'exercice après enregistrement"
         )
-        st.session_state.settings['show_suggestions'] = st.checkbox(
-            "Suggestions de charge", 
-            value=st.session_state.settings['show_suggestions'],
-            help="Affiche des recommandations de poids basées sur ton historique"
+        st.session_state.settings['show_session_stats'] = st.checkbox(
+            "Statistiques de séance", 
+            value=st.session_state.settings['show_session_stats'],
+            help="Affiche les stats en temps réel pendant la séance"
         )
     with col_a2:
         st.session_state.settings['show_previous_weeks'] = st.selectbox(
@@ -794,11 +813,6 @@ with tab_opt:
             "Animations du thème", 
             value=st.session_state.settings['theme_animations'],
             help="Active les animations CSS (glow, pulse, etc.)"
-        )
-        st.session_state.settings['show_session_stats'] = st.checkbox(
-            "Statistiques de séance", 
-            value=st.session_state.settings['show_session_stats'],
-            help="Affiche les stats en temps réel pendant la séance"
         )
     
     st.markdown("### 🔔 Notifications")
@@ -815,7 +829,7 @@ with tab_opt:
         help="⚡ Sauvegarde automatiquement quand une série complète est remplie"
     )
     if st.session_state.settings['auto_save']:
-        st.info("ℹ️ Avec la sauvegarde auto, le bouton Enregistrer disparaît et la sauvegarde se fait dès qu'une série est complète (Poids ET Reps remplis)")
+        st.info("ℹ️ La sauvegarde auto se déclenche dès qu'une série est complète (Poids ET Reps remplis)")
     
     st.divider()
     if st.button("🔄 Réinitialiser les paramètres", type="secondary"):
@@ -828,73 +842,23 @@ with tab_opt:
             'sound_enabled': False,
             'auto_save': False,
             'theme_animations': True,
-            'show_suggestions': True,
             'show_session_stats': True
         }
         st.success("✅ Paramètres réinitialisés !")
         st.rerun()
 
-# --- ONGLET MA SÉANCE (OPTIMISÉ) ---
-with tab_s:
-    # Timer de repos NON-BLOQUANT
-    if st.session_state.settings['rest_timer_enabled'] and st.session_state.rest_timer['active']:
-        timer_placeholder = st.empty()
-        remaining = get_timer_remaining()
-        
-        if remaining > 0:
-            mins = remaining // 60
-            secs = remaining % 60
-            
-            with timer_placeholder.container():
-                col_timer1, col_timer2, col_timer3 = st.columns([1, 2, 1])
-                with col_timer2:
-                    st.markdown(f"""
-                    <div class='timer-compact'>
-                        <div class='timer-text'>⏱️ {mins:02d}:{secs:02d}</div>
-                        <div class='timer-label'>{st.session_state.rest_timer['exercise']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    col_pause1, col_pause2 = st.columns(2)
-                    if col_pause1.button("⏸️ Pause", key="pause_timer"):
-                        st.session_state.rest_timer['active'] = False
-                        st.rerun()
-                    if col_pause2.button("⏭️ Skip", key="skip_timer"):
-                        st.session_state.rest_timer['active'] = False
-                        st.rerun()
-            
-            # Auto-refresh timer
-            time.sleep(1)
-            st.rerun()
-        else:
-            with timer_placeholder.container():
-                st.success(f"✅ Repos terminé ! Prêt pour la série suivante")
-                if st.session_state.settings['sound_enabled']:
-                    st.markdown("""
-                    <audio autoplay>
-                        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZRQ0PVqzn77BdGAg+ltryxnMpBSuBzvLaiTYIGWm98OScTgwOUKnk9bl0IQU3jtXzzH4yBCF2xPDekUAKFF6069+rVxcJRaDk8bhwKAU0iNPz1IY0Bx5uxO/knEYND1Wr5/K1biAFN47W89GAMwQhd8fv45NGDBBbsOjyulwYCUag5fK8cikFM4fU89SCNQY=" type="audio/wav">
-                    </audio>
-                    """, unsafe_allow_html=True)
-            time.sleep(2)
-            st.session_state.rest_timer['active'] = False
-            st.rerun()
-    
+elif tab_choice == "🏋️‍♂️ MA SÉANCE":
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
-        # Démarrer le chrono de séance
-        if st.session_state.session_start_time is None:
-            st.session_state.session_start_time = time.time()
-        
-        # AUTO-SÉLECTION AVEC PRISE EN COMPTE DES SKIPS
+        # AUTO-SÉLECTION AVEC SKIP
         def get_current_session():
             for seance in prog.keys():
                 seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
                 if seance_data.empty:
                     return seance
                 
-                # Compter les exos (validés ou skippés)
                 exos_prog = len([ex for ex in prog[seance]])
                 exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
                 
@@ -913,23 +877,17 @@ with tab_s:
 
         # STATISTIQUES DE SÉANCE
         if st.session_state.settings['show_session_stats']:
-            elapsed_time = int(time.time() - st.session_state.session_start_time) if st.session_state.session_start_time else 0
-            session_mins = elapsed_time // 60
-            session_secs = elapsed_time % 60
-            
             current_session_data = df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
             exos_done = len(current_session_data[current_session_data["Poids"] > 0]["Exercice"].unique())
             total_exos = len(prog[choix_s])
             volume_today = int((current_session_data["Poids"] * current_session_data["Reps"]).sum())
             
-            col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+            col_s1, col_s2, col_s3 = st.columns(3)
             with col_s1:
-                st.markdown(f"<div class='stat-card'><small>⏱️ Temps</small><br><b>{session_mins}:{session_secs:02d}</b></div>", unsafe_allow_html=True)
-            with col_s2:
                 st.markdown(f"<div class='stat-card'><small>✅ Exercices</small><br><b>{exos_done}/{total_exos}</b></div>", unsafe_allow_html=True)
-            with col_s3:
+            with col_s2:
                 st.markdown(f"<div class='stat-card'><small>📦 Volume</small><br><b>{volume_today} kg</b></div>", unsafe_allow_html=True)
-            with col_s4:
+            with col_s3:
                 progress_pct = int((exos_done / total_exos) * 100) if total_exos > 0 else 0
                 st.markdown(f"<div class='stat-card'><small>📊 Avancement</small><br><b>{progress_pct}%</b></div>", unsafe_allow_html=True)
 
@@ -974,7 +932,7 @@ with tab_s:
             else:
                 var_index = 0
             
-            # AUTO-RÉDUIRE EXPANDER
+            # AUTO-RÉDUIRE
             curr_all = df_h[(df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) & (df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
             exo_completed = not curr_all.empty and ((curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0) or curr_all["Remarque"].str.contains("SKIP", na=False).any())
             
@@ -988,16 +946,10 @@ with tab_s:
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
                 
-                # Message variante différente
+                # Message variante
                 all_variants = df_h[df_h["Exercice"].str.contains(exo_base, regex=False, na=False) & (df_h["Séance"] == choix_s)]["Exercice"].unique()
                 if len(all_variants) > 1:
                     st.caption(f"ℹ️ Exercice pratiqué avec {len(all_variants)} variantes différentes")
-                
-                # Suggestions de charge
-                if st.session_state.settings['show_suggestions']:
-                    suggested_weight, suggestion_msg = suggest_weight(exo_final, df_h, s_act)
-                    if suggested_weight:
-                        st.markdown(f"<div class='suggestion-box'>💡 {suggestion_msg}</div>", unsafe_allow_html=True)
                 
                 if not f_h.empty:
                     best_w = f_h["Poids"].max()
@@ -1053,40 +1005,33 @@ with tab_s:
                     
                     # SAUVEGARDE AUTOMATIQUE
                     if st.session_state.settings['auto_save']:
-                        # Vérifier si une série complète vient d'être remplie
                         current_state = ed.to_dict()
                         last_state = st.session_state.last_editor_state.get(editor_key, {})
                         
-                        # Détecter nouvelle série complète
                         for idx, row in ed.iterrows():
                             if row["Poids"] > 0 and row["Reps"] > 0:
-                                # Vérifier si c'est nouveau
                                 if editor_key not in last_state or idx >= len(last_state.get("Poids", [])) or last_state["Poids"][idx] == 0:
-                                    # Nouvelle série complète détectée → Sauvegarder
                                     v = ed.copy()
                                     v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                                     save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                                     st.session_state.editing_exo.discard(exo_final)
                                     
-                                    # Démarrer timer si pas la dernière série
+                                    # Timer JavaScript
                                     completed_sets = len(v[v["Poids"] > 0])
                                     if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
-                                        start_rest_timer(st.session_state.settings['rest_duration'], exo_base)
+                                        display_rest_timer(st.session_state.settings['rest_duration'], exo_base, st.session_state.settings['sound_enabled'])
                                     
-                                    st.success(f"✅ Série {int(row['Série'])} enregistrée automatiquement !")
-                                    time.sleep(1)
+                                    st.success(f"✅ Série {int(row['Série'])} enregistrée !")
                                     st.rerun()
                         
-                        # Sauvegarder l'état actuel
                         st.session_state.last_editor_state[editor_key] = current_state
                         
-                        # Bouton Skip uniquement
                         if st.button("⏩ Skip Exo", key=f"sk_{exo_final}", use_container_width=True):
                             v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                             save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                             st.rerun()
                     else:
-                        # MODE MANUEL avec bouton Enregistrer
+                        # MODE MANUEL
                         c_save, c_skip = st.columns(2)
                         if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                             v = ed.copy()
@@ -1094,10 +1039,10 @@ with tab_s:
                             save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                             st.session_state.editing_exo.discard(exo_final)
                             
-                            # Démarrer timer
+                            # Timer JavaScript
                             completed_sets = len(v[(v["Poids"] > 0) & (v["Reps"] > 0)])
                             if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
-                                start_rest_timer(st.session_state.settings['rest_duration'], exo_base)
+                                display_rest_timer(st.session_state.settings['rest_duration'], exo_base, st.session_state.settings['sound_enabled'])
                             
                             st.rerun()
                             
@@ -1106,8 +1051,7 @@ with tab_s:
                             save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                             st.rerun()
 
-# --- ONGLET PROGRAMME ---
-with tab_p:
+elif tab_choice == "📅 PROGRAMME":
     st.markdown("## ⚙️ Configuration")
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
@@ -1140,9 +1084,7 @@ with tab_p:
     nvs = st.text_input("➕ Créer séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-
-# --- ONGLET PROGRÈS ---
-with tab_st:
+elif tab_choice == "📈 PROGRÈS":
     if not df_h.empty:
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers, noms = [0, 5000, 25000, 75000, 200000, 500000], ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
@@ -1200,8 +1142,7 @@ with tab_st:
             st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
 
-# --- ONGLET ARCADE ---
-with tab_g:
+elif tab_choice == "🎮 ARCADE":
     st.markdown("## 🎮 ARCADE CYBER-FITNESS")
     
     if 'selected_game' not in st.session_state:
