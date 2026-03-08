@@ -9,32 +9,24 @@ import streamlit.components.v1 as components
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="💪")
 
-# Initialiser les paramètres de l'app
+# Initialiser les paramètres de l'app (SANS CHRONO)
 if 'settings' not in st.session_state:
     st.session_state.settings = {
-        'rest_timer_enabled': True,
-        'rest_duration': 90,
         'auto_collapse': True,
         'show_1rm': True,
         'show_previous_weeks': 2,
-        'sound_enabled': False,
         'auto_save': False,
-        'theme_animations': True,
-        'show_session_stats': True
+        'theme_animations': True
     }
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
-# Pour tracker les changements du data_editor
-if 'last_editor_state' not in st.session_state:
-    st.session_state.last_editor_state = {}
+# Pour tracker l'auto-save ligne par ligne
+if 'last_saved_rows' not in st.session_state:
+    st.session_state.last_saved_rows = {}
 
-# Navigation custom
-if 'current_tab' not in st.session_state:
-    st.session_state.current_tab = 'seance'  # Par défaut sur SÉANCE
-
-# --- 2. CSS : DESIGN CYBER-RPG COMPLET AVEC ANIMATIONS ---
+# --- 2. CSS : DESIGN CYBER-RPG MOBILE-FRIENDLY ---
 animations_css = """
     @keyframes pulse {
         0%, 100% { opacity: 1; }
@@ -61,81 +53,127 @@ st.markdown(f"""
 <style>
     {animations_css}
     
+    /* Fix scroll horizontal et mobile */
+    .main .block-container {{
+        max-width: 100%;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }}
+    
+    .main {{
+        overflow-x: hidden !important;
+    }}
+    
     .stApp {{
         background: radial-gradient(circle at 50% 0%, rgba(10, 50, 100, 0.4) 0%, transparent 50%),
                     linear-gradient(180deg, #050A18 0%, #000000 100%);
-        background-attachment: fixed; color: #F0F2F6;
+        background-attachment: fixed; 
+        color: #F0F2F6;
+        overflow-x: hidden;
     }}
     
     .stExpander {{
         background: rgba(255, 255, 255, 0.03) !important;
         border: 1px solid rgba(74, 144, 226, 0.3) !important;
-        border-radius: 15px !important; backdrop-filter: blur(10px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important; margin-bottom: 15px;
+        border-radius: 15px !important; 
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important; 
+        margin-bottom: 15px;
         {'animation: slideIn 0.3s ease-out;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     h1, h2, h3 {{ 
-        letter-spacing: 1.5px; text-transform: uppercase; color: #FFFFFF; 
+        letter-spacing: 1.5px; 
+        text-transform: uppercase; 
+        color: #FFFFFF; 
         text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
         {'animation: slideIn 0.5s ease-out;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     div[data-testid="stMetricValue"] {{ 
-        font-family: 'Courier New', monospace; font-size: 38px !important; color: #58CCFF !important; 
-        font-weight: 900; text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important;
+        font-family: 'Courier New', monospace; 
+        font-size: 38px !important; 
+        color: #58CCFF !important; 
+        font-weight: 900; 
+        text-shadow: 0 0 20px rgba(88, 204, 255, 0.6) !important;
         {'animation: pulse 2s infinite;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     .rank-ladder {{ 
-        display: flex; justify-content: space-between; align-items: center; 
-        background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; 
-        border: 1px solid #58CCFF; margin-bottom: 30px;
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        background: rgba(255,255,255,0.05); 
+        padding: 15px; 
+        border-radius: 15px; 
+        border: 1px solid #58CCFF; 
+        margin-bottom: 30px;
         {'animation: glow 3s infinite;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     .rank-step {{ 
-        text-align: center; flex: 1; opacity: 0.5; font-size: 10px; 
+        text-align: center; 
+        flex: 1; 
+        opacity: 0.5; 
+        font-size: 9px; 
         transition: all 0.3s ease;
     }}
     
     .rank-step.active {{ 
-        opacity: 1; font-weight: bold; transform: scale(1.15); color: #58CCFF;
+        opacity: 1; 
+        font-weight: bold; 
+        transform: scale(1.15); 
+        color: #58CCFF;
         {'animation: float 2s ease-in-out infinite;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     .rank-step.completed {{ color: #00FF7F; opacity: 0.8; }}
     
     .xp-bar-bg {{ 
-        width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; 
-        height: 12px; overflow: hidden; border: 1px solid rgba(88, 204, 255, 0.3); 
+        width: 100%; 
+        background: rgba(255,255,255,0.1); 
+        border-radius: 10px; 
+        height: 12px; 
+        overflow: hidden; 
+        border: 1px solid rgba(88, 204, 255, 0.3); 
     }}
     
     .xp-bar-fill {{ 
-        height: 100%; background: linear-gradient(90deg, #58CCFF, #00FF7F); 
+        height: 100%; 
+        background: linear-gradient(90deg, #58CCFF, #00FF7F); 
         box-shadow: 0 0 15px #58CCFF;
         transition: width 1s ease-out;
     }}
 
     .vol-container {{ 
-        background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; 
+        background: rgba(255,255,255,0.05); 
+        border-radius: 10px; 
+        padding: 10px; 
         border: 1px solid rgba(88, 204, 255, 0.2);
         {'animation: slideIn 0.5s ease-out;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     .vol-bar {{ 
-        height: 12px; border-radius: 6px; background: #58CCFF; 
-        transition: width 0.8s ease-in-out; box-shadow: 0 0 10px #58CCFF; 
+        height: 12px; 
+        border-radius: 6px; 
+        background: #58CCFF; 
+        transition: width 0.8s ease-in-out; 
+        box-shadow: 0 0 10px #58CCFF; 
     }}
     
     .vol-overload {{ 
-        background: #00FF7F !important; box-shadow: 0 0 15px #00FF7F !important;
+        background: #00FF7F !important; 
+        box-shadow: 0 0 15px #00FF7F !important;
         {'animation: pulse 1.5s infinite;' if st.session_state.settings['theme_animations'] else ''}
     }}
 
     .podium-card {{ 
-        background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 15px; 
-        text-align: center; margin-bottom: 10px; border-top: 4px solid #58CCFF;
+        background: rgba(255, 255, 255, 0.07); 
+        border-radius: 12px; 
+        padding: 15px; 
+        text-align: center; 
+        margin-bottom: 10px; 
+        border-top: 4px solid #58CCFF;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }}
     
@@ -145,26 +183,36 @@ st.markdown(f"""
     }}
     
     .podium-gold {{ 
-        border-color: #FFD700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        border-color: #FFD700 !important; 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
         {'animation: glow 2s infinite;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
     .podium-silver {{ 
-        border-color: #C0C0C0 !important; box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); 
+        border-color: #C0C0C0 !important; 
+        box-shadow: 0 0 15px rgba(192, 192, 192, 0.2); 
     }}
     
     .podium-bronze {{ 
-        border-color: #CD7F32 !important; box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); 
+        border-color: #CD7F32 !important; 
+        box-shadow: 0 0 15px rgba(205, 127, 50, 0.2); 
     }}
     
     .recup-container {{ 
-        display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; 
+        display: flex; 
+        gap: 10px; 
+        overflow-x: auto; 
+        padding: 10px 0; 
+        margin-bottom: 20px; 
     }}
     
     .recup-card {{ 
-        min-width: 90px; background: rgba(255,255,255,0.05); 
-        border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; 
-        padding: 8px; text-align: center;
+        min-width: 85px; 
+        background: rgba(255,255,255,0.05); 
+        border: 1px solid rgba(255,255,255,0.1); 
+        border-radius: 10px; 
+        padding: 8px; 
+        text-align: center;
         transition: transform 0.2s ease;
     }}
     
@@ -173,24 +221,34 @@ st.markdown(f"""
     }}
     
     .status-dot {{ 
-        height: 10px; width: 10px; border-radius: 50%; 
-        display: inline-block; margin-right: 5px;
+        height: 10px; 
+        width: 10px; 
+        border-radius: 50%; 
+        display: inline-block; 
+        margin-right: 5px;
         {'animation: pulse 2s infinite;' if st.session_state.settings['theme_animations'] else ''}
     }}
 
     .cyber-analysis {{ 
-        background: rgba(88, 204, 255, 0.05); border-left: 4px solid #58CCFF; 
-        padding: 15px; border-radius: 0 10px 10px 0; margin-bottom: 20px; 
-        font-size: 0.95rem;
+        background: rgba(88, 204, 255, 0.05); 
+        border-left: 4px solid #58CCFF; 
+        padding: 15px; 
+        border-radius: 0 10px 10px 0; 
+        margin-bottom: 20px; 
+        font-size: 0.9rem;
         {'animation: slideIn 0.6s ease-out;' if st.session_state.settings['theme_animations'] else ''}
     }}
     
-    .stat-card {{
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
-        padding: 12px;
-        text-align: center;
-        border: 1px solid rgba(88, 204, 255, 0.2);
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {{
+        .rank-step {{
+            font-size: 7px;
+        }}
+        
+        .recup-card {{
+            min-width: 75px;
+            padding: 6px;
+        }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -221,91 +279,8 @@ def style_comparaison(row, hist_prev):
             elif cr < pr: colors[1] = r
     return colors
 
-def display_rest_timer(duration_seconds, exercise_name, sound_enabled):
-    """Affiche un timer JavaScript pur qui ne bloque pas Streamlit"""
-    timer_html = f"""
-    <div id="timer-container" style="
-        background: linear-gradient(135deg, #FF453A, #FF6B6B);
-        border: 2px solid #FF453A;
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-        margin: 15px auto;
-        max-width: 300px;
-        box-shadow: 0 5px 15px rgba(255, 69, 58, 0.3);
-    ">
-        <div id="timer-display" style="
-            font-family: 'Courier New', monospace;
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: white;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-            margin: 0;
-        ">⏱️ --:--</div>
-        <div style="
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-top: 8px;
-        ">{exercise_name}</div>
-        <button onclick="stopTimer()" style="
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid white;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 5px;
-            margin-top: 10px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        ">⏭️ Terminer</button>
-    </div>
-    
-    <script>
-        let timeLeft = {duration_seconds};
-        let timerInterval = null;
-        let soundEnabled = {str(sound_enabled).lower()};
-        
-        function updateDisplay() {{
-            const mins = Math.floor(timeLeft / 60);
-            const secs = timeLeft % 60;
-            document.getElementById('timer-display').textContent = 
-                `⏱️ ${{mins.toString().padStart(2, '0')}}:${{secs.toString().padStart(2, '0')}}`;
-        }}
-        
-        function stopTimer() {{
-            if (timerInterval) {{
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }}
-            document.getElementById('timer-container').style.display = 'none';
-        }}
-        
-        function startTimer() {{
-            updateDisplay();
-            timerInterval = setInterval(function() {{
-                timeLeft--;
-                updateDisplay();
-                
-                if (timeLeft <= 0) {{
-                    clearInterval(timerInterval);
-                    document.getElementById('timer-display').textContent = '✅ Terminé !';
-                    document.getElementById('timer-display').style.color = '#00FF7F';
-                    
-                    if (soundEnabled) {{
-                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZRQ0PVqzn77BdGAg+ltryxnMpBSuBzvLaiTYIGWm98OScTgwOUKnk9bl0IQU3jtXzzH4yBCF2xPDekUAKFF6069+rVxcJRaDk8bhwKAU0iNPz1IY0Bx5uxO/knEYND1Wr5/K1biAFN47W89GAMwQhd8fv45NGDBBbsOjyulwYCUag5fK8cikFM4fU89SCNQY=');
-                        audio.play();
-                    }}
-                    
-                    setTimeout(stopTimer, 3000);
-                }}
-            }}, 1000);
-        }}
-        
-        startTimer();
-    </script>
-    """
-    components.html(timer_html, height=150)
 
-# --- 4. JEUX CYBER (GRAVITÉ FLAPPY CORRIGÉE) ---
+# --- 4. JEUX CYBER (ADAPTATIFS MOBILE/DESKTOP) ---
 def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
     
@@ -329,23 +304,27 @@ def muscle_flappy_game():
         
         canvas.style.touchAction = 'none';
         
-        // VRAIE GRAVITÉ FLAPPY BIRD
+        // Détecter mobile vs desktop
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Paramètres adaptatifs
         let biceps = { 
             x: 60, 
             y: 200, 
             w: 35, 
             h: 35, 
-            gravity: 0.4,      // Gravité naturelle
+            gravity: isMobile ? 0.25 : 0.5,
             velocity: 0, 
-            lift: -7.5,        // Force de saut
-            maxVelocity: 10    // Vitesse max de chute
+            lift: isMobile ? -6 : -8.5,
+            maxVelocity: 10
         };
+        
         let pipes = []; 
         let frameCount = 0; 
         let score = 0; 
         let gameOver = false; 
         let gameStarted = false;
-        let baseSpeed = 2;
+        let baseSpeed = isMobile ? 1.5 : 3;
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
         
         function reset() { 
@@ -379,22 +358,20 @@ def muscle_flappy_game():
             ctx.fillStyle = '#050A18';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Dessiner le joueur
             ctx.font = "40px Arial";
             ctx.fillText("💪", biceps.x, biceps.y);
             
             if (gameStarted && !gameOver) {
-                // PHYSIQUE FLAPPY
                 biceps.velocity += biceps.gravity;
                 biceps.velocity = Math.min(biceps.velocity, biceps.maxVelocity);
                 biceps.y += biceps.velocity;
                 
-                // Vitesse progressive
                 let currentSpeed = baseSpeed + (Math.floor(score / 20) * 0.15);
                 
-                // Générer obstacles - BIEN ESPACÉS
-                if (frameCount % 120 === 0) {  // Toutes les 120 frames = ~2 secondes
-                    let gap = 170;  // Gap plus large
+                // Obstacles bien espacés
+                let spawnInterval = isMobile ? 90 : 120;
+                if (frameCount % spawnInterval === 0) {
+                    let gap = 180;
                     let minTop = 100;
                     let maxTop = canvas.height - gap - 100;
                     let topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
@@ -407,11 +384,9 @@ def muscle_flappy_game():
                     }); 
                 }
                 
-                // Dessiner et gérer obstacles
                 for (let i = pipes.length - 1; i >= 0; i--) {
                     pipes[i].x -= currentSpeed;
                     
-                    // Dessiner tuyaux
                     ctx.fillStyle = "#FF453A";
                     ctx.fillRect(pipes[i].x, 0, 65, pipes[i].topH);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, canvas.height);
@@ -420,24 +395,20 @@ def muscle_flappy_game():
                     ctx.fillRect(pipes[i].x, pipes[i].topH - 25, 65, 25);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, 25);
                     
-                    // Collision
                     if (biceps.x + 30 > pipes[i].x && biceps.x + 5 < pipes[i].x + 65) { 
                         if (biceps.y - 20 < pipes[i].topH || biceps.y + 20 > pipes[i].topH + pipes[i].gap) {
                             gameOver = true;
                         }
                     }
                     
-                    // Score
                     if (!pipes[i].passed && biceps.x > pipes[i].x + 65) { 
                         score++; 
                         pipes[i].passed = true;
                     }
                     
-                    // Supprimer hors écran
                     if (pipes[i].x < -80) pipes.splice(i, 1);
                 }
                 
-                // Collision sol/plafond
                 if (biceps.y > canvas.height - 20 || biceps.y < 20) {
                     gameOver = true;
                 }
@@ -466,7 +437,6 @@ def muscle_flappy_game():
                 ctx.fillText("Clique pour recommencer", 95, 380);
             }
             
-            // Affichage scores
             ctx.font = "bold 22px Arial"; 
             ctx.fillStyle = "#00FF7F";
             ctx.fillText("⚡ " + score, 25, 40);
@@ -504,6 +474,8 @@ def rep_crusher_game():
         
         canvas2.style.touchAction = 'none';
         
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         let barbell = { x: 140, y: 470, w: 100, h: 12 };
         let plates = [];
         let score = 0;
@@ -512,7 +484,7 @@ def rep_crusher_game():
         let gameOver = false;
         let gameStarted = false;
         let frameCount = 0;
-        let speed = 1.5;
+        let speed = isMobile ? 1 : 2;
         let mouseX = 180;
         
         const colors = ['#FF453A', '#00FF7F', '#58CCFF', '#FFD700', '#FF00FF', '#FFA500'];
@@ -525,7 +497,7 @@ def rep_crusher_game():
             gameOver = false;
             gameStarted = false;
             frameCount = 0;
-            speed = 1.5;
+            speed = isMobile ? 1 : 2;
         }
         
         function spawnPlate() {
@@ -577,7 +549,7 @@ def rep_crusher_game():
             ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
             
             if (gameStarted && !gameOver) {
-                speed = 1.5 + (score / 25);
+                speed = (isMobile ? 1 : 2) + (score / 25);
                 
                 if (frameCount % Math.max(45, 90 - score * 1.5) === 0) {
                     spawnPlate();
@@ -752,37 +724,12 @@ with col_l2:
 
 st.title("💪 MUSCU TRACKER PRO")
 
-# NAVIGATION CUSTOM avec boutons radio
-tab_choice = st.radio(
-    "Navigation",
-    ["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"],
-    index=1,  # Par défaut sur MA SÉANCE (index 1)
-    horizontal=True,
-    label_visibility="collapsed",
-    key="tab_navigation"
-)
+# Tabs normaux
+tab_p, tab_s, tab_st, tab_g, tab_opt = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"])
 
-# Containers conditionnels
-if tab_choice == "⚙️ OPTIONS":
+# --- ONGLET OPTIONS (SANS CHRONO) ---
+with tab_opt:
     st.markdown("## ⚙️ PARAMÈTRES DE L'APPLICATION")
-    
-    st.markdown("### ⏱️ Timer de Repos")
-    col_t1, col_t2 = st.columns(2)
-    with col_t1:
-        st.session_state.settings['rest_timer_enabled'] = st.checkbox(
-            "Activer le timer de repos", 
-            value=st.session_state.settings['rest_timer_enabled'],
-            help="Affiche un compte à rebours entre les séries"
-        )
-    with col_t2:
-        st.session_state.settings['rest_duration'] = st.number_input(
-            "Durée du repos (secondes)", 
-            min_value=30, 
-            max_value=300, 
-            value=st.session_state.settings['rest_duration'],
-            step=15,
-            disabled=not st.session_state.settings['rest_timer_enabled']
-        )
     
     st.markdown("### 📊 Affichage")
     col_a1, col_a2 = st.columns(2)
@@ -797,11 +744,6 @@ if tab_choice == "⚙️ OPTIONS":
             value=st.session_state.settings['auto_collapse'],
             help="Réduit automatiquement l'exercice après enregistrement"
         )
-        st.session_state.settings['show_session_stats'] = st.checkbox(
-            "Statistiques de séance", 
-            value=st.session_state.settings['show_session_stats'],
-            help="Affiche les stats en temps réel pendant la séance"
-        )
     with col_a2:
         st.session_state.settings['show_previous_weeks'] = st.selectbox(
             "Semaines d'historique à afficher",
@@ -815,39 +757,30 @@ if tab_choice == "⚙️ OPTIONS":
             help="Active les animations CSS (glow, pulse, etc.)"
         )
     
-    st.markdown("### 🔔 Notifications")
-    st.session_state.settings['sound_enabled'] = st.checkbox(
-        "Son fin de timer", 
-        value=st.session_state.settings['sound_enabled'],
-        help="Joue un son quand le timer de repos se termine"
-    )
-    
     st.markdown("### 💾 Enregistrement")
     st.session_state.settings['auto_save'] = st.checkbox(
         "Sauvegarde automatique", 
         value=st.session_state.settings['auto_save'],
-        help="⚡ Sauvegarde automatiquement quand une série complète est remplie"
+        help="⚡ Sauvegarde automatiquement chaque ligne dès qu'elle est complète"
     )
     if st.session_state.settings['auto_save']:
-        st.info("ℹ️ La sauvegarde auto se déclenche dès qu'une série est complète (Poids ET Reps remplis)")
+        st.info("ℹ️ La sauvegarde auto enregistre chaque ligne individuellement dès que Poids ET Reps sont remplis")
     
     st.divider()
     if st.button("🔄 Réinitialiser les paramètres", type="secondary"):
         st.session_state.settings = {
-            'rest_timer_enabled': True,
-            'rest_duration': 90,
             'auto_collapse': True,
             'show_1rm': True,
             'show_previous_weeks': 2,
-            'sound_enabled': False,
             'auto_save': False,
-            'theme_animations': True,
-            'show_session_stats': True
+            'theme_animations': True
         }
         st.success("✅ Paramètres réinitialisés !")
         st.rerun()
 
-elif tab_choice == "🏋️‍♂️ MA SÉANCE":
+
+# --- ONGLET MA SÉANCE (SANS STATS, AUTO-SAVE LIGNE PAR LIGNE) ---
+with tab_s:
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
@@ -874,22 +807,6 @@ elif tab_choice == "🏋️‍♂️ MA SÉANCE":
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
             save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             st.rerun()
-
-        # STATISTIQUES DE SÉANCE
-        if st.session_state.settings['show_session_stats']:
-            current_session_data = df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
-            exos_done = len(current_session_data[current_session_data["Poids"] > 0]["Exercice"].unique())
-            total_exos = len(prog[choix_s])
-            volume_today = int((current_session_data["Poids"] * current_session_data["Reps"]).sum())
-            
-            col_s1, col_s2, col_s3 = st.columns(3)
-            with col_s1:
-                st.markdown(f"<div class='stat-card'><small>✅ Exercices</small><br><b>{exos_done}/{total_exos}</b></div>", unsafe_allow_html=True)
-            with col_s2:
-                st.markdown(f"<div class='stat-card'><small>📦 Volume</small><br><b>{volume_today} kg</b></div>", unsafe_allow_html=True)
-            with col_s3:
-                progress_pct = int((exos_done / total_exos) * 100) if total_exos > 0 else 0
-                st.markdown(f"<div class='stat-card'><small>📊 Avancement</small><br><b>{progress_pct}%</b></div>", unsafe_allow_html=True)
 
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
@@ -960,19 +877,23 @@ elif tab_choice == "🏋️‍♂️ MA SÉANCE":
                     else:
                         st.caption(f"🏆 Record : **{best_w:g}kg**")
 
-                hist_weeks = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
+                # HISTORIQUE : Chercher les semaines NON-SKIP
+                hist_weeks_all = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
+                hist_weeks = [w for w in hist_weeks_all if not f_h[(f_h["Semaine"] == w) & (f_h["Poids"] > 0)].empty]
+                
                 if hist_weeks and st.session_state.settings['show_previous_weeks'] > 0:
                     weeks_to_show = hist_weeks[-st.session_state.settings['show_previous_weeks']:]
                     for w_num in weeks_to_show:
-                        h_data = f_h[f_h["Semaine"] == w_num]
-                        st.caption(f"📅 Semaine {w_num}")
-                        st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                        h_data = f_h[(f_h["Semaine"] == w_num) & (f_h["Poids"] > 0)]
+                        if not h_data.empty:
+                            st.caption(f"📅 Semaine {w_num}")
+                            st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 elif not hist_weeks:
                     st.info("Semaine 1 : Établis tes marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
                 last_w_num = hist_weeks[-1] if hist_weeks else None
-                hist_prev_df = f_h[f_h["Semaine"] == last_w_num] if last_w_num is not None else pd.DataFrame()
+                hist_prev_df = f_h[(f_h["Semaine"] == last_w_num) & (f_h["Poids"] > 0)] if last_w_num is not None else pd.DataFrame()
                 
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
 
@@ -1003,32 +924,40 @@ elif tab_choice == "🏋️‍♂️ MA SÉANCE":
                         hide_index=True
                     )
                     
-                    # SAUVEGARDE AUTOMATIQUE
+                    # SAUVEGARDE AUTOMATIQUE LIGNE PAR LIGNE
                     if st.session_state.settings['auto_save']:
-                        current_state = ed.to_dict()
-                        last_state = st.session_state.last_editor_state.get(editor_key, {})
+                        saved_key = f"{editor_key}_saved"
+                        if saved_key not in st.session_state.last_saved_rows:
+                            st.session_state.last_saved_rows[saved_key] = set()
                         
                         for idx, row in ed.iterrows():
-                            if row["Poids"] > 0 and row["Reps"] > 0:
-                                if editor_key not in last_state or idx >= len(last_state.get("Poids", [])) or last_state["Poids"][idx] == 0:
-                                    v = ed.copy()
-                                    v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
-                                    save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                                    st.session_state.editing_exo.discard(exo_final)
-                                    
-                                    # Timer JavaScript
-                                    completed_sets = len(v[v["Poids"] > 0])
-                                    if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
-                                        display_rest_timer(st.session_state.settings['rest_duration'], exo_base, st.session_state.settings['sound_enabled'])
-                                    
-                                    st.success(f"✅ Série {int(row['Série'])} enregistrée !")
-                                    st.rerun()
-                        
-                        st.session_state.last_editor_state[editor_key] = current_state
+                            row_id = int(row["Série"])
+                            if row["Poids"] > 0 and row["Reps"] > 0 and row_id not in st.session_state.last_saved_rows[saved_key]:
+                                # Sauvegarder SEULEMENT cette ligne
+                                single_row = pd.DataFrame([{
+                                    "Semaine": s_act,
+                                    "Séance": choix_s,
+                                    "Exercice": exo_final,
+                                    "Série": row_id,
+                                    "Reps": int(row["Reps"]),
+                                    "Poids": float(row["Poids"]),
+                                    "Remarque": str(row["Remarque"]),
+                                    "Muscle": muscle_grp,
+                                    "Date": datetime.now().strftime("%Y-%m-%d")
+                                }])
+                                
+                                df_h_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s) & (df_h["Série"] == row_id))]
+                                save_hist(pd.concat([df_h_filtered, single_row], ignore_index=True))
+                                
+                                st.session_state.last_saved_rows[saved_key].add(row_id)
+                                st.success(f"✅ Série {row_id} enregistrée !")
+                                st.rerun()
                         
                         if st.button("⏩ Skip Exo", key=f"sk_{exo_final}", use_container_width=True):
                             v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                             save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                            if saved_key in st.session_state.last_saved_rows:
+                                del st.session_state.last_saved_rows[saved_key]
                             st.rerun()
                     else:
                         # MODE MANUEL
@@ -1038,12 +967,6 @@ elif tab_choice == "🏋️‍♂️ MA SÉANCE":
                             v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                             save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                             st.session_state.editing_exo.discard(exo_final)
-                            
-                            # Timer JavaScript
-                            completed_sets = len(v[(v["Poids"] > 0) & (v["Reps"] > 0)])
-                            if st.session_state.settings['rest_timer_enabled'] and completed_sets < p_sets:
-                                display_rest_timer(st.session_state.settings['rest_duration'], exo_base, st.session_state.settings['sound_enabled'])
-                            
                             st.rerun()
                             
                         if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
@@ -1051,7 +974,9 @@ elif tab_choice == "🏋️‍♂️ MA SÉANCE":
                             save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                             st.rerun()
 
-elif tab_choice == "📅 PROGRAMME":
+
+# --- ONGLET PROGRAMME ---
+with tab_p:
     st.markdown("## ⚙️ Configuration")
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
@@ -1084,7 +1009,8 @@ elif tab_choice == "📅 PROGRAMME":
     nvs = st.text_input("➕ Créer séance")
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
-elif tab_choice == "📈 PROGRÈS":
+# --- ONGLET PROGRÈS (OPTIMISÉ MOBILE) ---
+with tab_st:
     if not df_h.empty:
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
         paliers, noms = [0, 5000, 25000, 75000, 200000, 500000], ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
@@ -1102,9 +1028,26 @@ elif tab_choice == "📈 PROGRÈS":
         for m in labels:
             m_max = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
             scores.append(min((m_max / standards[m]) * 100, 110))
-        fig_r = go.Figure(data=go.Scatterpolar(r=scores + [scores[0]], theta=labels + [labels[0]], fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88, 204, 255, 0.2)'))
-        fig_r.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), angularaxis=dict(color="white")), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=40, r=40, t=20, b=20), height=350)
-        st.plotly_chart(fig_r, use_container_width=True, config={'staticPlot': True})
+        
+        # Radar optimisé mobile
+        fig_r = go.Figure(data=go.Scatterpolar(
+            r=scores + [scores[0]], 
+            theta=labels + [labels[0]], 
+            fill='toself', 
+            line=dict(color='#58CCFF', width=3), 
+            fillcolor='rgba(88, 204, 255, 0.2)'
+        ))
+        fig_r.update_layout(
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 110], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"), 
+                angularaxis=dict(color="white")
+            ), 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)', 
+            margin=dict(l=20, r=20, t=10, b=10),
+            height=300
+        )
+        st.plotly_chart(fig_r, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
 
         if any(s > 0 for s in scores):
             top_m = labels[scores.index(max(scores))]
@@ -1112,9 +1055,9 @@ elif tab_choice == "📈 PROGRÈS":
             if valid_scores:
                 min_val, low_m = min(valid_scores, key=lambda x: x[0])
                 lvl = "Faible" if (max(scores)-min_val) < 15 else ("Moyen" if (max(scores)-min_val) < 30 else "Élevé")
-                msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}. Ton vrai point faible actuel se situe au niveau de tes {low_m}. Le déséquilibre global est jugé {lvl}."
-            else: msg = f"🛡️ Analyseur de Profil : Ton profil est dominé par tes {top_m}."
-            if scores[labels.index("Jambes")] == 0: msg += " Il faudra penser à les travailler un jour..."
+                msg = f"🛡️ Profil : Dominé par {top_m}. Point faible : {low_m}. Déséquilibre {lvl}."
+            else: msg = f"🛡️ Profil dominé par {top_m}."
+            if scores[labels.index("Jambes")] == 0: msg += " Pense aux jambes !"
             st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
         
         st.markdown("### 🏅 Hall of Fame")
@@ -1139,10 +1082,11 @@ elif tab_choice == "📈 PROGRÈS":
             fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
             fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
             fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
-            st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True})
+            st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
 
-elif tab_choice == "🎮 ARCADE":
+# --- ONGLET ARCADE ---
+with tab_g:
     st.markdown("## 🎮 ARCADE CYBER-FITNESS")
     
     if 'selected_game' not in st.session_state:
