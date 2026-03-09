@@ -771,7 +771,12 @@ with tab_home:
     <html>
     <head>
         <style>
-            body {{ margin: 0; padding: 0; background: transparent; }}
+            body {{ 
+                margin: 0; 
+                padding: 0; 
+                background: transparent;
+                overflow-x: hidden;
+            }}
         </style>
     </head>
     <body>
@@ -803,7 +808,7 @@ with tab_home:
     </html>
     """
     
-    components.html(widget_html, height=500)
+    components.html(widget_html, height=650, scrolling=True)
     
     # GROS BOUTON D'ACTION
     st.markdown("<br>", unsafe_allow_html=True)
