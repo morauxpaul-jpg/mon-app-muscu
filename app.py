@@ -743,8 +743,9 @@ with tab_home:
     
     next_session = get_next_session()
     
-    # Volume cette semaine
+    # Volume cette semaine - Formaté avec espaces
     vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
+    vol_week_formatted = f"{vol_week:,}".replace(',', ' ')  # Format avec espaces
     
     # Séances cette semaine
     sessions_done = len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Séance"].unique())
@@ -807,7 +808,7 @@ with tab_home:
                 text-align: center;
             ">
                 <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">VOLUME</div>
-                <div style="font-size: 2.5rem; color: #00FF7F; font-weight: 900;">{vol_week:,}</div>
+                <div style="font-size: 2.5rem; color: #00FF7F; font-weight: 900;">{vol_week_formatted}</div>
                 <div style="font-size: 0.8rem; color: #888;">kg</div>
             </div>
         </div>
@@ -835,7 +836,7 @@ with tab_home:
             <div style="font-size: 1.8rem; color: white; font-weight: 900; letter-spacing: 2px;">{next_session if next_session else "TERMINÉ ✅"}</div>
         </div>
     </div>
-    """.replace(',', ' '), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     # GROS BOUTON D'ACTION
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1077,13 +1078,15 @@ with tab_s:
 with tab_st:
     if not df_h.empty:
         v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
+        v_tot_formatted = f"{v_tot:,}".replace(',', ' ')  # Format avec espaces
         paliers, noms = [0, 5000, 25000, 75000, 200000, 500000], ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
         idx = len(paliers) - 1 - idx
         prev_r, curr_r, next_r = (noms[idx-1] if idx > 0 else "DÉBUT"), noms[idx], (noms[idx+1] if idx < len(noms)-1 else "MAX")
         next_p = paliers[idx+1] if idx < len(paliers)-1 else paliers[-1]
+        next_p_formatted = f"{next_p:,}".replace(',', ' ')  # Format avec espaces
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
-        st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot:,} kg</small><small style='color:#58CCFF;'>Objectif : {next_p:,} kg</small></div></div>""".replace(',', ' '), unsafe_allow_html=True)
+        st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot_formatted} kg</small><small style='color:#58CCFF;'>Objectif : {next_p_formatted} kg</small></div></div>""", unsafe_allow_html=True)
         
         st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
