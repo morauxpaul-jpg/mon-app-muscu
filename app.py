@@ -9,22 +9,17 @@ import streamlit.components.v1 as components
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="💪")
 
-# Initialiser les paramètres de l'app (SANS CHRONO)
+# Initialiser les paramètres de l'app (SANS OPTIONS)
 if 'settings' not in st.session_state:
     st.session_state.settings = {
         'auto_collapse': True,
         'show_1rm': True,
         'show_previous_weeks': 2,
-        'auto_save': False,
         'theme_animations': True
     }
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
-
-# Pour tracker l'auto-save ligne par ligne
-if 'last_saved_rows' not in st.session_state:
-    st.session_state.last_saved_rows = {}
 
 # --- 2. CSS : DESIGN CYBER-RPG MOBILE-FRIENDLY ---
 animations_css = """
@@ -307,16 +302,16 @@ def muscle_flappy_game():
         // Détecter mobile vs desktop
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        // Paramètres adaptatifs
+        // Paramètres adaptatifs - GRAVITÉ TRÈS FAIBLE POUR FLOATER
         let biceps = { 
             x: 60, 
             y: 200, 
             w: 35, 
             h: 35, 
-            gravity: isMobile ? 0.25 : 0.5,
+            gravity: isMobile ? 0.15 : 0.35,  // Gravité réduite pour flotter
             velocity: 0, 
-            lift: isMobile ? -6 : -8.5,
-            maxVelocity: 10
+            lift: isMobile ? -5.5 : -7.5,     // Saut ajusté
+            maxVelocity: 8                     // Vitesse max réduite
         };
         
         let pipes = []; 
@@ -324,7 +319,7 @@ def muscle_flappy_game():
         let score = 0; 
         let gameOver = false; 
         let gameStarted = false;
-        let baseSpeed = isMobile ? 1.5 : 3;
+        let baseSpeed = isMobile ? 1.2 : 2.5;  // Vitesse réduite
         let record = localStorage.getItem('muscleFlappyRecord') || 0;
         
         function reset() { 
@@ -366,12 +361,12 @@ def muscle_flappy_game():
                 biceps.velocity = Math.min(biceps.velocity, biceps.maxVelocity);
                 biceps.y += biceps.velocity;
                 
-                let currentSpeed = baseSpeed + (Math.floor(score / 20) * 0.15);
+                let currentSpeed = baseSpeed + (Math.floor(score / 20) * 0.1);  // Progression lente
                 
-                // Obstacles bien espacés
-                let spawnInterval = isMobile ? 90 : 120;
+                // Obstacles TRÈS ESPACÉS
+                let spawnInterval = isMobile ? 150 : 180;  // Beaucoup plus espacés
                 if (frameCount % spawnInterval === 0) {
-                    let gap = 180;
+                    let gap = 190;  // Gap encore plus large
                     let minTop = 100;
                     let maxTop = canvas.height - gap - 100;
                     let topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
@@ -724,59 +719,8 @@ with col_l2:
 
 st.title("💪 MUSCU TRACKER PRO")
 
-# Tabs normaux
-tab_p, tab_s, tab_st, tab_g, tab_opt = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE", "⚙️ OPTIONS"])
-
-# --- ONGLET OPTIONS (SANS CHRONO) ---
-with tab_opt:
-    st.markdown("## ⚙️ PARAMÈTRES DE L'APPLICATION")
-    
-    st.markdown("### 📊 Affichage")
-    col_a1, col_a2 = st.columns(2)
-    with col_a1:
-        st.session_state.settings['show_1rm'] = st.checkbox(
-            "Afficher le 1RM estimé", 
-            value=st.session_state.settings['show_1rm'],
-            help="Montre le poids maximal estimé pour 1 répétition"
-        )
-        st.session_state.settings['auto_collapse'] = st.checkbox(
-            "Réduire auto après validation", 
-            value=st.session_state.settings['auto_collapse'],
-            help="Réduit automatiquement l'exercice après enregistrement"
-        )
-    with col_a2:
-        st.session_state.settings['show_previous_weeks'] = st.selectbox(
-            "Semaines d'historique à afficher",
-            options=[0, 1, 2, 3, 4],
-            index=st.session_state.settings['show_previous_weeks'],
-            help="Nombre de semaines précédentes à montrer"
-        )
-        st.session_state.settings['theme_animations'] = st.checkbox(
-            "Animations du thème", 
-            value=st.session_state.settings['theme_animations'],
-            help="Active les animations CSS (glow, pulse, etc.)"
-        )
-    
-    st.markdown("### 💾 Enregistrement")
-    st.session_state.settings['auto_save'] = st.checkbox(
-        "Sauvegarde automatique", 
-        value=st.session_state.settings['auto_save'],
-        help="⚡ Sauvegarde automatiquement chaque ligne dès qu'elle est complète"
-    )
-    if st.session_state.settings['auto_save']:
-        st.info("ℹ️ La sauvegarde auto enregistre chaque ligne individuellement dès que Poids ET Reps sont remplis")
-    
-    st.divider()
-    if st.button("🔄 Réinitialiser les paramètres", type="secondary"):
-        st.session_state.settings = {
-            'auto_collapse': True,
-            'show_1rm': True,
-            'show_previous_weeks': 2,
-            'auto_save': False,
-            'theme_animations': True
-        }
-        st.success("✅ Paramètres réinitialisés !")
-        st.rerun()
+# Tabs - SANS OPTIONS
+tab_p, tab_s, tab_st, tab_g = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
 
 
 # --- ONGLET MA SÉANCE (SANS STATS, AUTO-SAVE LIGNE PAR LIGNE) ---
@@ -807,6 +751,31 @@ with tab_s:
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
             save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             st.rerun()
+        
+        # MENU DISCRET DE GESTION
+        with st.expander("⚙️ Gestion avancée", expanded=False):
+            st.caption("🔧 Options de gestion rapide")
+            
+            col_g1, col_g2 = st.columns(2)
+            
+            with col_g1:
+                if st.button("🔄 Réinitialiser cette séance", type="secondary", use_container_width=True):
+                    # Supprimer toutes les données de cette séance pour cette semaine
+                    df_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s))]
+                    save_hist(df_filtered)
+                    st.success(f"✅ Séance {choix_s} réinitialisée !")
+                    st.rerun()
+            
+            with col_g2:
+                exos_seance = [ex["name"] for ex in prog[choix_s]]
+                if exos_seance:
+                    exo_to_reset = st.selectbox("Exercice à réinitialiser", exos_seance, key="reset_exo")
+                    if st.button("🗑️ Réinitialiser cet exercice", type="secondary", use_container_width=True):
+                        # Supprimer cet exercice pour cette séance/semaine
+                        df_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"].str.contains(exo_to_reset, regex=False, na=False)))]
+                        save_hist(df_filtered)
+                        st.success(f"✅ {exo_to_reset} réinitialisé !")
+                        st.rerun()
 
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
@@ -924,55 +893,19 @@ with tab_s:
                         hide_index=True
                     )
                     
-                    # SAUVEGARDE AUTOMATIQUE LIGNE PAR LIGNE
-                    if st.session_state.settings['auto_save']:
-                        saved_key = f"{editor_key}_saved"
-                        if saved_key not in st.session_state.last_saved_rows:
-                            st.session_state.last_saved_rows[saved_key] = set()
+                    # MODE MANUEL UNIQUEMENT
+                    c_save, c_skip = st.columns(2)
+                    if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
+                        v = ed.copy()
+                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
+                        st.session_state.editing_exo.discard(exo_final)
+                        st.rerun()
                         
-                        for idx, row in ed.iterrows():
-                            row_id = int(row["Série"])
-                            if row["Poids"] > 0 and row["Reps"] > 0 and row_id not in st.session_state.last_saved_rows[saved_key]:
-                                # Sauvegarder SEULEMENT cette ligne
-                                single_row = pd.DataFrame([{
-                                    "Semaine": s_act,
-                                    "Séance": choix_s,
-                                    "Exercice": exo_final,
-                                    "Série": row_id,
-                                    "Reps": int(row["Reps"]),
-                                    "Poids": float(row["Poids"]),
-                                    "Remarque": str(row["Remarque"]),
-                                    "Muscle": muscle_grp,
-                                    "Date": datetime.now().strftime("%Y-%m-%d")
-                                }])
-                                
-                                df_h_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s) & (df_h["Série"] == row_id))]
-                                save_hist(pd.concat([df_h_filtered, single_row], ignore_index=True))
-                                
-                                st.session_state.last_saved_rows[saved_key].add(row_id)
-                                st.success(f"✅ Série {row_id} enregistrée !")
-                                st.rerun()
-                        
-                        if st.button("⏩ Skip Exo", key=f"sk_{exo_final}", use_container_width=True):
-                            v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                            save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
-                            if saved_key in st.session_state.last_saved_rows:
-                                del st.session_state.last_saved_rows[saved_key]
-                            st.rerun()
-                    else:
-                        # MODE MANUEL
-                        c_save, c_skip = st.columns(2)
-                        if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
-                            v = ed.copy()
-                            v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
-                            save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
-                            st.session_state.editing_exo.discard(exo_final)
-                            st.rerun()
-                            
-                        if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
-                            v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
-                            save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
-                            st.rerun()
+                    if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
+                        v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
+                        save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                        st.rerun()
 
 
 # --- ONGLET PROGRAMME ---
