@@ -719,11 +719,155 @@ with col_l2:
 
 st.title("💪 MUSCU TRACKER PRO")
 
-# Tabs - SANS OPTIONS
-tab_p, tab_s, tab_st, tab_g = st.tabs(["📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
+# Tabs - AVEC WIDGET ACCUEIL
+tab_home, tab_p, tab_s, tab_st, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
 
+# --- ONGLET ACCUEIL / WIDGET ---
+with tab_home:
+    st.markdown("## 🎯 TABLEAU DE BORD")
+    
+    # Calculer les stats
+    s_act = int(df_h["Semaine"].max() if not df_h.empty else 1)
+    
+    # Prochaine séance à faire
+    def get_next_session():
+        for seance in prog.keys():
+            seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
+            if seance_data.empty:
+                return seance
+            exos_prog = len([ex for ex in prog[seance]])
+            exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
+            if exos_done_or_skipped < exos_prog:
+                return seance
+        return list(prog.keys())[0] if prog else None
+    
+    next_session = get_next_session()
+    
+    # Volume cette semaine
+    vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
+    
+    # Séances cette semaine
+    sessions_done = len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Séance"].unique())
+    total_sessions = len(prog.keys())
+    
+    # Streak (semaines consécutives avec au moins une séance)
+    if not df_h.empty:
+        weeks_with_data = sorted(df_h[df_h["Poids"] > 0]["Semaine"].unique(), reverse=True)
+        streak = 0
+        for i, week in enumerate(weeks_with_data):
+            if i == 0 or week == weeks_with_data[i-1] - 1:
+                streak += 1
+            else:
+                break
+    else:
+        streak = 0
+    
+    # WIDGET PRINCIPAL - Design Cyber
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, rgba(88, 204, 255, 0.1), rgba(0, 255, 127, 0.1));
+        border: 2px solid #58CCFF;
+        border-radius: 20px;
+        padding: 30px;
+        margin: 20px 0;
+        box-shadow: 0 10px 40px rgba(88, 204, 255, 0.3);
+    ">
+        <div style="text-align: center; margin-bottom: 25px;">
+            <h1 style="
+                font-size: 2.5rem;
+                color: #58CCFF;
+                text-shadow: 0 0 20px rgba(88, 204, 255, 0.8);
+                margin: 0;
+                letter-spacing: 3px;
+            ">SEMAINE {s_act}</h1>
+        </div>
+        
+        <div style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        ">
+            <div style="
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(88, 204, 255, 0.3);
+                border-radius: 12px;
+                padding: 20px;
+                text-align: center;
+            ">
+                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">SÉANCES</div>
+                <div style="font-size: 2.5rem; color: #58CCFF; font-weight: 900;">{sessions_done}/{total_sessions}</div>
+            </div>
+            
+            <div style="
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(0, 255, 127, 0.3);
+                border-radius: 12px;
+                padding: 20px;
+                text-align: center;
+            ">
+                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">VOLUME</div>
+                <div style="font-size: 2.5rem; color: #00FF7F; font-weight: 900;">{vol_week:,}</div>
+                <div style="font-size: 0.8rem; color: #888;">kg</div>
+            </div>
+        </div>
+        
+        <div style="
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        ">
+            <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">🔥 STREAK</div>
+            <div style="font-size: 2rem; color: #FFD700; font-weight: 900;">{streak} SEMAINES</div>
+        </div>
+        
+        <div style="
+            background: rgba(255, 69, 58, 0.1);
+            border: 2px solid #FF453A;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        ">
+            <div style="font-size: 1rem; color: #FF453A; margin-bottom: 10px; font-weight: bold;">📍 PROCHAINE SÉANCE</div>
+            <div style="font-size: 1.8rem; color: white; font-weight: 900; letter-spacing: 2px;">{next_session if next_session else "TERMINÉ ✅"}</div>
+        </div>
+    </div>
+    """.replace(',', ' '), unsafe_allow_html=True)
+    
+    # GROS BOUTON D'ACTION
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    if next_session:
+        if st.button("🚀 COMMENCER LA SÉANCE", key="start_session", use_container_width=True, type="primary"):
+            st.info(f"👉 Va dans l'onglet **🏋️‍♂️ MA SÉANCE** pour commencer **{next_session}** (semaine {s_act}) !")
+            st.balloons()
+    else:
+        st.success("🎉 Toutes les séances de la semaine sont terminées ! Bravo !")
+        if st.button("➡️ Passer à la semaine suivante", key="next_week"):
+            st.info(f"👉 Change la semaine dans l'onglet **MA SÉANCE** pour passer à la semaine {s_act + 1}")
+    
+    # Stats rapides en bas
+    st.divider()
+    st.markdown("### 📊 CETTE SEMAINE")
+    
+    col_m1, col_m2, col_m3 = st.columns(3)
+    
+    with col_m1:
+        st.metric("💪 Exercices", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Exercice"].unique()))
+    
+    with col_m2:
+        st.metric("🔢 Séries", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]))
+    
+    with col_m3:
+        total_reps = int(df_h[df_h["Semaine"] == s_act]["Reps"].sum())
+        st.metric("🎯 Reps", total_reps)
 
-# --- ONGLET MA SÉANCE (SANS STATS, AUTO-SAVE LIGNE PAR LIGNE) ---
+# --- ONGLET PROGRAMME ---
+with tab_p:
+# --- ONGLET MA SÉANCE ---
 with tab_s:
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
