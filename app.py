@@ -752,27 +752,19 @@ with tab_s:
             save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             st.rerun()
         
-        # Système de reset simple
+        # Expander TOUJOURS visible pour éviter erreur DOM
         current_session_data = df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
-        if not current_session_data.empty:
-            if 'confirm_reset' not in st.session_state:
-                st.session_state.confirm_reset = False
-            
-            if not st.session_state.confirm_reset:
-                if st.button("🔄 Recommencer cette séance", key="reset_btn", type="secondary"):
-                    st.session_state.confirm_reset = True
-                    st.rerun()
-            else:
+        has_data = not current_session_data.empty
+        
+        with st.expander("⚠️ Recommencer cette séance", expanded=False):
+            if has_data:
                 st.warning(f"⚠️ Effacer **{choix_s}** semaine **{s_act}** ? (L'historique sera conservé)")
-                col_conf1, col_conf2 = st.columns(2)
-                if col_conf1.button("✅ Confirmer", type="primary", key="conf_yes"):
+                if st.button("🔄 Confirmer", type="primary", key="reset_confirm"):
                     df_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s))]
                     save_hist(df_filtered)
-                    st.session_state.confirm_reset = False
                     st.rerun()
-                if col_conf2.button("❌ Annuler", key="conf_no"):
-                    st.session_state.confirm_reset = False
-                    st.rerun()
+            else:
+                st.info("ℹ️ Aucune donnée pour cette séance.")
 
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
