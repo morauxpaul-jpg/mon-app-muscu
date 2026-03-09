@@ -867,6 +867,38 @@ with tab_home:
 
 # --- ONGLET PROGRAMME ---
 with tab_p:
+    st.markdown("## ⚙️ Configuration")
+    jours = list(prog.keys())
+    for idx_j, j in enumerate(jours):
+        with st.expander(f"📦 {j}"):
+            c_s1, c_s2 = st.columns(2)
+            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
+                jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
+                save_prog({k: prog[k] for k in jours})
+                st.rerun()
+            if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
+                del prog[j]
+                save_prog(prog)
+                st.rerun()
+            for i, ex in enumerate(prog[j]):
+                c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
+                c1.write(f"**{ex['name']}**")
+                ex['sets'] = c2.number_input("Sets", 1, 15, ex.get('sets', 3), key=f"p_s_{j}_{i}")
+                ex['muscle'] = c3.selectbox("Muscle", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], index=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"].index(ex.get("muscle", "Autre")), key=f"m_{j}_{i}")
+                if c4.button("⬆️", key=f"ue_{j}_{i}"):
+                    if i > 0: prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]; save_prog(prog); st.rerun()
+                if c5.button("⬇️", key=f"de_{j}_{i}"):
+                    if i < len(prog[j])-1: prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]; save_prog(prog); st.rerun()
+                if c6.button("🗑️", key=f"rm_{j}_{i}"):
+                    prog[j].pop(i); save_prog(prog); st.rerun()
+            st.divider()
+            cx, cm, cs = st.columns([3, 2, 1])
+            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
+                prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
+    nvs = st.text_input("➕ Créer séance")
+    if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
+
 # --- ONGLET MA SÉANCE ---
 with tab_s:
     if prog:
@@ -1040,40 +1072,6 @@ with tab_s:
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                         st.rerun()
 
-
-# --- ONGLET PROGRAMME ---
-with tab_p:
-    st.markdown("## ⚙️ Configuration")
-    jours = list(prog.keys())
-    for idx_j, j in enumerate(jours):
-        with st.expander(f"📦 {j}"):
-            c_s1, c_s2 = st.columns(2)
-            if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
-                jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
-                save_prog({k: prog[k] for k in jours})
-                st.rerun()
-            if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
-                del prog[j]
-                save_prog(prog)
-                st.rerun()
-            for i, ex in enumerate(prog[j]):
-                c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
-                c1.write(f"**{ex['name']}**")
-                ex['sets'] = c2.number_input("Sets", 1, 15, ex.get('sets', 3), key=f"p_s_{j}_{i}")
-                ex['muscle'] = c3.selectbox("Muscle", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], index=["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"].index(ex.get("muscle", "Autre")), key=f"m_{j}_{i}")
-                if c4.button("⬆️", key=f"ue_{j}_{i}"):
-                    if i > 0: prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]; save_prog(prog); st.rerun()
-                if c5.button("⬇️", key=f"de_{j}_{i}"):
-                    if i < len(prog[j])-1: prog[j][i], prog[j][i+1] = prog[j][i+1], prog[j][i]; save_prog(prog); st.rerun()
-                if c6.button("🗑️", key=f"rm_{j}_{i}"):
-                    prog[j].pop(i); save_prog(prog); st.rerun()
-            st.divider()
-            cx, cm, cs = st.columns([3, 2, 1])
-            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos", "Autre"], key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
-            if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
-                prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
-    nvs = st.text_input("➕ Créer séance")
-    if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
 # --- ONGLET PROGRÈS (OPTIMISÉ MOBILE) ---
 with tab_st:
