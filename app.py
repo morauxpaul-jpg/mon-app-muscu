@@ -764,79 +764,51 @@ with tab_home:
         streak = 0
     
     # WIDGET PRINCIPAL - Design Cyber
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, rgba(88, 204, 255, 0.1), rgba(0, 255, 127, 0.1));
-        border: 2px solid #58CCFF;
-        border-radius: 20px;
-        padding: 30px;
-        margin: 20px 0;
-        box-shadow: 0 10px 40px rgba(88, 204, 255, 0.3);
-    ">
-        <div style="text-align: center; margin-bottom: 25px;">
-            <h1 style="
-                font-size: 2.5rem;
-                color: #58CCFF;
-                text-shadow: 0 0 20px rgba(88, 204, 255, 0.8);
-                margin: 0;
-                letter-spacing: 3px;
-            ">SEMAINE {s_act}</h1>
+    widget_html = f"""
+<div style="
+    background: linear-gradient(135deg, rgba(88, 204, 255, 0.1), rgba(0, 255, 127, 0.1));
+    border: 2px solid #58CCFF;
+    border-radius: 20px;
+    padding: 30px;
+    margin: 20px 0;
+    box-shadow: 0 10px 40px rgba(88, 204, 255, 0.3);
+">
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="
+            font-size: 2.5rem;
+            color: #58CCFF;
+            text-shadow: 0 0 20px rgba(88, 204, 255, 0.8);
+            margin: 0;
+            letter-spacing: 3px;
+        ">SEMAINE {s_act}</h1>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(88, 204, 255, 0.3); border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">SÉANCES</div>
+            <div style="font-size: 2.5rem; color: #58CCFF; font-weight: 900;">{sessions_done}/{total_sessions}</div>
         </div>
         
-        <div style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-        ">
-            <div style="
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(88, 204, 255, 0.3);
-                border-radius: 12px;
-                padding: 20px;
-                text-align: center;
-            ">
-                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">SÉANCES</div>
-                <div style="font-size: 2.5rem; color: #58CCFF; font-weight: 900;">{sessions_done}/{total_sessions}</div>
-            </div>
-            
-            <div style="
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(0, 255, 127, 0.3);
-                border-radius: 12px;
-                padding: 20px;
-                text-align: center;
-            ">
-                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">VOLUME</div>
-                <div style="font-size: 2.5rem; color: #00FF7F; font-weight: 900;">{vol_week_formatted}</div>
-                <div style="font-size: 0.8rem; color: #888;">kg</div>
-            </div>
-        </div>
-        
-        <div style="
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-        ">
-            <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">🔥 STREAK</div>
-            <div style="font-size: 2rem; color: #FFD700; font-weight: 900;">{streak} SEMAINES</div>
-        </div>
-        
-        <div style="
-            background: rgba(255, 69, 58, 0.1);
-            border: 2px solid #FF453A;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-        ">
-            <div style="font-size: 1rem; color: #FF453A; margin-bottom: 10px; font-weight: bold;">📍 PROCHAINE SÉANCE</div>
-            <div style="font-size: 1.8rem; color: white; font-weight: 900; letter-spacing: 2px;">{next_session if next_session else "TERMINÉ ✅"}</div>
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 255, 127, 0.3); border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">VOLUME</div>
+            <div style="font-size: 2.5rem; color: #00FF7F; font-weight: 900;">{vol_week_formatted}</div>
+            <div style="font-size: 0.8rem; color: #888;">kg</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    
+    <div style="background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">🔥 STREAK</div>
+        <div style="font-size: 2rem; color: #FFD700; font-weight: 900;">{streak} SEMAINES</div>
+    </div>
+    
+    <div style="background: rgba(255, 69, 58, 0.1); border: 2px solid #FF453A; border-radius: 15px; padding: 20px; text-align: center;">
+        <div style="font-size: 1rem; color: #FF453A; margin-bottom: 10px; font-weight: bold;">📍 PROCHAINE SÉANCE</div>
+        <div style="font-size: 1.8rem; color: white; font-weight: 900; letter-spacing: 2px;">{next_session if next_session else "TERMINÉ ✅"}</div>
+    </div>
+</div>
+"""
+    
+    st.markdown(widget_html, unsafe_allow_html=True)
     
     # GROS BOUTON D'ACTION
     st.markdown("<br>", unsafe_allow_html=True)
