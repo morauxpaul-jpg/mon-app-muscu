@@ -752,30 +752,17 @@ with tab_s:
             save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             st.rerun()
         
-        # MENU DISCRET DE GESTION
-        with st.expander("⚙️ Gestion avancée", expanded=False):
-            st.caption("🔧 Options de gestion rapide")
-            
-            col_g1, col_g2 = st.columns(2)
-            
-            with col_g1:
-                if st.button("🔄 Réinitialiser cette séance", type="secondary", use_container_width=True):
-                    # Supprimer toutes les données de cette séance pour cette semaine
+        # Bouton pour recommencer la séance EN COURS
+        current_session_data = df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
+        if not current_session_data.empty:
+            with st.expander("⚠️ Recommencer cette séance", expanded=False):
+                st.warning(f"⚠️ Ceci va effacer UNIQUEMENT les données de la séance **{choix_s}** pour la **semaine {s_act}**. L'historique des semaines précédentes sera conservé.")
+                if st.button("🔄 Confirmer : Recommencer la séance", type="secondary"):
+                    # Supprimer UNIQUEMENT la séance actuelle (semaine en cours)
                     df_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s))]
                     save_hist(df_filtered)
-                    st.success(f"✅ Séance {choix_s} réinitialisée !")
+                    st.success(f"✅ Séance {choix_s} (semaine {s_act}) réinitialisée !")
                     st.rerun()
-            
-            with col_g2:
-                exos_seance = [ex["name"] for ex in prog[choix_s]]
-                if exos_seance:
-                    exo_to_reset = st.selectbox("Exercice à réinitialiser", exos_seance, key="reset_exo")
-                    if st.button("🗑️ Réinitialiser cet exercice", type="secondary", use_container_width=True):
-                        # Supprimer cet exercice pour cette séance/semaine
-                        df_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s) & (df_h["Exercice"].str.contains(exo_to_reset, regex=False, na=False)))]
-                        save_hist(df_filtered)
-                        st.success(f"✅ {exo_to_reset} réinitialisé !")
-                        st.rerun()
 
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
