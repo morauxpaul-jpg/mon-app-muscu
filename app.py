@@ -363,10 +363,10 @@ def muscle_flappy_game():
                 
                 let currentSpeed = baseSpeed + (Math.floor(score / 20) * 0.1);  // Progression lente
                 
-                // Obstacles TRÈS ESPACÉS
-                let spawnInterval = isMobile ? 150 : 180;  // Beaucoup plus espacés
+                // Obstacles TRÈS ESPACÉS - AUGMENTÉ
+                let spawnInterval = isMobile ? 220 : 280;  // Encore plus espacés
                 if (frameCount % spawnInterval === 0) {
-                    let gap = 190;  // Gap encore plus large
+                    let gap = 220;  // Gap très large
                     let minTop = 100;
                     let maxTop = canvas.height - gap - 100;
                     let topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
@@ -390,8 +390,14 @@ def muscle_flappy_game():
                     ctx.fillRect(pipes[i].x, pipes[i].topH - 25, 65, 25);
                     ctx.fillRect(pipes[i].x, pipes[i].topH + pipes[i].gap, 65, 25);
                     
-                    if (biceps.x + 30 > pipes[i].x && biceps.x + 5 < pipes[i].x + 65) { 
-                        if (biceps.y - 20 < pipes[i].topH || biceps.y + 20 > pipes[i].topH + pipes[i].gap) {
+                    // Collision fixée - hitbox plus précise (emoji ~30x30px)
+                    let bLeft = biceps.x - 10;
+                    let bRight = biceps.x + 20;
+                    let bTop = biceps.y - 15;
+                    let bBottom = biceps.y + 15;
+                    
+                    if (bRight > pipes[i].x && bLeft < pipes[i].x + 65) { 
+                        if (bTop < pipes[i].topH || bBottom > pipes[i].topH + pipes[i].gap) {
                             gameOver = true;
                         }
                     }
@@ -712,18 +718,18 @@ prog = get_prog()
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
-# Logo
-col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
-with col_l2: 
-    st.image("logo.png")
-
-st.title("💪 MUSCU TRACKER PRO")
-
 # Tabs - AVEC WIDGET ACCUEIL
 tab_home, tab_p, tab_s, tab_st, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
 
 # --- ONGLET ACCUEIL / WIDGET ---
 with tab_home:
+    # Logo et titre UNIQUEMENT sur la page d'accueil
+    col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
+    with col_l2: 
+        st.image("logo.png")
+    
+    st.markdown("<h1 style='text-align: center; margin-top: 5px; margin-bottom: 20px;'>💪 MUSCU TRACKER PRO</h1>", unsafe_allow_html=True)
+    
     st.markdown("## 🎯 TABLEAU DE BORD")
     
     # Calculer les stats
@@ -773,14 +779,14 @@ with tab_home:
         <style>
             body {{ 
                 margin: 0; 
-                padding: 0; 
+                padding: 10px; 
                 background: transparent;
-                overflow-x: hidden;
+                overflow: hidden;
             }}
         </style>
     </head>
     <body>
-        <div style="background: linear-gradient(135deg, rgba(88, 204, 255, 0.1), rgba(0, 255, 127, 0.1)); border: 2px solid #58CCFF; border-radius: 20px; padding: 30px; margin: 20px 0; box-shadow: 0 10px 40px rgba(88, 204, 255, 0.3);">
+        <div style="background: linear-gradient(135deg, rgba(88, 204, 255, 0.1), rgba(0, 255, 127, 0.1)); border: 2px solid #58CCFF; border-radius: 20px; padding: 30px; margin: 10px; box-shadow: 0 0 20px rgba(88, 204, 255, 0.4);">
             <div style="text-align: center; margin-bottom: 25px;">
                 <h1 style="font-size: 2.5rem; color: #58CCFF; text-shadow: 0 0 20px rgba(88, 204, 255, 0.8); margin: 0; letter-spacing: 3px;">SEMAINE {s_act}</h1>
             </div>
@@ -809,18 +815,6 @@ with tab_home:
     """
     
     components.html(widget_html, height=650, scrolling=True)
-    
-    # GROS BOUTON D'ACTION
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    if next_session:
-        if st.button("🚀 COMMENCER LA SÉANCE", key="start_session", use_container_width=True, type="primary"):
-            st.info(f"👉 Va dans l'onglet **🏋️‍♂️ MA SÉANCE** pour commencer **{next_session}** (semaine {s_act}) !")
-            st.balloons()
-    else:
-        st.success("🎉 Toutes les séances de la semaine sont terminées ! Bravo !")
-        if st.button("➡️ Passer à la semaine suivante", key="next_week"):
-            st.info(f"👉 Change la semaine dans l'onglet **MA SÉANCE** pour passer à la semaine {s_act + 1}")
     
     # Stats rapides en bas
     st.divider()
@@ -1138,12 +1132,14 @@ with tab_g:
                      use_container_width=True,
                      type="primary" if st.session_state.selected_game == "flappy" else "secondary"):
             st.session_state.selected_game = "flappy"
+            st.rerun()
     
     with col2:
         if st.button("🏋️ REP CRUSHER", key="select_crusher", 
                      use_container_width=True,
                      type="primary" if st.session_state.selected_game == "crusher" else "secondary"):
             st.session_state.selected_game = "crusher"
+            st.rerun()
     
     st.markdown("---")
     
