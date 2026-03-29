@@ -398,6 +398,25 @@ def get_next_session(programme: dict, df_h: pd.DataFrame, semaine: int) -> str |
     return list(programme.keys())[0] if programme else None
 
 
+def get_last_sessions_for_exercise(df_exo: pd.DataFrame, current_week: int, max_sessions: int = 2) -> list:
+    """
+    Retourne les dernières semaines passées où l'exercice a été réellement fait
+    (Poids > 0), hors semaine actuelle.
+    """
+    if df_exo.empty:
+        return []
+
+    past_df = df_exo[
+        (df_exo["Semaine"] < current_week) &
+        (df_exo["Poids"] > 0)
+    ].copy()
+
+    if past_df.empty:
+        return []
+
+    return sorted(past_df["Semaine"].unique())[-max_sessions:]
+
+
 # --- 4. JEUX CYBER (ADAPTATIFS MOBILE/DESKTOP) ---
 def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
@@ -1209,27 +1228,34 @@ with tab_s:
                     else:
                         st.caption(f"🏆 Record : **{best_w:g}kg**")
 
-                hist_weeks_all = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
-                hist_weeks = [w for w in hist_weeks_all if not f_h[(f_h["Semaine"] == w) & (f_h["Poids"] > 0)].empty]
+                last_sessions = get_last_sessions_for_exercise(
+                    f_h,
+                    current_week=s_act,
+                    max_sessions=st.session_state.settings["show_previous_weeks"]
+                )
 
-                if hist_weeks and st.session_state.settings["show_previous_weeks"] > 0:
-                    weeks_to_show = hist_weeks[-st.session_state.settings["show_previous_weeks"]:]
-                    for w_num in weeks_to_show:
-                        h_data = f_h[(f_h["Semaine"] == w_num) & (f_h["Poids"] > 0)]
+                if last_sessions:
+                    for w_num in last_sessions:
+                        h_data = f_h[
+                            (f_h["Semaine"] == w_num) &
+                            (f_h["Poids"] > 0)
+                        ].copy()
+
                         if not h_data.empty:
                             st.caption(f"📅 Semaine {w_num}")
                             st.dataframe(
-                                h_data[["Série", "Reps", "Poids", "Remarque"]],
+                                h_data[["Série", "Reps", "Poids", "Remarque"]].sort_values("Série"),
                                 hide_index=True,
                                 use_container_width=True,
                             )
-                elif not hist_weeks:
+                else:
                     st.info("Semaine 1 : Établis tes marques !")
 
                 curr = f_h[f_h["Semaine"] == s_act]
-                last_w_num = hist_weeks[-1] if hist_weeks else None
+
+                last_w_num = last_sessions[-1] if last_sessions else None
                 hist_prev_df = (
-                    f_h[(f_h["Semaine"] == last_w_num) & (f_h["Poids"] > 0)]
+                    f_h[(f_h["Semaine"] == last_w_num) & (f_h["Poids"] > 0)].copy()
                     if last_w_num is not None else pd.DataFrame()
                 )
 
