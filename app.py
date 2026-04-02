@@ -274,6 +274,44 @@ def get_rep_estimations(one_rm):
 def get_base_name(full_name):
     return full_name.split("(")[0].strip() if "(" in full_name else full_name
 
+def render_table(df, hist_prev=None):
+    """Affiche un DataFrame comme tableau HTML statique (pas de glissement mobile)."""
+    col_styles = {
+        "Série":   "width:40px; text-align:center;",
+        "Reps":    "width:44px; text-align:center;",
+        "Poids":   "width:56px; text-align:center;",
+        "Remarque":"text-align:left;",
+        "Semaine": "width:60px; text-align:center;",
+        "Muscle":  "text-align:left;",
+    }
+    th_base = "padding:6px 8px; color:#58CCFF; font-weight:600; border-bottom:1px solid rgba(88,204,255,0.2);"
+    td_base = "padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.05);"
+    html = "<div style='background:rgba(255,255,255,0.04); border-radius:10px; overflow:hidden; margin-bottom:8px;'>"
+    html += "<table style='width:100%; border-collapse:collapse; font-size:13px;'><thead><tr>"
+    for c in df.columns:
+        cs = col_styles.get(c, "")
+        html += f"<th style='{th_base}{cs}'>{c}</th>"
+    html += "</tr></thead><tbody>"
+    for _, row in df.iterrows():
+        row_bg = ""
+        if hist_prev is not None and not hist_prev.empty and "Série" in df.columns:
+            prev = hist_prev[hist_prev["Série"] == row["Série"]]
+            if not prev.empty:
+                pw, cw = float(prev.iloc[0]["Poids"]), float(row["Poids"])
+                pr, cr = int(prev.iloc[0]["Reps"]), int(row["Reps"])
+                if cw > pw:   row_bg = "background:rgba(0,255,127,0.1);"
+                elif cw < pw: row_bg = "background:rgba(255,69,58,0.1);"
+                elif cr > pr: row_bg = "background:rgba(0,255,127,0.07);"
+                elif cr < pr: row_bg = "background:rgba(255,69,58,0.07);"
+        html += f"<tr style='{row_bg}'>"
+        for c, v in zip(df.columns, row):
+            cs = col_styles.get(c, "")
+            cell = f"{v:g}" if isinstance(v, float) else str(v) if v is not None else ""
+            html += f"<td style='{td_base}{cs}'>{cell}</td>"
+        html += "</tr>"
+    html += "</tbody></table></div>"
+    st.markdown(html, unsafe_allow_html=True)
+
 def style_comparaison(row, hist_prev):
     if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
     prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
@@ -1040,7 +1078,7 @@ with tab_s:
                             h_data = f_h[(f_h["Semaine"] == w_num) & (f_h["Poids"] > 0)]
                             if not h_data.empty:
                                 st.caption(f"📅 Semaine {w_num}")
-                                st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(width="small"), "Reps": st.column_config.NumberColumn(width="small"), "Poids": st.column_config.NumberColumn(width="small"), "Remarque": st.column_config.TextColumn(width="medium")})
+                                render_table(h_data[["Série", "Reps", "Poids", "Remarque"]].reset_index(drop=True))
                 elif not hist_weeks:
                     st.info("Semaine 1 : Établis tes marques !")
 
@@ -1054,7 +1092,7 @@ with tab_s:
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(width="small"), "Reps": st.column_config.NumberColumn(width="small"), "Poids": st.column_config.NumberColumn(width="small"), "Remarque": st.column_config.TextColumn(width="medium")})
+                    render_table(curr[["Série", "Reps", "Poids", "Remarque"]].reset_index(drop=True), hist_prev=hist_prev_df)
                     if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
@@ -1184,7 +1222,7 @@ with tab_st:
                 fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
                 fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
                 st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
-            st.dataframe(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True, use_container_width=True, column_config={"Semaine": st.column_config.NumberColumn(width="small"), "Reps": st.column_config.NumberColumn(width="small"), "Poids": st.column_config.NumberColumn(width="small"), "Muscle": st.column_config.TextColumn(width="medium")})
+            render_table(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False).reset_index(drop=True))
 
 # --- ONGLET ARCADE ---
 with tab_g:
