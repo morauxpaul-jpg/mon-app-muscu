@@ -1025,17 +1025,30 @@ with tab_s:
                     else:
                         st.caption(f"🏆 Record : **{best_w:g}kg**")
 
-                # HISTORIQUE : Chercher les semaines NON-SKIP
+                # HISTORIQUE : 2 dernières séances faites + séances manquées
                 hist_weeks_all = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
                 hist_weeks = [w for w in hist_weeks_all if not f_h[(f_h["Semaine"] == w) & (f_h["Poids"] > 0)].empty]
-                
+
+                # Semaines où la séance entière a été manquée
+                missed_weeks = set(df_h[
+                    (df_h["Séance"] == choix_s) &
+                    (df_h["Exercice"] == "SESSION") &
+                    (df_h["Semaine"] < s_act)
+                ]["Semaine"].unique())
+
                 if hist_weeks and st.session_state.settings['show_previous_weeks'] > 0:
                     weeks_to_show = hist_weeks[-st.session_state.settings['show_previous_weeks']:]
-                    for w_num in weeks_to_show:
-                        h_data = f_h[(f_h["Semaine"] == w_num) & (f_h["Poids"] > 0)]
-                        if not h_data.empty:
-                            st.caption(f"📅 Semaine {w_num}")
-                            st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                    min_w = weeks_to_show[0]
+                    # Timeline combinée : séances faites + manquées dans la plage
+                    combined = sorted(set(weeks_to_show) | {w for w in missed_weeks if w >= min_w})
+                    for w_num in combined:
+                        if w_num in missed_weeks and w_num not in weeks_to_show:
+                            st.caption(f"📅 Semaine {w_num} — 🚩 SÉANCE MANQUÉE")
+                        else:
+                            h_data = f_h[(f_h["Semaine"] == w_num) & (f_h["Poids"] > 0)]
+                            if not h_data.empty:
+                                st.caption(f"📅 Semaine {w_num}")
+                                st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
                 elif not hist_weeks:
                     st.info("Semaine 1 : Établis tes marques !")
 
