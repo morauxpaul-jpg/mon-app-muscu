@@ -745,28 +745,22 @@ def rep_crusher_game():
 
 # --- 5. CARTE DU CORPS INTERACTIVE ---
 def body_map_section(df_p):
-    # Muscles fins avec standards et zone SVG
     MUSCLES = {
-        "Pecs":           {"std": 100, "zone": "Pecs"},
-        "Dos":            {"std": 120, "zone": "Dos"},
-        "Épaules":        {"std": 75,  "zone": "Épaules"},
-        "Biceps":         {"std": 45,  "zone": "Bras"},
-        "Triceps":        {"std": 55,  "zone": "Bras"},
-        "Avant-bras":     {"std": 35,  "zone": "Bras"},
-        "Abdos":          {"std": 40,  "zone": "Abdos"},
-        "Quadriceps":     {"std": 140, "zone": "Jambes"},
-        "Ischio-jambiers":{"std": 80,  "zone": "Jambes"},
-        "Fessiers":       {"std": 100, "zone": "Jambes"},
-        "Mollets":        {"std": 80,  "zone": "Jambes"},
-        # legacy macro
-        "Bras":           {"std": 50,  "zone": "Bras"},
-        "Jambes":         {"std": 150, "zone": "Jambes"},
+        "Pecs":           {"std": 100, "zid": "z-pecs"},
+        "Dos":            {"std": 120, "zid": "z-dos"},
+        "Épaules":        {"std": 75,  "zid": "z-epaules"},
+        "Biceps":         {"std": 45,  "zid": "z-biceps"},
+        "Triceps":        {"std": 55,  "zid": "z-triceps"},
+        "Avant-bras":     {"std": 35,  "zid": "z-avbras"},
+        "Abdos":          {"std": 40,  "zid": "z-abdos"},
+        "Quadriceps":     {"std": 140, "zid": "z-quad"},
+        "Ischio-jambiers":{"std": 80,  "zid": "z-ischio"},
+        "Fessiers":       {"std": 100, "zid": "z-fessiers"},
+        "Mollets":        {"std": 80,  "zid": "z-mollets"},
+        "Bras":           {"std": 50,  "zid": "z-biceps"},   # legacy
+        "Jambes":         {"std": 150, "zid": "z-quad"},     # legacy
     }
     DISPLAY_MUSCLES = [m for m in MUSCLES if m not in ("Bras", "Jambes")]
-
-    def hex_rgba(h, a):
-        try: return f"rgba({int(h[1:3],16)},{int(h[3:5],16)},{int(h[5:7],16)},{a})"
-        except: return f"rgba(88,204,255,{a})"
 
     def get_col(pct):
         if pct == 0: return "#1e2d3d"
@@ -775,143 +769,234 @@ def body_map_section(df_p):
         elif pct < 95: return "#58CCFF"
         else: return "#00FF7F"
 
-    # Stats par muscle
+    # Stats par muscle (str.contains pour multi-muscles)
     sc = {}
     for m, info in MUSCLES.items():
-        md = df_p[df_p["Muscle"]==m] if not df_p.empty else pd.DataFrame()
+        md = df_p[df_p["Muscle"].str.contains(m, regex=False, na=False)] if not df_p.empty else pd.DataFrame()
         rm = md["1RM"].max() if not md.empty else 0
         pct = min((rm/info["std"])*100, 120) if info["std"] > 0 else 0
         sc[m] = {"pct": pct, "lvl": min(int(pct/20), 5), "col": get_col(pct), "rm": rm, "std": info["std"]}
 
-    # Couleur par zone SVG = meilleur score parmi les muscles de la zone
-    def zone_col(zone):
-        pcts = [sc[m]["pct"] for m, info in MUSCLES.items() if info["zone"] == zone and sc[m]["pct"] > 0]
-        return get_col(max(pcts) if pcts else 0)
-    def zone_op(zone):
-        return "0.88" if any(sc[m]["pct"] > 0 for m, info in MUSCLES.items() if info["zone"] == zone) else "0.25"
+    # Couleur/opacité par zone d'affichage SVG
+    def mc(m): return sc[m]["col"]
+    def mop(m): return "0.9" if sc[m]["pct"] > 0 else "0.2"
 
-    svg = f"""<div style="background:linear-gradient(160deg,#060e1e,#050A18);border-radius:16px;
-border:1px solid rgba(88,204,255,0.2);padding:12px;box-shadow:inset 0 0 60px rgba(88,204,255,0.04);">
-<div style="text-align:center;font-family:monospace;font-size:10px;color:#58CCFF;
-letter-spacing:3px;margin-bottom:6px;opacity:0.7;">◈ SCAN CORPOREL ◈</div>
-<div style="display:flex;gap:12px;align-items:flex-start;">
-<svg viewBox="0 0 200 370" width="155" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <filter id="mg"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <pattern id="sl" width="2" height="5" patternUnits="userSpaceOnUse"><rect width="2" height="1" fill="rgba(0,0,0,0.18)"/></pattern>
-  </defs>
+    # Données JS : top exercices + évolution par muscle
+    muscle_data = {}
+    for m in DISPLAY_MUSCLES:
+        md = df_p[df_p["Muscle"].str.contains(m, regex=False, na=False)] if not df_p.empty else pd.DataFrame()
+        exos = []
+        evo = []
+        if not md.empty:
+            top = md.groupby("Exercice")["1RM"].max().sort_values(ascending=False).head(5)
+            exos = [{"name": str(e), "rm": round(float(r), 1)} for e, r in top.items()]
+            evo_df = md.groupby("Semaine")["1RM"].max().reset_index()
+            evo = [{"w": int(row["Semaine"]), "r": round(float(row["1RM"]), 1)} for _, row in evo_df.iterrows()]
+        muscle_data[m] = {
+            "pct": round(sc[m]["pct"], 1), "lvl": sc[m]["lvl"],
+            "col": sc[m]["col"], "rm": round(sc[m]["rm"], 1), "std": sc[m]["std"],
+            "zid": MUSCLES[m]["zid"], "exos": exos, "evo": evo
+        }
+
+    active_pcts = [sc[m]["pct"] for m in DISPLAY_MUSCLES if sc[m]["pct"] > 0]
+    total_pct = sum(active_pcts)/len(active_pcts) if active_pcts else 0
+    power_label = ["DÉBUTANT","RECRUE","CHALLENGER","ÉLITE","CYBER-ATHLÈTE","DIEU DU FER"][min(int(total_pct/20), 5)]
+    data_json = json.dumps(muscle_data, ensure_ascii=False)
+
+    # SVG avec zones cliquables (ID ASCII, onclick JS)
+    svg_zones = f"""
   <ellipse cx="100" cy="34" rx="27" ry="30" fill="#0d1b2a" stroke="#58CCFF" stroke-width="1.2" opacity="0.7"/>
   <circle cx="92" cy="29" r="2.5" fill="#58CCFF" opacity="0.45"/>
   <circle cx="108" cy="29" r="2.5" fill="#58CCFF" opacity="0.45"/>
   <path d="M94 42 Q100 47 106 42" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.35"/>
   <rect x="93" y="61" width="14" height="13" rx="4" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.8" opacity="0.5"/>
-  <!-- ÉPAULES -->
-  <ellipse cx="62" cy="88" rx="22" ry="14" fill="{zone_col('Épaules')}" opacity="{zone_op('Épaules')}" filter="url(#mg)"/>
-  <ellipse cx="138" cy="88" rx="22" ry="14" fill="{zone_col('Épaules')}" opacity="{zone_op('Épaules')}" filter="url(#mg)"/>
-  <path d="M79 74 L121 74 L129 175 L71 175 Z" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.6" opacity="0.3"/>
-  <!-- PECS -->
-  <path d="M83 76 Q100 91 100 102 Q85 97 79 84 Z" fill="{zone_col('Pecs')}" opacity="{zone_op('Pecs')}" filter="url(#mg)"/>
-  <path d="M117 76 Q100 91 100 102 Q115 97 121 84 Z" fill="{zone_col('Pecs')}" opacity="{zone_op('Pecs')}" filter="url(#mg)"/>
-  <!-- ABDOS -->
-  <rect x="83" y="104" width="15" height="19" rx="4" fill="{zone_col('Abdos')}" opacity="{zone_op('Abdos')}" filter="url(#mg)"/>
-  <rect x="102" y="104" width="15" height="19" rx="4" fill="{zone_col('Abdos')}" opacity="{zone_op('Abdos')}" filter="url(#mg)"/>
-  <rect x="83" y="127" width="15" height="19" rx="4" fill="{zone_col('Abdos')}" opacity="{zone_op('Abdos')}" filter="url(#mg)"/>
-  <rect x="102" y="127" width="15" height="19" rx="4" fill="{zone_col('Abdos')}" opacity="{zone_op('Abdos')}" filter="url(#mg)"/>
-  <rect x="85" y="150" width="13" height="16" rx="4" fill="{zone_col('Abdos')}" opacity="{zone_op('Abdos')}" filter="url(#mg)"/>
-  <rect x="102" y="150" width="13" height="16" rx="4" fill="{zone_col('Abdos')}" opacity="{zone_op('Abdos')}" filter="url(#mg)"/>
-  <!-- BRAS (biceps+triceps) -->
-  <rect x="41" y="78" width="17" height="62" rx="8" fill="{zone_col('Bras')}" opacity="{zone_op('Bras')}" filter="url(#mg)"/>
-  <rect x="142" y="78" width="17" height="62" rx="8" fill="{zone_col('Bras')}" opacity="{zone_op('Bras')}" filter="url(#mg)"/>
-  <!-- AVANT-BRAS -->
-  <rect x="39" y="143" width="13" height="46" rx="6" fill="{zone_col('Bras')}" opacity="0.55" filter="url(#mg)"/>
-  <rect x="148" y="143" width="13" height="46" rx="6" fill="{zone_col('Bras')}" opacity="0.55" filter="url(#mg)"/>
-  <ellipse cx="45" cy="196" rx="9" ry="7" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.35"/>
-  <ellipse cx="155" cy="196" rx="9" ry="7" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.35"/>
-  <ellipse cx="100" cy="177" rx="32" ry="12" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.6" opacity="0.3"/>
-  <!-- JAMBES (quads+ischio+fessiers) -->
-  <rect x="70" y="186" width="27" height="86" rx="13" fill="{zone_col('Jambes')}" opacity="{zone_op('Jambes')}" filter="url(#mg)"/>
-  <rect x="103" y="186" width="27" height="86" rx="13" fill="{zone_col('Jambes')}" opacity="{zone_op('Jambes')}" filter="url(#mg)"/>
-  <!-- MOLLETS -->
-  <rect x="72" y="275" width="23" height="52" rx="11" fill="{zone_col('Jambes')}" opacity="0.6" filter="url(#mg)"/>
-  <rect x="105" y="275" width="23" height="52" rx="11" fill="{zone_col('Jambes')}" opacity="0.6" filter="url(#mg)"/>
+  <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
+    <ellipse cx="62" cy="88" rx="22" ry="14" fill="{mc('Épaules')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <ellipse cx="138" cy="88" rx="22" ry="14" fill="{mc('Épaules')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+  </g>
+  <path d="M79 74 L121 74 L129 175 L71 175 Z" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+  <g id="z-pecs" class="zone" onclick="sel('Pecs')"><title>Pecs</title>
+    <path d="M83 76 Q100 91 100 102 Q85 97 79 84 Z" fill="{mc('Pecs')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M117 76 Q100 91 100 102 Q115 97 121 84 Z" fill="{mc('Pecs')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+  </g>
+  <g id="z-dos" class="zone" onclick="sel('Dos')"><title>Dos</title>
+    <rect x="84" y="108" width="32" height="62" rx="5" fill="{mc('Dos')}" opacity="0.22"/>
+    <text x="100" y="146" text-anchor="middle" fill="{mc('Dos')}" font-size="9" font-family="monospace" opacity="0.9" font-weight="bold">DOS</text>
+  </g>
+  <g id="z-abdos" class="zone" onclick="sel('Abdos')"><title>Abdos</title>
+    <rect x="83" y="104" width="15" height="19" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+    <rect x="102" y="104" width="15" height="19" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+    <rect x="83" y="127" width="15" height="19" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+    <rect x="102" y="127" width="15" height="19" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+    <rect x="85" y="150" width="13" height="16" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+    <rect x="102" y="150" width="13" height="16" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+  </g>
+  <g id="z-biceps" class="zone" onclick="sel('Biceps')"><title>Biceps</title>
+    <rect x="41" y="78" width="17" height="38" rx="8" fill="{mc('Biceps')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <rect x="142" y="78" width="17" height="38" rx="8" fill="{mc('Biceps')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <text x="49" y="100" text-anchor="middle" fill="white" font-size="6" font-family="monospace" opacity="0.55">BI</text>
+    <text x="150" y="100" text-anchor="middle" fill="white" font-size="6" font-family="monospace" opacity="0.55">BI</text>
+  </g>
+  <g id="z-triceps" class="zone" onclick="sel('Triceps')"><title>Triceps</title>
+    <rect x="41" y="118" width="17" height="24" rx="6" fill="{mc('Triceps')}" opacity="{mop('Triceps')}" filter="url(#gw)"/>
+    <rect x="142" y="118" width="17" height="24" rx="6" fill="{mc('Triceps')}" opacity="{mop('Triceps')}" filter="url(#gw)"/>
+    <text x="49" y="132" text-anchor="middle" fill="white" font-size="6" font-family="monospace" opacity="0.55">TRI</text>
+    <text x="150" y="132" text-anchor="middle" fill="white" font-size="6" font-family="monospace" opacity="0.55">TRI</text>
+  </g>
+  <g id="z-avbras" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
+    <rect x="39" y="143" width="13" height="48" rx="6" fill="{mc('Avant-bras')}" opacity="0.7" filter="url(#gw)"/>
+    <rect x="148" y="143" width="13" height="48" rx="6" fill="{mc('Avant-bras')}" opacity="0.7" filter="url(#gw)"/>
+  </g>
+  <ellipse cx="45" cy="197" rx="9" ry="7" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.35"/>
+  <ellipse cx="155" cy="197" rx="9" ry="7" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.35"/>
+  <g id="z-fessiers" class="zone" onclick="sel('Fessiers')"><title>Fessiers</title>
+    <ellipse cx="100" cy="178" rx="30" ry="12" fill="{mc('Fessiers')}" opacity="0.55" filter="url(#gw)"/>
+  </g>
+  <g id="z-quad" class="zone" onclick="sel('Quadriceps')"><title>Quadriceps</title>
+    <rect x="70" y="188" width="27" height="56" rx="13" fill="{mc('Quadriceps')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <rect x="103" y="188" width="27" height="56" rx="13" fill="{mc('Quadriceps')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <text x="83" y="220" text-anchor="middle" fill="white" font-size="6" font-family="monospace" opacity="0.55">Q</text>
+    <text x="116" y="220" text-anchor="middle" fill="white" font-size="6" font-family="monospace" opacity="0.55">Q</text>
+  </g>
+  <g id="z-ischio" class="zone" onclick="sel('Ischio-jambiers')"><title>Ischio-jambiers</title>
+    <rect x="70" y="246" width="27" height="26" rx="7" fill="{mc('Ischio-jambiers')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gw)"/>
+    <rect x="103" y="246" width="27" height="26" rx="7" fill="{mc('Ischio-jambiers')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gw)"/>
+    <text x="83" y="261" text-anchor="middle" fill="white" font-size="5" font-family="monospace" opacity="0.55">ISC</text>
+    <text x="116" y="261" text-anchor="middle" fill="white" font-size="5" font-family="monospace" opacity="0.55">ISC</text>
+  </g>
+  <g id="z-mollets" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
+    <rect x="72" y="276" width="23" height="52" rx="11" fill="{mc('Mollets')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <rect x="105" y="276" width="23" height="52" rx="11" fill="{mc('Mollets')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+  </g>
   <ellipse cx="83" cy="334" rx="16" ry="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.3"/>
-  <ellipse cx="117" cy="334" rx="16" ry="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.3"/>
-  <!-- DOS -->
-  <rect x="71" y="109" width="58" height="60" rx="6" fill="{zone_col('Dos')}" opacity="0.15"/>
-  <text x="100" y="144" text-anchor="middle" fill="{zone_col('Dos')}" font-size="9" font-family="monospace" opacity="0.7">DOS</text>
-  <rect width="200" height="370" fill="url(#sl)" pointer-events="none" opacity="0.4"/>
-</svg>
-<!-- PANEL DROITE -->
-<div style="flex:1;padding-top:4px;">
-  <div style="font-family:monospace;font-size:10px;color:#aaa;letter-spacing:1px;margin-bottom:8px;">MUSCLES</div>
-""" + "".join([f"""
-  <div style="margin-bottom:5px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;">
-      <span style="font-size:10px;color:{sc[m]['col']};font-weight:600;font-family:monospace;">{m.upper()}</span>
-      <span style="font-size:9px;color:#555;">Lv.{sc[m]['lvl']}/5</span>
+  <ellipse cx="117" cy="334" rx="16" ry="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.3"/>"""
+
+    # Overview rows (Python-rendered, embedded in HTML)
+    overview_rows = ""
+    for m in DISPLAY_MUSCLES:
+        s = sc[m]
+        pct_w = min(s['pct'], 100)
+        overview_rows += (
+            f'<div class="mrow" onclick="sel(\'{m}\')" '
+            f'style="border-left:2px solid {s["col"]}55;padding:3px 0 3px 7px;margin-bottom:4px;cursor:pointer;border-radius:0 6px 6px 0;">'
+            f'<div style="display:flex;justify-content:space-between;">'
+            f'<span style="font-size:10px;color:{s["col"]};font-weight:700;">{m.upper()}</span>'
+            f'<span style="font-size:9px;color:#444;">Lv.{s["lvl"]}/5 · {s["rm"]:.0f}kg</span>'
+            f'</div>'
+            f'<div style="background:rgba(255,255,255,0.07);border-radius:2px;height:3px;margin-top:2px;">'
+            f'<div style="width:{pct_w:.0f}%;height:100%;background:{s["col"]};border-radius:2px;'
+            f'box-shadow:0 0 5px {s["col"]};transition:width 0.4s;"></div></div></div>'
+        )
+
+    css = """<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:transparent;font-family:monospace;color:#ccc;overflow:hidden;}
+.wrap{background:linear-gradient(160deg,#060e1e,#050A18);border-radius:16px;
+  border:1px solid rgba(88,204,255,0.2);padding:12px;display:flex;gap:12px;
+  box-shadow:inset 0 0 50px rgba(88,204,255,0.03);}
+.zone{cursor:pointer;transition:filter 0.15s;}
+.zone:hover{filter:brightness(1.5);}
+.zone.on{filter:brightness(1.8) drop-shadow(0 0 7px #58CCFF);}
+.mrow:hover{background:rgba(88,204,255,0.06)!important;}
+.scard{background:rgba(255,255,255,0.04);border-radius:8px;padding:7px;text-align:center;flex:1;}
+.bg{background:rgba(255,255,255,0.07);border-radius:3px;height:4px;margin:5px 0 8px;}
+.fill{height:100%;border-radius:3px;}
+#detail{display:none;}
+.back{cursor:pointer;color:#58CCFF;font-size:10px;margin-bottom:9px;opacity:0.7;display:inline-block;}
+.back:hover{opacity:1;}
+</style>"""
+
+    js = r"""<script>
+const D = """ + data_json + r""";
+
+function sel(name) {
+  document.querySelectorAll('.zone').forEach(z=>z.classList.remove('on'));
+  const zid = D[name] ? D[name].zid : null;
+  if(zid){ const el=document.getElementById(zid); if(el) el.classList.add('on'); }
+  const d = D[name]; if(!d) return;
+  document.getElementById('ov').style.display='none';
+  document.getElementById('detail').style.display='block';
+  const bar = '█'.repeat(d.lvl)+'░'.repeat(5-d.lvl);
+  let h = '<div style="color:'+d.col+';font-size:13px;font-weight:700;letter-spacing:2px;margin-bottom:8px;">'
+    + '⬡ '+name.toUpperCase()
+    + '<div style="font-size:11px;margin-top:2px;">'+bar+' NV.'+d.lvl+'/5</div></div>'
+    + '<div style="display:flex;gap:5px;margin-bottom:8px;">'
+    + scard(d.rm.toFixed(1),'kg','1RM EST.',d.col)
+    + scard(d.std,'kg','STD ÉLITE','#666')
+    + scard(d.pct.toFixed(0),'%','ATTEINT',d.col)
+    + '</div>'
+    + '<div class="bg"><div class="fill" style="width:'+Math.min(d.pct,100).toFixed(0)+'%;background:'+d.col+';box-shadow:0 0 7px '+d.col+';"></div></div>';
+  if(d.exos && d.exos.length){
+    h+='<div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:3px;">TOP EXERCICES</div>';
+    d.exos.forEach(e=>{
+      const p=d.exos[0].rm>0?(e.rm/d.exos[0].rm)*100:0;
+      const b='█'.repeat(Math.round(p/10))+'░'.repeat(10-Math.round(p/10));
+      h+='<div style="font-size:9px;color:#666;margin-bottom:1px;">'+b+' '+e.name+' <span style="color:'+d.col+'">'+e.rm.toFixed(1)+'kg</span></div>';
+    });
+    h+='<br>';
+  }
+  if(d.evo && d.evo.length>1) h+='<div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:3px;">ÉVOLUTION 1RM</div>'+spark(d.evo,d.col);
+  else if(d.rm===0) h+='<div style="font-size:10px;color:#333;text-align:center;margin-top:12px;">Pas encore de données.<br>Lance-toi ! 💪</div>';
+  document.getElementById('dc').innerHTML=h;
+}
+
+function back(){
+  document.querySelectorAll('.zone').forEach(z=>z.classList.remove('on'));
+  document.getElementById('ov').style.display='block';
+  document.getElementById('detail').style.display='none';
+}
+
+function scard(val,unit,label,col){
+  return '<div class="scard" style="border:1px solid '+col+'44;">'
+    +'<div style="font-size:8px;color:#555;">'+label+'</div>'
+    +'<div style="font-size:16px;color:'+col+';font-weight:900;">'+val+'</div>'
+    +'<div style="font-size:8px;color:#444;">'+unit+'</div></div>';
+}
+
+function spark(evo,col){
+  const W=155,H=50,pts=[],cir=[];
+  const rms=evo.map(e=>e.r), mn=Math.min(...rms), mx=Math.max(...rms), rng=mx-mn||1;
+  evo.forEach((e,i)=>{
+    const x=(i/(evo.length-1))*(W-12)+6, y=H-((e.r-mn)/rng)*(H-14)-7;
+    pts.push(x+','+y); cir.push('<circle cx="'+x+'" cy="'+y+'" r="2.8" fill="'+col+'" stroke="#060e1e" stroke-width="1.5"/>');
+  });
+  const first=evo[0], last=evo[evo.length-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:50px;background:rgba(0,0,0,0.2);border-radius:6px;">'
+    +'<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    +cir.join('')
+    +'<text x="6" y="'+(H-2)+'" fill="#444" font-size="7">S'+first.w+'</text>'
+    +'<text x="'+(W-6)+'" y="'+(H-2)+'" fill="#444" font-size="7" text-anchor="end">S'+last.w+'</text>'
+    +'</svg>';
+}
+</script>"""
+
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">{css}</head><body>
+<div style="text-align:center;font-family:monospace;font-size:10px;color:#58CCFF;letter-spacing:2px;margin-bottom:4px;opacity:0.6;">
+  ◈ SCAN CORPOREL ◈ &nbsp;·&nbsp; <span style="color:#00FF7F;">{power_label}</span>
+  <span style="color:#555;"> · {total_pct:.0f}%</span></div>
+<div class="wrap">
+  <div style="flex-shrink:0;">
+    <svg viewBox="0 0 200 370" width="148" xmlns="http://www.w3.org/2000/svg">
+      <defs><filter id="gw"><feGaussianBlur stdDeviation="3.5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      {svg_zones}
+    </svg>
+  </div>
+  <div style="flex:1;min-width:0;overflow:hidden;">
+    <div id="ov">
+      <div style="font-size:8px;color:#444;letter-spacing:1px;margin-bottom:6px;">↓ CLIQUE SUR UN MUSCLE</div>
+      {overview_rows}
     </div>
-    <div style="background:rgba(255,255,255,0.06);border-radius:3px;height:3px;">
-      <div style="width:{min(sc[m]['pct'],100):.0f}%;height:100%;background:{sc[m]['col']};border-radius:3px;box-shadow:0 0 5px {sc[m]['col']};"></div>
+    <div id="detail">
+      <div class="back" onclick="back()">← Vue d'ensemble</div>
+      <div id="dc"></div>
     </div>
-    <div style="font-size:8px;color:#444;margin-top:1px;">{sc[m]['rm']:.0f}kg 1RM · std {sc[m]['std']}kg</div>
-  </div>""" for m in DISPLAY_MUSCLES]) + """
-</div></div></div>"""
+  </div>
+</div>
+{js}
+</body></html>"""
 
-    active_pcts = [sc[m]["pct"] for m in DISPLAY_MUSCLES if sc[m]["pct"] > 0]
-    total_pct = sum(active_pcts)/len(active_pcts) if active_pcts else 0
-    power = ["DÉBUTANT","RECRUE","CHALLENGER","ÉLITE","CYBER-ATHLÈTE","DIEU DU FER"][min(int(total_pct/20), 5)]
-    st.markdown(f"""<div style="text-align:center;margin-bottom:6px;">
-    <span style="font-size:11px;color:#aaa;font-family:monospace;">POWER SCORE </span>
-    <span style="font-size:20px;font-weight:900;color:#00FF7F;">{power}</span>
-    <span style="font-size:11px;color:#555;font-family:monospace;"> · {total_pct:.0f}%</span></div>""", unsafe_allow_html=True)
-    st.markdown(svg, unsafe_allow_html=True)
-
-    st.markdown("---")
-    if "sel_muscle" not in st.session_state: st.session_state.sel_muscle = None
-    mcols = st.columns(len(DISPLAY_MUSCLES))
-    for col, m in zip(mcols, DISPLAY_MUSCLES):
-        active = st.session_state.sel_muscle == m
-        label = m[:4] if len(m) > 5 else m
-        if col.button(label, key=f"bm_{m}", type="primary" if active else "secondary", use_container_width=True):
-            st.session_state.sel_muscle = None if active else m
-            st.rerun()
-
-    sel = st.session_state.sel_muscle
-    if sel and sel in sc:
-        s = sc[sel]
-        # inclure données legacy si besoin (ex: "Bras" regroupé dans Biceps/Triceps)
-        md = df_p[df_p["Muscle"]==sel] if not df_p.empty else pd.DataFrame()
-        st.markdown(f"""<div style="background:{hex_rgba(s['col'],0.06)};border:1px solid {hex_rgba(s['col'],0.4)};
-border-radius:12px;padding:14px;margin-top:6px;">
-<div style="font-family:monospace;color:{s['col']};font-size:13px;letter-spacing:2px;margin-bottom:10px;">
-⬡ {sel.upper()} — NIVEAU {s['lvl']}/5 &nbsp;{'█'*s['lvl']}{'░'*(5-s['lvl'])}</div>""", unsafe_allow_html=True)
-        if not md.empty:
-            best = md.sort_values("1RM", ascending=False).iloc[0]
-            c1, c2, c3 = st.columns(3)
-            c1.metric("🏆 Record", f"{best['Poids']:g}kg × {int(best['Reps'])}")
-            c2.metric("⚡ 1RM Est.", f"{best['1RM']:.1f}kg")
-            c3.metric("🎯 Standard", f"{s['std']}kg")
-            st.progress(min(s["pct"]/100, 1.0), text=f"{s['pct']:.0f}% du standard élite")
-            top = md.groupby("Exercice")["1RM"].max().sort_values(ascending=False).head(5)
-            if not top.empty:
-                st.markdown("**🥊 Meilleurs exercices :**")
-                for exo, rm in top.items():
-                    pct_max = (rm/top.iloc[0])*100
-                    bar = "█"*int(pct_max/10)+"░"*(10-int(pct_max/10))
-                    st.markdown(f'<div style="font-family:monospace;font-size:11px;color:#ccc;margin:2px 0;">{bar} {exo} — {rm:.1f}kg</div>', unsafe_allow_html=True)
-            evo = md.groupby("Semaine")["1RM"].max().reset_index()
-            if len(evo) > 1:
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=evo["Semaine"], y=evo["1RM"], mode='markers+lines',
-                    line=dict(color=s["col"], width=2), marker=dict(size=7, color=s["col"]),
-                    fill='tozeroy', fillcolor=hex_rgba(s["col"], 0.08)))
-                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                    margin=dict(l=0,r=0,t=5,b=0), height=180,
-                    xaxis=dict(color="#aaa", title="Semaine"), yaxis=dict(color="#aaa", title="1RM (kg)"))
-                st.plotly_chart(fig, use_container_width=True, config={'staticPlot':True,'displayModeBar':False})
-        else:
-            st.info(f"Pas encore de données pour {sel}. Lance-toi !")
-        st.markdown("</div>", unsafe_allow_html=True)
+    components.html(html, height=430, scrolling=False)
 
 
 # --- 6. CARDIO ---
@@ -1220,9 +1305,12 @@ with tab_p:
                 c1, c2, c3, c4, c5, c6 = st.columns([3, 1.5, 1.5, 0.7, 0.7, 0.7])
                 c1.write(f"**{ex['name']}**")
                 ex['sets'] = c2.number_input("Sets", 1, 15, ex.get('sets', 3), key=f"p_s_{j}_{i}")
-                _ML = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Bras","Jambes","Autre"]
-                _mv = ex.get("muscle","Autre"); _mi = _ML.index(_mv) if _mv in _ML else _ML.index("Autre")
-                ex['muscle'] = c3.selectbox("Muscle", _ML, index=_mi, key=f"m_{j}_{i}")
+                _ML = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
+                _mv = ex.get("muscle","Autre")
+                # Rétro-compat : valeur peut être "Bras","Jambes" ou multi "Pecs,Triceps"
+                _cur = [v.strip() for v in _mv.split(",") if v.strip() in _ML] or ["Autre"]
+                _sel = c3.multiselect("Muscle(s)", _ML, default=_cur, key=f"m_{j}_{i}")
+                ex['muscle'] = ",".join(_sel) if _sel else "Autre"
                 if c4.button("⬆️", key=f"ue_{j}_{i}"):
                     if i > 0: prog[j][i], prog[j][i-1] = prog[j][i-1], prog[j][i]; save_prog(prog); st.rerun()
                 if c5.button("⬇️", key=f"de_{j}_{i}"):
@@ -1231,8 +1319,10 @@ with tab_p:
                     prog[j].pop(i); save_prog(prog); st.rerun()
             st.divider()
             cx, cm, cs = st.columns([3, 2, 1])
-            _ML2 = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Bras","Jambes","Autre"]
-            ni, nm, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cm.selectbox("Groupe", _ML2, key=f"nm_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            _ML2 = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
+            ni, ns = cx.text_input("Nouvel exo", key=f"ni_{j}"), cs.number_input("Séries", 1, 15, 3, key=f"ns_{j}")
+            _nm_sel = cm.multiselect("Muscle(s)", _ML2, default=["Autre"], key=f"nm_{j}")
+            nm = ",".join(_nm_sel) if _nm_sel else "Autre"
             if st.button("➕ Ajouter", key=f"ba_{j}") and ni:
                 prog[j].append({"name": ni, "sets": ns, "muscle": nm}); save_prog(prog); st.rerun()
     nvs = st.text_input("➕ Créer séance")
@@ -1301,10 +1391,10 @@ with tab_s:
                 st.info("ℹ️ Aucune donnée pour cette séance.")
 
         st.markdown("### 🔋 RÉCUPÉRATION")
-        recup_cols = ["Pecs", "Dos", "Jambes", "Épaules", "Bras", "Abdos"]
+        recup_cols = ["Pecs","Dos","Épaules","Biceps","Triceps","Abdos","Quadriceps","Mollets"]
         html_recup = "<div class='recup-container'>"
         for m in recup_cols:
-            trained_this_week = df_h[(df_h["Muscle"] == m) & (df_h["Semaine"] == s_act)]
+            trained_this_week = df_h[df_h["Muscle"].str.contains(m, regex=False, na=False) & (df_h["Semaine"] == s_act)]
             sc, lab = "#00FF7F", "PRET"
             if not trained_this_week.empty:
                 last_d = trained_this_week["Date"].max()
@@ -1459,38 +1549,10 @@ with tab_st:
         xp_ratio = min((v_tot - paliers[idx]) / (next_p - paliers[idx]), 1.0) if next_p > paliers[idx] else 1.0
         st.markdown(f"""<div class='rank-ladder'><div class='rank-step completed'><small>PASSÉ</small><br>{prev_r}</div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step active'><small>ACTUEL</small><br><span style='font-size:18px;'>{curr_r}</span></div><div style='font-size: 20px; color: #58CCFF;'>➡️</div><div class='rank-step'><small>PROCHAIN</small><br>{next_r}</div></div><div class='xp-container'><div class='xp-bar-bg'><div class='xp-bar-fill' style='width:{xp_ratio*100}%;'></div></div><div style='display:flex; justify-content: space-between;'><small style='color:#00FF7F;'>{v_tot_formatted} kg</small><small style='color:#58CCFF;'>Objectif : {next_p_formatted} kg</small></div></div>""", unsafe_allow_html=True)
         
-        st.markdown("### 🕸️ Radar d'Équilibre")
-        # Scoring relatif : % de ton propre record personnel global → montre l'équilibre réel
-        _ALL_M = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Bras","Jambes"]
-        _rm_map = {m: (df_p[df_p["Muscle"]==m]["1RM"].max() if not df_p[df_p["Muscle"]==m].empty else 0) for m in _ALL_M}
-        labels = [m for m in _ALL_M if _rm_map[m] > 0]
-        if labels:
-            _max_rm = max(_rm_map[m] for m in labels)
-            scores = [round((_rm_map[m] / _max_rm) * 100, 1) for m in labels]
-            fig_r = go.Figure(data=go.Scatterpolar(
-                r=scores + [scores[0]], theta=labels + [labels[0]],
-                fill='toself', line=dict(color='#58CCFF', width=3), fillcolor='rgba(88,204,255,0.2)'
-            ))
-            fig_r.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0,100], showticklabels=False, gridcolor="rgba(255,255,255,0.1)"),
-                           angularaxis=dict(color="white")),
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=20,r=20,t=10,b=10), height=300
-            )
-            st.plotly_chart(fig_r, use_container_width=True, config={'staticPlot':True,'displayModeBar':False})
-            top_m = labels[scores.index(max(scores))]
-            low_m = labels[scores.index(min(scores))]
-            gap = max(scores) - min(scores)
-            lvl = "faible" if gap < 20 else ("modéré" if gap < 40 else "important")
-            msg = f"🛡️ Point fort : **{top_m}** ({_rm_map[top_m]:.0f}kg 1RM). Point faible : **{low_m}** ({_rm_map[low_m]:.0f}kg). Déséquilibre {lvl}."
-            st.markdown(f"<div class='cyber-analysis'>{msg}</div>", unsafe_allow_html=True)
-        else:
-            labels = _ALL_M
-
         st.markdown("### 🏅 Hall of Fame")
-        _FILT_ALL = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Bras","Jambes","Autre"]
+        _FILT_ALL = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
         m_filt = st.multiselect("Filtrer par muscle :", _FILT_ALL, default=_FILT_ALL)
-        df_p_filt = df_p[df_p["Muscle"].isin(m_filt)]
+        df_p_filt = df_p[df_p["Muscle"].apply(lambda x: any(m in str(x) for m in m_filt) if pd.notna(x) else False)]
         if not df_p_filt.empty:
             podium = df_p_filt.groupby("Exercice").agg({"1RM": "max"}).sort_values(by="1RM", ascending=False).head(3)
             p_cols = st.columns(3); meds, clss = ["🥇 OR", "🥈 ARGENT", "🥉 BRONZE"], ["podium-gold", "podium-silver", "podium-bronze"]
