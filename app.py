@@ -319,24 +319,24 @@ def auto_muscles(name):
     n = name.lower()
     muscles = set()
     rules = [
-        # POITRINE
+        # POITRINE — pas de Triceps (muscle secondaire, pas primaire)
         (["écarté","fly","pec deck","butterfly","cable crossover","poulie croisée","crossover"], ["Pecs"]),
-        (["dips"], ["Pecs","Triceps"]),
-        (["pompe","push-up","pushup","push up"], ["Pecs","Triceps","Épaules"]),
-        (["développé couché","bench press","dc haltères","dc barre"], ["Pecs","Triceps","Épaules"]),
-        (["développé incliné","di haltères","di barre"], ["Pecs","Triceps","Épaules"]),
-        (["développé décliné","dd "], ["Pecs","Triceps"]),
-        (["développé"], ["Pecs","Triceps"]),
-        # DOS
-        (["traction","pull-up","pullup","chin-up","chinup","chin up"], ["Dos","Biceps"]),
-        (["tirage","lat machine","lat pull","lat pulldown"], ["Dos","Biceps"]),
-        (["rowing","row","t-bar","barre t"], ["Dos","Biceps"]),
+        (["dips"], ["Pecs"]),
+        (["pompe","push-up","pushup","push up"], ["Pecs"]),
+        (["développé couché","bench press","dc haltères","dc barre"], ["Pecs"]),
+        (["développé incliné","di haltères","di barre"], ["Pecs"]),
+        (["développé décliné","dd "], ["Pecs"]),
+        (["développé"], ["Pecs"]),
+        # DOS — pas de Biceps (muscle secondaire, pas primaire)
+        (["traction","pull-up","pullup","chin-up","chinup","chin up"], ["Dos"]),
+        (["tirage","lat machine","lat pull","lat pulldown"], ["Dos"]),
+        (["rowing","row","t-bar","barre t"], ["Dos"]),
         (["pull-over","pullover"], ["Dos","Pecs"]),
         (["hyperextension","back extension","good morning"], ["Dos","Ischio-jambiers"]),
         (["soulevé de terre","deadlift","sdt","sumo"], ["Dos","Ischio-jambiers","Fessiers"]),
-        # ÉPAULES
-        (["développé militaire","overhead press","ohp","military press","press assis","press debout","shoulder press"], ["Épaules","Triceps"]),
-        (["arnold"], ["Épaules","Triceps"]),
+        # ÉPAULES — pas de Triceps
+        (["développé militaire","overhead press","ohp","military press","press assis","press debout","shoulder press"], ["Épaules"]),
+        (["arnold"], ["Épaules"]),
         (["élévation latérale","lateral raise","élévation lat"], ["Épaules"]),
         (["élévation frontale","front raise","élévation front"], ["Épaules"]),
         (["oiseau","reverse fly","rear delt","oiseau"], ["Épaules"]),
@@ -844,10 +844,21 @@ def body_map_section(df_p):
         elif pct < 95: return "#58CCFF"
         else: return "#00FF7F"
 
-    # Stats par muscle (str.contains pour multi-muscles)
+    # Données legacy : "Bras" → Biceps+Triceps, "Jambes" → Quadriceps+Ischio+Fessiers+Mollets
+    LEGACY = {"Biceps":"Bras","Triceps":"Bras","Avant-bras":"Bras",
+               "Quadriceps":"Jambes","Ischio-jambiers":"Jambes","Fessiers":"Jambes","Mollets":"Jambes"}
+
+    def muscle_df(m):
+        if df_p.empty: return pd.DataFrame()
+        mask = df_p["Muscle"].str.contains(m, regex=False, na=False)
+        if m in LEGACY:
+            mask = mask | df_p["Muscle"].str.contains(LEGACY[m], regex=False, na=False)
+        return df_p[mask]
+
+    # Stats par muscle
     sc = {}
     for m, info in MUSCLES.items():
-        md = df_p[df_p["Muscle"].str.contains(m, regex=False, na=False)] if not df_p.empty else pd.DataFrame()
+        md = muscle_df(m)
         rm = md["1RM"].max() if not md.empty else 0
         pct = min((rm/info["std"])*100, 120) if info["std"] > 0 else 0
         sc[m] = {"pct": pct, "lvl": min(int(pct/20), 5), "col": get_col(pct), "rm": rm, "std": info["std"]}
@@ -859,7 +870,7 @@ def body_map_section(df_p):
     # Données JS : top exercices + évolution par muscle
     muscle_data = {}
     for m in DISPLAY_MUSCLES:
-        md = df_p[df_p["Muscle"].str.contains(m, regex=False, na=False)] if not df_p.empty else pd.DataFrame()
+        md = muscle_df(m)
         exos = []
         evo = []
         if not md.empty:
