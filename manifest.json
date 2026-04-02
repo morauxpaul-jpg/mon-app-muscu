@@ -1,0 +1,17 @@
+{
+  "name": "Muscu Tracker PRO",
+  "short_name": "Muscu PRO",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050A18",
+  "theme_color": "#050A18",
+  "description": "Mon application de musculation privée",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512 1024x1024 2048x2048",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
