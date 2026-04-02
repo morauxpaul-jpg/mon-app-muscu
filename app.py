@@ -732,26 +732,21 @@ def save_prog(prog_dict):
 df_h = get_hist()
 prog = get_prog()
 
-muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
+# Clés réservées aux données internes (pas des séances)
+prog_seances = {k: v for k, v in prog.items() if not k.startswith('_')}
+muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog_seances for ex in prog_seances[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
-# Navigation persistante
-_nav = [('home','🏠'), ('prog','📅 PROG'), ('seance','🏋️ SÉANCE'), ('stats','📈'), ('arcade','🎮')]
-_cols = st.columns(len(_nav))
-for _col, (_key, _label) in zip(_cols, _nav):
-    _active = st.session_state.active_tab == _key
-    if _col.button(_label, key=f"nav_{_key}", use_container_width=True,
-                   type="primary" if _active else "secondary"):
-        st.session_state.active_tab = _key
-        st.rerun()
-st.divider()
+# Logo toujours visible en haut
+col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
+with col_l2:
+    st.image("logo.png")
+
+# Onglets
+tab_home, tab_p, tab_s, tab_st, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
 
 # --- ONGLET ACCUEIL / WIDGET ---
-if st.session_state.active_tab == 'home':
-    # Logo et titre UNIQUEMENT sur la page d'accueil
-    col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
-    with col_l2: 
-        st.image("logo.png")
+with tab_home:
     
     st.markdown("<h1 style='text-align: center; margin-top: 5px; margin-bottom: 20px;'>💪 MUSCU TRACKER PRO</h1>", unsafe_allow_html=True)
     
@@ -762,7 +757,7 @@ if st.session_state.active_tab == 'home':
     
     # Prochaine séance à faire
     def get_next_session():
-        for seance in prog.keys():
+        for seance in prog_seances.keys():
             seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
             if seance_data.empty:
                 return seance
@@ -770,17 +765,17 @@ if st.session_state.active_tab == 'home':
             exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
             if exos_done_or_skipped < exos_prog:
                 return seance
-        return list(prog.keys())[0] if prog else None
-    
+        return list(prog_seances.keys())[0] if prog_seances else None
+
     next_session = get_next_session()
-    
+
     # Volume cette semaine - Formaté avec espaces
     vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
     vol_week_formatted = f"{vol_week:,}".replace(',', ' ')  # Format avec espaces
-    
+
     # Séances cette semaine
     sessions_done = len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Séance"].unique())
-    total_sessions = len(prog.keys())
+    total_sessions = len(prog_seances.keys())
     
     # Streak (semaines consécutives avec au moins une séance)
     if not df_h.empty:
@@ -858,15 +853,15 @@ if st.session_state.active_tab == 'home':
         st.metric("🎯 Reps", total_reps)
 
 # --- ONGLET PROGRAMME ---
-if st.session_state.active_tab == 'prog':
+with tab_p:
     st.markdown("## ⚙️ Configuration")
-    jours = list(prog.keys())
+    jours = list(prog_seances.keys())
     for idx_j, j in enumerate(jours):
         with st.expander(f"📦 {j}"):
             c_s1, c_s2 = st.columns(2)
             if c_s1.button("⬆️ Monter Séance", key=f"up_s_{j}") and idx_j > 0:
                 jours[idx_j], jours[idx_j-1] = jours[idx_j-1], jours[idx_j]
-                save_prog({k: prog[k] for k in jours})
+                save_prog({**{k: v for k, v in prog.items() if k.startswith('_')}, **{k: prog[k] for k in jours}})
                 st.rerun()
             if c_s2.button("🗑️ Supprimer Séance", key=f"del_s_{j}"):
                 del prog[j]
@@ -913,28 +908,26 @@ if st.session_state.active_tab == 'prog':
             st.rerun()
 
 # --- ONGLET MA SÉANCE ---
-if st.session_state.active_tab == 'seance':
+with tab_s:
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
         # AUTO-SÉLECTION AVEC SKIP
         def get_current_session():
-            for seance in prog.keys():
+            for seance in prog_seances.keys():
                 seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
                 if seance_data.empty:
                     return seance
-                
-                exos_prog = len([ex for ex in prog[seance]])
+                exos_prog = len([ex for ex in prog_seances[seance]])
                 exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
-                
                 if exos_done_or_skipped < exos_prog:
                     return seance
-            return list(prog.keys())[0] if prog else None
+            return list(prog_seances.keys())[0] if prog_seances else None
 
         default_s = get_current_session()
-        s_index = list(prog.keys()).index(default_s) if default_s and default_s in prog.keys() else 0
-        choix_s = c_h1.selectbox("Séance :", list(prog.keys()), index=s_index)
+        s_index = list(prog_seances.keys()).index(default_s) if default_s and default_s in prog_seances.keys() else 0
+        choix_s = c_h1.selectbox("Séance :", list(prog_seances.keys()), index=s_index)
         
         if c_h3.button("🚩 Séance Manquée", use_container_width=True):
             m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
@@ -1100,7 +1093,7 @@ if st.session_state.active_tab == 'seance':
 
 
 # --- ONGLET PROGRÈS (OPTIMISÉ MOBILE) ---
-if st.session_state.active_tab == 'stats':
+with tab_st:
     legacy_volume = prog.get('_legacy_volume', 0)
     v_tot = int((df_h['Poids'] * df_h['Reps']).sum()) + legacy_volume if not df_h.empty else legacy_volume
     if v_tot > 0 or not df_h.empty:
@@ -1194,7 +1187,7 @@ if st.session_state.active_tab == 'stats':
             st.dataframe(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
 
 # --- ONGLET ARCADE ---
-if st.session_state.active_tab == 'arcade':
+with tab_g:
     st.markdown("## 🎮 ARCADE CYBER-FITNESS")
     
     if 'selected_game' not in st.session_state:
