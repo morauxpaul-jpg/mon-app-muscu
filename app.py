@@ -260,8 +260,48 @@ st.markdown(f"""
         color: white !important;
         font-weight: bold !important;
     }}
+
+    /* Bloquer le curseur de déplacement sur les data editors */
+    [data-testid="stDataEditorResizable"] canvas,
+    [data-testid="stDataFrame"] canvas {{
+        cursor: default !important;
+        user-drag: none !important;
+        -webkit-user-drag: none !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
+
+# Bloquer le drag des colonnes dans st.data_editor via JS
+components.html("""
+<script>
+(function() {
+    function blockColumnDrag() {
+        var editors = window.parent.document.querySelectorAll('[data-testid="stDataEditorResizable"] canvas, [data-testid="stDataFrame"] canvas');
+        editors.forEach(function(canvas) {
+            if (!canvas._dragBlocked) {
+                canvas._dragBlocked = true;
+                canvas.addEventListener('mousedown', function(e) {
+                    var rect = canvas.getBoundingClientRect();
+                    var scaleY = canvas.height / rect.height;
+                    var y = (e.clientY - rect.top) * scaleY;
+                    if (y < 36 * scaleY) { e.stopImmediatePropagation(); }
+                }, true);
+                canvas.addEventListener('touchstart', function(e) {
+                    var rect = canvas.getBoundingClientRect();
+                    var scaleY = canvas.height / rect.height;
+                    var touch = e.touches[0];
+                    var y = (touch.clientY - rect.top) * scaleY;
+                    if (y < 36 * scaleY) { e.stopImmediatePropagation(); }
+                }, true);
+            }
+        });
+    }
+    var observer = new MutationObserver(blockColumnDrag);
+    observer.observe(window.parent.document.body, { childList: true, subtree: true });
+    blockColumnDrag();
+})();
+</script>
+""", height=0)
 
 
 # --- 3. FONCTIONS TECHNIQUES ---
