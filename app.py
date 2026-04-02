@@ -1040,7 +1040,7 @@ with tab_s:
                             h_data = f_h[(f_h["Semaine"] == w_num) & (f_h["Poids"] > 0)]
                             if not h_data.empty:
                                 st.caption(f"📅 Semaine {w_num}")
-                                st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True)
+                                st.dataframe(h_data[["Série", "Reps", "Poids", "Remarque"]], hide_index=True, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(width="small"), "Reps": st.column_config.NumberColumn(width="small"), "Poids": st.column_config.NumberColumn(width="small"), "Remarque": st.column_config.TextColumn(width="medium")})
                 elif not hist_weeks:
                     st.info("Semaine 1 : Établis tes marques !")
 
@@ -1054,7 +1054,7 @@ with tab_s:
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
-                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True)
+                    st.dataframe(curr[["Série", "Reps", "Poids", "Remarque"]].style.apply(style_comparaison, axis=1, hist_prev=hist_prev_df).format({"Poids": "{:g}"}), hide_index=True, use_container_width=True, column_config={"Série": st.column_config.NumberColumn(width="small"), "Reps": st.column_config.NumberColumn(width="small"), "Poids": st.column_config.NumberColumn(width="small"), "Remarque": st.column_config.TextColumn(width="medium")})
                     if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
@@ -1184,7 +1184,7 @@ with tab_st:
                 fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
                 fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
                 st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
-            st.dataframe(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
+            st.dataframe(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True, use_container_width=True, column_config={"Semaine": st.column_config.NumberColumn(width="small"), "Reps": st.column_config.NumberColumn(width="small"), "Poids": st.column_config.NumberColumn(width="small"), "Muscle": st.column_config.TextColumn(width="medium")})
 
 # --- ONGLET ARCADE ---
 with tab_g:
