@@ -21,6 +21,9 @@ if 'settings' not in st.session_state:
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
 
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = 'seance'
+
 # --- 2. CSS : DESIGN CYBER-RPG MOBILE-FRIENDLY ---
 animations_css = """
     @keyframes pulse {
@@ -239,11 +242,23 @@ st.markdown(f"""
         .rank-step {{
             font-size: 7px;
         }}
-        
+
         .recup-card {{
             min-width: 75px;
             padding: 6px;
         }}
+    }}
+
+    /* Navigation persistante */
+    div[data-testid="stHorizontalBlock"]:has(button[data-testid^="stBaseButton"]:first-child) {{
+        gap: 4px;
+        margin-bottom: 8px;
+    }}
+    .nav-active button {{
+        background: linear-gradient(135deg, #58CCFF, #0077AA) !important;
+        border-color: #58CCFF !important;
+        color: white !important;
+        font-weight: bold !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -692,6 +707,7 @@ def get_prog():
     except:
         return {}
 
+@st.cache_data(ttl=30)
 def get_hist():
     try:
         data = ws_h.get_all_records()
@@ -707,6 +723,7 @@ def get_hist():
 def save_hist(df):
     ws_h.clear()
     ws_h.update([df.copy().fillna("").columns.values.tolist()] + df.copy().fillna("").values.tolist(), value_input_option='USER_ENTERED')
+    get_hist.clear()
 
 def save_prog(prog_dict):
     ws_p.update_acell('A1', json.dumps(prog_dict))
@@ -718,11 +735,19 @@ prog = get_prog()
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog for ex in prog[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 
-# Tabs - AVEC WIDGET ACCUEIL
-tab_home, tab_p, tab_s, tab_st, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
+# Navigation persistante
+_nav = [('home','🏠'), ('prog','📅 PROG'), ('seance','🏋️ SÉANCE'), ('stats','📈'), ('arcade','🎮')]
+_cols = st.columns(len(_nav))
+for _col, (_key, _label) in zip(_cols, _nav):
+    _active = st.session_state.active_tab == _key
+    if _col.button(_label, key=f"nav_{_key}", use_container_width=True,
+                   type="primary" if _active else "secondary"):
+        st.session_state.active_tab = _key
+        st.rerun()
+st.divider()
 
 # --- ONGLET ACCUEIL / WIDGET ---
-with tab_home:
+if st.session_state.active_tab == 'home':
     # Logo et titre UNIQUEMENT sur la page d'accueil
     col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
     with col_l2: 
@@ -833,7 +858,7 @@ with tab_home:
         st.metric("🎯 Reps", total_reps)
 
 # --- ONGLET PROGRAMME ---
-with tab_p:
+if st.session_state.active_tab == 'prog':
     st.markdown("## ⚙️ Configuration")
     jours = list(prog.keys())
     for idx_j, j in enumerate(jours):
@@ -867,54 +892,18 @@ with tab_p:
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
     st.divider()
-    with st.expander("🔧 Diagnostic & Réparation des données"):
-        if not df_h.empty:
-            st.markdown(f"**Lignes totales dans Google Sheets :** {len(df_h)}")
-            st.markdown(f"**Semaines trouvées :** {sorted(df_h['Semaine'].unique().tolist())}")
-            st.markdown(f"**Doublons détectés :** {df_h.duplicated(subset=['Semaine','Séance','Exercice','Série']).sum()}")
-
-            # Aperçu des dates disponibles
-            dates_valides = df_h[df_h["Date"].astype(str).str.match(r'\d{4}-\d{2}-\d{2}')]["Date"]
-            st.markdown(f"**Dates valides trouvées :** {len(dates_valides)} / {len(df_h)}")
-            if not dates_valides.empty:
-                st.markdown(f"**Période :** {dates_valides.min()} → {dates_valides.max()}")
-
-            st.dataframe(df_h.groupby(['Semaine','Séance'])['Exercice'].count().reset_index().rename(columns={'Exercice':'Nb lignes'}), hide_index=True, use_container_width=True)
-
-            st.markdown("**🔍 Aperçu brut des 20 premières lignes :**")
-            st.dataframe(df_h[["Semaine","Séance","Exercice","Série","Reps","Poids","Date"]].head(20), hide_index=True, use_container_width=True)
-
-            if st.button("🧹 Supprimer les doublons", type="primary"):
-                df_clean = df_h.drop_duplicates(subset=['Semaine','Séance','Exercice','Série'], keep='last')
-                save_hist(df_clean)
-                st.success(f"Nettoyé ! {len(df_h) - len(df_clean)} doublons supprimés.")
-                st.rerun()
-
-            st.divider()
-            st.markdown("**🗓️ Reconstruire les semaines depuis les dates**")
-            st.caption("Utilise les dates de chaque séance pour recalculer les numéros de semaine (semaine 1 = ta première séance enregistrée).")
-            if st.button("🔁 Reconstruire les semaines", type="primary"):
-                df_fix = df_h.copy()
-                df_fix["Date_dt"] = pd.to_datetime(df_fix["Date"], errors='coerce')
-                if df_fix["Date_dt"].isna().all():
-                    st.error("Aucune date valide trouvée — impossible de reconstruire.")
-                else:
-                    # Trouver la date de référence (lundi de la première semaine)
-                    first_date = df_fix["Date_dt"].dropna().min()
-                    ref_monday = first_date - timedelta(days=first_date.weekday())
-                    # Calculer le numéro de semaine relatif (1-based)
-                    df_fix["Semaine"] = ((df_fix["Date_dt"] - ref_monday).dt.days // 7 + 1).fillna(1).astype(int)
-                    df_fix = df_fix.drop(columns=["Date_dt"])
-                    # Dédoublonner après reconstruction
-                    df_fix = df_fix.drop_duplicates(subset=['Semaine','Séance','Exercice','Série'], keep='last')
-                    save_hist(df_fix)
-                    st.success(f"Semaines reconstruites ! Semaines trouvées : {sorted(df_fix['Semaine'].unique().tolist())}")
-                    st.rerun()
-        else:
-            st.info("Aucune donnée historique.")
+    with st.expander("⚠️ Réinitialiser les séances"):
+        st.warning("Remet à zéro toutes les séances (semaine 1, historique vide). Ton rang et XP total sont conservés dans Progrès.")
+        if st.button("🔴 Confirmer la réinitialisation", type="primary", key="reset_all"):
+            v_tot_save = int((df_h['Poids'] * df_h['Reps']).sum()) if not df_h.empty else 0
+            prog['_legacy_volume'] = prog.get('_legacy_volume', 0) + v_tot_save
+            save_prog(prog)
+            save_hist(pd.DataFrame(columns=["Semaine","Séance","Exercice","Série","Reps","Poids","Remarque","Muscle","Date"]))
+            st.success("Réinitialisation effectuée. Reprends en semaine 1 !")
+            st.rerun()
 
 # --- ONGLET MA SÉANCE ---
-with tab_s:
+if st.session_state.active_tab == 'seance':
     if prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
@@ -1101,9 +1090,10 @@ with tab_s:
 
 
 # --- ONGLET PROGRÈS (OPTIMISÉ MOBILE) ---
-with tab_st:
-    if not df_h.empty:
-        v_tot = int((df_h['Poids'] * df_h['Reps']).sum())
+if st.session_state.active_tab == 'stats':
+    legacy_volume = prog.get('_legacy_volume', 0)
+    v_tot = int((df_h['Poids'] * df_h['Reps']).sum()) + legacy_volume if not df_h.empty else legacy_volume
+    if v_tot > 0 or not df_h.empty:
         v_tot_formatted = f"{v_tot:,}".replace(',', ' ')  # Format avec espaces
         paliers, noms = [0, 5000, 25000, 75000, 200000, 500000], ["RECRUE NÉON", "CYBER-SOLDAT", "ÉLITE DE CHROME", "TITAN D'ACIER", "LÉGENDE CYBER", "DIEU DU FER"]
         idx = next((i for i, p in enumerate(paliers[::-1]) if v_tot >= p), 0)
@@ -1179,7 +1169,7 @@ with tab_st:
         st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
 
 # --- ONGLET ARCADE ---
-with tab_g:
+if st.session_state.active_tab == 'arcade':
     st.markdown("## 🎮 ARCADE CYBER-FITNESS")
     
     if 'selected_game' not in st.session_state:
