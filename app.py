@@ -897,6 +897,16 @@ if st.session_state.active_tab == 'prog':
         if st.button("🔴 Confirmer la réinitialisation", type="primary", key="reset_all"):
             v_tot_save = int((df_h['Poids'] * df_h['Reps']).sum()) if not df_h.empty else 0
             prog['_legacy_volume'] = prog.get('_legacy_volume', 0) + v_tot_save
+            if not df_h.empty:
+                # Archive : max hebdo par exercice (pour charts + records)
+                arch_src = df_h[df_h['Reps'] > 0].copy()
+                if not arch_src.empty:
+                    weekly_max = arch_src.groupby(['Exercice', 'Semaine']).apply(
+                        lambda g: pd.Series({'Poids': g['Poids'].max(), 'Reps': int(g.loc[g['Poids'].idxmax(), 'Reps']), 'Muscle': g['Muscle'].iloc[0]})
+                    ).reset_index()
+                    existing = prog.get('_archive', [])
+                    existing.extend(weekly_max.to_dict('records'))
+                    prog['_archive'] = existing[-2000:]
             save_prog(prog)
             save_hist(pd.DataFrame(columns=["Semaine","Séance","Exercice","Série","Reps","Poids","Remarque","Muscle","Date"]))
             st.success("Réinitialisation effectuée. Reprends en semaine 1 !")
@@ -1106,7 +1116,19 @@ if st.session_state.active_tab == 'stats':
         
         st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
-        df_p = df_h[df_h["Reps"] > 0].copy(); df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
+        # Fusionner données actuelles + archive (pour préserver records après reset)
+        arch_rows = prog.get('_archive', [])
+        if arch_rows:
+            df_arch = pd.DataFrame(arch_rows)
+            df_arch['Poids'] = pd.to_numeric(df_arch['Poids'], errors='coerce').fillna(0.0)
+            df_arch['Reps'] = pd.to_numeric(df_arch.get('Reps', 1), errors='coerce').fillna(1).astype(int)
+            df_arch['Semaine'] = pd.to_numeric(df_arch.get('Semaine', 0), errors='coerce').fillna(0).astype(int)
+            df_live = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame(columns=df_arch.columns)
+            df_p = pd.concat([df_live, df_arch[df_arch['Reps'] > 0]], ignore_index=True)
+        else:
+            df_p = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame()
+        if not df_p.empty:
+            df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
         scores, labels = [], list(standards.keys())
         for m in labels:
             m_max = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
@@ -1152,21 +1174,24 @@ if st.session_state.active_tab == 'stats':
             for idx, (ex_n, row) in enumerate(podium.iterrows()):
                 with p_cols[idx]: st.markdown(f"<div class='podium-card {clss[idx]}'><small>{meds[idx]}</small><br><b>{ex_n}</b><br><span style='color:#58CCFF; font-size:22px;'>{row['1RM']:.1f}kg</span></div>", unsafe_allow_html=True)
         
-        st.divider(); sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_h["Exercice"].unique()))
-        df_e = df_h[df_h["Exercice"] == sel_e].copy(); df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
-        if not df_rec.empty:
-            best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
-            c1r, c2r = st.columns(2)
-            c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**")
-            c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
-            with st.expander("📊 Estimation Rep Max"):
-                ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
-                for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
-            fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
-            fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
-            fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
-            st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
-        st.dataframe(df_e[["Semaine", "Série", "Reps", "Poids", "Remarque", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
+        if not df_p.empty:
+            st.divider()
+            sel_e = st.selectbox("🎯 Zoom mouvement :", sorted(df_p["Exercice"].unique()))
+            df_e = df_p[df_p["Exercice"] == sel_e].copy()
+            df_rec = df_e[(df_e["Poids"] > 0) | (df_e["Reps"] > 0)].copy()
+            if not df_rec.empty:
+                best = df_rec.sort_values(["Poids", "Reps"], ascending=False).iloc[0]; one_rm = calc_1rm(best['Poids'], best['Reps'])
+                c1r, c2r = st.columns(2)
+                c1r.success(f"🏆 RECORD RÉEL\n\n**{best['Poids']}kg x {int(best['Reps'])}**")
+                c2r.info(f"⚡ 1RM ESTIMÉ\n\n**{one_rm:.1f} kg**")
+                with st.expander("📊 Estimation Rep Max"):
+                    ests = get_rep_estimations(one_rm); cols = st.columns(len(ests))
+                    for idx, (r, p) in enumerate(ests.items()): cols[idx].metric(f"{r} Reps", f"{p}kg")
+                fig_l = go.Figure(); c_dat = df_rec.groupby("Semaine")["Poids"].max().reset_index()
+                fig_l.add_trace(go.Scatter(x=c_dat["Semaine"], y=c_dat["Poids"], mode='markers+lines', line=dict(color='#58CCFF', width=3), marker=dict(size=10, color='#00FF7F')))
+                fig_l.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0, r=0, t=10, b=0), height=300)
+                st.plotly_chart(fig_l, use_container_width=True, config={'staticPlot': True, 'displayModeBar': False})
+            st.dataframe(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False), hide_index=True)
 
 # --- ONGLET ARCADE ---
 if st.session_state.active_tab == 'arcade':
