@@ -872,6 +872,13 @@ with tab_p:
             st.markdown(f"**Lignes totales dans Google Sheets :** {len(df_h)}")
             st.markdown(f"**Semaines trouvées :** {sorted(df_h['Semaine'].unique().tolist())}")
             st.markdown(f"**Doublons détectés :** {df_h.duplicated(subset=['Semaine','Séance','Exercice','Série']).sum()}")
+
+            # Aperçu des dates disponibles
+            dates_valides = df_h[df_h["Date"].astype(str).str.match(r'\d{4}-\d{2}-\d{2}')]["Date"]
+            st.markdown(f"**Dates valides trouvées :** {len(dates_valides)} / {len(df_h)}")
+            if not dates_valides.empty:
+                st.markdown(f"**Période :** {dates_valides.min()} → {dates_valides.max()}")
+
             st.dataframe(df_h.groupby(['Semaine','Séance'])['Exercice'].count().reset_index().rename(columns={'Exercice':'Nb lignes'}), hide_index=True, use_container_width=True)
 
             if st.button("🧹 Supprimer les doublons", type="primary"):
@@ -879,6 +886,27 @@ with tab_p:
                 save_hist(df_clean)
                 st.success(f"Nettoyé ! {len(df_h) - len(df_clean)} doublons supprimés.")
                 st.rerun()
+
+            st.divider()
+            st.markdown("**🗓️ Reconstruire les semaines depuis les dates**")
+            st.caption("Utilise les dates de chaque séance pour recalculer les numéros de semaine (semaine 1 = ta première séance enregistrée).")
+            if st.button("🔁 Reconstruire les semaines", type="primary"):
+                df_fix = df_h.copy()
+                df_fix["Date_dt"] = pd.to_datetime(df_fix["Date"], errors='coerce')
+                if df_fix["Date_dt"].isna().all():
+                    st.error("Aucune date valide trouvée — impossible de reconstruire.")
+                else:
+                    # Trouver la date de référence (lundi de la première semaine)
+                    first_date = df_fix["Date_dt"].dropna().min()
+                    ref_monday = first_date - timedelta(days=first_date.weekday())
+                    # Calculer le numéro de semaine relatif (1-based)
+                    df_fix["Semaine"] = ((df_fix["Date_dt"] - ref_monday).dt.days // 7 + 1).fillna(1).astype(int)
+                    df_fix = df_fix.drop(columns=["Date_dt"])
+                    # Dédoublonner après reconstruction
+                    df_fix = df_fix.drop_duplicates(subset=['Semaine','Séance','Exercice','Série'], keep='last')
+                    save_hist(df_fix)
+                    st.success(f"Semaines reconstruites ! Semaines trouvées : {sorted(df_fix['Semaine'].unique().tolist())}")
+                    st.rerun()
         else:
             st.info("Aucune donnée historique.")
 
