@@ -881,6 +881,9 @@ with tab_p:
 
             st.dataframe(df_h.groupby(['Semaine','Séance'])['Exercice'].count().reset_index().rename(columns={'Exercice':'Nb lignes'}), hide_index=True, use_container_width=True)
 
+            st.markdown("**🔍 Aperçu brut des 20 premières lignes :**")
+            st.dataframe(df_h[["Semaine","Séance","Exercice","Série","Reps","Poids","Date"]].head(20), hide_index=True, use_container_width=True)
+
             if st.button("🧹 Supprimer les doublons", type="primary"):
                 df_clean = df_h.drop_duplicates(subset=['Semaine','Séance','Exercice','Série'], keep='last')
                 save_hist(df_clean)
