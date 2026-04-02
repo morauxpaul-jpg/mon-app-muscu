@@ -743,7 +743,240 @@ def rep_crusher_game():
     components.html(game_html, height=580)
 
 
-# --- 5. CONNEXION ---
+# --- 5. CARTE DU CORPS INTERACTIVE ---
+def body_map_section(df_p):
+    STANDARDS = {"Pecs":100,"Dos":120,"Épaules":75,"Bras":50,"Abdos":40,"Jambes":150}
+    def hex_rgba(h,a):
+        try: return f"rgba({int(h[1:3],16)},{int(h[3:5],16)},{int(h[5:7],16)},{a})"
+        except: return f"rgba(88,204,255,{a})"
+
+    sc = {}
+    for m, std in STANDARDS.items():
+        md = df_p[df_p["Muscle"]==m] if not df_p.empty else pd.DataFrame()
+        rm = md["1RM"].max() if not md.empty else 0
+        pct = min((rm/std)*100,120) if std>0 else 0
+        lvl = min(int(pct/20),5)
+        col = "#1e2d3d" if pct==0 else ("#FF453A" if pct<40 else ("#FF9F0A" if pct<70 else ("#58CCFF" if pct<95 else "#00FF7F")))
+        sc[m] = {"pct":pct,"lvl":lvl,"col":col,"rm":rm,"std":std}
+
+    def c(m): return sc[m]["col"]
+    def op(m): return "0.88" if sc[m]["pct"]>0 else "0.25"
+
+    svg = f"""<div style="background:linear-gradient(160deg,#060e1e,#050A18);border-radius:16px;
+border:1px solid rgba(88,204,255,0.2);padding:12px;box-shadow:inset 0 0 60px rgba(88,204,255,0.04);">
+<div style="text-align:center;font-family:monospace;font-size:10px;color:#58CCFF;
+letter-spacing:3px;margin-bottom:6px;opacity:0.7;">◈ SCAN CORPOREL ◈</div>
+<div style="display:flex;gap:12px;align-items:flex-start;">
+<svg viewBox="0 0 200 370" width="155" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="mg"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <pattern id="sl" width="2" height="5" patternUnits="userSpaceOnUse"><rect width="2" height="1" fill="rgba(0,0,0,0.18)"/></pattern>
+  </defs>
+  <!-- HEAD -->
+  <ellipse cx="100" cy="34" rx="27" ry="30" fill="#0d1b2a" stroke="#58CCFF" stroke-width="1.2" opacity="0.7"/>
+  <circle cx="92" cy="29" r="2.5" fill="#58CCFF" opacity="0.45"/>
+  <circle cx="108" cy="29" r="2.5" fill="#58CCFF" opacity="0.45"/>
+  <path d="M94 42 Q100 47 106 42" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.35"/>
+  <!-- NECK -->
+  <rect x="93" y="61" width="14" height="13" rx="4" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.8" opacity="0.5"/>
+  <!-- ÉPAULES -->
+  <ellipse cx="62" cy="88" rx="22" ry="14" fill="{c('Épaules')}" opacity="{op('Épaules')}" filter="url(#mg)"/>
+  <ellipse cx="138" cy="88" rx="22" ry="14" fill="{c('Épaules')}" opacity="{op('Épaules')}" filter="url(#mg)"/>
+  <!-- TORSO BG -->
+  <path d="M79 74 L121 74 L129 175 L71 175 Z" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.6" opacity="0.3"/>
+  <!-- PECS -->
+  <path d="M83 76 Q100 91 100 102 Q85 97 79 84 Z" fill="{c('Pecs')}" opacity="{op('Pecs')}" filter="url(#mg)"/>
+  <path d="M117 76 Q100 91 100 102 Q115 97 121 84 Z" fill="{c('Pecs')}" opacity="{op('Pecs')}" filter="url(#mg)"/>
+  <!-- ABDOS 6-pack -->
+  <rect x="83" y="104" width="15" height="19" rx="4" fill="{c('Abdos')}" opacity="{op('Abdos')}" filter="url(#mg)"/>
+  <rect x="102" y="104" width="15" height="19" rx="4" fill="{c('Abdos')}" opacity="{op('Abdos')}" filter="url(#mg)"/>
+  <rect x="83" y="127" width="15" height="19" rx="4" fill="{c('Abdos')}" opacity="{op('Abdos')}" filter="url(#mg)"/>
+  <rect x="102" y="127" width="15" height="19" rx="4" fill="{c('Abdos')}" opacity="{op('Abdos')}" filter="url(#mg)"/>
+  <rect x="85" y="150" width="13" height="16" rx="4" fill="{c('Abdos')}" opacity="{op('Abdos')}" filter="url(#mg)"/>
+  <rect x="102" y="150" width="13" height="16" rx="4" fill="{c('Abdos')}" opacity="{op('Abdos')}" filter="url(#mg)"/>
+  <!-- BRAS -->
+  <rect x="41" y="78" width="17" height="62" rx="8" fill="{c('Bras')}" opacity="{op('Bras')}" filter="url(#mg)"/>
+  <rect x="142" y="78" width="17" height="62" rx="8" fill="{c('Bras')}" opacity="{op('Bras')}" filter="url(#mg)"/>
+  <!-- AVANT-BRAS -->
+  <rect x="39" y="143" width="13" height="46" rx="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.4"/>
+  <rect x="148" y="143" width="13" height="46" rx="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.4"/>
+  <!-- MAINS -->
+  <ellipse cx="45" cy="196" rx="9" ry="7" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.35"/>
+  <ellipse cx="155" cy="196" rx="9" ry="7" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.35"/>
+  <!-- HANCHES -->
+  <ellipse cx="100" cy="177" rx="32" ry="12" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.6" opacity="0.3"/>
+  <!-- JAMBES QUADS -->
+  <rect x="70" y="186" width="27" height="86" rx="13" fill="{c('Jambes')}" opacity="{op('Jambes')}" filter="url(#mg)"/>
+  <rect x="103" y="186" width="27" height="86" rx="13" fill="{c('Jambes')}" opacity="{op('Jambes')}" filter="url(#mg)"/>
+  <!-- MOLLETS -->
+  <rect x="72" y="275" width="23" height="52" rx="11" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.4"/>
+  <rect x="105" y="275" width="23" height="52" rx="11" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.4"/>
+  <!-- PIEDS -->
+  <ellipse cx="83" cy="334" rx="16" ry="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.3"/>
+  <ellipse cx="117" cy="334" rx="16" ry="6" fill="#0d1b2a" stroke="#58CCFF" stroke-width="0.7" opacity="0.3"/>
+  <!-- DOS INDICATEUR -->
+  <rect x="71" y="109" width="58" height="60" rx="6" fill="{c('Dos')}" opacity="0.12"/>
+  <text x="100" y="144" text-anchor="middle" fill="{c('Dos')}" font-size="9" font-family="monospace" opacity="0.6">DOS</text>
+  <!-- Scan overlay -->
+  <rect width="200" height="370" fill="url(#sl)" pointer-events="none" opacity="0.4"/>
+</svg>
+<!-- PANEL DROITE -->
+<div style="flex:1;padding-top:4px;">
+  <div style="font-family:monospace;font-size:10px;color:#aaa;letter-spacing:1px;margin-bottom:8px;">GROUPES MUSCULAIRES</div>
+""" + "".join([f"""
+  <div style="margin-bottom:7px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+      <span style="font-size:11px;color:{sc[m]['col']};font-weight:600;font-family:monospace;">{m.upper()}</span>
+      <span style="font-size:10px;color:#666;">Lv.{sc[m]['lvl']}/5</span>
+    </div>
+    <div style="background:rgba(255,255,255,0.06);border-radius:3px;height:4px;">
+      <div style="width:{min(sc[m]['pct'],100):.0f}%;height:100%;background:{sc[m]['col']};border-radius:3px;box-shadow:0 0 6px {sc[m]['col']};"></div>
+    </div>
+    <div style="font-size:9px;color:#555;margin-top:1px;">{sc[m]['pct']:.0f}% · {sc[m]['rm']:.0f}kg 1RM</div>
+  </div>""" for m in STANDARDS]) + """
+</div></div></div>"""
+
+    total_pct = sum(s["pct"] for s in sc.values())/len(sc)
+    power = ["DÉBUTANT","RECRUE","CHALLENGER","ÉLITE","CYBER-ATHLÈTE","DIEU DU FER"][min(int(total_pct/20),5)]
+    st.markdown(f"""<div style="text-align:center;margin-bottom:6px;">
+    <span style="font-size:11px;color:#aaa;font-family:monospace;">POWER SCORE </span>
+    <span style="font-size:20px;font-weight:900;color:#00FF7F;">{power}</span>
+    <span style="font-size:11px;color:#555;font-family:monospace;"> · {total_pct:.0f}%</span></div>""", unsafe_allow_html=True)
+    st.markdown(svg, unsafe_allow_html=True)
+
+    st.markdown("---")
+    if "sel_muscle" not in st.session_state: st.session_state.sel_muscle = None
+    mcols = st.columns(len(STANDARDS))
+    for col, m in zip(mcols, STANDARDS):
+        active = st.session_state.sel_muscle == m
+        if col.button(m, key=f"bm_{m}", type="primary" if active else "secondary", use_container_width=True):
+            st.session_state.sel_muscle = None if active else m
+            st.rerun()
+
+    sel = st.session_state.sel_muscle
+    if sel:
+        s = sc[sel]
+        md = df_p[df_p["Muscle"]==sel] if not df_p.empty else pd.DataFrame()
+        st.markdown(f"""<div style="background:{hex_rgba(s['col'],0.06)};border:1px solid {hex_rgba(s['col'],0.4)};
+border-radius:12px;padding:14px;margin-top:6px;">
+<div style="font-family:monospace;color:{s['col']};font-size:13px;letter-spacing:2px;margin-bottom:10px;">
+⬡ {sel.upper()} — NIVEAU {s['lvl']}/5 &nbsp;{'█'*s['lvl']}{'░'*(5-s['lvl'])}</div>""", unsafe_allow_html=True)
+        if not md.empty:
+            best = md.sort_values("1RM",ascending=False).iloc[0]
+            c1,c2,c3 = st.columns(3)
+            c1.metric("🏆 Record",f"{best['Poids']:g}kg × {int(best['Reps'])}")
+            c2.metric("⚡ 1RM Est.",f"{best['1RM']:.1f}kg")
+            c3.metric("🎯 Standard",f"{s['std']}kg")
+            st.progress(min(s["pct"]/100,1.0), text=f"{s['pct']:.0f}% du standard élite")
+            top = md.groupby("Exercice")["1RM"].max().sort_values(ascending=False).head(5)
+            if not top.empty:
+                st.markdown("**🥊 Meilleurs exercices :**")
+                for exo,rm in top.items():
+                    pct_max = (rm/top.iloc[0])*100
+                    bar = "█"*int(pct_max/10)+"░"*(10-int(pct_max/10))
+                    st.markdown(f'<div style="font-family:monospace;font-size:11px;color:#ccc;margin:2px 0;">{bar} {exo} — {rm:.1f}kg</div>',unsafe_allow_html=True)
+            evo = md.groupby("Semaine")["1RM"].max().reset_index()
+            if len(evo)>1:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=evo["Semaine"],y=evo["1RM"],mode='markers+lines',
+                    line=dict(color=s["col"],width=2),marker=dict(size=7,color=s["col"]),
+                    fill='tozeroy',fillcolor=hex_rgba(s["col"],0.08)))
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)',
+                    margin=dict(l=0,r=0,t=5,b=0),height=180,
+                    xaxis=dict(color="#aaa",title="Semaine"),yaxis=dict(color="#aaa",title="1RM (kg)"))
+                st.plotly_chart(fig,use_container_width=True,config={'staticPlot':True,'displayModeBar':False})
+        else:
+            st.info(f"Pas encore de données pour {sel}. Lance-toi !")
+        st.markdown("</div>",unsafe_allow_html=True)
+
+
+# --- 6. CARDIO ---
+def cardio_section(df_h, s_act):
+    ACTS = {"🏃 Course":["dur","dist","speed","inc"],"🚶 Marche":["dur","dist","speed","inc"],
+            "🚴 Vélo":["dur","dist","speed"],"🪜 Escaliers":["dur","floors"],
+            "🏊 Natation":["dur","dist"],"🔄 Elliptique":["dur","dist","res"],"💪 Autre":["dur","dist"]}
+    ICONS = {"🏃 Course":"🏃","🚶 Marche":"🚶","🚴 Vélo":"🚴","🪜 Escaliers":"🪜","🏊 Natation":"🏊","🔄 Elliptique":"🔄","💪 Autre":"💪"}
+
+    df_c = df_h[df_h["Séance"]=="CARDIO"].copy() if not df_h.empty else pd.DataFrame()
+
+    # Stats semaine
+    if not df_c.empty:
+        dw = df_c[df_c["Semaine"]==s_act]
+        c1,c2,c3 = st.columns(3)
+        c1.metric("⏱️ Cette semaine",f"{int(dw['Reps'].sum())} min")
+        c2.metric("📍 Distance",f"{dw['Poids'].sum():.1f} km")
+        c3.metric("🔥 Sessions",len(dw))
+        # Streak cardio
+        all_dates = sorted(df_c["Date"].dropna().unique(), reverse=True)
+        streak=0
+        prev=None
+        for d in all_dates:
+            try:
+                dt = datetime.strptime(d,"%Y-%m-%d")
+                if prev is None or (prev-dt).days==1: streak+=1; prev=dt
+                else: break
+            except: pass
+        if streak>1: st.caption(f"🔥 Streak : {streak} jours consécutifs !")
+
+    st.markdown("### ➕ Nouvelle session")
+    if "cardio_act" not in st.session_state: st.session_state.cardio_act="🏃 Course"
+    ac = st.columns(len(ACTS))
+    for col,(act,_) in zip(ac,ACTS.items()):
+        if col.button(ICONS[act],key=f"ca_{act}",type="primary" if st.session_state.cardio_act==act else "secondary",use_container_width=True):
+            st.session_state.cardio_act=act; st.rerun()
+    st.caption(f"**{st.session_state.cardio_act}**")
+    fields = ACTS[st.session_state.cardio_act]
+
+    col1,col2 = st.columns(2)
+    dur = col1.number_input("⏱️ Durée (min)",1,300,30,key="cd_dur")
+    dist = col2.number_input("📍 Distance (km)",0.0,300.0,0.0,step=0.1,key="cd_dist") if "dist" in fields else 0.0
+    col3,col4 = st.columns(2)
+    speed = col3.number_input("⚡ Vitesse (km/h)",0.0,50.0,0.0,step=0.1,key="cd_spd") if "speed" in fields else 0.0
+    inc = col4.number_input("📐 Inclinaison (%)",0.0,30.0,0.0,step=0.5,key="cd_inc") if "inc" in fields else 0.0
+    floors = col3.number_input("🪜 Étages",0,500,0,key="cd_fl") if "floors" in fields else 0
+    res = col4.number_input("💪 Résistance",0,20,5,key="cd_res") if "res" in fields else 0
+    feel = st.select_slider("💭 Ressenti",options=["😴 Facile","😊 Correct","💪 Intense","🔥 Max"],value="😊 Correct",key="cd_feel")
+    note = st.text_input("📝 Note",key="cd_note",placeholder="Optionnel...")
+
+    if st.button("✅ Enregistrer",type="primary",use_container_width=True,key="save_cardio"):
+        if dist==0.0 and speed>0: dist=round((speed*dur)/60,2)
+        detail = json.dumps({"speed":speed,"inc":inc,"floors":floors,"res":res,"feel":feel,"note":note},ensure_ascii=False)
+        row = pd.DataFrame([{"Semaine":s_act,"Séance":"CARDIO","Exercice":st.session_state.cardio_act,
+            "Série":1,"Reps":dur,"Poids":dist,"Remarque":detail,"Muscle":"Cardio",
+            "Date":datetime.now().strftime("%Y-%m-%d")}])
+        save_hist(pd.concat([df_h,row],ignore_index=True))
+        st.success(f"✅ {dur} min · {dist:.1f} km enregistrés !")
+        st.rerun()
+
+    if not df_c.empty:
+        st.markdown("### 📊 Progression")
+        weekly = df_c.groupby("Semaine").agg(minutes=("Reps","sum"),km=("Poids","sum")).reset_index()
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=weekly["Semaine"],y=weekly["minutes"],name="Min",marker_color="#58CCFF",opacity=0.75))
+        fig.add_trace(go.Scatter(x=weekly["Semaine"],y=weekly["km"],name="km",yaxis="y2",
+            mode="markers+lines",line=dict(color="#00FF7F",width=2),marker=dict(size=7,color="#00FF7F")))
+        fig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=0,r=0,t=5,b=0),height=200,showlegend=False,
+            xaxis=dict(color="#aaa"),yaxis=dict(color="#58CCFF"),
+            yaxis2=dict(color="#00FF7F",overlaying="y",side="right"))
+        st.plotly_chart(fig,use_container_width=True,config={'staticPlot':True,'displayModeBar':False})
+
+        st.markdown("### 🗓️ Sessions récentes")
+        for _,row in df_c.sort_values("Date",ascending=False).head(8).iterrows():
+            try: d=json.loads(row["Remarque"]) if row["Remarque"] else {}
+            except: d={}
+            fi = d.get("feel","")[:2] if d.get("feel") else ""
+            sp = f" · {d.get('speed',0):.1f}km/h" if d.get("speed",0)>0 else ""
+            ic = f" · {d.get('inc',0):.0f}%" if d.get("inc",0)>0 else ""
+            fl = f" · {d.get('floors',0)}étages" if d.get("floors",0)>0 else ""
+            st.markdown(f"""<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 12px;
+margin:3px 0;border-left:3px solid #58CCFF44;font-size:12px;">
+<span style="color:#58CCFF">{row['Exercice']}</span>
+<span style="color:#ccc"> · S{int(row['Semaine'])} · {int(row['Reps'])}min · {float(row['Poids']):.1f}km{sp}{ic}{fl}</span>
+<span style="float:right;color:#666">{row['Date']} {fi}</span></div>""",unsafe_allow_html=True)
+
+
+# --- 7. CONNEXION ---
 import os
 
 @st.cache_resource
@@ -820,8 +1053,22 @@ col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
 with col_l2:
     st.image("logo.png")
 
+# Calcul df_p global (partagé entre onglets)
+arch_rows = prog.get('_archive', [])
+if arch_rows:
+    df_arch = pd.DataFrame(arch_rows)
+    df_arch['Poids'] = pd.to_numeric(df_arch['Poids'], errors='coerce').fillna(0.0)
+    df_arch['Reps'] = pd.to_numeric(df_arch.get('Reps', 1), errors='coerce').fillna(1).astype(int)
+    df_arch['Semaine'] = pd.to_numeric(df_arch.get('Semaine', 0), errors='coerce').fillna(0).astype(int)
+    df_live = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame(columns=df_arch.columns)
+    df_p = pd.concat([df_live, df_arch[df_arch['Reps'] > 0]], ignore_index=True)
+else:
+    df_p = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame()
+if not df_p.empty:
+    df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
+
 # Onglets
-tab_home, tab_p, tab_s, tab_st, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🎮 ARCADE"])
+tab_home, tab_p, tab_s, tab_st, tab_body, tab_cardio, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🫁 CORPS", "🏃 CARDIO", "🎮 ARCADE"])
 
 # --- ONGLET ACCUEIL / WIDGET ---
 with tab_home:
@@ -1187,19 +1434,6 @@ with tab_st:
         
         st.markdown("### 🕸️ Radar d'Équilibre")
         standards = {"Jambes": 150, "Dos": 120, "Pecs": 100, "Épaules": 75, "Bras": 50, "Abdos": 40}
-        # Fusionner données actuelles + archive (pour préserver records après reset)
-        arch_rows = prog.get('_archive', [])
-        if arch_rows:
-            df_arch = pd.DataFrame(arch_rows)
-            df_arch['Poids'] = pd.to_numeric(df_arch['Poids'], errors='coerce').fillna(0.0)
-            df_arch['Reps'] = pd.to_numeric(df_arch.get('Reps', 1), errors='coerce').fillna(1).astype(int)
-            df_arch['Semaine'] = pd.to_numeric(df_arch.get('Semaine', 0), errors='coerce').fillna(0).astype(int)
-            df_live = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame(columns=df_arch.columns)
-            df_p = pd.concat([df_live, df_arch[df_arch['Reps'] > 0]], ignore_index=True)
-        else:
-            df_p = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame()
-        if not df_p.empty:
-            df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
         scores, labels = [], list(standards.keys())
         for m in labels:
             m_max = df_p[df_p["Muscle"] == m]["1RM"].max() if not df_p[df_p["Muscle"] == m].empty else 0
@@ -1265,6 +1499,15 @@ with tab_st:
             render_table(df_e[["Semaine", "Reps", "Poids", "Muscle"]].sort_values("Semaine", ascending=False).reset_index(drop=True))
 
 # --- ONGLET ARCADE ---
+with tab_body:
+    st.markdown("## 🫁 CARTE DU CORPS")
+    body_map_section(df_p)
+
+with tab_cardio:
+    st.markdown("## 🏃 CARDIO")
+    s_act_cardio = int(df_h["Semaine"].max() if not df_h.empty else 1)
+    cardio_section(df_h, s_act_cardio)
+
 with tab_g:
     st.markdown("## 🎮 ARCADE CYBER-FITNESS")
     
