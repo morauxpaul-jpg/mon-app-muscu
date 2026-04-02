@@ -314,6 +314,81 @@ def get_rep_estimations(one_rm):
 def get_base_name(full_name):
     return full_name.split("(")[0].strip() if "(" in full_name else full_name
 
+def auto_muscles(name):
+    """Retourne muscles comma-separated basé sur le nom d'exercice, ou None si inconnu."""
+    n = name.lower()
+    muscles = set()
+    rules = [
+        # POITRINE
+        (["écarté","fly","pec deck","butterfly","cable crossover","poulie croisée","crossover"], ["Pecs"]),
+        (["dips"], ["Pecs","Triceps"]),
+        (["pompe","push-up","pushup","push up"], ["Pecs","Triceps","Épaules"]),
+        (["développé couché","bench press","dc haltères","dc barre"], ["Pecs","Triceps","Épaules"]),
+        (["développé incliné","di haltères","di barre"], ["Pecs","Triceps","Épaules"]),
+        (["développé décliné","dd "], ["Pecs","Triceps"]),
+        (["développé"], ["Pecs","Triceps"]),
+        # DOS
+        (["traction","pull-up","pullup","chin-up","chinup","chin up"], ["Dos","Biceps"]),
+        (["tirage","lat machine","lat pull","lat pulldown"], ["Dos","Biceps"]),
+        (["rowing","row","t-bar","barre t"], ["Dos","Biceps"]),
+        (["pull-over","pullover"], ["Dos","Pecs"]),
+        (["hyperextension","back extension","good morning"], ["Dos","Ischio-jambiers"]),
+        (["soulevé de terre","deadlift","sdt","sumo"], ["Dos","Ischio-jambiers","Fessiers"]),
+        # ÉPAULES
+        (["développé militaire","overhead press","ohp","military press","press assis","press debout","shoulder press"], ["Épaules","Triceps"]),
+        (["arnold"], ["Épaules","Triceps"]),
+        (["élévation latérale","lateral raise","élévation lat"], ["Épaules"]),
+        (["élévation frontale","front raise","élévation front"], ["Épaules"]),
+        (["oiseau","reverse fly","rear delt","oiseau"], ["Épaules"]),
+        (["face pull"], ["Épaules","Dos"]),
+        (["shrug","haussement"], ["Épaules"]),
+        (["upright row","tirage menton"], ["Épaules","Biceps"]),
+        # BICEPS
+        (["curl marteau","hammer curl","marteau"], ["Biceps","Avant-bras"]),
+        (["reverse curl","curl inversé"], ["Biceps","Avant-bras"]),
+        (["curl barre","curl haltère","curl poulie","curl concentré","curl incliné","curl scott","preacher curl","zottman"], ["Biceps"]),
+        (["curl"], ["Biceps"]),
+        (["biceps"], ["Biceps"]),
+        # TRICEPS
+        (["skull crusher","barre front","jm press","lying extension","extension nuque"], ["Triceps"]),
+        (["pushdown","tirage poulie triceps","corde triceps","triceps poulie","poulie triceps"], ["Triceps"]),
+        (["kick-back triceps","kickback triceps"], ["Triceps"]),
+        (["extension triceps","triceps barre","extension haltère"], ["Triceps"]),
+        (["triceps"], ["Triceps"]),
+        # AVANT-BRAS
+        (["poignet","wrist curl","avant-bras","forearm"], ["Avant-bras"]),
+        # ABDOS
+        (["crunch","sit-up","situp"], ["Abdos"]),
+        (["gainage","planche","plank"], ["Abdos"]),
+        (["relevé de jambe","leg raise","hanging leg","knee raise"], ["Abdos"]),
+        (["rotation","twist","russian","oblique"], ["Abdos"]),
+        (["abdos","abdominal","ab "], ["Abdos"]),
+        (["roue abdos","wheel"], ["Abdos"]),
+        # QUADRICEPS
+        (["leg extension","extension cuisse","extension jambe"], ["Quadriceps"]),
+        (["hack squat"], ["Quadriceps"]),
+        (["split squat","bulgare","bulgarian"], ["Quadriceps","Fessiers","Ischio-jambiers"]),
+        (["fente","lunge","walking lunge"], ["Quadriceps","Fessiers","Ischio-jambiers"]),
+        (["leg press","presse à cuisse","presse cuisse","presse jambe"], ["Quadriceps","Fessiers"]),
+        (["goblet"], ["Quadriceps","Fessiers"]),
+        (["squat","back squat","front squat","box squat"], ["Quadriceps","Fessiers"]),
+        (["presse"], ["Quadriceps","Fessiers"]),
+        # ISCHIO-JAMBIERS
+        (["leg curl","curl jambe","ischio","lying leg curl","seated leg curl","nordic"], ["Ischio-jambiers"]),
+        (["rdl","romanian","roumain","soulevé jambe tendue","stiff leg"], ["Ischio-jambiers","Fessiers"]),
+        # FESSIERS
+        (["hip thrust","hip-thrust","hip extension"], ["Fessiers"]),
+        (["abduction","écartement cuisse"], ["Fessiers"]),
+        (["kickback","kick-back","donkey kick"], ["Fessiers","Ischio-jambiers"]),
+        (["glute bridge","fessier","glute"], ["Fessiers"]),
+        # MOLLETS
+        (["mollet","calf raise","calves","talon","standing calf","seated calf"], ["Mollets"]),
+    ]
+    for keywords, ms in rules:
+        if any(kw in n for kw in keywords):
+            muscles.update(ms)
+    return ",".join(sorted(muscles)) if muscles else None
+
 def render_table(df, hist_prev=None):
     """Affiche un DataFrame comme tableau HTML statique (pas de glissement mobile)."""
     col_styles = {
@@ -1329,6 +1404,26 @@ with tab_p:
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
     st.divider()
+    if st.button("🤖 Auto-assigner les muscles", type="primary", use_container_width=True, help="Assigne automatiquement les muscles selon le nom de chaque exercice"):
+        updated, skipped = [], []
+        for s in prog_seances:
+            for ex in prog[s]:
+                cur = ex.get("muscle", "Autre")
+                new_m = auto_muscles(ex["name"])
+                if new_m:
+                    ex["muscle"] = new_m
+                    updated.append(f"{ex['name']} → {new_m}")
+                else:
+                    skipped.append(ex["name"])
+        save_prog(prog)
+        if updated:
+            st.success(f"✅ {len(updated)} exercice(s) mis à jour")
+            with st.expander("Détail"):
+                for line in updated: st.caption(line)
+        if skipped:
+            st.warning(f"⚠️ {len(skipped)} exercice(s) non reconnus : {', '.join(skipped)}")
+        st.rerun()
+
     with st.expander("⚠️ Réinitialiser les séances"):
         st.warning("Remet à zéro toutes les séances (semaine 1, historique vide). Ton rang et XP total sont conservés dans Progrès.")
         if st.button("🔴 Confirmer la réinitialisation", type="primary", key="reset_all"):
