@@ -928,8 +928,13 @@ def body_map_section(df_p):
       <feGaussianBlur stdDeviation="3.5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M10,0 L0,0 L0,10" fill="none" stroke="#0a1f33" stroke-width="0.3"/>
+    </pattern>
     {grads_f}
   </defs>
+  <!-- Fond grille HUD -->
+  <rect width="200" height="420" fill="url(#grid)" opacity="0.5"/>
   <!-- ── Silhouette ── -->
   <!-- Tête -->
   <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
@@ -961,6 +966,49 @@ def body_map_section(df_p):
   <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
   <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
   <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- ── Lignes anatomiques internes FACE ── -->
+  <!-- Clavicules -->
+  <path d="M92,77 C94,73 100,71 106,73 C110,74 114,76 116,78" stroke="#0d2e4a" stroke-width="0.8" fill="none" stroke-dasharray="2.5,2"/>
+  <path d="M108,77 C106,73 100,71 94,73 C90,74 86,76 84,78" stroke="#0d2e4a" stroke-width="0.8" fill="none" stroke-dasharray="2.5,2"/>
+  <!-- Sternum / ligne médiane thorax -->
+  <line x1="100" y1="78" x2="100" y2="190" stroke="#0d2e4a" stroke-width="0.6" stroke-dasharray="3,2.5"/>
+  <!-- Grille abdominale -->
+  <line x1="88" y1="118" x2="112" y2="118" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="88" y1="130" x2="112" y2="130" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="88" y1="142" x2="112" y2="142" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="88" y1="154" x2="112" y2="154" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <line x1="89" y1="166" x2="111" y2="166" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <!-- Pli inguinal -->
+  <path d="M78,192 C88,185 112,185 122,192" stroke="#0d2e4a" stroke-width="0.5" fill="none" stroke-dasharray="2,2"/>
+  <!-- Séparation VM (teardrop quad) -->
+  <path d="M84,292 C86,284 90,280 92,282" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
+  <path d="M116,292 C114,284 110,280 108,282" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
+  <!-- Dentelures serratus -->
+  <path d="M65,108 C68,114 66,122 68,128" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
+  <path d="M135,108 C132,114 134,122 132,128" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
+  <!-- Lignes tibiales -->
+  <line x1="80" y1="318" x2="80" y2="395" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
+  <line x1="120" y1="318" x2="120" y2="395" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
+
+  <!-- ── HUD : Coins brackets ── -->
+  <path d="M4,22 L4,4 L22,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <path d="M196,22 L196,4 L178,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <path d="M4,398 L4,416 L22,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <path d="M196,398 L196,416 L178,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <!-- Micro-tirets déco HUD -->
+  <line x1="92" y1="4" x2="108" y2="4" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+  <line x1="92" y1="416" x2="108" y2="416" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+
+  <!-- ── Scan line ── -->
+  <g>
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="8" stroke-opacity="0.04">
+      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="1.2" stroke-opacity="0.28">
+      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
+    </line>
+  </g>
 
   <!-- ── Zones musculaires FACE ── -->
   <!-- Deltoïdes -->
@@ -1011,8 +1059,13 @@ def body_map_section(df_p):
       <feGaussianBlur stdDeviation="3.5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <pattern id="gridb" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M10,0 L0,0 L0,10" fill="none" stroke="#0a1f33" stroke-width="0.3"/>
+    </pattern>
     {grads_b}
   </defs>
+  <!-- Fond grille HUD -->
+  <rect width="200" height="420" fill="url(#gridb)" opacity="0.5"/>
   <!-- ── Silhouette (identique face) ── -->
   <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
   <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
@@ -1030,6 +1083,47 @@ def body_map_section(df_p):
   <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
   <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
   <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- ── Lignes anatomiques internes DOS ── -->
+  <!-- Colonne vertébrale -->
+  <line x1="100" y1="78" x2="100" y2="190" stroke="#0d2e4a" stroke-width="0.6" stroke-dasharray="3,2.5"/>
+  <!-- Scapulas (omoplates) -->
+  <path d="M80,88 C74,94 72,108 76,118 C80,126 88,126 92,120 C90,112 88,100 80,88 Z" stroke="#0d2e4a" stroke-width="0.6" fill="none" stroke-dasharray="2,1.5"/>
+  <path d="M120,88 C126,94 128,108 124,118 C120,126 112,126 108,120 C110,112 112,100 120,88 Z" stroke="#0d2e4a" stroke-width="0.6" fill="none" stroke-dasharray="2,1.5"/>
+  <!-- Crête épine scapulaire -->
+  <line x1="78" y1="91" x2="92" y2="96" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="1.5,1.5"/>
+  <line x1="122" y1="91" x2="108" y2="96" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="1.5,1.5"/>
+  <!-- Érecteurs / colonne lombaire -->
+  <line x1="96" y1="140" x2="96" y2="188" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,2"/>
+  <line x1="104" y1="140" x2="104" y2="188" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,2"/>
+  <!-- Creux inter-fessier -->
+  <line x1="100" y1="196" x2="100" y2="240" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <!-- Pli fessier -->
+  <path d="M74,244 C84,252 100,254 126,244" stroke="#0d2e4a" stroke-width="0.5" fill="none" stroke-dasharray="2,2"/>
+  <!-- Bandelette iliotibiale -->
+  <line x1="76" y1="260" x2="74" y2="312" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
+  <line x1="124" y1="260" x2="126" y2="312" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
+  <!-- Creux poplité (derrière genou) -->
+  <path d="M74,312 C80,316 90,318 90,316" stroke="#0d2e4a" stroke-width="0.4" fill="none"/>
+  <path d="M126,312 C120,316 110,318 110,316" stroke="#0d2e4a" stroke-width="0.4" fill="none"/>
+
+  <!-- ── HUD : Coins brackets ── -->
+  <path d="M4,22 L4,4 L22,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <path d="M196,22 L196,4 L178,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <path d="M4,398 L4,416 L22,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <path d="M196,398 L196,416 L178,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
+  <line x1="92" y1="4" x2="108" y2="4" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+  <line x1="92" y1="416" x2="108" y2="416" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+
+  <!-- ── Scan line ── -->
+  <g>
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="8" stroke-opacity="0.04">
+      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="1.2" stroke-opacity="0.28">
+      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
+    </line>
+  </g>
 
   <!-- ── Zones musculaires DOS ── -->
   <!-- Deltoïdes postérieurs -->
@@ -1119,9 +1213,13 @@ body{background:transparent;font-family:'Courier New',monospace;color:#ccc;overf
 .vbtn.active{background:rgba(88,204,255,0.14);border-color:#58CCFF;color:#fff;
   box-shadow:0 0 14px rgba(88,204,255,0.25);}
 .vbtn:hover:not(.active){background:rgba(88,204,255,0.08);color:#7ab8d8;}
-.zone{cursor:pointer;transition:filter 0.2s;}
-.zone:hover{filter:brightness(2) drop-shadow(0 0 6px currentColor);}
-.zone.on{filter:brightness(2.8) drop-shadow(0 0 12px currentColor);}
+.zone{cursor:pointer;transition:filter 0.25s;}
+.zone:hover{filter:brightness(2.2) drop-shadow(0 0 8px currentColor);}
+@keyframes pulse{
+  0%,100%{filter:brightness(2.6) drop-shadow(0 0 10px currentColor);}
+  50%{filter:brightness(4.0) drop-shadow(0 0 22px currentColor) drop-shadow(0 0 6px #fff);}
+}
+.zone.on{animation:pulse 1.8s ease-in-out infinite;}
 .mrow{transition:background 0.15s;}
 .mrow:hover{background:rgba(88,204,255,0.07)!important;}
 .mrow.arow{background:rgba(88,204,255,0.1)!important;}
