@@ -1427,10 +1427,7 @@ muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog_seances fo
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
 df_h["Muscle"] = df_h.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1).astype(str)
 
-# Logo toujours visible en haut
-col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
-with col_l2:
-    st.image("logo.png")
+
 
 # Calcul df_p global (partagé entre onglets)
 arch_rows = prog.get('_archive', [])
