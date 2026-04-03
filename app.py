@@ -354,8 +354,8 @@ def auto_muscles(name):
         (["shrug","haussement"], ["Épaules"]),
         (["upright row","tirage menton"], ["Épaules","Biceps"]),
         # BICEPS
-        (["curl marteau","hammer curl","marteau"], ["Biceps","Avant-bras"]),
-        (["reverse curl","curl inversé"], ["Biceps","Avant-bras"]),
+        (["curl marteau","hammer curl","marteau"], ["Biceps"]),
+        (["reverse curl","curl inversé"], ["Biceps"]),
         (["curl barre","curl haltère","curl poulie","curl concentré","curl incliné","curl scott","preacher curl","zottman"], ["Biceps"]),
         (["curl"], ["Biceps"]),
         (["biceps"], ["Biceps"]),
@@ -842,34 +842,59 @@ def body_map_section(df_p):
         "Ischio-jambiers": {"std": 60,  "zid_f": None,         "zid_b": "z-ischio"},
         "Fessiers":        {"std": 80,  "zid_f": None,         "zid_b": "z-fessiers"},
         "Mollets":         {"std": 60,  "zid_f": "z-mollets",  "zid_b": "z-mollets-b"},
-        "Bras":            {"std": 30,  "zid_f": "z-biceps",   "zid_b": None},   # legacy
-        "Jambes":          {"std": 100, "zid_f": "z-quad",     "zid_b": None},   # legacy
+        "Bras":            {"std": 30,  "zid_f": "z-biceps",   "zid_b": None},
+        "Jambes":          {"std": 100, "zid_f": "z-quad",     "zid_b": None},
     }
     DISPLAY_MUSCLES = [m for m in MUSCLES if m not in ("Bras", "Jambes")]
 
     def get_col(pct):
-        if pct == 0:    return "#1e2d3d"
+        if pct == 0:    return "#1a2a3a"
         elif pct < 40:  return "#FF453A"
         elif pct < 70:  return "#FF9F0A"
         elif pct < 95:  return "#58CCFF"
         else:           return "#00FF7F"
 
+    def get_lbl(pct):
+        if pct == 0:   return "—"
+        elif pct < 40: return "DÉB"
+        elif pct < 70: return "INT"
+        elif pct < 95: return "AVA"
+        else:          return "EXP"
+
+    def sid(m):
+        return m.lower().replace("é","e").replace("è","e").replace("ê","e").replace("à","a").replace("â","a").replace("î","i").replace("-","").replace(" ","")
+
     def muscle_df(m):
         if df_p.empty: return pd.DataFrame()
         return df_p[df_p["Muscle"].str.contains(m, regex=False, na=False)]
 
-    # Stats par muscle
     sc = {}
     for m, info in MUSCLES.items():
         md = muscle_df(m)
         rm = md["1RM"].max() if not md.empty else 0
         pct = min((rm / info["std"]) * 100, 120) if info["std"] > 0 else 0
-        sc[m] = {"pct": pct, "lvl": min(int(pct / 20), 5), "col": get_col(pct), "rm": rm, "std": info["std"]}
+        sc[m] = {"pct": pct, "col": get_col(pct), "rm": rm, "std": info["std"], "lbl": get_lbl(pct)}
 
-    def mc(m): return sc[m]["col"]
-    def mop(m): return "0.9" if sc[m]["pct"] > 0 else "0.2"
+    def mf(m, pfx):
+        return f"url(#{pfx}{sid(m)})" if sc[m]["pct"] > 0 else "#1a2a3a"
+    def mop(m):
+        return "0.92" if sc[m]["pct"] > 0 else "0.13"
 
-    # Données JS par muscle : record réel + dernières séances + top exos
+    def make_grads(pfx):
+        g = ""
+        for m in DISPLAY_MUSCLES:
+            c = sc[m]["col"]
+            if sc[m]["pct"] > 0:
+                g += (f'<radialGradient id="{pfx}{sid(m)}" cx="50%" cy="35%" r="65%">'
+                      f'<stop offset="0%" stop-color="{c}" stop-opacity="1"/>'
+                      f'<stop offset="55%" stop-color="{c}" stop-opacity="0.65"/>'
+                      f'<stop offset="100%" stop-color="{c}" stop-opacity="0.08"/>'
+                      f'</radialGradient>')
+        return g
+
+    grads_f = make_grads("gf")
+    grads_b = make_grads("gb")
+
     muscle_data = {}
     for m in DISPLAY_MUSCLES:
         md = muscle_df(m)
@@ -894,8 +919,8 @@ def body_map_section(df_p):
                     best_rm = grp2.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
                     evo.append({"w": int(wk2), "r": round(float(best_rm), 1)})
         muscle_data[m] = {
-            "pct": round(sc[m]["pct"], 1), "lvl": sc[m]["lvl"],
-            "col": sc[m]["col"], "rm": round(sc[m]["rm"], 1), "std": sc[m]["std"],
+            "pct": round(sc[m]["pct"], 1), "col": sc[m]["col"],
+            "rm": round(sc[m]["rm"], 1), "std": sc[m]["std"], "lbl": sc[m]["lbl"],
             "zid_f": MUSCLES[m]["zid_f"], "zid_b": MUSCLES[m]["zid_b"],
             "best": {"w": best_w, "r": best_r},
             "last": last_sessions, "exos": exos, "evo": evo,
@@ -903,164 +928,192 @@ def body_map_section(df_p):
 
     data_json = json.dumps(muscle_data, ensure_ascii=False)
 
-    # SVG FACE (FRONT)
-    svg_front = f"""<svg viewBox="0 0 200 370" width="148" xmlns="http://www.w3.org/2000/svg">
-  <defs><filter id="gw"><feGaussianBlur stdDeviation="3" result="b"/>
-    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    # SVG FACE
+    svg_front = f"""<svg viewBox="0 0 200 370" width="150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="gw" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    {grads_f}
+  </defs>
   <!-- Silhouette -->
-  <ellipse cx="100" cy="32" rx="21" ry="25" fill="#0d1b2a" stroke="#1e3a5f" stroke-width="1.2"/>
-  <circle cx="92" cy="27" r="2" fill="#58CCFF" opacity="0.35"/>
-  <circle cx="108" cy="27" r="2" fill="#58CCFF" opacity="0.35"/>
-  <rect x="92" y="55" width="16" height="14" rx="5" fill="#0d1b2a" stroke="#1e3a5f" stroke-width="0.8"/>
-  <path d="M79,68 L121,68 L126,175 L74,175 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.8" opacity="0.8"/>
-  <path d="M57,72 L75,72 L70,132 L55,132 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M53,134 L69,134 L65,192 L50,192 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="54" cy="196" rx="9" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.5"/>
-  <path d="M143,72 L125,72 L130,132 L145,132 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M147,134 L131,134 L135,192 L150,192 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="146" cy="196" rx="9" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.5"/>
-  <ellipse cx="100" cy="177" rx="28" ry="10" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.8" opacity="0.7"/>
-  <path d="M72,183 L96,183 L94,265 L70,265 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M71,267 L92,267 L90,345 L69,345 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="78" cy="350" rx="16" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.4"/>
-  <path d="M128,183 L104,183 L106,265 L130,265 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M129,267 L108,267 L110,345 L131,345 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="122" cy="350" rx="16" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.4"/>
-  <!-- Zones muscles FACE -->
+  <ellipse cx="100" cy="31" rx="22" ry="26" fill="#0b1622" stroke="#1c3450" stroke-width="1.2"/>
+  <circle cx="93" cy="27" r="2.2" fill="#58CCFF" opacity="0.28"/>
+  <circle cx="107" cy="27" r="2.2" fill="#58CCFF" opacity="0.28"/>
+  <path d="M92,56 L108,56 L109,69 L91,69 Z" fill="#0b1622" stroke="#1c3450" stroke-width="0.8"/>
+  <path d="M79,68 L121,68 L126,176 L74,176 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.9" opacity="0.9"/>
+  <path d="M58,70 L76,70 L71,134 L55,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M53,136 L70,136 L66,195 L49,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="54" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
+  <path d="M142,70 L124,70 L129,134 L145,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M147,136 L130,136 L134,195 L151,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="146" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
+  <ellipse cx="100" cy="178" rx="29" ry="10" fill="#080e1a" stroke="#1c3450" stroke-width="0.8" opacity="0.8"/>
+  <path d="M73,184 L97,184 L95,268 L71,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M71,270 L93,270 L91,348 L69,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="79" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
+  <path d="M127,184 L103,184 L105,268 L129,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M129,270 L107,270 L109,348 L131,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="121" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
+  <!-- Zones FACE avec dégradés -->
   <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <ellipse cx="60" cy="82" rx="19" ry="13" fill="{mc('Épaules')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
-    <ellipse cx="140" cy="82" rx="19" ry="13" fill="{mc('Épaules')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <ellipse cx="60" cy="82" rx="20" ry="14" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <ellipse cx="140" cy="82" rx="20" ry="14" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
   </g>
   <g id="z-pecs" class="zone" onclick="sel('Pecs')"><title>Pecs</title>
-    <path d="M80,72 Q93,90 100,102 Q87,96 79,83 Z" fill="{mc('Pecs')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
-    <path d="M120,72 Q107,90 100,102 Q113,96 121,83 Z" fill="{mc('Pecs')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M80,70 Q94,88 101,106 Q87,100 78,85 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M120,70 Q106,88 99,106 Q113,100 122,85 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
   </g>
   <g id="z-biceps" class="zone" onclick="sel('Biceps')"><title>Biceps</title>
-    <rect x="58" y="74" width="16" height="46" rx="8" fill="{mc('Biceps')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
-    <rect x="126" y="74" width="16" height="46" rx="8" fill="{mc('Biceps')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M59,73 Q75,73 75,122 Q59,122 57,98 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M141,73 Q125,73 125,122 Q141,122 143,98 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
   </g>
   <g id="z-avbras" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <rect x="54" y="126" width="14" height="60" rx="7" fill="{mc('Avant-bras')}" opacity="0.75" filter="url(#gw)"/>
-    <rect x="132" y="126" width="14" height="60" rx="7" fill="{mc('Avant-bras')}" opacity="0.75" filter="url(#gw)"/>
+    <rect x="52" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <rect x="132" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
   </g>
   <g id="z-abdos" class="zone" onclick="sel('Abdos')"><title>Abdos</title>
-    <rect x="83" y="106" width="14" height="18" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
-    <rect x="103" y="106" width="14" height="18" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
-    <rect x="84" y="128" width="13" height="18" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
-    <rect x="103" y="128" width="13" height="18" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
-    <rect x="86" y="149" width="11" height="15" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
-    <rect x="103" y="149" width="11" height="15" rx="4" fill="{mc('Abdos')}" opacity="{mop('Abdos')}"/>
+    <rect x="85" y="108" width="12" height="16" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="103" y="108" width="12" height="16" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="85" y="128" width="12" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="103" y="128" width="12" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="87" y="147" width="10" height="14" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="103" y="147" width="10" height="14" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
   </g>
   <g id="z-quad" class="zone" onclick="sel('Quadriceps')"><title>Quadriceps</title>
-    <rect x="72" y="186" width="23" height="68" rx="11" fill="{mc('Quadriceps')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
-    <rect x="105" y="186" width="23" height="68" rx="11" fill="{mc('Quadriceps')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M74,186 Q97,185 96,268 Q71,268 72,186 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M126,186 Q103,185 104,268 Q129,268 128,186 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
   </g>
   <g id="z-mollets" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
-    <rect x="72" y="270" width="19" height="62" rx="9" fill="{mc('Mollets')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
-    <rect x="109" y="270" width="19" height="62" rx="9" fill="{mc('Mollets')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <rect x="72" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <rect x="108" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
   </g>
 </svg>"""
 
-    # SVG DOS (BACK)
-    svg_back = f"""<svg viewBox="0 0 200 370" width="148" xmlns="http://www.w3.org/2000/svg">
-  <defs><filter id="gwb"><feGaussianBlur stdDeviation="3" result="b"/>
-    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    # SVG DOS
+    svg_back = f"""<svg viewBox="0 0 200 370" width="150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="gwb" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    {grads_b}
+  </defs>
   <!-- Silhouette -->
-  <ellipse cx="100" cy="32" rx="21" ry="25" fill="#0d1b2a" stroke="#1e3a5f" stroke-width="1.2"/>
-  <rect x="92" y="55" width="16" height="14" rx="5" fill="#0d1b2a" stroke="#1e3a5f" stroke-width="0.8"/>
-  <path d="M79,68 L121,68 L126,175 L74,175 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.8" opacity="0.8"/>
-  <path d="M57,72 L75,72 L70,132 L55,132 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M53,134 L69,134 L65,192 L50,192 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="54" cy="196" rx="9" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.5"/>
-  <path d="M143,72 L125,72 L130,132 L145,132 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M147,134 L131,134 L135,192 L150,192 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="146" cy="196" rx="9" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.5"/>
-  <ellipse cx="100" cy="177" rx="28" ry="10" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.8" opacity="0.7"/>
-  <path d="M72,183 L96,183 L94,265 L70,265 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M71,267 L92,267 L90,345 L69,345 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="78" cy="350" rx="16" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.4"/>
-  <path d="M128,183 L104,183 L106,265 L130,265 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <path d="M129,267 L108,267 L110,345 L131,345 Z" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.8"/>
-  <ellipse cx="122" cy="350" rx="16" ry="6" fill="#0a1520" stroke="#1e3a5f" stroke-width="0.7" opacity="0.4"/>
-  <!-- Zones muscles DOS -->
+  <ellipse cx="100" cy="31" rx="22" ry="26" fill="#0b1622" stroke="#1c3450" stroke-width="1.2"/>
+  <path d="M92,56 L108,56 L109,69 L91,69 Z" fill="#0b1622" stroke="#1c3450" stroke-width="0.8"/>
+  <path d="M79,68 L121,68 L126,176 L74,176 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.9" opacity="0.9"/>
+  <path d="M58,70 L76,70 L71,134 L55,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M53,136 L70,136 L66,195 L49,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="54" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
+  <path d="M142,70 L124,70 L129,134 L145,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M147,136 L130,136 L134,195 L151,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="146" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
+  <ellipse cx="100" cy="178" rx="29" ry="10" fill="#080e1a" stroke="#1c3450" stroke-width="0.8" opacity="0.8"/>
+  <path d="M73,184 L97,184 L95,268 L71,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M71,270 L93,270 L91,348 L69,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="79" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
+  <path d="M127,184 L103,184 L105,268 L129,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <path d="M129,270 L107,270 L109,348 L131,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
+  <ellipse cx="121" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
+  <!-- Zones DOS avec dégradés -->
   <g id="z-epaules-b" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <ellipse cx="60" cy="82" rx="19" ry="13" fill="{mc('Épaules')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
-    <ellipse cx="140" cy="82" rx="19" ry="13" fill="{mc('Épaules')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <ellipse cx="60" cy="82" rx="20" ry="14" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <ellipse cx="140" cy="82" rx="20" ry="14" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
   </g>
   <g id="z-dos" class="zone" onclick="sel('Dos')"><title>Dos</title>
-    <path d="M92,68 L108,68 L116,90 L84,90 Z" fill="{mc('Dos')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <path d="M80,92 L96,92 L100,160 L76,148 Z" fill="{mc('Dos')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <path d="M120,92 L104,92 L100,160 L124,148 Z" fill="{mc('Dos')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M91,68 L109,68 L117,93 L83,93 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M79,95 L97,95 L100,162 L75,150 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M121,95 L103,95 L100,162 L125,150 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
   </g>
   <g id="z-triceps" class="zone" onclick="sel('Triceps')"><title>Triceps</title>
-    <rect x="58" y="74" width="16" height="46" rx="8" fill="{mc('Triceps')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
-    <rect x="126" y="74" width="16" height="46" rx="8" fill="{mc('Triceps')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M59,73 Q75,73 75,122 Q59,122 57,98 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M141,73 Q125,73 125,122 Q141,122 143,98 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
   </g>
   <g id="z-avbras-b" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <rect x="54" y="126" width="14" height="60" rx="7" fill="{mc('Avant-bras')}" opacity="0.75" filter="url(#gwb)"/>
-    <rect x="132" y="126" width="14" height="60" rx="7" fill="{mc('Avant-bras')}" opacity="0.75" filter="url(#gwb)"/>
+    <rect x="52" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <rect x="132" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
   </g>
   <g id="z-fessiers" class="zone" onclick="sel('Fessiers')"><title>Fessiers</title>
-    <ellipse cx="86" cy="185" rx="21" ry="16" fill="{mc('Fessiers')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
-    <ellipse cx="114" cy="185" rx="21" ry="16" fill="{mc('Fessiers')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
+    <ellipse cx="86" cy="185" rx="22" ry="17" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
+    <ellipse cx="114" cy="185" rx="22" ry="17" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
   </g>
   <g id="z-ischio" class="zone" onclick="sel('Ischio-jambiers')"><title>Ischio-jambiers</title>
-    <rect x="72" y="202" width="23" height="58" rx="11" fill="{mc('Ischio-jambiers')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
-    <rect x="105" y="202" width="23" height="58" rx="11" fill="{mc('Ischio-jambiers')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M74,204 Q97,202 96,268 Q71,268 73,204 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M126,204 Q103,202 104,268 Q129,268 127,204 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
   </g>
   <g id="z-mollets-b" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
-    <rect x="72" y="270" width="19" height="62" rx="9" fill="{mc('Mollets')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
-    <rect x="109" y="270" width="19" height="62" rx="9" fill="{mc('Mollets')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+    <rect x="72" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+    <rect x="108" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
   </g>
 </svg>"""
 
-    # Overview rows
+    # Légende couleurs + overview rows
+    lbl_col = {"—":"#2a3a4a","DÉB":"#FF453A","INT":"#FF9F0A","AVA":"#58CCFF","EXP":"#00FF7F"}
+    legend_html = (
+        '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:7px;flex-wrap:wrap;">'
+        + ''.join(
+            f'<div style="display:flex;align-items:center;gap:3px;">'
+            f'<div style="width:7px;height:7px;border-radius:50%;background:{c};box-shadow:0 0 5px {c}88;"></div>'
+            f'<span style="font-size:7.5px;color:{c};letter-spacing:0.5px;">{lbl}</span></div>'
+            for lbl, c in [("DÉB","#FF453A"),("INT","#FF9F0A"),("AVA","#58CCFF"),("EXP","#00FF7F")]
+        )
+        + '</div>'
+    )
+
     overview_rows = ""
     for m in DISPLAY_MUSCLES:
         s = sc[m]
         pct_w = min(s['pct'], 100)
-        if MUSCLES[m]["zid_f"] is None:
-            view_hint = "DOS · "
-        elif MUSCLES[m]["zid_b"] is None:
-            view_hint = "FACE · "
-        else:
-            view_hint = ""
+        lc = lbl_col.get(s['lbl'], "#2a3a4a")
         overview_rows += (
-            f'<div class="mrow" onclick="selAuto(\'{m}\')" '
-            f'style="border-left:2px solid {s["col"]}55;padding:3px 0 3px 7px;margin-bottom:4px;cursor:pointer;border-radius:0 6px 6px 0;">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;">'
-            f'<span style="font-size:10px;color:{s["col"]};font-weight:700;">{m.upper()}</span>'
-            f'<span style="font-size:8px;color:#444;">{view_hint}{s["rm"]:.0f}kg 1RM</span>'
+            f'<div class="mrow" onclick="selAuto(\'{m}\')" data-m="{m}"'
+            f' style="padding:5px 6px 4px;margin-bottom:3px;cursor:pointer;border-radius:6px;'
+            f'border-left:3px solid {s["col"]};">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+            f'<span style="font-size:10px;color:{s["col"]};font-weight:700;letter-spacing:0.5px;">{m}</span>'
+            f'<span style="font-size:7.5px;color:{lc};background:{lc}22;border-radius:3px;'
+            f'padding:1px 5px;font-weight:700;">{s["lbl"]}</span>'
             f'</div>'
-            f'<div style="background:rgba(255,255,255,0.07);border-radius:2px;height:3px;margin-top:2px;">'
-            f'<div style="width:{pct_w:.0f}%;height:100%;background:{s["col"]};border-radius:2px;'
-            f'box-shadow:0 0 5px {s["col"]};transition:width 0.4s;"></div></div></div>'
+            f'<div style="display:flex;align-items:center;gap:5px;">'
+            f'<div style="flex:1;background:rgba(255,255,255,0.06);border-radius:3px;height:4px;">'
+            f'<div style="width:{pct_w:.0f}%;height:100%;'
+            f'background:linear-gradient(90deg,{s["col"]}88,{s["col"]});border-radius:3px;'
+            f'box-shadow:0 0 7px {s["col"]}66;"></div></div>'
+            f'<span style="font-size:8px;color:#4a5a6a;white-space:nowrap;">{s["rm"]:.0f}kg</span>'
+            f'</div></div>'
         )
 
     css = """<style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:transparent;font-family:monospace;color:#ccc;overflow:hidden;}
-.wrap{background:linear-gradient(160deg,#060e1e,#050A18);border-radius:16px;
-  border:1px solid rgba(88,204,255,0.2);padding:10px;display:flex;gap:10px;
-  box-shadow:inset 0 0 50px rgba(88,204,255,0.03);}
+body{background:transparent;font-family:'Courier New',monospace;color:#ccc;overflow:hidden;}
+.wrap{background:linear-gradient(150deg,#060e1e 0%,#04080f 100%);border-radius:16px;
+  border:1px solid rgba(88,204,255,0.18);padding:10px;display:flex;gap:8px;
+  box-shadow:0 4px 30px rgba(0,0,0,0.6),inset 0 0 60px rgba(88,204,255,0.02);}
 .svg-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
-.vtoggle{display:flex;gap:4px;margin-bottom:6px;}
-.vbtn{background:rgba(255,255,255,0.05);border:1px solid rgba(88,204,255,0.3);
-  color:#58CCFF;font-family:monospace;font-size:9px;padding:3px 12px;
-  border-radius:4px;cursor:pointer;transition:all 0.15s;letter-spacing:1px;}
-.vbtn.active{background:rgba(88,204,255,0.15);border-color:#58CCFF;color:#fff;}
-.vbtn:hover{background:rgba(88,204,255,0.1);}
-.zone{cursor:pointer;transition:filter 0.15s;}
-.zone:hover{filter:brightness(1.6);}
-.zone.on{filter:brightness(2.2) drop-shadow(0 0 6px currentColor);}
-.mrow:hover{background:rgba(88,204,255,0.06)!important;}
-.scard{background:rgba(255,255,255,0.04);border-radius:8px;padding:6px;text-align:center;flex:1;min-width:0;}
+.vtoggle{display:flex;gap:5px;margin-bottom:7px;}
+.vbtn{background:rgba(255,255,255,0.04);border:1px solid rgba(88,204,255,0.22);
+  color:#4a8aaa;font-family:monospace;font-size:9px;padding:4px 14px;
+  border-radius:20px;cursor:pointer;transition:all 0.2s;letter-spacing:1.5px;}
+.vbtn.active{background:rgba(88,204,255,0.14);border-color:#58CCFF;color:#fff;
+  box-shadow:0 0 14px rgba(88,204,255,0.25);}
+.vbtn:hover:not(.active){background:rgba(88,204,255,0.08);color:#7ab8d8;}
+.zone{cursor:pointer;transition:filter 0.18s;}
+.zone:hover{filter:brightness(1.9) drop-shadow(0 0 5px currentColor);}
+.zone.on{filter:brightness(2.6) drop-shadow(0 0 10px currentColor);}
+.mrow{transition:background 0.15s;}
+.mrow:hover{background:rgba(88,204,255,0.07)!important;}
+.mrow.arow{background:rgba(88,204,255,0.1)!important;}
 #detail{display:none;}
-.back{cursor:pointer;color:#58CCFF;font-size:10px;margin-bottom:8px;opacity:0.7;display:inline-block;}
+.back{cursor:pointer;color:#58CCFF;font-size:10px;margin-bottom:9px;opacity:0.55;
+  display:inline-block;transition:opacity 0.15s;letter-spacing:1px;}
 .back:hover{opacity:1;}
-.ltable{width:100%;border-collapse:collapse;font-size:9px;margin:4px 0 6px;}
-.ltable th{color:#444;font-weight:normal;padding:1px 3px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.ltable td{padding:2px 3px;color:#aaa;}
+.ltable{width:100%;border-collapse:collapse;font-size:9px;margin:3px 0 5px;}
+.ltable th{color:#333;font-weight:normal;padding:2px 4px;
+  border-bottom:1px solid rgba(255,255,255,0.06);letter-spacing:1px;}
+.ltable td{padding:2px 4px;color:#7a8a9a;}
+.ltable tr:hover td{color:#aaa;}
 </style>"""
 
     js = r"""<script>
@@ -1085,45 +1138,55 @@ function selAuto(name) {
 
 function sel(name) {
   document.querySelectorAll('.zone').forEach(z=>z.classList.remove('on'));
+  document.querySelectorAll('.mrow').forEach(r=>r.classList.remove('arow'));
   const d = D[name]; if (!d) return;
   const zid = curView==='front' ? d.zid_f : d.zid_b;
   if (zid) { const el=document.getElementById(zid); if(el) el.classList.add('on'); }
+  document.querySelectorAll('.mrow').forEach(r=>{if(r.dataset.m===name)r.classList.add('arow');});
   document.getElementById('ov').style.display='none';
   document.getElementById('detail').style.display='block';
 
-  let h = '<div style="color:'+d.col+';font-size:13px;font-weight:700;letter-spacing:2px;margin-bottom:8px;">⬡ '+name.toUpperCase()+'</div>';
+  const lblColors = {"—":"#2a3a4a","DÉB":"#FF453A","INT":"#FF9F0A","AVA":"#58CCFF","EXP":"#00FF7F"};
+  const lc = lblColors[d.lbl] || "#444";
+  let h = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+    + '<div style="width:3px;height:32px;background:'+d.col+';border-radius:2px;box-shadow:0 0 10px '+d.col+'66;"></div>'
+    + '<div><div style="font-size:13px;font-weight:900;color:'+d.col+';letter-spacing:2px;">'+name.toUpperCase()+'</div>'
+    + '<div style="font-size:8px;color:'+lc+';letter-spacing:1px;margin-top:1px;">'+d.lbl+' · '+d.pct.toFixed(0)+'% objectif</div>'
+    + '</div></div>';
 
   if (d.best && d.best.w > 0) {
-    h += '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-bottom:8px;text-align:center;border:1px solid '+d.col+'33;">'
-      + '<div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:3px;">RECORD PERSONNEL</div>'
-      + '<div style="font-size:22px;font-weight:900;color:'+d.col+';">'+d.best.w.toFixed(1)+'<span style="font-size:12px;color:#666;">kg</span>'
-      + ' <span style="font-size:15px;color:#555;">×</span> '
-      + d.best.r+'<span style="font-size:12px;color:#666;"> reps</span></div>'
-      + '<div style="font-size:9px;color:#444;margin-top:2px;">1RM est. '+d.rm.toFixed(1)+'kg &nbsp;·&nbsp; std '+d.std+'kg</div>'
+    h += '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;margin-bottom:8px;text-align:center;border:1px solid '+d.col+'28;">'
+      + '<div style="font-size:7.5px;color:#444;letter-spacing:1.5px;margin-bottom:4px;">RECORD PERSONNEL</div>'
+      + '<div style="font-size:24px;font-weight:900;color:'+d.col+';line-height:1;">'+d.best.w.toFixed(1)
+      + '<span style="font-size:12px;color:#555;"> kg</span>'
+      + ' <span style="font-size:14px;color:#444;">×</span> '
+      + d.best.r+'<span style="font-size:12px;color:#555;"> reps</span></div>'
+      + '<div style="font-size:8.5px;color:#3a4a5a;margin-top:4px;">1RM · '+d.rm.toFixed(1)+'kg &nbsp;/&nbsp; obj. '+d.std+'kg</div>'
       + '</div>';
   } else {
-    h += '<div style="font-size:10px;color:#333;text-align:center;padding:14px 0;">Pas encore de données.<br><span style="font-size:20px;">💪</span></div>';
+    h += '<div style="font-size:10px;color:#2a3a4a;text-align:center;padding:16px 0 14px;">Pas encore de données<br><span style="font-size:22px;opacity:0.4;">💪</span></div>';
   }
 
   if (d.last && d.last.length) {
-    h += '<div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:2px;">DERNIÈRES SÉANCES</div>'
+    h += '<div style="font-size:7.5px;color:#3a4a5a;letter-spacing:1.5px;margin-bottom:3px;">DERNIÈRES SÉANCES</div>'
       + '<table class="ltable"><tr><th>Sem.</th><th>Charge</th><th>Reps</th></tr>';
     d.last.forEach(ls => {
-      h += '<tr><td style="color:#58CCFF">S'+ls.s+'</td><td style="color:'+d.col+'">'+ls.w.toFixed(1)+'kg</td><td>'+ls.r+'</td></tr>';
+      h += '<tr><td style="color:#58CCFF88">S'+ls.s+'</td><td style="color:'+d.col+'">'+ls.w.toFixed(1)+'kg</td><td>'+ls.r+'</td></tr>';
     });
     h += '</table>';
   }
 
   if (d.exos && d.exos.length) {
-    h += '<div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:3px;">TOP EXERCICES</div>';
+    h += '<div style="font-size:7.5px;color:#3a4a5a;letter-spacing:1.5px;margin-bottom:4px;">TOP EXERCICES</div>';
     d.exos.forEach((e,i) => {
-      h += '<div style="font-size:9px;margin-bottom:2px;color:#666;">'+(i===0?'▶':'·')+' '+e.name
-        +' <span style="color:'+d.col+';font-weight:700;">'+e.w.toFixed(1)+'kg × '+e.r+'</span></div>';
+      h += '<div style="font-size:9px;margin-bottom:3px;color:#5a6a7a;">'
+        + (i===0?'<span style="color:'+d.col+'">▶</span>':'<span style="color:#2a3a4a">·</span>')
+        + ' '+e.name+' <span style="color:'+d.col+';font-weight:700;">'+e.w.toFixed(1)+'kg×'+e.r+'</span></div>';
     });
   }
 
   if (d.evo && d.evo.length>1) {
-    h += '<div style="font-size:8px;color:#555;letter-spacing:1px;margin:5px 0 3px;">ÉVOLUTION 1RM</div>'+spark(d.evo,d.col);
+    h += '<div style="font-size:7.5px;color:#3a4a5a;letter-spacing:1.5px;margin:6px 0 4px;">ÉVOLUTION 1RM</div>'+spark(d.evo,d.col);
   }
 
   document.getElementById('dc').innerHTML = h;
@@ -1131,29 +1194,37 @@ function sel(name) {
 
 function back() {
   document.querySelectorAll('.zone').forEach(z=>z.classList.remove('on'));
+  document.querySelectorAll('.mrow').forEach(r=>r.classList.remove('arow'));
   document.getElementById('ov').style.display='block';
   document.getElementById('detail').style.display='none';
 }
 
-function spark(evo,col){
-  const W=155,H=46,pts=[],cir=[];
+function spark(evo, col) {
+  const W=160, H=50, pad=8, pts=[], cir=[];
   const rms=evo.map(e=>e.r), mn=Math.min(...rms), mx=Math.max(...rms), rng=mx-mn||1;
   evo.forEach((e,i)=>{
-    const x=(i/(evo.length-1))*(W-14)+7, y=H-((e.r-mn)/rng)*(H-14)-7;
-    pts.push(x+','+y); cir.push('<circle cx="'+x+'" cy="'+y+'" r="2.5" fill="'+col+'" stroke="#060e1e" stroke-width="1.5"/>');
+    const x=(i/(evo.length-1))*(W-pad*2)+pad, y=H-((e.r-mn)/rng)*(H-pad*2)-pad;
+    pts.push(x+','+y);
+    cir.push('<circle cx="'+x+'" cy="'+y+'" r="2.8" fill="'+col+'" stroke="#04080f" stroke-width="1.5"/>');
   });
-  const first=evo[0],last=evo[evo.length-1];
-  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:46px;background:rgba(0,0,0,0.18);border-radius:6px;">'
+  const area_pts = pts.join(' ')+' '+W+','+(H-1)+' '+0+','+(H-1);
+  const first=evo[0], last=evo[evo.length-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:50px;background:rgba(0,0,0,0.25);'
+    +'border-radius:7px;border:1px solid rgba(255,255,255,0.04);">'
+    +'<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0%" stop-color="'+col+'" stop-opacity="0.18"/>'
+    +'<stop offset="100%" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'
+    +'<polygon points="'+area_pts+'" fill="url(#ag)"/>'
     +'<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
     +cir.join('')
-    +'<text x="7" y="'+(H-2)+'" fill="#444" font-size="7">S'+first.w+'</text>'
-    +'<text x="'+(W-7)+'" y="'+(H-2)+'" fill="#444" font-size="7" text-anchor="end">S'+last.w+'</text>'
+    +'<text x="'+pad+'" y="'+(H-2)+'" fill="#2a3a4a" font-size="7" font-family="monospace">S'+first.w+'</text>'
+    +'<text x="'+(W-pad)+'" y="'+(H-2)+'" fill="#2a3a4a" font-size="7" font-family="monospace" text-anchor="end">S'+last.w+'</text>'
     +'</svg>';
 }
 </script>"""
 
     html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">{css}</head><body>
-<div style="text-align:center;font-family:monospace;font-size:9px;color:#58CCFF;letter-spacing:2px;margin-bottom:4px;opacity:0.45;">◈ SCAN CORPOREL ◈</div>
+<div style="text-align:center;font-family:monospace;font-size:8.5px;color:#2a4a6a;letter-spacing:3px;margin-bottom:5px;">◈ SCAN CORPOREL ◈</div>
 <div class="wrap">
   <div class="svg-col">
     <div class="vtoggle">
@@ -1165,7 +1236,7 @@ function spark(evo,col){
   </div>
   <div style="flex:1;min-width:0;overflow:hidden;">
     <div id="ov">
-      <div style="font-size:8px;color:#444;letter-spacing:1px;margin-bottom:6px;">↓ CLIQUE SUR UN MUSCLE</div>
+      {legend_html}
       {overview_rows}
     </div>
     <div id="detail">
@@ -1177,7 +1248,7 @@ function spark(evo,col){
 {js}
 </body></html>"""
 
-    components.html(html, height=460, scrolling=False)
+    components.html(html, height=465, scrolling=False)
 
 
 # --- 6. CARDIO ---
@@ -1752,7 +1823,7 @@ with tab_st:
     st.markdown("### 🫁 Carte du Corps")
     body_map_section(df_p)
 
-    if not df_h.empty:
+    if not df_p.empty:
         st.markdown("### 🏅 Hall of Fame")
         _FILT_ALL = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos","Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
         m_filt = st.multiselect("Filtrer par muscle :", _FILT_ALL, default=_FILT_ALL)
