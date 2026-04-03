@@ -314,6 +314,14 @@ def get_rep_estimations(one_rm):
 def get_base_name(full_name):
     return full_name.split("(")[0].strip() if "(" in full_name else full_name
 
+def fix_muscle(exercice, muscle):
+    """Corrige les valeurs de muscle legacy ('Bras', 'Jambes', 'Autre') via auto_muscles."""
+    if muscle in ("Bras", "Jambes", "Autre", "", None):
+        result = auto_muscles(get_base_name(str(exercice)))
+        if result:
+            return result
+    return muscle
+
 def auto_muscles(name):
     """Retourne muscles comma-separated basé sur le nom d'exercice, ou None si inconnu."""
     n = name.lower()
@@ -844,23 +852,9 @@ def body_map_section(df_p):
         elif pct < 95:  return "#58CCFF"
         else:           return "#00FF7F"
 
-    # Legacy : "Bras" → Biceps/Triceps uniquement (pas Avant-bras), "Jambes" → jambes
-    LEGACY = {
-        "Biceps": "Bras", "Triceps": "Bras",
-        "Quadriceps": "Jambes", "Ischio-jambiers": "Jambes",
-        "Fessiers": "Jambes", "Mollets": "Jambes",
-    }
-
-    def has_exact(muscle_str, word):
-        if pd.isna(muscle_str): return False
-        return word in [p.strip() for p in str(muscle_str).split(",")]
-
     def muscle_df(m):
         if df_p.empty: return pd.DataFrame()
-        mask = df_p["Muscle"].str.contains(m, regex=False, na=False)
-        if m in LEGACY:
-            mask = mask | df_p["Muscle"].apply(lambda x: has_exact(x, LEGACY[m]))
-        return df_p[mask]
+        return df_p[df_p["Muscle"].str.contains(m, regex=False, na=False)]
 
     # Stats par muscle
     sc = {}
@@ -1341,6 +1335,7 @@ prog = get_prog()
 prog_seances = {k: v for k, v in prog.items() if not k.startswith('_')}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog_seances for ex in prog_seances[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
+df_h["Muscle"] = df_h.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1)
 
 # Logo toujours visible en haut
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
@@ -1352,8 +1347,11 @@ arch_rows = prog.get('_archive', [])
 if arch_rows:
     df_arch = pd.DataFrame(arch_rows)
     df_arch['Poids'] = pd.to_numeric(df_arch['Poids'], errors='coerce').fillna(0.0)
-    df_arch['Reps'] = pd.to_numeric(df_arch.get('Reps', 1), errors='coerce').fillna(1).astype(int)
-    df_arch['Semaine'] = pd.to_numeric(df_arch.get('Semaine', 0), errors='coerce').fillna(0).astype(int)
+    df_arch['Reps'] = pd.to_numeric(df_arch['Reps'] if 'Reps' in df_arch.columns else 1, errors='coerce').fillna(1).astype(int)
+    df_arch['Semaine'] = pd.to_numeric(df_arch['Semaine'] if 'Semaine' in df_arch.columns else 0, errors='coerce').fillna(0).astype(int)
+    # Remapper les muscles archivés via muscle_mapping (comme df_h)
+    df_arch["Muscle"] = df_arch["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_arch["Muscle"]).replace("", "Autre")
+    df_arch["Muscle"] = df_arch.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1)
     df_live = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame(columns=df_arch.columns)
     df_p = pd.concat([df_live, df_arch[df_arch['Reps'] > 0]], ignore_index=True)
 else:
