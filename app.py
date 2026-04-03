@@ -315,12 +315,14 @@ def get_base_name(full_name):
     return full_name.split("(")[0].strip() if "(" in full_name else full_name
 
 def fix_muscle(exercice, muscle):
-    """Corrige les valeurs de muscle legacy ('Bras', 'Jambes', 'Autre') via auto_muscles."""
-    if muscle in ("Bras", "Jambes", "Autre", "", None):
+    """Corrige les valeurs de muscle legacy ('Bras', 'Jambes', 'Autre', NaN) via auto_muscles."""
+    import pandas as _pd
+    if _pd.isna(muscle) or str(muscle) in ("Bras", "Jambes", "Autre", "nan", ""):
         result = auto_muscles(get_base_name(str(exercice)))
         if result:
             return result
-    return muscle
+        return "Autre"
+    return str(muscle)
 
 def auto_muscles(name):
     """Retourne muscles comma-separated basé sur le nom d'exercice, ou None si inconnu."""
