@@ -854,13 +854,6 @@ def body_map_section(df_p):
         elif pct < 95:  return "#58CCFF"
         else:           return "#00FF7F"
 
-    def get_lbl(pct):
-        if pct == 0:   return "—"
-        elif pct < 40: return "DÉB"
-        elif pct < 70: return "INT"
-        elif pct < 95: return "AVA"
-        else:          return "EXP"
-
     def sid(m):
         return m.lower().replace("é","e").replace("è","e").replace("ê","e").replace("à","a").replace("â","a").replace("î","i").replace("-","").replace(" ","")
 
@@ -873,22 +866,22 @@ def body_map_section(df_p):
         md = muscle_df(m)
         rm = md["1RM"].max() if not md.empty else 0
         pct = min((rm / info["std"]) * 100, 120) if info["std"] > 0 else 0
-        sc[m] = {"pct": pct, "col": get_col(pct), "rm": rm, "std": info["std"], "lbl": get_lbl(pct)}
+        sc[m] = {"pct": pct, "col": get_col(pct), "rm": rm, "std": info["std"]}
 
     def mf(m, pfx):
         return f"url(#{pfx}{sid(m)})" if sc[m]["pct"] > 0 else "#1a2a3a"
     def mop(m):
-        return "0.92" if sc[m]["pct"] > 0 else "0.13"
+        return "0.92" if sc[m]["pct"] > 0 else "0.12"
 
     def make_grads(pfx):
         g = ""
         for m in DISPLAY_MUSCLES:
             c = sc[m]["col"]
             if sc[m]["pct"] > 0:
-                g += (f'<radialGradient id="{pfx}{sid(m)}" cx="50%" cy="35%" r="65%">'
+                g += (f'<radialGradient id="{pfx}{sid(m)}" cx="50%" cy="32%" r="62%">'
                       f'<stop offset="0%" stop-color="{c}" stop-opacity="1"/>'
-                      f'<stop offset="55%" stop-color="{c}" stop-opacity="0.65"/>'
-                      f'<stop offset="100%" stop-color="{c}" stop-opacity="0.08"/>'
+                      f'<stop offset="50%" stop-color="{c}" stop-opacity="0.7"/>'
+                      f'<stop offset="100%" stop-color="{c}" stop-opacity="0.06"/>'
                       f'</radialGradient>')
         return g
 
@@ -920,7 +913,7 @@ def body_map_section(df_p):
                     evo.append({"w": int(wk2), "r": round(float(best_rm), 1)})
         muscle_data[m] = {
             "pct": round(sc[m]["pct"], 1), "col": sc[m]["col"],
-            "rm": round(sc[m]["rm"], 1), "std": sc[m]["std"], "lbl": sc[m]["lbl"],
+            "rm": round(sc[m]["rm"], 1), "std": sc[m]["std"],
             "zid_f": MUSCLES[m]["zid_f"], "zid_b": MUSCLES[m]["zid_b"],
             "best": {"w": best_w, "r": best_r},
             "last": last_sessions, "exos": exos, "evo": evo,
@@ -928,169 +921,196 @@ def body_map_section(df_p):
 
     data_json = json.dumps(muscle_data, ensure_ascii=False)
 
-    # SVG FACE
-    svg_front = f"""<svg viewBox="0 0 200 370" width="150" xmlns="http://www.w3.org/2000/svg">
+    # ─── SVG FACE — corps anatomique réaliste ───────────────────────────────
+    svg_front = f"""<svg viewBox="0 0 200 420" width="148" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="gw" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="4" result="b"/>
+    <filter id="gw" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     {grads_f}
   </defs>
-  <!-- Silhouette -->
-  <ellipse cx="100" cy="31" rx="22" ry="26" fill="#0b1622" stroke="#1c3450" stroke-width="1.2"/>
-  <circle cx="93" cy="27" r="2.2" fill="#58CCFF" opacity="0.28"/>
-  <circle cx="107" cy="27" r="2.2" fill="#58CCFF" opacity="0.28"/>
-  <path d="M92,56 L108,56 L109,69 L91,69 Z" fill="#0b1622" stroke="#1c3450" stroke-width="0.8"/>
-  <path d="M79,68 L121,68 L126,176 L74,176 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.9" opacity="0.9"/>
-  <path d="M58,70 L76,70 L71,134 L55,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M53,136 L70,136 L66,195 L49,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="54" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
-  <path d="M142,70 L124,70 L129,134 L145,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M147,136 L130,136 L134,195 L151,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="146" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
-  <ellipse cx="100" cy="178" rx="29" ry="10" fill="#080e1a" stroke="#1c3450" stroke-width="0.8" opacity="0.8"/>
-  <path d="M73,184 L97,184 L95,268 L71,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M71,270 L93,270 L91,348 L69,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="79" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
-  <path d="M127,184 L103,184 L105,268 L129,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M129,270 L107,270 L109,348 L131,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="121" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
-  <!-- Zones FACE avec dégradés -->
+  <!-- ── Silhouette ── -->
+  <!-- Tête -->
+  <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
+  <circle cx="92" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
+  <circle cx="108" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
+  <!-- Cou -->
+  <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
+  <!-- Torso (courbes bezier — épaules larges, taille étroite, hanches) -->
+  <path d="M92,76 C80,76 60,72 38,82 C26,88 24,102 26,116 C28,130 36,138 38,150 C40,162 38,174 40,184 L70,196 L76,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L124,208 L130,196 L160,184 C162,174 160,162 162,150 C164,138 172,130 174,116 C176,102 174,88 162,82 C140,72 120,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
+  <!-- Bras gauche (upper) -->
+  <path d="M38,82 C30,90 24,104 24,120 C24,134 26,142 30,146 C34,150 40,150 44,144 C48,138 48,120 46,106 C44,92 42,82 38,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <!-- Avant-bras gauche -->
+  <path d="M30,148 C26,158 24,172 26,184 C28,192 32,198 36,198 C40,200 44,198 46,192 C48,186 46,172 44,160 C42,150 38,148 30,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="38" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <!-- Bras droit (upper) -->
+  <path d="M162,82 C170,90 176,104 176,120 C176,134 174,142 170,146 C166,150 160,150 156,144 C152,138 152,120 154,106 C156,92 158,82 162,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <!-- Avant-bras droit -->
+  <path d="M170,148 C174,158 176,172 174,184 C172,192 168,198 164,198 C160,200 156,198 154,192 C152,186 154,172 156,160 C158,150 162,148 170,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="162" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <!-- Hanches -->
+  <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
+  <!-- Cuisse gauche -->
+  <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <!-- Cuisse droite -->
+  <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <!-- Tibia gauche -->
+  <path d="M72,314 C70,328 68,350 70,372 C72,384 74,392 76,396 C80,400 86,399 88,394 C90,388 90,372 88,352 C86,330 80,316 72,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <!-- Tibia droit -->
+  <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+  <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- ── Zones musculaires FACE ── -->
+  <!-- Deltoïdes -->
   <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <ellipse cx="60" cy="82" rx="20" ry="14" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
-    <ellipse cx="140" cy="82" rx="20" ry="14" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <path d="M36,82 C26,88 22,102 24,116 C26,126 30,134 34,138 C38,134 40,118 40,106 C40,94 38,84 36,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <path d="M164,82 C174,88 178,102 176,116 C174,126 170,134 166,138 C162,134 160,118 160,106 C160,94 162,84 164,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
   </g>
+  <!-- Pectoraux (forme en éventail) -->
   <g id="z-pecs" class="zone" onclick="sel('Pecs')"><title>Pecs</title>
-    <path d="M80,70 Q94,88 101,106 Q87,100 78,85 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
-    <path d="M120,70 Q106,88 99,106 Q113,100 122,85 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M70,80 C84,72 102,80 104,112 C88,122 72,116 66,102 C64,92 64,84 70,80 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M130,80 C116,72 98,80 96,112 C112,122 128,116 134,102 C136,92 136,84 130,80 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
   </g>
+  <!-- Biceps (ovale allongé face antérieure du bras) -->
   <g id="z-biceps" class="zone" onclick="sel('Biceps')"><title>Biceps</title>
-    <path d="M59,73 Q75,73 75,122 Q59,122 57,98 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
-    <path d="M141,73 Q125,73 125,122 Q141,122 143,98 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M38,86 C32,98 28,114 30,128 C32,138 36,142 40,138 C44,134 46,118 44,106 C42,94 40,86 38,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M162,86 C168,98 172,114 170,128 C168,138 164,142 160,138 C156,134 154,118 156,106 C158,94 160,86 162,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
   </g>
+  <!-- Avant-bras -->
   <g id="z-avbras" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <rect x="52" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
-    <rect x="132" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <path d="M30,150 C24,162 22,176 24,188 C26,196 30,200 34,198 C38,196 40,186 40,174 C40,162 36,152 30,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <path d="M170,150 C176,162 178,176 176,188 C174,196 170,200 166,198 C162,196 160,186 160,174 C160,162 164,152 170,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
   </g>
+  <!-- Abdominaux (grille 6-pack) -->
   <g id="z-abdos" class="zone" onclick="sel('Abdos')"><title>Abdos</title>
-    <rect x="85" y="108" width="12" height="16" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="103" y="108" width="12" height="16" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="85" y="128" width="12" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="103" y="128" width="12" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="87" y="147" width="10" height="14" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="103" y="147" width="10" height="14" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="85" y="110" width="13" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="102" y="110" width="13" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="85" y="129" width="13" height="14" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="102" y="129" width="13" height="14" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="86" y="147" width="12" height="13" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="102" y="147" width="12" height="13" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
   </g>
+  <!-- Quadriceps (grande zone antérieure de cuisse) -->
   <g id="z-quad" class="zone" onclick="sel('Quadriceps')"><title>Quadriceps</title>
-    <path d="M74,186 Q97,185 96,268 Q71,268 72,186 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
-    <path d="M126,186 Q103,185 104,268 Q129,268 128,186 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M68,200 C64,216 62,240 64,268 C66,290 68,304 70,314 C76,322 86,322 90,314 C94,304 92,280 90,254 C88,226 84,204 68,200 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M132,200 C136,216 138,240 136,268 C134,290 132,304 130,314 C124,322 114,322 110,314 C106,304 108,280 110,254 C112,226 116,204 132,200 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
   </g>
+  <!-- Mollets (tibialis anterior visible de face) -->
   <g id="z-mollets" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
-    <rect x="72" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
-    <rect x="108" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <path d="M74,316 C70,330 68,352 70,374 C72,386 74,394 76,398 C80,402 86,401 88,396 C90,390 90,372 88,350 C86,328 80,318 74,316 Z" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <path d="M126,316 C130,330 132,352 130,374 C128,386 126,394 124,398 C120,402 114,401 112,396 C110,390 110,372 112,350 C114,328 120,318 126,316 Z" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
   </g>
 </svg>"""
 
-    # SVG DOS
-    svg_back = f"""<svg viewBox="0 0 200 370" width="150" xmlns="http://www.w3.org/2000/svg">
+    # ─── SVG DOS — corps anatomique réaliste ────────────────────────────────
+    svg_back = f"""<svg viewBox="0 0 200 420" width="148" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="gwb" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="4" result="b"/>
+    <filter id="gwb" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     {grads_b}
   </defs>
-  <!-- Silhouette -->
-  <ellipse cx="100" cy="31" rx="22" ry="26" fill="#0b1622" stroke="#1c3450" stroke-width="1.2"/>
-  <path d="M92,56 L108,56 L109,69 L91,69 Z" fill="#0b1622" stroke="#1c3450" stroke-width="0.8"/>
-  <path d="M79,68 L121,68 L126,176 L74,176 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.9" opacity="0.9"/>
-  <path d="M58,70 L76,70 L71,134 L55,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M53,136 L70,136 L66,195 L49,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="54" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
-  <path d="M142,70 L124,70 L129,134 L145,134 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M147,136 L130,136 L134,195 L151,195 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="146" cy="199" rx="10" ry="6" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.5"/>
-  <ellipse cx="100" cy="178" rx="29" ry="10" fill="#080e1a" stroke="#1c3450" stroke-width="0.8" opacity="0.8"/>
-  <path d="M73,184 L97,184 L95,268 L71,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M71,270 L93,270 L91,348 L69,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="79" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
-  <path d="M127,184 L103,184 L105,268 L129,268 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <path d="M129,270 L107,270 L109,348 L131,348 Z" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.9"/>
-  <ellipse cx="121" cy="352" rx="17" ry="5.5" fill="#080e1a" stroke="#1c3450" stroke-width="0.7" opacity="0.4"/>
-  <!-- Zones DOS avec dégradés -->
+  <!-- ── Silhouette (identique face) ── -->
+  <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
+  <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
+  <path d="M92,76 C80,76 60,72 38,82 C26,88 24,102 26,116 C28,130 36,138 38,150 C40,162 38,174 40,184 L70,196 L76,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L124,208 L130,196 L160,184 C162,174 160,162 162,150 C164,138 172,130 174,116 C176,102 174,88 162,82 C140,72 120,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
+  <path d="M38,82 C30,90 24,104 24,120 C24,134 26,142 30,146 C34,150 40,150 44,144 C48,138 48,120 46,106 C44,92 42,82 38,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M30,148 C26,158 24,172 26,184 C28,192 32,198 36,198 C40,200 44,198 46,192 C48,186 46,172 44,160 C42,150 38,148 30,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="38" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M162,82 C170,90 176,104 176,120 C176,134 174,142 170,146 C166,150 160,150 156,144 C152,138 152,120 154,106 C156,92 158,82 162,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M170,148 C174,158 176,172 174,184 C172,192 168,198 164,198 C160,200 156,198 154,192 C152,186 154,172 156,160 C158,150 162,148 170,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="162" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
+  <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M72,314 C70,328 68,350 70,372 C72,384 74,392 76,396 C80,400 86,399 88,394 C90,388 90,372 88,352 C86,330 80,316 72,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+  <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- ── Zones musculaires DOS ── -->
+  <!-- Deltoïdes postérieurs -->
   <g id="z-epaules-b" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <ellipse cx="60" cy="82" rx="20" ry="14" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
-    <ellipse cx="140" cy="82" rx="20" ry="14" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <path d="M36,82 C26,88 22,102 24,116 C26,126 30,134 34,138 C38,134 40,118 40,106 C40,94 38,84 36,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <path d="M164,82 C174,88 178,102 176,116 C174,126 170,134 166,138 C162,134 160,118 160,106 C160,94 162,84 164,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
   </g>
+  <!-- Dos : trapèze + grands dorsaux -->
   <g id="z-dos" class="zone" onclick="sel('Dos')"><title>Dos</title>
-    <path d="M91,68 L109,68 L117,93 L83,93 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <path d="M79,95 L97,95 L100,162 L75,150 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <path d="M121,95 L103,95 L100,162 L125,150 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <!-- Trapèze supérieur (losange) -->
+    <path d="M88,74 C92,70 100,68 108,74 L118,94 C108,100 100,102 92,94 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <!-- Grand dorsal gauche (éventail) -->
+    <path d="M72,90 C64,102 60,124 64,150 C66,164 72,170 78,167 C84,162 86,148 86,128 C86,110 82,92 72,90 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <!-- Grand dorsal droit -->
+    <path d="M128,90 C136,102 140,124 136,150 C134,164 128,170 122,167 C116,162 114,148 114,128 C114,110 118,92 128,90 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <!-- Rhomboïdes / érecteurs (colonne) -->
+    <path d="M90,98 C94,94 100,92 106,98 L112,136 C108,144 100,146 92,136 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
   </g>
+  <!-- Triceps (face postérieure du bras) -->
   <g id="z-triceps" class="zone" onclick="sel('Triceps')"><title>Triceps</title>
-    <path d="M59,73 Q75,73 75,122 Q59,122 57,98 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
-    <path d="M141,73 Q125,73 125,122 Q141,122 143,98 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M38,86 C32,98 28,114 30,128 C32,138 36,142 40,138 C44,134 46,118 44,106 C42,94 40,86 38,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M162,86 C168,98 172,114 170,128 C168,138 164,142 160,138 C156,134 154,118 156,106 C158,94 160,86 162,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
   </g>
+  <!-- Avant-bras dos -->
   <g id="z-avbras-b" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <rect x="52" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
-    <rect x="132" y="128" width="16" height="60" rx="8" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <path d="M30,150 C24,162 22,176 24,188 C26,196 30,200 34,198 C38,196 40,186 40,174 C40,162 36,152 30,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <path d="M170,150 C176,162 178,176 176,188 C174,196 170,200 166,198 C162,196 160,186 160,174 C160,162 164,152 170,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
   </g>
+  <!-- Fessiers (grandes fesses arrondies) -->
   <g id="z-fessiers" class="zone" onclick="sel('Fessiers')"><title>Fessiers</title>
-    <ellipse cx="86" cy="185" rx="22" ry="17" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
-    <ellipse cx="114" cy="185" rx="22" ry="17" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
+    <path d="M68,198 C64,210 64,228 68,240 C72,252 82,258 94,254 C102,250 104,238 102,224 C100,208 94,198 80,196 Z" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
+    <path d="M132,198 C136,210 136,228 132,240 C128,252 118,258 106,254 C98,250 96,238 98,224 C100,208 106,198 120,196 Z" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
   </g>
+  <!-- Ischio-jambiers (face postérieure cuisse) -->
   <g id="z-ischio" class="zone" onclick="sel('Ischio-jambiers')"><title>Ischio-jambiers</title>
-    <path d="M74,204 Q97,202 96,268 Q71,268 73,204 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
-    <path d="M126,204 Q103,202 104,268 Q129,268 127,204 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M68,202 C64,218 62,242 64,270 C66,292 68,306 70,316 C76,322 86,322 90,314 C94,304 92,280 90,254 C88,226 84,206 68,202 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M132,202 C136,218 138,242 136,270 C134,292 132,306 130,316 C124,322 114,322 110,314 C106,304 108,280 110,254 C112,226 116,206 132,202 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
   </g>
+  <!-- Mollets (gastrocnémien — plus proéminent de dos) -->
   <g id="z-mollets-b" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
-    <rect x="72" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
-    <rect x="108" y="272" width="20" height="62" rx="10" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+    <path d="M72,318 C68,334 66,356 68,378 C70,390 72,398 74,402 C78,406 86,405 88,400 C90,392 90,374 88,354 C86,332 80,320 72,318 Z" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+    <path d="M128,318 C132,334 134,356 132,378 C130,390 128,398 126,402 C122,406 114,405 112,400 C110,392 110,374 112,354 C114,332 120,320 128,318 Z" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
   </g>
 </svg>"""
 
-    # Légende couleurs + overview rows
-    lbl_col = {"—":"#2a3a4a","DÉB":"#FF453A","INT":"#FF9F0A","AVA":"#58CCFF","EXP":"#00FF7F"}
+    # ─── Panel latéral : légende couleur + liste muscles ────────────────────
     legend_html = (
-        '<div style="display:flex;gap:10px;justify-content:center;margin-bottom:7px;flex-wrap:wrap;">'
-        + ''.join(
-            f'<div style="display:flex;align-items:center;gap:3px;">'
-            f'<div style="width:7px;height:7px;border-radius:50%;background:{c};box-shadow:0 0 5px {c}88;"></div>'
-            f'<span style="font-size:7.5px;color:{c};letter-spacing:0.5px;">{lbl}</span></div>'
-            for lbl, c in [("DÉB","#FF453A"),("INT","#FF9F0A"),("AVA","#58CCFF"),("EXP","#00FF7F")]
-        )
-        + '</div>'
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:4px 6px;'
+        'background:rgba(255,255,255,0.03);border-radius:6px;">'
+        '<div style="height:5px;flex:1;border-radius:3px;'
+        'background:linear-gradient(90deg,#FF453A,#FF9F0A,#58CCFF,#00FF7F);'
+        'box-shadow:0 0 8px rgba(88,204,255,0.3);"></div>'
+        '<span style="font-size:7px;color:#3a4a5a;letter-spacing:1px;white-space:nowrap;">progression</span>'
+        '</div>'
     )
 
     overview_rows = ""
     for m in DISPLAY_MUSCLES:
         s = sc[m]
         pct_w = min(s['pct'], 100)
-        lc = lbl_col.get(s['lbl'], "#2a3a4a")
         overview_rows += (
             f'<div class="mrow" onclick="selAuto(\'{m}\')" data-m="{m}"'
             f' style="padding:5px 6px 4px;margin-bottom:3px;cursor:pointer;border-radius:6px;'
             f'border-left:3px solid {s["col"]};">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
-            f'<span style="font-size:10px;color:{s["col"]};font-weight:700;letter-spacing:0.5px;">{m}</span>'
-            f'<span style="font-size:7.5px;color:{lc};background:{lc}22;border-radius:3px;'
-            f'padding:1px 5px;font-weight:700;">{s["lbl"]}</span>'
+            f'<span style="font-size:10px;color:{s["col"]};font-weight:700;">{m}</span>'
+            f'<span style="font-size:8px;color:#3a4a5a;">{s["rm"]:.0f} kg</span>'
             f'</div>'
-            f'<div style="display:flex;align-items:center;gap:5px;">'
-            f'<div style="flex:1;background:rgba(255,255,255,0.06);border-radius:3px;height:4px;">'
+            f'<div style="background:rgba(255,255,255,0.06);border-radius:3px;height:4px;">'
             f'<div style="width:{pct_w:.0f}%;height:100%;'
             f'background:linear-gradient(90deg,{s["col"]}88,{s["col"]});border-radius:3px;'
             f'box-shadow:0 0 7px {s["col"]}66;"></div></div>'
-            f'<span style="font-size:8px;color:#4a5a6a;white-space:nowrap;">{s["rm"]:.0f}kg</span>'
-            f'</div></div>'
+            f'</div>'
         )
 
     css = """<style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:transparent;font-family:'Courier New',monospace;color:#ccc;overflow:hidden;}
 .wrap{background:linear-gradient(150deg,#060e1e 0%,#04080f 100%);border-radius:16px;
-  border:1px solid rgba(88,204,255,0.18);padding:10px;display:flex;gap:8px;
-  box-shadow:0 4px 30px rgba(0,0,0,0.6),inset 0 0 60px rgba(88,204,255,0.02);}
+  border:1px solid rgba(88,204,255,0.15);padding:10px;display:flex;gap:8px;
+  box-shadow:0 4px 30px rgba(0,0,0,0.6),inset 0 0 60px rgba(88,204,255,0.015);}
 .svg-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
 .vtoggle{display:flex;gap:5px;margin-bottom:7px;}
 .vbtn{background:rgba(255,255,255,0.04);border:1px solid rgba(88,204,255,0.22);
@@ -1099,9 +1119,9 @@ body{background:transparent;font-family:'Courier New',monospace;color:#ccc;overf
 .vbtn.active{background:rgba(88,204,255,0.14);border-color:#58CCFF;color:#fff;
   box-shadow:0 0 14px rgba(88,204,255,0.25);}
 .vbtn:hover:not(.active){background:rgba(88,204,255,0.08);color:#7ab8d8;}
-.zone{cursor:pointer;transition:filter 0.18s;}
-.zone:hover{filter:brightness(1.9) drop-shadow(0 0 5px currentColor);}
-.zone.on{filter:brightness(2.6) drop-shadow(0 0 10px currentColor);}
+.zone{cursor:pointer;transition:filter 0.2s;}
+.zone:hover{filter:brightness(2) drop-shadow(0 0 6px currentColor);}
+.zone.on{filter:brightness(2.8) drop-shadow(0 0 12px currentColor);}
 .mrow{transition:background 0.15s;}
 .mrow:hover{background:rgba(88,204,255,0.07)!important;}
 .mrow.arow{background:rgba(88,204,255,0.1)!important;}
@@ -1110,9 +1130,9 @@ body{background:transparent;font-family:'Courier New',monospace;color:#ccc;overf
   display:inline-block;transition:opacity 0.15s;letter-spacing:1px;}
 .back:hover{opacity:1;}
 .ltable{width:100%;border-collapse:collapse;font-size:9px;margin:3px 0 5px;}
-.ltable th{color:#333;font-weight:normal;padding:2px 4px;
-  border-bottom:1px solid rgba(255,255,255,0.06);letter-spacing:1px;}
-.ltable td{padding:2px 4px;color:#7a8a9a;}
+.ltable th{color:#2a3a4a;font-weight:normal;padding:2px 4px;
+  border-bottom:1px solid rgba(255,255,255,0.05);letter-spacing:1px;}
+.ltable td{padding:2px 4px;color:#6a7a8a;}
 .ltable tr:hover td{color:#aaa;}
 </style>"""
 
@@ -1142,51 +1162,49 @@ function sel(name) {
   const d = D[name]; if (!d) return;
   const zid = curView==='front' ? d.zid_f : d.zid_b;
   if (zid) { const el=document.getElementById(zid); if(el) el.classList.add('on'); }
-  document.querySelectorAll('.mrow').forEach(r=>{if(r.dataset.m===name)r.classList.add('arow');});
+  document.querySelectorAll('.mrow').forEach(r=>{ if(r.dataset.m===name) r.classList.add('arow'); });
   document.getElementById('ov').style.display='none';
   document.getElementById('detail').style.display='block';
 
-  const lblColors = {"—":"#2a3a4a","DÉB":"#FF453A","INT":"#FF9F0A","AVA":"#58CCFF","EXP":"#00FF7F"};
-  const lc = lblColors[d.lbl] || "#444";
   let h = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
     + '<div style="width:3px;height:32px;background:'+d.col+';border-radius:2px;box-shadow:0 0 10px '+d.col+'66;"></div>'
     + '<div><div style="font-size:13px;font-weight:900;color:'+d.col+';letter-spacing:2px;">'+name.toUpperCase()+'</div>'
-    + '<div style="font-size:8px;color:'+lc+';letter-spacing:1px;margin-top:1px;">'+d.lbl+' · '+d.pct.toFixed(0)+'% objectif</div>'
+    + '<div style="font-size:8px;color:#3a4a5a;letter-spacing:1px;margin-top:2px;">'+d.pct.toFixed(0)+'% de l\'objectif</div>'
     + '</div></div>';
 
   if (d.best && d.best.w > 0) {
-    h += '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;margin-bottom:8px;text-align:center;border:1px solid '+d.col+'28;">'
-      + '<div style="font-size:7.5px;color:#444;letter-spacing:1.5px;margin-bottom:4px;">RECORD PERSONNEL</div>'
+    h += '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;margin-bottom:8px;text-align:center;border:1px solid '+d.col+'22;">'
+      + '<div style="font-size:7.5px;color:#2a3a4a;letter-spacing:1.5px;margin-bottom:4px;">RECORD PERSONNEL</div>'
       + '<div style="font-size:24px;font-weight:900;color:'+d.col+';line-height:1;">'+d.best.w.toFixed(1)
-      + '<span style="font-size:12px;color:#555;"> kg</span>'
-      + ' <span style="font-size:14px;color:#444;">×</span> '
-      + d.best.r+'<span style="font-size:12px;color:#555;"> reps</span></div>'
-      + '<div style="font-size:8.5px;color:#3a4a5a;margin-top:4px;">1RM · '+d.rm.toFixed(1)+'kg &nbsp;/&nbsp; obj. '+d.std+'kg</div>'
+      + '<span style="font-size:12px;color:#444;"> kg</span>'
+      + ' <span style="font-size:14px;color:#333;">×</span> '
+      + d.best.r+'<span style="font-size:12px;color:#444;"> reps</span></div>'
+      + '<div style="font-size:8.5px;color:#2a3a4a;margin-top:4px;">1RM · '+d.rm.toFixed(1)+'kg &nbsp;/&nbsp; obj. '+d.std+'kg</div>'
       + '</div>';
   } else {
-    h += '<div style="font-size:10px;color:#2a3a4a;text-align:center;padding:16px 0 14px;">Pas encore de données<br><span style="font-size:22px;opacity:0.4;">💪</span></div>';
+    h += '<div style="font-size:10px;color:#1e2e3e;text-align:center;padding:16px 0 14px;">Pas encore de données<br><span style="font-size:22px;opacity:0.3;">💪</span></div>';
   }
 
   if (d.last && d.last.length) {
-    h += '<div style="font-size:7.5px;color:#3a4a5a;letter-spacing:1.5px;margin-bottom:3px;">DERNIÈRES SÉANCES</div>'
+    h += '<div style="font-size:7.5px;color:#2a3a4a;letter-spacing:1.5px;margin-bottom:3px;">DERNIÈRES SÉANCES</div>'
       + '<table class="ltable"><tr><th>Sem.</th><th>Charge</th><th>Reps</th></tr>';
     d.last.forEach(ls => {
-      h += '<tr><td style="color:#58CCFF88">S'+ls.s+'</td><td style="color:'+d.col+'">'+ls.w.toFixed(1)+'kg</td><td>'+ls.r+'</td></tr>';
+      h += '<tr><td style="color:#58CCFF66">S'+ls.s+'</td><td style="color:'+d.col+'">'+ls.w.toFixed(1)+'kg</td><td>'+ls.r+'</td></tr>';
     });
     h += '</table>';
   }
 
   if (d.exos && d.exos.length) {
-    h += '<div style="font-size:7.5px;color:#3a4a5a;letter-spacing:1.5px;margin-bottom:4px;">TOP EXERCICES</div>';
+    h += '<div style="font-size:7.5px;color:#2a3a4a;letter-spacing:1.5px;margin-bottom:4px;">TOP EXERCICES</div>';
     d.exos.forEach((e,i) => {
-      h += '<div style="font-size:9px;margin-bottom:3px;color:#5a6a7a;">'
-        + (i===0?'<span style="color:'+d.col+'">▶</span>':'<span style="color:#2a3a4a">·</span>')
+      h += '<div style="font-size:9px;margin-bottom:3px;color:#4a5a6a;">'
+        + (i===0?'<span style="color:'+d.col+'">▶</span>':'<span style="color:#1e2e3e">·</span>')
         + ' '+e.name+' <span style="color:'+d.col+';font-weight:700;">'+e.w.toFixed(1)+'kg×'+e.r+'</span></div>';
     });
   }
 
   if (d.evo && d.evo.length>1) {
-    h += '<div style="font-size:7.5px;color:#3a4a5a;letter-spacing:1.5px;margin:6px 0 4px;">ÉVOLUTION 1RM</div>'+spark(d.evo,d.col);
+    h += '<div style="font-size:7.5px;color:#2a3a4a;letter-spacing:1.5px;margin:6px 0 4px;">ÉVOLUTION 1RM</div>'+spark(d.evo,d.col);
   }
 
   document.getElementById('dc').innerHTML = h;
@@ -1209,22 +1227,21 @@ function spark(evo, col) {
   });
   const area_pts = pts.join(' ')+' '+W+','+(H-1)+' '+0+','+(H-1);
   const first=evo[0], last=evo[evo.length-1];
-  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:50px;background:rgba(0,0,0,0.25);'
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:50px;background:rgba(0,0,0,0.2);'
     +'border-radius:7px;border:1px solid rgba(255,255,255,0.04);">'
     +'<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">'
-    +'<stop offset="0%" stop-color="'+col+'" stop-opacity="0.18"/>'
+    +'<stop offset="0%" stop-color="'+col+'" stop-opacity="0.2"/>'
     +'<stop offset="100%" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'
     +'<polygon points="'+area_pts+'" fill="url(#ag)"/>'
     +'<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
     +cir.join('')
-    +'<text x="'+pad+'" y="'+(H-2)+'" fill="#2a3a4a" font-size="7" font-family="monospace">S'+first.w+'</text>'
-    +'<text x="'+(W-pad)+'" y="'+(H-2)+'" fill="#2a3a4a" font-size="7" font-family="monospace" text-anchor="end">S'+last.w+'</text>'
+    +'<text x="'+pad+'" y="'+(H-2)+'" fill="#1e2e3e" font-size="7" font-family="monospace">S'+first.w+'</text>'
+    +'<text x="'+(W-pad)+'" y="'+(H-2)+'" fill="#1e2e3e" font-size="7" font-family="monospace" text-anchor="end">S'+last.w+'</text>'
     +'</svg>';
 }
 </script>"""
 
     html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">{css}</head><body>
-<div style="text-align:center;font-family:monospace;font-size:8.5px;color:#2a4a6a;letter-spacing:3px;margin-bottom:5px;">◈ SCAN CORPOREL ◈</div>
 <div class="wrap">
   <div class="svg-col">
     <div class="vtoggle">
@@ -1248,7 +1265,7 @@ function spark(evo, col) {
 {js}
 </body></html>"""
 
-    components.html(html, height=465, scrolling=False)
+    components.html(html, height=500, scrolling=False)
 
 
 # --- 6. CARDIO ---
