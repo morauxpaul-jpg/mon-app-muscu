@@ -1337,7 +1337,7 @@ prog = get_prog()
 prog_seances = {k: v for k, v in prog.items() if not k.startswith('_')}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog_seances for ex in prog_seances[s]}
 df_h["Muscle"] = df_h["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_h["Muscle"]).replace("", "Autre")
-df_h["Muscle"] = df_h.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1)
+df_h["Muscle"] = df_h.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1).astype(str)
 
 # Logo toujours visible en haut
 col_l1, col_l2, col_l3 = st.columns([1, 1.8, 1])
@@ -1353,7 +1353,7 @@ if arch_rows:
     df_arch['Semaine'] = pd.to_numeric(df_arch['Semaine'] if 'Semaine' in df_arch.columns else 0, errors='coerce').fillna(0).astype(int)
     # Remapper les muscles archivés via muscle_mapping (comme df_h)
     df_arch["Muscle"] = df_arch["Exercice"].apply(get_base_name).map(muscle_mapping).fillna(df_arch["Muscle"]).replace("", "Autre")
-    df_arch["Muscle"] = df_arch.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1)
+    df_arch["Muscle"] = df_arch.apply(lambda r: fix_muscle(r["Exercice"], r["Muscle"]), axis=1).astype(str)
     df_live = df_h[df_h["Reps"] > 0].copy() if not df_h.empty else pd.DataFrame(columns=df_arch.columns)
     df_p = pd.concat([df_live, df_arch[df_arch['Reps'] > 0]], ignore_index=True)
 else:
