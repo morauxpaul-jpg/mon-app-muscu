@@ -921,251 +921,424 @@ def body_map_section(df_p):
 
     data_json = json.dumps(muscle_data, ensure_ascii=False)
 
-    # ─── SVG FACE — corps anatomique réaliste ───────────────────────────────
+    # ─── SVG FACE — Cyberpunk hologram ──────────────────────────────────────────
     svg_front = f"""<svg viewBox="0 0 200 420" width="148" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="gw" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="3.5" result="b"/>
+    <filter id="gw" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-      <path d="M10,0 L0,0 L0,10" fill="none" stroke="#0a1f33" stroke-width="0.3"/>
+    <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M8,0 L0,0 L0,8" fill="none" stroke="#091828" stroke-width="0.3"/>
     </pattern>
     {grads_f}
   </defs>
-  <!-- Fond grille HUD -->
-  <rect width="200" height="420" fill="url(#grid)" opacity="0.5"/>
-  <!-- ── Silhouette ── -->
-  <!-- Tête -->
-  <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
-  <circle cx="92" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
-  <circle cx="108" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
-  <!-- Cou -->
-  <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
-  <!-- Torso (courbes bezier — épaules larges, taille étroite, hanches) -->
-  <path d="M92,76 C80,76 60,72 38,82 C26,88 24,102 26,116 C28,130 36,138 38,150 C40,162 38,174 40,184 L70,196 L76,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L124,208 L130,196 L160,184 C162,174 160,162 162,150 C164,138 172,130 174,116 C176,102 174,88 162,82 C140,72 120,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
-  <!-- Bras gauche (upper) -->
-  <path d="M38,82 C30,90 24,104 24,120 C24,134 26,142 30,146 C34,150 40,150 44,144 C48,138 48,120 46,106 C44,92 42,82 38,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
-  <!-- Avant-bras gauche -->
-  <path d="M30,148 C26,158 24,172 26,184 C28,192 32,198 36,198 C40,200 44,198 46,192 C48,186 46,172 44,160 C42,150 38,148 30,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="38" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
-  <!-- Bras droit (upper) -->
-  <path d="M162,82 C170,90 176,104 176,120 C176,134 174,142 170,146 C166,150 160,150 156,144 C152,138 152,120 154,106 C156,92 158,82 162,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
-  <!-- Avant-bras droit -->
-  <path d="M170,148 C174,158 176,172 174,184 C172,192 168,198 164,198 C160,200 156,198 154,192 C152,186 154,172 156,160 C158,150 162,148 170,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="162" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
-  <!-- Hanches -->
-  <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
-  <!-- Cuisse gauche -->
-  <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <!-- Cuisse droite -->
-  <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <!-- Tibia gauche -->
-  <path d="M72,314 C70,328 68,350 70,372 C72,384 74,392 76,396 C80,400 86,399 88,394 C90,388 90,372 88,352 C86,330 80,316 72,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <!-- Tibia droit -->
-  <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
-  <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
 
-  <!-- ── Lignes anatomiques internes FACE ── -->
-  <!-- Clavicules -->
-  <path d="M92,77 C94,73 100,71 106,73 C110,74 114,76 116,78" stroke="#0d2e4a" stroke-width="0.8" fill="none" stroke-dasharray="2.5,2"/>
-  <path d="M108,77 C106,73 100,71 94,73 C90,74 86,76 84,78" stroke="#0d2e4a" stroke-width="0.8" fill="none" stroke-dasharray="2.5,2"/>
-  <!-- Sternum / ligne médiane thorax -->
-  <line x1="100" y1="78" x2="100" y2="190" stroke="#0d2e4a" stroke-width="0.6" stroke-dasharray="3,2.5"/>
-  <!-- Grille abdominale -->
-  <line x1="88" y1="118" x2="112" y2="118" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <line x1="88" y1="130" x2="112" y2="130" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <line x1="88" y1="142" x2="112" y2="142" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <line x1="88" y1="154" x2="112" y2="154" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <line x1="89" y1="166" x2="111" y2="166" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <!-- Pli inguinal -->
-  <path d="M78,192 C88,185 112,185 122,192" stroke="#0d2e4a" stroke-width="0.5" fill="none" stroke-dasharray="2,2"/>
-  <!-- Séparation VM (teardrop quad) -->
-  <path d="M84,292 C86,284 90,280 92,282" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
-  <path d="M116,292 C114,284 110,280 108,282" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
-  <!-- Dentelures serratus -->
-  <path d="M65,108 C68,114 66,122 68,128" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
-  <path d="M135,108 C132,114 134,122 132,128" stroke="#0d2e4a" stroke-width="0.5" fill="none"/>
-  <!-- Lignes tibiales -->
-  <line x1="80" y1="318" x2="80" y2="395" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
-  <line x1="120" y1="318" x2="120" y2="395" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
+  <rect width="200" height="420" fill="url(#grid)" opacity="0.7"/>
 
-  <!-- ── HUD : Coins brackets ── -->
-  <path d="M4,22 L4,4 L22,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <path d="M196,22 L196,4 L178,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <path d="M4,398 L4,416 L22,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <path d="M196,398 L196,416 L178,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <!-- Micro-tirets déco HUD -->
-  <line x1="92" y1="4" x2="108" y2="4" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
-  <line x1="92" y1="416" x2="108" y2="416" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+  <!-- ═══ COUCHE 1 — MUSCLES (sous la peau) ═══ -->
 
-  <!-- ── Scan line ── -->
-  <g>
-    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="8" stroke-opacity="0.04">
-      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
-    </line>
-    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="1.2" stroke-opacity="0.28">
-      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
-    </line>
+  <!-- DELTOIDES -->
+  <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Epaules</title>
+    <path d="M57,70 C43,73 32,82 30,97 C28,112 34,128 42,136
+             C48,132 55,122 57,108 C59,94 59,80 57,70 Z"
+          fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <path d="M143,70 C157,73 168,82 170,97 C172,112 166,128 158,136
+             C152,132 145,122 143,108 C141,94 141,80 143,70 Z"
+          fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
   </g>
 
-  <!-- ── Zones musculaires FACE ── -->
-  <!-- Deltoïdes -->
-  <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <path d="M36,82 C26,88 22,102 24,116 C26,126 30,134 34,138 C38,134 40,118 40,106 C40,94 38,84 36,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
-    <path d="M164,82 C174,88 178,102 176,116 C174,126 170,134 166,138 C162,134 160,118 160,106 C160,94 162,84 164,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
-  </g>
-  <!-- Pectoraux (forme en éventail) -->
+  <!-- PECTORAUX -->
   <g id="z-pecs" class="zone" onclick="sel('Pecs')"><title>Pecs</title>
-    <path d="M70,80 C84,72 102,80 104,112 C88,122 72,116 66,102 C64,92 64,84 70,80 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
-    <path d="M130,80 C116,72 98,80 96,112 C112,122 128,116 134,102 C136,92 136,84 130,80 Z" fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M100,74 C90,71 74,71 60,79 C50,85 46,98 48,111
+             C50,121 57,127 67,123 C80,117 94,106 100,112 Z"
+          fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
+    <path d="M100,74 C110,71 126,71 140,79 C150,85 154,98 152,111
+             C150,121 143,127 133,123 C120,117 106,106 100,112 Z"
+          fill="{mf('Pecs','gf')}" opacity="{mop('Pecs')}" filter="url(#gw)"/>
   </g>
-  <!-- Biceps (ovale allongé face antérieure du bras) -->
+
+  <!-- BICEPS -->
   <g id="z-biceps" class="zone" onclick="sel('Biceps')"><title>Biceps</title>
-    <path d="M38,86 C32,98 28,114 30,128 C32,138 36,142 40,138 C44,134 46,118 44,106 C42,94 40,86 38,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
-    <path d="M162,86 C168,98 172,114 170,128 C168,138 164,142 160,138 C156,134 154,118 156,106 C158,94 160,86 162,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M43,90 C33,95 27,109 27,123 C27,137 33,148 41,148
+             C49,148 55,138 55,124 C55,110 51,95 43,90 Z"
+          fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M157,90 C167,95 173,109 173,123 C173,137 167,148 159,148
+             C151,148 145,138 145,124 C145,110 149,95 157,90 Z"
+          fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
   </g>
-  <!-- Avant-bras -->
+
+  <!-- AVANT-BRAS -->
   <g id="z-avbras" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <path d="M30,150 C24,162 22,176 24,188 C26,196 30,200 34,198 C38,196 40,186 40,174 C40,162 36,152 30,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
-    <path d="M170,150 C176,162 178,176 176,188 C174,196 170,200 166,198 C162,196 160,186 160,174 C160,162 164,152 170,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <path d="M39,152 C29,158 23,172 23,186 C23,197 27,203 33,201
+             C39,199 45,189 45,175 C45,163 43,155 39,152 Z"
+          fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <path d="M161,152 C171,158 177,172 177,186 C177,197 173,203 167,201
+             C161,199 155,189 155,175 C155,163 157,155 161,152 Z"
+          fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
   </g>
-  <!-- Abdominaux (grille 6-pack) -->
+
+  <!-- ABDOMINAUX + OBLIQUES -->
   <g id="z-abdos" class="zone" onclick="sel('Abdos')"><title>Abdos</title>
-    <rect x="85" y="110" width="13" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="102" y="110" width="13" height="15" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="85" y="129" width="13" height="14" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="102" y="129" width="13" height="14" rx="4" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="86" y="147" width="12" height="13" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
-    <rect x="102" y="147" width="12" height="13" rx="3" fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}"/>
+    <rect x="87" y="116" width="11" height="11" rx="3"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <rect x="102" y="116" width="11" height="11" rx="3"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <rect x="87" y="131" width="11" height="11" rx="3"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <rect x="102" y="131" width="11" height="11" rx="3"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <rect x="88" y="146" width="10" height="10" rx="3"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <rect x="102" y="146" width="10" height="10" rx="3"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <path d="M77,119 C71,128 69,143 71,158 C73,166 77,170 81,166
+             C83,158 83,142 81,130 Z"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
+    <path d="M123,119 C129,128 131,143 129,158 C127,166 123,170 119,166
+             C117,158 117,142 119,130 Z"
+          fill="{mf('Abdos','gf')}" opacity="{mop('Abdos')}" filter="url(#gw)"/>
   </g>
-  <!-- Quadriceps (grande zone antérieure de cuisse) -->
+
+  <!-- QUADRICEPS -->
   <g id="z-quad" class="zone" onclick="sel('Quadriceps')"><title>Quadriceps</title>
-    <path d="M68,200 C64,216 62,240 64,268 C66,290 68,304 70,314 C76,322 86,322 90,314 C94,304 92,280 90,254 C88,226 84,204 68,200 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
-    <path d="M132,200 C136,216 138,240 136,268 C134,290 132,304 130,314 C124,322 114,322 110,314 C106,304 108,280 110,254 C112,226 116,204 132,200 Z" fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M83,207 C79,223 77,247 79,271 C81,287 85,297 89,297
+             C93,297 96,287 96,269 C96,247 94,223 90,207 Z"
+          fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M72,209 C66,225 64,251 66,275 C68,289 73,297 79,295
+             C81,279 79,253 79,229 C79,217 76,209 72,209 Z"
+          fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M93,268 C91,278 89,291 90,298 C94,305 101,304 102,297
+             C104,289 102,275 98,268 Z"
+          fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M117,207 C121,223 123,247 121,271 C119,287 115,297 111,297
+             C107,297 104,287 104,269 C104,247 106,223 110,207 Z"
+          fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M128,209 C134,225 136,251 134,275 C132,289 127,297 121,295
+             C119,279 121,253 121,229 C121,217 124,209 128,209 Z"
+          fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
+    <path d="M107,268 C109,278 111,291 110,298 C106,305 99,304 98,297
+             C96,289 98,275 102,268 Z"
+          fill="{mf('Quadriceps','gf')}" opacity="{mop('Quadriceps')}" filter="url(#gw)"/>
   </g>
-  <!-- Mollets (tibialis anterior visible de face) -->
+
+  <!-- MOLLETS (tibialis anterior) -->
   <g id="z-mollets" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
-    <path d="M74,316 C70,330 68,352 70,374 C72,386 74,394 76,398 C80,402 86,401 88,396 C90,390 90,372 88,350 C86,328 80,318 74,316 Z" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
-    <path d="M126,316 C130,330 132,352 130,374 C128,386 126,394 124,398 C120,402 114,401 112,396 C110,390 110,372 112,350 C114,328 120,318 126,316 Z" fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <path d="M75,317 C71,331 69,353 71,375 C73,387 75,395 77,399
+             C81,403 87,402 89,397 C91,390 91,371 89,349 C87,327 81,319 75,317 Z"
+          fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+    <path d="M125,317 C129,331 131,353 129,375 C127,387 125,395 123,399
+             C119,403 113,402 111,397 C109,390 109,371 111,349 C113,327 119,319 125,317 Z"
+          fill="{mf('Mollets','gf')}" opacity="{mop('Mollets')}" filter="url(#gw)"/>
+  </g>
+
+  <!-- ═══ COUCHE 2 — PEAU HOLOGRAPHIQUE ═══ -->
+  <ellipse cx="100" cy="28" rx="18" ry="22"
+           fill="#050b18" stroke="#00d4ff" stroke-width="1.3" opacity="0.88"/>
+  <ellipse cx="93" cy="23" rx="2.5" ry="1.5"
+           fill="none" stroke="#00d4ff" stroke-width="0.5" opacity="0.35"/>
+  <ellipse cx="107" cy="23" rx="2.5" ry="1.5"
+           fill="none" stroke="#00d4ff" stroke-width="0.5" opacity="0.35"/>
+  <path d="M95,35 C97,37 103,37 105,35"
+        fill="none" stroke="#00d4ff" stroke-width="0.4" opacity="0.25"/>
+  <path d="M93,48 L91,66 L109,66 L107,48 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.82"/>
+  <path d="M91,66 C78,66 55,68 35,78 C23,86 21,102 23,117
+           C25,133 33,143 35,155 C37,167 35,177 37,189
+           L67,201 L75,213 L88,215 C92,217 96,218 100,218
+           C104,218 108,217 112,215 L125,213 L133,201
+           L163,189 C165,177 163,167 165,155 C167,143 175,133 177,117
+           C179,102 177,86 165,78 C145,68 122,66 109,66 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="1.2" opacity="0.70"/>
+  <path d="M35,78 C27,86 21,103 21,119 C21,135 23,145 27,151
+           C31,155 37,155 41,149 C45,143 47,127 45,113 C43,97 41,85 35,78 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="1.0" opacity="0.70"/>
+  <path d="M27,153 C21,165 19,179 21,191 C23,201 27,205 33,203
+           C39,201 43,191 43,177 C43,165 39,155 27,153 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <ellipse cx="33" cy="208" rx="9" ry="6"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+  <path d="M165,78 C173,86 179,103 179,119 C179,135 177,145 173,151
+           C169,155 163,155 159,149 C155,143 153,127 155,113 C157,97 159,85 165,78 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="1.0" opacity="0.70"/>
+  <path d="M173,153 C179,165 181,179 179,191 C177,201 173,205 167,203
+           C161,201 157,191 157,177 C157,165 161,155 173,153 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <ellipse cx="167" cy="208" rx="9" ry="6"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+  <ellipse cx="100" cy="201" rx="35" ry="11"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.62"/>
+  <path d="M67,203 C61,219 59,245 61,271 C63,293 67,307 71,317
+           C75,323 85,324 89,317 C93,309 93,285 91,259 C89,231 85,209 67,203 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.70"/>
+  <path d="M133,203 C139,219 141,245 139,271 C137,293 133,307 129,317
+           C125,323 115,324 111,317 C107,309 107,285 109,259 C111,231 115,209 133,203 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.70"/>
+  <path d="M71,319 C67,333 65,357 67,379 C69,391 71,399 73,403
+           C77,407 85,406 87,401 C89,394 89,375 87,353 C85,331 79,321 71,319 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <path d="M129,319 C133,333 135,357 133,379 C131,391 129,399 127,403
+           C123,407 115,406 113,401 C111,394 111,375 113,353 C115,331 121,321 129,319 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <ellipse cx="79" cy="409" rx="16" ry="7"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+  <ellipse cx="121" cy="409" rx="16" ry="7"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+
+  <!-- ═══ COUCHE 3 — LIGNES ANATOMIQUES ═══ -->
+  <path d="M91,67 C89,64 96,62 100,62 C104,62 111,64 109,67"
+        stroke="#00d4ff" stroke-width="0.7" fill="none" opacity="0.28" stroke-dasharray="2.5,2"/>
+  <line x1="100" y1="67" x2="100" y2="160"
+        stroke="#00d4ff" stroke-width="0.5" opacity="0.22" stroke-dasharray="3,3"/>
+  <line x1="87" y1="128" x2="113" y2="128"
+        stroke="#00d4ff" stroke-width="0.4" opacity="0.22" stroke-dasharray="1.5,2"/>
+  <line x1="87" y1="143" x2="113" y2="143"
+        stroke="#00d4ff" stroke-width="0.4" opacity="0.22" stroke-dasharray="1.5,2"/>
+  <line x1="88" y1="157" x2="112" y2="157"
+        stroke="#00d4ff" stroke-width="0.4" opacity="0.22" stroke-dasharray="1.5,2"/>
+  <path d="M79,196 C88,190 112,190 121,196"
+        stroke="#00d4ff" stroke-width="0.4" fill="none" opacity="0.22" stroke-dasharray="2,2"/>
+  <path d="M85,276 C87,268 91,264 93,266"
+        stroke="#00d4ff" stroke-width="0.4" fill="none" opacity="0.2"/>
+  <path d="M115,276 C113,268 109,264 107,266"
+        stroke="#00d4ff" stroke-width="0.4" fill="none" opacity="0.2"/>
+  <line x1="79" y1="323" x2="79" y2="397"
+        stroke="#00d4ff" stroke-width="0.35" opacity="0.18" stroke-dasharray="2,3"/>
+  <line x1="121" y1="323" x2="121" y2="397"
+        stroke="#00d4ff" stroke-width="0.35" opacity="0.18" stroke-dasharray="2,3"/>
+
+  <!-- ═══ COUCHE 4 — HUD ═══ -->
+  <path d="M4,22 L4,4 L22,4"   stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <path d="M196,22 L196,4 L178,4"  stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <path d="M4,398 L4,416 L22,416"  stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <path d="M196,398 L196,416 L178,416" stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <line x1="89" y1="4"   x2="111" y2="4"   stroke="#00d4ff" stroke-width="0.9" opacity="0.35"/>
+  <line x1="89" y1="416" x2="111" y2="416" stroke="#00d4ff" stroke-width="0.9" opacity="0.35"/>
+  <line x1="4"  y1="100" x2="11"  y2="100" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="4"  y1="210" x2="11"  y2="210" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="4"  y1="320" x2="11"  y2="320" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="189" y1="100" x2="196" y2="100" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="189" y1="210" x2="196" y2="210" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="189" y1="320" x2="196" y2="320" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Scan line -->
+  <g>
+    <line x1="0" y1="0" x2="200" y2="0"
+          stroke="#00d4ff" stroke-width="9" stroke-opacity="0.05">
+      <animateTransform attributeName="transform" type="translate"
+                        from="0,-5" to="0,425" dur="5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="0" x2="200" y2="0"
+          stroke="#00d4ff" stroke-width="1" stroke-opacity="0.40">
+      <animateTransform attributeName="transform" type="translate"
+                        from="0,-5" to="0,425" dur="5s" repeatCount="indefinite"/>
+    </line>
   </g>
 </svg>"""
 
-    # ─── SVG DOS — corps anatomique réaliste ────────────────────────────────
+    # ─── SVG DOS — Cyberpunk hologram ───────────────────────────────────────────
     svg_back = f"""<svg viewBox="0 0 200 420" width="148" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="gwb" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="3.5" result="b"/>
+    <filter id="gwb" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <pattern id="gridb" width="10" height="10" patternUnits="userSpaceOnUse">
-      <path d="M10,0 L0,0 L0,10" fill="none" stroke="#0a1f33" stroke-width="0.3"/>
+    <pattern id="gridb" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M8,0 L0,0 L0,8" fill="none" stroke="#091828" stroke-width="0.3"/>
     </pattern>
     {grads_b}
   </defs>
-  <!-- Fond grille HUD -->
-  <rect width="200" height="420" fill="url(#gridb)" opacity="0.5"/>
-  <!-- ── Silhouette (identique face) ── -->
-  <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
-  <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
-  <path d="M92,76 C80,76 60,72 38,82 C26,88 24,102 26,116 C28,130 36,138 38,150 C40,162 38,174 40,184 L70,196 L76,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L124,208 L130,196 L160,184 C162,174 160,162 162,150 C164,138 172,130 174,116 C176,102 174,88 162,82 C140,72 120,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
-  <path d="M38,82 C30,90 24,104 24,120 C24,134 26,142 30,146 C34,150 40,150 44,144 C48,138 48,120 46,106 C44,92 42,82 38,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
-  <path d="M30,148 C26,158 24,172 26,184 C28,192 32,198 36,198 C40,200 44,198 46,192 C48,186 46,172 44,160 C42,150 38,148 30,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="38" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
-  <path d="M162,82 C170,90 176,104 176,120 C176,134 174,142 170,146 C166,150 160,150 156,144 C152,138 152,120 154,106 C156,92 158,82 162,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
-  <path d="M170,148 C174,158 176,172 174,184 C172,192 168,198 164,198 C160,200 156,198 154,192 C152,186 154,172 156,160 C158,150 162,148 170,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="162" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
-  <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
-  <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <path d="M72,314 C70,328 68,350 70,372 C72,384 74,392 76,396 C80,400 86,399 88,394 C90,388 90,372 88,352 C86,330 80,316 72,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
-  <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
 
-  <!-- ── Lignes anatomiques internes DOS ── -->
-  <!-- Colonne vertébrale -->
-  <line x1="100" y1="78" x2="100" y2="190" stroke="#0d2e4a" stroke-width="0.6" stroke-dasharray="3,2.5"/>
-  <!-- Scapulas (omoplates) -->
-  <path d="M80,88 C74,94 72,108 76,118 C80,126 88,126 92,120 C90,112 88,100 80,88 Z" stroke="#0d2e4a" stroke-width="0.6" fill="none" stroke-dasharray="2,1.5"/>
-  <path d="M120,88 C126,94 128,108 124,118 C120,126 112,126 108,120 C110,112 112,100 120,88 Z" stroke="#0d2e4a" stroke-width="0.6" fill="none" stroke-dasharray="2,1.5"/>
-  <!-- Crête épine scapulaire -->
-  <line x1="78" y1="91" x2="92" y2="96" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="1.5,1.5"/>
-  <line x1="122" y1="91" x2="108" y2="96" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="1.5,1.5"/>
-  <!-- Érecteurs / colonne lombaire -->
-  <line x1="96" y1="140" x2="96" y2="188" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,2"/>
-  <line x1="104" y1="140" x2="104" y2="188" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,2"/>
-  <!-- Creux inter-fessier -->
-  <line x1="100" y1="196" x2="100" y2="240" stroke="#0d2e4a" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <!-- Pli fessier -->
-  <path d="M74,244 C84,252 100,254 126,244" stroke="#0d2e4a" stroke-width="0.5" fill="none" stroke-dasharray="2,2"/>
-  <!-- Bandelette iliotibiale -->
-  <line x1="76" y1="260" x2="74" y2="312" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
-  <line x1="124" y1="260" x2="126" y2="312" stroke="#0d2e4a" stroke-width="0.4" stroke-dasharray="2,3"/>
-  <!-- Creux poplité (derrière genou) -->
-  <path d="M74,312 C80,316 90,318 90,316" stroke="#0d2e4a" stroke-width="0.4" fill="none"/>
-  <path d="M126,312 C120,316 110,318 110,316" stroke="#0d2e4a" stroke-width="0.4" fill="none"/>
+  <rect width="200" height="420" fill="url(#gridb)" opacity="0.7"/>
 
-  <!-- ── HUD : Coins brackets ── -->
-  <path d="M4,22 L4,4 L22,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <path d="M196,22 L196,4 L178,4" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <path d="M4,398 L4,416 L22,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <path d="M196,398 L196,416 L178,416" stroke="#58CCFF" stroke-width="1.2" fill="none" opacity="0.45"/>
-  <line x1="92" y1="4" x2="108" y2="4" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
-  <line x1="92" y1="416" x2="108" y2="416" stroke="#58CCFF" stroke-width="0.6" opacity="0.25"/>
+  <!-- ═══ COUCHE 1 — MUSCLES DOS ═══ -->
 
-  <!-- ── Scan line ── -->
-  <g>
-    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="8" stroke-opacity="0.04">
-      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
-    </line>
-    <line x1="0" y1="0" x2="200" y2="0" stroke="#58CCFF" stroke-width="1.2" stroke-opacity="0.28">
-      <animateTransform attributeName="transform" type="translate" from="0,-4" to="0,424" dur="5s" repeatCount="indefinite"/>
-    </line>
+  <!-- DELTOIDES POSTERIEURS -->
+  <g id="z-epaules-b" class="zone" onclick="sel('Épaules')"><title>Epaules</title>
+    <path d="M57,70 C43,73 32,82 30,97 C28,112 34,128 42,136
+             C48,132 55,122 57,108 C59,94 59,80 57,70 Z"
+          fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <path d="M143,70 C157,73 168,82 170,97 C172,112 166,128 158,136
+             C152,132 145,122 143,108 C141,94 141,80 143,70 Z"
+          fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
   </g>
 
-  <!-- ── Zones musculaires DOS ── -->
-  <!-- Deltoïdes postérieurs -->
-  <g id="z-epaules-b" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <path d="M36,82 C26,88 22,102 24,116 C26,126 30,134 34,138 C38,134 40,118 40,106 C40,94 38,84 36,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
-    <path d="M164,82 C174,88 178,102 176,116 C174,126 170,134 166,138 C162,134 160,118 160,106 C160,94 162,84 164,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
-  </g>
-  <!-- Dos : trapèze + grands dorsaux -->
+  <!-- DOS : TRAPEZE + GRANDS DORSAUX + ERECTEURS -->
   <g id="z-dos" class="zone" onclick="sel('Dos')"><title>Dos</title>
-    <!-- Trapèze supérieur (losange) -->
-    <path d="M88,74 C92,70 100,68 108,74 L118,94 C108,100 100,102 92,94 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <!-- Grand dorsal gauche (éventail) -->
-    <path d="M72,90 C64,102 60,124 64,150 C66,164 72,170 78,167 C84,162 86,148 86,128 C86,110 82,92 72,90 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <!-- Grand dorsal droit -->
-    <path d="M128,90 C136,102 140,124 136,150 C134,164 128,170 122,167 C116,162 114,148 114,128 C114,110 118,92 128,90 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
-    <!-- Rhomboïdes / érecteurs (colonne) -->
-    <path d="M90,98 C94,94 100,92 106,98 L112,136 C108,144 100,146 92,136 Z" fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M86,67 C92,63 100,61 108,63 C116,65 120,71 118,79
+             L112,96 C108,102 100,104 92,96 L84,79 C82,73 84,69 86,67 Z"
+          fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M80,96 C74,104 74,118 80,124 C86,130 100,132 114,128
+             C122,122 126,112 122,104 L112,96 C108,102 100,104 92,96 Z"
+          fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M66,85 C58,98 54,122 56,150 C58,164 64,172 72,170
+             C80,166 84,152 84,132 C84,114 78,98 66,85 Z"
+          fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M134,85 C142,98 146,122 144,150 C142,164 136,172 128,170
+             C120,166 116,152 116,132 C116,114 122,98 134,85 Z"
+          fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
+    <path d="M93,104 C91,120 91,144 93,168 L100,170 L107,168
+             C109,144 109,120 107,104 Z"
+          fill="{mf('Dos','gb')}" opacity="{mop('Dos')}" filter="url(#gwb)"/>
   </g>
-  <!-- Triceps (face postérieure du bras) -->
+
+  <!-- TRICEPS -->
   <g id="z-triceps" class="zone" onclick="sel('Triceps')"><title>Triceps</title>
-    <path d="M38,86 C32,98 28,114 30,128 C32,138 36,142 40,138 C44,134 46,118 44,106 C42,94 40,86 38,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
-    <path d="M162,86 C168,98 172,114 170,128 C168,138 164,142 160,138 C156,134 154,118 156,106 C158,94 160,86 162,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M43,88 C33,94 27,110 27,125 C27,139 33,150 41,150
+             C49,150 55,140 55,126 C55,112 51,95 43,88 Z"
+          fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M157,88 C167,94 173,110 173,125 C173,139 167,150 159,150
+             C151,150 145,140 145,126 C145,112 149,95 157,88 Z"
+          fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
   </g>
-  <!-- Avant-bras dos -->
+
+  <!-- AVANT-BRAS DOS -->
   <g id="z-avbras-b" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <path d="M30,150 C24,162 22,176 24,188 C26,196 30,200 34,198 C38,196 40,186 40,174 C40,162 36,152 30,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
-    <path d="M170,150 C176,162 178,176 176,188 C174,196 170,200 166,198 C162,196 160,186 160,174 C160,162 164,152 170,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <path d="M39,154 C29,160 23,174 23,188 C23,199 27,205 33,203
+             C39,201 45,191 45,177 C45,165 43,157 39,154 Z"
+          fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <path d="M161,154 C171,160 177,174 177,188 C177,199 173,205 167,203
+             C161,201 155,191 155,177 C155,165 157,157 161,154 Z"
+          fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
   </g>
-  <!-- Fessiers (grandes fesses arrondies) -->
+
+  <!-- FESSIERS -->
   <g id="z-fessiers" class="zone" onclick="sel('Fessiers')"><title>Fessiers</title>
-    <path d="M68,198 C64,210 64,228 68,240 C72,252 82,258 94,254 C102,250 104,238 102,224 C100,208 94,198 80,196 Z" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
-    <path d="M132,198 C136,210 136,228 132,240 C128,252 118,258 106,254 C98,250 96,238 98,224 C100,208 106,198 120,196 Z" fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
+    <path d="M64,204 C58,216 58,236 62,252 C66,264 76,270 88,264
+             C100,258 104,244 100,228 C96,212 87,202 75,202 Z"
+          fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
+    <path d="M136,204 C142,216 142,236 138,252 C134,264 124,270 112,264
+             C100,258 96,244 100,228 C104,212 113,202 125,202 Z"
+          fill="{mf('Fessiers','gb')}" opacity="{mop('Fessiers')}" filter="url(#gwb)"/>
   </g>
-  <!-- Ischio-jambiers (face postérieure cuisse) -->
+
+  <!-- ISCHIO-JAMBIERS -->
   <g id="z-ischio" class="zone" onclick="sel('Ischio-jambiers')"><title>Ischio-jambiers</title>
-    <path d="M68,202 C64,218 62,242 64,270 C66,292 68,306 70,316 C76,322 86,322 90,314 C94,304 92,280 90,254 C88,226 84,206 68,202 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
-    <path d="M132,202 C136,218 138,242 136,270 C134,292 132,306 130,316 C124,322 114,322 110,314 C106,304 108,280 110,254 C112,226 116,206 132,202 Z" fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M67,210 C61,226 59,252 61,278 C63,298 69,312 75,316
+             C83,320 91,314 91,300 C91,280 87,252 83,228 C79,212 74,208 67,210 Z"
+          fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M88,212 C86,230 86,254 88,278 C90,298 94,314 98,316
+             C102,318 108,310 108,292 C108,270 106,246 102,224 C98,210 93,210 88,212 Z"
+          fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M133,210 C139,226 141,252 139,278 C137,298 131,312 125,316
+             C117,320 109,314 109,300 C109,280 113,252 117,228 C121,212 126,208 133,210 Z"
+          fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
+    <path d="M112,212 C114,230 114,254 112,278 C110,298 106,314 102,316
+             C98,318 92,310 92,292 C92,270 94,246 98,224 C102,210 107,210 112,212 Z"
+          fill="{mf('Ischio-jambiers','gb')}" opacity="{mop('Ischio-jambiers')}" filter="url(#gwb)"/>
   </g>
-  <!-- Mollets (gastrocnémien — plus proéminent de dos) -->
+
+  <!-- MOLLETS DOS (gastrocnemiens) -->
   <g id="z-mollets-b" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
-    <path d="M72,318 C68,334 66,356 68,378 C70,390 72,398 74,402 C78,406 86,405 88,400 C90,392 90,374 88,354 C86,332 80,320 72,318 Z" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
-    <path d="M128,318 C132,334 134,356 132,378 C130,390 128,398 126,402 C122,406 114,405 112,400 C110,392 110,374 112,354 C114,332 120,320 128,318 Z" fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+    <path d="M68,322 C62,338 60,362 64,384 C66,396 70,404 74,408
+             C80,412 90,410 92,404 C94,396 92,376 88,354 C84,332 78,322 68,322 Z"
+          fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+    <path d="M132,322 C138,338 140,362 136,384 C134,396 130,404 126,408
+             C120,412 110,410 108,404 C106,396 108,376 112,354 C116,332 122,322 132,322 Z"
+          fill="{mf('Mollets','gb')}" opacity="{mop('Mollets')}" filter="url(#gwb)"/>
+  </g>
+
+  <!-- ═══ COUCHE 2 — PEAU HOLOGRAPHIQUE DOS ═══ -->
+  <ellipse cx="100" cy="28" rx="18" ry="22"
+           fill="#050b18" stroke="#00d4ff" stroke-width="1.3" opacity="0.88"/>
+  <path d="M93,48 L91,66 L109,66 L107,48 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.82"/>
+  <path d="M91,66 C78,66 55,68 35,78 C23,86 21,102 23,117
+           C25,133 33,143 35,155 C37,167 35,177 37,189
+           L67,201 L75,213 L88,215 C92,217 96,218 100,218
+           C104,218 108,217 112,215 L125,213 L133,201
+           L163,189 C165,177 163,167 165,155 C167,143 175,133 177,117
+           C179,102 177,86 165,78 C145,68 122,66 109,66 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="1.2" opacity="0.70"/>
+  <path d="M35,78 C27,86 21,103 21,119 C21,135 23,145 27,151
+           C31,155 37,155 41,149 C45,143 47,127 45,113 C43,97 41,85 35,78 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="1.0" opacity="0.70"/>
+  <path d="M27,153 C21,165 19,179 21,191 C23,201 27,205 33,203
+           C39,201 43,191 43,177 C43,165 39,155 27,153 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <ellipse cx="33" cy="208" rx="9" ry="6"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+  <path d="M165,78 C173,86 179,103 179,119 C179,135 177,145 173,151
+           C169,155 163,155 159,149 C155,143 153,127 155,113 C157,97 159,85 165,78 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="1.0" opacity="0.70"/>
+  <path d="M173,153 C179,165 181,179 179,191 C177,201 173,205 167,203
+           C161,201 157,191 157,177 C157,165 161,155 173,153 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <ellipse cx="167" cy="208" rx="9" ry="6"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+  <ellipse cx="100" cy="201" rx="35" ry="11"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.62"/>
+  <path d="M67,203 C61,219 59,245 61,271 C63,293 67,307 71,317
+           C75,323 85,324 89,317 C93,309 93,285 91,259 C89,231 85,209 67,203 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.70"/>
+  <path d="M133,203 C139,219 141,245 139,271 C137,293 133,307 129,317
+           C125,323 115,324 111,317 C107,309 107,285 109,259 C111,231 115,209 133,203 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.9" opacity="0.70"/>
+  <path d="M71,319 C67,333 65,357 67,379 C69,391 71,399 73,403
+           C77,407 85,406 87,401 C89,394 89,375 87,353 C85,331 79,321 71,319 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <path d="M129,319 C133,333 135,357 133,379 C131,391 129,399 127,403
+           C123,407 115,406 113,401 C111,394 111,375 113,353 C115,331 121,321 129,319 Z"
+        fill="#050b18" stroke="#00d4ff" stroke-width="0.8" opacity="0.70"/>
+  <ellipse cx="79" cy="409" rx="16" ry="7"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+  <ellipse cx="121" cy="409" rx="16" ry="7"
+           fill="#050b18" stroke="#00d4ff" stroke-width="0.7" opacity="0.55"/>
+
+  <!-- ═══ COUCHE 3 — LIGNES ANATOMIQUES DOS ═══ -->
+  <line x1="100" y1="67" x2="100" y2="190"
+        stroke="#00d4ff" stroke-width="0.5" opacity="0.22" stroke-dasharray="3,3"/>
+  <path d="M77,88 C71,97 69,112 73,122 C77,130 85,132 91,126 C89,118 87,106 77,88 Z"
+        stroke="#00d4ff" stroke-width="0.6" fill="none" opacity="0.24" stroke-dasharray="2,1.5"/>
+  <path d="M123,88 C129,97 131,112 127,122 C123,130 115,132 109,126 C111,118 113,106 123,88 Z"
+        stroke="#00d4ff" stroke-width="0.6" fill="none" opacity="0.24" stroke-dasharray="2,1.5"/>
+  <line x1="76" y1="92" x2="92" y2="97"
+        stroke="#00d4ff" stroke-width="0.4" opacity="0.2" stroke-dasharray="1.5,2"/>
+  <line x1="124" y1="92" x2="108" y2="97"
+        stroke="#00d4ff" stroke-width="0.4" opacity="0.2" stroke-dasharray="1.5,2"/>
+  <line x1="96" y1="104" x2="96" y2="186"
+        stroke="#00d4ff" stroke-width="0.3" opacity="0.18" stroke-dasharray="2,2"/>
+  <line x1="104" y1="104" x2="104" y2="186"
+        stroke="#00d4ff" stroke-width="0.3" opacity="0.18" stroke-dasharray="2,2"/>
+  <line x1="100" y1="204" x2="100" y2="250"
+        stroke="#00d4ff" stroke-width="0.4" opacity="0.18" stroke-dasharray="2,2"/>
+  <path d="M70,252 C82,260 100,262 130,252"
+        stroke="#00d4ff" stroke-width="0.4" fill="none" opacity="0.22" stroke-dasharray="2,2"/>
+  <line x1="73" y1="262" x2="71" y2="318"
+        stroke="#00d4ff" stroke-width="0.3" opacity="0.16" stroke-dasharray="2,3"/>
+  <line x1="127" y1="262" x2="129" y2="318"
+        stroke="#00d4ff" stroke-width="0.3" opacity="0.16" stroke-dasharray="2,3"/>
+  <path d="M73,318 C79,322 89,323 89,321"
+        stroke="#00d4ff" stroke-width="0.4" fill="none" opacity="0.2"/>
+  <path d="M127,318 C121,322 111,323 111,321"
+        stroke="#00d4ff" stroke-width="0.4" fill="none" opacity="0.2"/>
+
+  <!-- ═══ COUCHE 4 — HUD DOS ═══ -->
+  <path d="M4,22 L4,4 L22,4"   stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <path d="M196,22 L196,4 L178,4"  stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <path d="M4,398 L4,416 L22,416"  stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <path d="M196,398 L196,416 L178,416" stroke="#00d4ff" stroke-width="1.6" fill="none" opacity="0.65"/>
+  <line x1="89" y1="4"   x2="111" y2="4"   stroke="#00d4ff" stroke-width="0.9" opacity="0.35"/>
+  <line x1="89" y1="416" x2="111" y2="416" stroke="#00d4ff" stroke-width="0.9" opacity="0.35"/>
+  <line x1="4"  y1="100" x2="11"  y2="100" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="4"  y1="210" x2="11"  y2="210" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="4"  y1="320" x2="11"  y2="320" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="189" y1="100" x2="196" y2="100" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="189" y1="210" x2="196" y2="210" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="189" y1="320" x2="196" y2="320" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Scan line -->
+  <g>
+    <line x1="0" y1="0" x2="200" y2="0"
+          stroke="#00d4ff" stroke-width="9" stroke-opacity="0.05">
+      <animateTransform attributeName="transform" type="translate"
+                        from="0,-5" to="0,425" dur="5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="0" x2="200" y2="0"
+          stroke="#00d4ff" stroke-width="1" stroke-opacity="0.40">
+      <animateTransform attributeName="transform" type="translate"
+                        from="0,-5" to="0,425" dur="5s" repeatCount="indefinite"/>
+    </line>
   </g>
 </svg>"""
 
