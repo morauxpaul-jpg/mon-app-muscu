@@ -1918,18 +1918,25 @@ with tab_s:
                     save_hist(pd.concat([df_h[mask], vsk], ignore_index=True))
                     st.rerun()
 
-        # ── Recommencer la séance ────────────────────────────────────────────
-        with st.expander("⚠️ Recommencer cette séance"):
-            st.warning("Effacer toutes les données enregistrées pour cette séance ?")
-            c_rec1, c_rec2 = st.columns(2)
-            if c_rec1.button("🔄 Effacer les données", type="primary", key="libre_reset_data"):
-                mask_r = ~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))
-                save_hist(df_h[mask_r])
+        # ── Recommencer la séance libre (confirmation inline) ────────────────
+        if st.session_state.get('confirming_reset_libre'):
+            st.warning("Effacer toutes les données de cette séance ?")
+            _rl1, _rl2, _rl3 = st.columns(3)
+            if _rl1.button("✅ Effacer données", type="primary", key="libre_conf_data"):
+                save_hist(df_h[~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))])
+                st.session_state.confirming_reset_libre = False
                 st.rerun()
-            if c_rec2.button("🗑️ Tout recommencer", key="libre_reset_all"):
-                mask_r = ~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))
-                save_hist(df_h[mask_r])
+            if _rl2.button("🗑️ Tout recommencer", key="libre_conf_all"):
+                save_hist(df_h[~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))])
                 st.session_state.seance_libre_exos = []
+                st.session_state.confirming_reset_libre = False
+                st.rerun()
+            if _rl3.button("❌ Annuler", key="libre_conf_cancel"):
+                st.session_state.confirming_reset_libre = False
+                st.rerun()
+        else:
+            if st.button("🔄 Recommencer cette séance", use_container_width=True, key="libre_reset_btn"):
+                st.session_state.confirming_reset_libre = True
                 st.rerun()
 
         # ── Bouton ajouter exercice ────────────────────────────────────────────
@@ -2038,19 +2045,23 @@ with tab_s:
             save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             st.rerun()
         
-        # Expander TOUJOURS visible pour éviter erreur DOM
+        # Recommencer séance — confirmation inline
         current_session_data = df_h[(df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
-        has_data = not current_session_data.empty
-        
-        with st.expander("⚠️ Recommencer cette séance", expanded=False):
-            if has_data:
-                st.warning(f"⚠️ Effacer **{choix_s}** semaine **{s_act}** ? (L'historique sera conservé)")
-                if st.button("🔄 Confirmer", type="primary", key="reset_confirm"):
-                    df_filtered = df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s))]
-                    save_hist(df_filtered)
+        if st.session_state.get('confirming_reset_seance') == choix_s:
+            st.warning(f"⚠️ Effacer **{choix_s}** semaine **{s_act}** ?")
+            _cr1, _cr2 = st.columns(2)
+            if _cr1.button("✅ Recommencer", type="primary", key="seance_confirm_yes"):
+                save_hist(df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s))])
+                st.session_state.confirming_reset_seance = None
+                st.rerun()
+            if _cr2.button("❌ Annuler", key="seance_confirm_no"):
+                st.session_state.confirming_reset_seance = None
+                st.rerun()
+        else:
+            if not current_session_data.empty:
+                if st.button("🔄 Recommencer cette séance", use_container_width=True, key="reset_seance_btn"):
+                    st.session_state.confirming_reset_seance = choix_s
                     st.rerun()
-            else:
-                st.info("ℹ️ Aucune donnée pour cette séance.")
 
         st.markdown("### 🔋 RÉCUPÉRATION")
         recup_cols = ["Pecs","Dos","Épaules","Biceps","Triceps","Abdos","Quadriceps","Mollets"]
@@ -2093,32 +2104,59 @@ with tab_s:
             else:
                 var_index = 0
             
-            expanded_state = True
-            
+            # Auto-collapse : exercice replié une fois complété
+            curr_all = df_h[
+                (df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) &
+                (df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
+            exo_completed = not curr_all.empty and (
+                (curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0) or
+                curr_all["Remarque"].str.contains("SKIP", na=False).any()
+            )
+            expanded_state = not exo_completed or exo_base in [
+                e.split("(")[0].strip() for e in st.session_state.editing_exo]
+
             with st.expander(f"🔹 {exo_base.upper()}", expanded=expanded_state):
+                # ── Bouton Recommencer (haut, confirmation inline) ──────────
+                _rkey = f"conf_reset_exo_{exo_base}_{i}"
+                if st.session_state.get(_rkey):
+                    st.warning("Effacer les données de cet exercice ?")
+                    _cy, _cn = st.columns(2)
+                    if _cy.button("✅ Recommencer", type="primary", key=f"yes_r_{exo_base}_{i}"):
+                        mask_exo = ~(
+                            (df_h["Semaine"] == s_act) &
+                            (df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) &
+                            (df_h["Séance"] == choix_s))
+                        save_hist(df_h[mask_exo])
+                        st.session_state[_rkey] = False
+                        st.session_state.editing_exo.discard(exo_base)
+                        st.rerun()
+                    if _cn.button("❌ Annuler", key=f"no_r_{exo_base}_{i}"):
+                        st.session_state[_rkey] = False
+                        st.rerun()
+                else:
+                    if curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0:
+                        if st.button("🔄 Recommencer cet exercice", key=f"rec_r_{exo_base}_{i}"):
+                            st.session_state[_rkey] = True
+                            st.rerun()
+
                 var = st.selectbox("Équipement :", variants, index=var_index, key=f"v_{exo_base}_{i}")
                 exo_final = f"{exo_base} ({var})" if var != "Standard" else exo_base
                 f_h = df_h[(df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s)]
-                
-                # Message variante
+
                 all_variants = df_h[df_h["Exercice"].str.contains(exo_base, regex=False, na=False) & (df_h["Séance"] == choix_s)]["Exercice"].unique()
                 if len(all_variants) > 1:
                     st.caption(f"ℹ️ Exercice pratiqué avec {len(all_variants)} variantes différentes")
-                
+
                 if not f_h.empty:
                     best_w = f_h["Poids"].max()
                     best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
-                    
                     if st.session_state.settings['show_1rm']:
                         st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
                     else:
                         st.caption(f"🏆 Record : **{best_w:g}kg**")
 
-                # HISTORIQUE : 2 dernières séances faites + séances manquées
                 hist_weeks_all = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
                 hist_weeks = [w for w in hist_weeks_all if not f_h[(f_h["Semaine"] == w) & (f_h["Poids"] > 0)].empty]
-
-                # Semaines où la séance entière a été manquée
                 missed_weeks = set(df_h[
                     (df_h["Séance"] == choix_s) &
                     (df_h["Exercice"] == "SESSION") &
@@ -2128,7 +2166,6 @@ with tab_s:
                 if hist_weeks and st.session_state.settings['show_previous_weeks'] > 0:
                     weeks_to_show = hist_weeks[-st.session_state.settings['show_previous_weeks']:]
                     min_w = weeks_to_show[0]
-                    # Timeline combinée : séances faites + manquées dans la plage
                     combined = sorted(set(weeks_to_show) | {w for w in missed_weeks if w >= min_w})
                     for w_num in combined:
                         if w_num in missed_weeks and w_num not in weeks_to_show:
@@ -2144,20 +2181,21 @@ with tab_s:
                 curr = f_h[f_h["Semaine"] == s_act]
                 last_w_num = hist_weeks[-1] if hist_weeks else None
                 hist_prev_df = f_h[(f_h["Semaine"] == last_w_num) & (f_h["Poids"] > 0)] if last_w_num is not None else pd.DataFrame()
-                
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
-
                 editor_key = f"ed_{exo_final}_{s_act}"
 
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     render_table(curr[["Série", "Reps", "Poids", "Remarque"]].reset_index(drop=True), hist_prev=hist_prev_df)
-                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"): 
+                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"):
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
                 else:
-                    df_base = pd.DataFrame({"Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets},
-                                           index=pd.RangeIndex(1, p_sets + 1, name="Série"))
+                    # Fix : df_base taille = max(séries programme, séries déjà sauvegardées)
+                    n_rows = max(p_sets, len(curr)) if not curr.empty else p_sets
+                    df_base = pd.DataFrame(
+                        {"Reps": [0]*n_rows, "Poids": [0.0]*n_rows, "Remarque": [""]*n_rows},
+                        index=pd.RangeIndex(1, n_rows + 1, name="Série"))
                     if not curr.empty:
                         for _, r in curr.iterrows():
                             idx = int(r["Série"])
@@ -2165,15 +2203,11 @@ with tab_s:
                                 df_base.loc[idx, ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
 
                     ed = st.data_editor(
-                        df_base,
-                        num_rows="dynamic",
-                        key=editor_key,
+                        df_base, num_rows="dynamic", key=editor_key,
                         use_container_width=True,
                         column_config={"Poids": st.column_config.NumberColumn(format="%g")},
-                        hide_index=False
-                    )
+                        hide_index=False)
 
-                    # MODE MANUEL UNIQUEMENT
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed.reset_index()
@@ -2182,7 +2216,7 @@ with tab_s:
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final)
                         st.rerun()
-                        
+
                     if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
