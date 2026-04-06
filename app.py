@@ -1903,6 +1903,7 @@ with tab_s:
                 c_sv_l, c_sk_l = st.columns(2)
                 if c_sv_l.button("💾 Enregistrer", key=f"svl_{exo_final_l}"):
                     vl = ed_l.copy()
+                    vl["Série"] = range(1, len(vl) + 1)
                     vl["Semaine"] = s_act_l
                     vl["Séance"] = nom_libre
                     vl["Exercice"] = exo_final_l
@@ -2082,14 +2083,7 @@ with tab_s:
             else:
                 var_index = 0
             
-            # AUTO-RÉDUIRE
-            curr_all = df_h[(df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) & (df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
-            exo_completed = not curr_all.empty and ((curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0) or curr_all["Remarque"].str.contains("SKIP", na=False).any())
-            
-            if st.session_state.settings['auto_collapse']:
-                expanded_state = not exo_completed or exo_base in [e.split("(")[0].strip() for e in st.session_state.editing_exo]
-            else:
-                expanded_state = True
+            expanded_state = True
             
             with st.expander(f"🔹 {exo_base.upper()}", expanded=expanded_state):
                 var = st.selectbox("Équipement :", variants, index=var_index, key=f"v_{exo_base}_{i}")
@@ -2174,6 +2168,7 @@ with tab_s:
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
                         v = ed.copy()
+                        v["Série"] = range(1, len(v) + 1)
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final)
