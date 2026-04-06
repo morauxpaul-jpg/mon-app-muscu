@@ -24,6 +24,21 @@ if 'editing_exo' not in st.session_state:
 if 'active_tab' not in st.session_state:
     st.session_state.active_tab = 'seance'
 
+if 'view' not in st.session_state:
+    st.session_state.view = 'accueil'
+
+if 'mode_seance' not in st.session_state:
+    st.session_state.mode_seance = None   # 'prefaite' | 'libre' | None
+
+if 'seance_selectionnee' not in st.session_state:
+    st.session_state.seance_selectionnee = None
+
+if 'seance_libre_exos' not in st.session_state:
+    st.session_state.seance_libre_exos = []   # [{"name":str,"muscle":str,"sets":int}]
+
+if 'switch_to_seance' not in st.session_state:
+    st.session_state.switch_to_seance = False
+
 # --- 2. CSS : DESIGN CYBER-RPG MOBILE-FRIENDLY ---
 animations_css = """
     @keyframes pulse {
@@ -1449,21 +1464,24 @@ if not df_p.empty:
 # Onglets
 tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🏃 CARDIO", "🎮 ARCADE"])
 
-# --- ONGLET ACCUEIL / WIDGET ---
+# --- ONGLET ACCUEIL ---
 with tab_home:
 
-    st.markdown("<h1 style='text-align: center; margin-top: 5px; margin-bottom: 20px;'>💪 MUSCU TRACKER PRO</h1>", unsafe_allow_html=True)
-
-    # Calculer les stats
     s_act = int(df_h["Semaine"].max() if not df_h.empty else 1)
 
-    # Prochaine séance à faire
+    # Helpers date
+    days_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+    months_fr = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                 "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+    today = datetime.now()
+    day_name = days_fr[today.weekday()]
+    date_str = f"{today.day} {months_fr[today.month - 1]} {today.year}"
+
     def get_next_session():
         for seance in prog_seances.keys():
             seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
             if seance_data.empty:
                 return seance
-            # Skip si marquée comme manquée
             if not seance_data[seance_data["Exercice"] == "SESSION"].empty:
                 continue
             exos_prog = len([ex for ex in prog[seance]])
@@ -1472,156 +1490,220 @@ with tab_home:
                 return seance
         return list(prog_seances.keys())[0] if prog_seances else None
 
-    next_session = get_next_session()
+    # JS switch to séance tab (déclenché après sélection)
+    if st.session_state.switch_to_seance:
+        st.session_state.switch_to_seance = False
+        components.html("""<script>
+        setTimeout(function(){
+            var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+            for (var i=0; i<tabs.length; i++){
+                if (tabs[i].textContent.indexOf('SÉANCE') !== -1){
+                    tabs[i].click(); break;
+                }
+            }
+        }, 120);
+        </script>""", height=0)
 
-    # --- SECTION AUJOURD'HUI ---
-    days_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
-    months_fr = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-                 "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
-    today = datetime.now()
-    day_name = days_fr[today.weekday()]
-    date_str = f"{today.day} {months_fr[today.month - 1]} {today.year}"
+    # ══════════════════════════════════════════
+    # VUE : PAGE DE SÉLECTION INTERMÉDIAIRE
+    # ══════════════════════════════════════════
+    if st.session_state.view == 'choix_seance':
 
-    st.markdown(f"""
-    <div style="text-align:center; padding:18px 12px 10px; margin-bottom:14px;
-        background:linear-gradient(135deg,rgba(88,204,255,0.07),rgba(0,255,127,0.05));
-        border:1px solid rgba(88,204,255,0.25); border-radius:16px;">
-        <div style="font-size:0.85rem; color:#5a7a9a; letter-spacing:3px; text-transform:uppercase;">{day_name}</div>
-        <div style="font-size:1.5rem; color:#58CCFF; font-weight:900; letter-spacing:2px;">{date_str}</div>
-        <div style="font-size:0.75rem; color:#3a5a7a; margin-top:4px; letter-spacing:2px;">SEMAINE {s_act}</div>
-    </div>
-    """, unsafe_allow_html=True)
+        if st.button("← Retour", key="back_accueil"):
+            st.session_state.view = 'accueil'
+            st.rerun()
 
-    # Séances manquées cette semaine
-    missed_this_week = set(df_h[
-        (df_h["Semaine"] == s_act) & (df_h["Exercice"] == "SESSION")
-    ]["Séance"].unique())
+        st.markdown(f"""
+        <div style="text-align:center; padding:12px 8px 6px; margin-bottom:20px;">
+            <div style="font-size:0.8rem; color:#5a7a9a; letter-spacing:3px;">{day_name.upper()} · {date_str}</div>
+            <div style="font-size:1.6rem; color:#fff; font-weight:900; margin-top:4px;">Quelle séance aujourd'hui ?</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # Statut de chaque séance
-    seance_list = list(prog_seances.keys())
-    seance_status = {}
-    for s in seance_list:
-        sd = df_h[(df_h["Séance"] == s) & (df_h["Semaine"] == s_act)]
-        if s in missed_this_week:
-            seance_status[s] = "missed"
-        elif sd.empty:
-            seance_status[s] = "todo"
-        else:
-            exos_prog = len(prog_seances[s])
-            done = len(sd[(sd["Poids"] > 0) | (sd["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
-            seance_status[s] = "done" if done >= exos_prog else "inprog"
+        seance_list_cs = list(prog_seances.keys())
+        _MUSCLE_LIST = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos",
+                        "Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
 
-    # Mini-calendrier des séances
-    status_styles = {
-        "todo":   ("rgba(88,204,255,0.08)",  "#58CCFF", "À FAIRE"),
-        "inprog": ("rgba(255,159,10,0.12)",  "#FF9F0A", "EN COURS"),
-        "done":   ("rgba(0,255,127,0.08)",   "#00FF7F", "FAIT ✓"),
-        "missed": ("rgba(255,69,58,0.10)",   "#FF453A", "MANQUÉE 🚩"),
-    }
-    cards_html = '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">'
-    for s, st_key in seance_status.items():
-        bg, col, label = status_styles[st_key]
-        cards_html += (
-            f'<div style="flex:1; min-width:90px; background:{bg}; border:1px solid {col}44;'
-            f' border-radius:10px; padding:10px 8px; text-align:center;">'
-            f'<div style="font-size:10px; font-weight:900; color:{col}; letter-spacing:1px;">{s}</div>'
-            f'<div style="font-size:9px; color:{col}99; margin-top:4px;">{label}</div>'
-            f'</div>'
-        )
-    cards_html += '</div>'
-    st.markdown(cards_html, unsafe_allow_html=True)
+        # ── OPTION A : Séance pré-faite ────────────────────────────────────────
+        st.markdown("""
+        <div style="border:1px solid rgba(88,204,255,0.3); border-radius:14px; padding:16px 14px 10px; margin-bottom:16px;">
+            <div style="font-size:0.75rem; color:#58CCFF; letter-spacing:3px; margin-bottom:12px;">📋 SÉANCE PRÉ-FAITE</div>
+        """, unsafe_allow_html=True)
 
-    # Choix de la séance du jour
-    st.markdown("#### 📍 Séance du jour")
-    session_options = seance_list + ["🚫 Repos / Manquée"]
-    default_idx = seance_list.index(next_session) if next_session and next_session in seance_list else 0
+        for sname in seance_list_cs:
+            n_exos = len(prog_seances[sname])
+            jours_s = prog.get('_jours', {}).get(sname, "")
+            jours_label = f" · {jours_s}" if jours_s else ""
+            next_marker = " ⚡" if sname == get_next_session() else ""
 
-    col_sel, col_btn = st.columns([2, 1])
-    with col_sel:
-        chosen_today = st.selectbox(
-            "Choisir :", session_options,
-            index=st.session_state.get('home_session_idx', default_idx),
-            key="home_session_choice", label_visibility="collapsed"
-        )
-
-    if chosen_today != "🚫 Repos / Manquée":
-        with col_btn:
-            if st.button("💪 COMMENCER", type="primary", use_container_width=True, key="home_start_btn"):
-                st.session_state['home_selected_session'] = chosen_today
-                st.session_state['home_session_idx'] = session_options.index(chosen_today)
-        if st.session_state.get('home_selected_session') == chosen_today:
-            st.info(f"→ Va dans l'onglet **MA SÉANCE** — **{chosen_today}** est pré-sélectionnée.")
-    else:
-        col_miss, col_miss_btn = st.columns([2, 1])
-        with col_miss:
-            seance_a_manquer = st.selectbox("Quelle séance ?", seance_list, key="home_miss_choice", label_visibility="collapsed")
-        with col_miss_btn:
-            if st.button("🚩 Manquée", use_container_width=True, key="home_miss_btn"):
-                already = df_h[
-                    (df_h["Séance"] == seance_a_manquer) &
-                    (df_h["Semaine"] == s_act) &
-                    (df_h["Exercice"] == "SESSION")
-                ]
-                if already.empty:
-                    m_rec = pd.DataFrame([{
-                        "Semaine": s_act, "Séance": seance_a_manquer, "Exercice": "SESSION",
-                        "Série": 1, "Reps": 0, "Poids": 0.0,
-                        "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre",
-                        "Date": datetime.now().strftime("%Y-%m-%d")
-                    }])
-                    save_hist(pd.concat([df_h, m_rec], ignore_index=True))
+            c_info, c_btn = st.columns([3, 1])
+            with c_info:
+                st.markdown(
+                    f"<div style='padding:8px 0 4px;'>"
+                    f"<span style='font-weight:700; color:#fff;'>{sname}</span>"
+                    f"<span style='color:#58CCFF;'>{next_marker}</span>"
+                    f"<br><span style='font-size:11px; color:#4a6a8a;'>{n_exos} exercices{jours_label}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+            with c_btn:
+                if st.button("Choisir →", key=f"cs_pref_{sname}", use_container_width=True):
+                    st.session_state.seance_selectionnee = sname
+                    st.session_state.mode_seance = 'prefaite'
+                    st.session_state.home_selected_session = sname
+                    st.session_state.switch_to_seance = True
+                    st.session_state.view = 'accueil'
                     st.rerun()
 
-    st.divider()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- STATS SEMAINE ---
-    vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
-    vol_week_formatted = f"{vol_week:,}".replace(',', ' ')
-    sessions_done = len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Séance"].unique())
-    total_sessions = len(prog_seances.keys())
+        # ── OPTION B : Séance personnalisée ───────────────────────────────────
+        st.markdown("""
+        <div style="border:1px solid rgba(0,255,127,0.3); border-radius:14px; padding:16px 14px;">
+            <div style="font-size:0.75rem; color:#00FF7F; letter-spacing:3px; margin-bottom:8px;">✏️ SÉANCE PERSONNALISÉE</div>
+            <div style="font-size:0.85rem; color:#5a8a6a; margin-bottom:12px;">
+                Construis ta séance exercice par exercice,<br>en piochant dans ton programme ou en créant du nouveau.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    if not df_h.empty:
-        weeks_with_data = sorted(df_h[df_h["Poids"] > 0]["Semaine"].unique(), reverse=True)
-        streak = 0
-        for i, week in enumerate(weeks_with_data):
-            if i == 0 or week == weeks_with_data[i-1] - 1:
-                streak += 1
-            else:
-                break
+        if st.button("🎯 Créer ma séance", type="primary", use_container_width=True, key="cs_libre"):
+            st.session_state.seance_libre_exos = []
+            st.session_state.mode_seance = 'libre'
+            st.session_state.switch_to_seance = True
+            st.session_state.view = 'accueil'
+            st.rerun()
+
+    # ══════════════════════════════════════════
+    # VUE : DASHBOARD ACCUEIL NORMAL
+    # ══════════════════════════════════════════
     else:
-        streak = 0
+        st.markdown("<h1 style='text-align:center; margin-top:5px; margin-bottom:16px;'>💪 MUSCU TRACKER PRO</h1>",
+                    unsafe_allow_html=True)
 
-    import streamlit.components.v1 as components
-    widget_html = f"""<!DOCTYPE html><html><head><style>
-    body{{margin:0;padding:8px;background:transparent;overflow:hidden;font-family:'Courier New',monospace;}}
-    </style></head><body>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div style="background:rgba(88,204,255,0.06);border:1px solid rgba(88,204,255,0.25);border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:0.8rem;color:#5a8aaa;letter-spacing:2px;">SÉANCES</div>
-            <div style="font-size:2.2rem;color:#58CCFF;font-weight:900;">{sessions_done}/{total_sessions}</div>
+        # Date + semaine
+        st.markdown(f"""
+        <div style="text-align:center; padding:14px 12px 10px; margin-bottom:14px;
+            background:linear-gradient(135deg,rgba(88,204,255,0.07),rgba(0,255,127,0.05));
+            border:1px solid rgba(88,204,255,0.25); border-radius:16px;">
+            <div style="font-size:0.85rem; color:#5a7a9a; letter-spacing:3px;">{day_name.upper()}</div>
+            <div style="font-size:1.5rem; color:#58CCFF; font-weight:900; letter-spacing:2px;">{date_str}</div>
+            <div style="font-size:0.75rem; color:#3a5a7a; margin-top:4px; letter-spacing:2px;">SEMAINE {s_act}</div>
         </div>
-        <div style="background:rgba(0,255,127,0.06);border:1px solid rgba(0,255,127,0.25);border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:0.8rem;color:#3a8a5a;letter-spacing:2px;">VOLUME</div>
-            <div style="font-size:2.2rem;color:#00FF7F;font-weight:900;">{vol_week_formatted}</div>
-            <div style="font-size:0.75rem;color:#3a6a4a;">kg cette semaine</div>
-        </div>
-    </div>
-    <div style="background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.25);border-radius:12px;padding:14px;text-align:center;">
-        <div style="font-size:0.8rem;color:#8a7a2a;letter-spacing:2px;">🔥 STREAK</div>
-        <div style="font-size:1.8rem;color:#FFD700;font-weight:900;">{streak} SEMAINE{"S" if streak > 1 else ""}</div>
-    </div>
-    </body></html>"""
-    components.html(widget_html, height=200, scrolling=False)
+        """, unsafe_allow_html=True)
 
-    st.markdown("### 📊 DÉTAIL")
-    col_m1, col_m2, col_m3 = st.columns(3)
-    with col_m1:
-        st.metric("💪 Exercices", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Exercice"].unique()))
-    with col_m2:
-        st.metric("🔢 Séries", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]))
-    with col_m3:
-        total_reps = int(df_h[df_h["Semaine"] == s_act]["Reps"].sum())
-        st.metric("🎯 Reps", total_reps)
+        # Bouton CTA principal
+        if st.button("💪  COMMENCER UNE SÉANCE", type="primary", use_container_width=True, key="cta_commencer"):
+            st.session_state.view = 'choix_seance'
+            st.rerun()
+
+        st.divider()
+
+        # Statut séances cette semaine
+        missed_this_week = set(df_h[
+            (df_h["Semaine"] == s_act) & (df_h["Exercice"] == "SESSION")
+        ]["Séance"].unique())
+        seance_list = list(prog_seances.keys())
+        seance_status = {}
+        for _s in seance_list:
+            sd = df_h[(df_h["Séance"] == _s) & (df_h["Semaine"] == s_act)]
+            if _s in missed_this_week:
+                seance_status[_s] = "missed"
+            elif sd.empty:
+                seance_status[_s] = "todo"
+            else:
+                exos_prog = len(prog_seances[_s])
+                done = len(sd[(sd["Poids"] > 0) | (sd["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
+                seance_status[_s] = "done" if done >= exos_prog else "inprog"
+
+        _st_styles = {
+            "todo":   ("rgba(88,204,255,0.08)",  "#58CCFF", "À FAIRE"),
+            "inprog": ("rgba(255,159,10,0.12)",  "#FF9F0A", "EN COURS"),
+            "done":   ("rgba(0,255,127,0.08)",   "#00FF7F", "FAIT ✓"),
+            "missed": ("rgba(255,69,58,0.10)",   "#FF453A", "MANQUÉE 🚩"),
+        }
+        cards_html = '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">'
+        for _s, _stk in seance_status.items():
+            _bg, _col, _lbl = _st_styles[_stk]
+            cards_html += (
+                f'<div style="flex:1; min-width:80px; background:{_bg}; border:1px solid {_col}44;'
+                f' border-radius:10px; padding:10px 6px; text-align:center;">'
+                f'<div style="font-size:10px; font-weight:900; color:{_col}; letter-spacing:1px;">{_s}</div>'
+                f'<div style="font-size:9px; color:{_col}99; margin-top:3px;">{_lbl}</div>'
+                f'</div>'
+            )
+        cards_html += '</div>'
+        st.markdown(cards_html, unsafe_allow_html=True)
+
+        # Marquage séance manquée rapide
+        with st.expander("🚩 Marquer une séance comme manquée"):
+            col_miss, col_miss_btn = st.columns([2, 1])
+            with col_miss:
+                seance_a_manquer = st.selectbox("Séance", seance_list, key="home_miss_choice", label_visibility="collapsed")
+            with col_miss_btn:
+                if st.button("Confirmer", use_container_width=True, key="home_miss_btn"):
+                    already = df_h[
+                        (df_h["Séance"] == seance_a_manquer) & (df_h["Semaine"] == s_act) & (df_h["Exercice"] == "SESSION")
+                    ]
+                    if already.empty:
+                        m_rec = pd.DataFrame([{
+                            "Semaine": s_act, "Séance": seance_a_manquer, "Exercice": "SESSION",
+                            "Série": 1, "Reps": 0, "Poids": 0.0,
+                            "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre",
+                            "Date": datetime.now().strftime("%Y-%m-%d")
+                        }])
+                        save_hist(pd.concat([df_h, m_rec], ignore_index=True))
+                        st.rerun()
+
+        st.divider()
+
+        # Stats semaine
+        vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
+        vol_week_formatted = f"{vol_week:,}".replace(',', ' ')
+        sessions_done = len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Séance"].unique())
+        total_sessions = len(prog_seances.keys())
+
+        if not df_h.empty:
+            weeks_with_data = sorted(df_h[df_h["Poids"] > 0]["Semaine"].unique(), reverse=True)
+            streak = 0
+            for i, week in enumerate(weeks_with_data):
+                if i == 0 or week == weeks_with_data[i-1] - 1:
+                    streak += 1
+                else:
+                    break
+        else:
+            streak = 0
+
+        widget_html = f"""<!DOCTYPE html><html><head><style>
+        body{{margin:0;padding:6px;background:transparent;overflow:hidden;font-family:'Courier New',monospace;}}
+        </style></head><body>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div style="background:rgba(88,204,255,0.06);border:1px solid rgba(88,204,255,0.25);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.75rem;color:#5a8aaa;letter-spacing:2px;">SÉANCES</div>
+                <div style="font-size:2rem;color:#58CCFF;font-weight:900;">{sessions_done}/{total_sessions}</div>
+            </div>
+            <div style="background:rgba(0,255,127,0.06);border:1px solid rgba(0,255,127,0.25);border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:0.75rem;color:#3a8a5a;letter-spacing:2px;">VOLUME</div>
+                <div style="font-size:2rem;color:#00FF7F;font-weight:900;">{vol_week_formatted}</div>
+                <div style="font-size:0.7rem;color:#3a6a4a;">kg cette semaine</div>
+            </div>
+        </div>
+        <div style="background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.25);border-radius:12px;padding:12px;text-align:center;">
+            <div style="font-size:0.75rem;color:#8a7a2a;letter-spacing:2px;">🔥 STREAK</div>
+            <div style="font-size:1.6rem;color:#FFD700;font-weight:900;">{streak} SEMAINE{"S" if streak > 1 else ""}</div>
+        </div>
+        </body></html>"""
+        components.html(widget_html, height=185, scrolling=False)
+
+        st.markdown("### 📊 DÉTAIL")
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            st.metric("💪 Exercices", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Exercice"].unique()))
+        with col_m2:
+            st.metric("🔢 Séries", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]))
+        with col_m3:
+            total_reps = int(df_h[df_h["Semaine"] == s_act]["Reps"].sum())
+            st.metric("🎯 Reps", total_reps)
 
 # --- ONGLET PROGRAMME ---
 with tab_p:
@@ -1716,7 +1798,152 @@ with tab_p:
 
 # --- ONGLET MA SÉANCE ---
 with tab_s:
-    if prog:
+    _MUSCLE_LIST_S = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos",
+                      "Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
+
+    # ══════════════════════════════════════════════════════════
+    # MODE LIBRE : séance personnalisée construite à la volée
+    # ══════════════════════════════════════════════════════════
+    if st.session_state.mode_seance == 'libre':
+
+        c_tl, c_tr = st.columns([3, 1])
+        with c_tl:
+            st.markdown("### 🎯 SÉANCE PERSONNALISÉE")
+        with c_tr:
+            if st.button("✕ Terminer", key="libre_fin", use_container_width=True):
+                st.session_state.mode_seance = None
+                st.session_state.seance_libre_exos = []
+                st.rerun()
+
+        s_act_l = st.number_input("Semaine", 1, 52,
+                                  int(df_h["Semaine"].max() if not df_h.empty else 1),
+                                  key="semaine_libre")
+        nom_libre = st.text_input("Nom de la séance", value="Séance Libre", key="nom_libre")
+
+        st.divider()
+
+        # Afficher les exercices déjà ajoutés
+        for li, exo_obj in enumerate(st.session_state.seance_libre_exos):
+            exo_base_l = exo_obj['name']
+            muscle_grp_l = exo_obj.get('muscle', 'Autre')
+            p_sets_l = exo_obj.get('sets', 3)
+
+            with st.expander(f"🔹 {exo_base_l.upper()}", expanded=True):
+                col_rm = st.columns([4, 1])
+                with col_rm[1]:
+                    if st.button("✕", key=f"rm_libre_{li}", help="Retirer cet exercice"):
+                        st.session_state.seance_libre_exos.pop(li)
+                        st.rerun()
+
+                variants_l = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
+                var_l = col_rm[0].selectbox("Équipement", variants_l, key=f"vl_{exo_base_l}_{li}")
+                exo_final_l = f"{exo_base_l} ({var_l})" if var_l != "Standard" else exo_base_l
+
+                # Record perso toutes séances confondues
+                f_h_l = df_h[df_h["Exercice"].str.contains(exo_base_l, regex=False, na=False)]
+                if not f_h_l.empty and not f_h_l[f_h_l["Reps"] > 0].empty:
+                    best_w_l = f_h_l["Poids"].max()
+                    best_1rm_l = f_h_l[f_h_l["Reps"] > 0].apply(
+                        lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
+                    st.caption(f"🏆 Record : **{best_w_l:g}kg** | ⚡ 1RM estimé : **{best_1rm_l:.1f}kg**")
+
+                curr_l = df_h[(df_h["Exercice"] == exo_final_l) &
+                              (df_h["Séance"] == nom_libre) &
+                              (df_h["Semaine"] == s_act_l)]
+                df_base_l = pd.DataFrame({"Série": range(1, p_sets_l + 1),
+                                          "Reps": [0]*p_sets_l,
+                                          "Poids": [0.0]*p_sets_l,
+                                          "Remarque": [""]*p_sets_l})
+                if not curr_l.empty:
+                    for _, rl in curr_l.iterrows():
+                        if rl["Série"] <= p_sets_l:
+                            df_base_l.loc[df_base_l["Série"] == rl["Série"],
+                                          ["Reps","Poids","Remarque"]] = [rl["Reps"], rl["Poids"], rl["Remarque"]]
+
+                ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}",
+                                      use_container_width=True, hide_index=True,
+                                      column_config={
+                                          "Série": st.column_config.NumberColumn(disabled=True),
+                                          "Poids": st.column_config.NumberColumn(format="%g")
+                                      },
+                                      column_order=["Série","Reps","Poids","Remarque"])
+
+                c_sv_l, c_sk_l = st.columns(2)
+                if c_sv_l.button("💾 Enregistrer", key=f"svl_{exo_final_l}"):
+                    vl = ed_l.copy()
+                    vl["Semaine"] = s_act_l
+                    vl["Séance"] = nom_libre
+                    vl["Exercice"] = exo_final_l
+                    vl["Muscle"] = muscle_grp_l
+                    vl["Date"] = datetime.now().strftime("%Y-%m-%d")
+                    mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
+                    save_hist(pd.concat([df_h[mask], vl], ignore_index=True))
+                    st.rerun()
+                if c_sk_l.button("⏩ Skip", key=f"skl_{exo_final_l}"):
+                    vsk = pd.DataFrame([{"Semaine": s_act_l, "Séance": nom_libre,
+                                         "Exercice": exo_final_l, "Série": 1,
+                                         "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫",
+                                         "Muscle": muscle_grp_l,
+                                         "Date": datetime.now().strftime("%Y-%m-%d")}])
+                    mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
+                    save_hist(pd.concat([df_h[mask], vsk], ignore_index=True))
+                    st.rerun()
+
+        # ── Bouton ajouter exercice ────────────────────────────────────────────
+        with st.expander("➕ Ajouter un exercice", expanded=len(st.session_state.seance_libre_exos) == 0):
+            mode_ajout = st.radio("", ["Depuis mes programmes", "Nouvel exercice"],
+                                  horizontal=True, key="libre_mode_ajout")
+
+            if mode_ajout == "Depuis mes programmes":
+                # Tous les exercices de tous les programmes (dédupliqués)
+                all_prog_exos = {}
+                for _sn, _exos in prog_seances.items():
+                    for _e in _exos:
+                        if _e['name'] not in all_prog_exos:
+                            all_prog_exos[_e['name']] = _e
+
+                muscle_filter = st.selectbox("Filtrer par muscle",
+                                             ["Tous"] + _MUSCLE_LIST_S,
+                                             key="libre_muscle_filter")
+                filtered_exos = [e for e in all_prog_exos.values()
+                                 if muscle_filter == "Tous"
+                                 or muscle_filter in str(e.get('muscle', ''))]
+
+                already_names = [e['name'] for e in st.session_state.seance_libre_exos]
+                for _fe in filtered_exos:
+                    _col_n, _col_b = st.columns([3, 1])
+                    _col_n.write(f"**{_fe['name']}** · {_fe.get('muscle','')}")
+                    _btn_lbl = "✓ Ajouté" if _fe['name'] in already_names else "+ Ajouter"
+                    if _col_b.button(_btn_lbl, key=f"add_prog_{_fe['name']}", disabled=_fe['name'] in already_names):
+                        st.session_state.seance_libre_exos.append({
+                            "name": _fe['name'],
+                            "muscle": _fe.get('muscle', 'Autre'),
+                            "sets": _fe.get('sets', 3)
+                        })
+                        st.rerun()
+
+            else:  # Nouvel exercice
+                new_name = st.text_input("Nom de l'exercice", key="libre_new_name")
+                new_muscle = st.selectbox("Muscle principal", _MUSCLE_LIST_S, key="libre_new_muscle")
+                new_sets = st.number_input("Nombre de séries", 1, 10, 3, key="libre_new_sets")
+                if st.button("➕ Ajouter cet exercice", key="libre_add_new",
+                             disabled=not new_name.strip()):
+                    already_names2 = [e['name'] for e in st.session_state.seance_libre_exos]
+                    if new_name.strip() not in already_names2:
+                        # Auto-détect muscle si non renseigné
+                        detected = auto_muscles(new_name.strip())
+                        muscle_final = detected if detected else new_muscle
+                        st.session_state.seance_libre_exos.append({
+                            "name": new_name.strip(),
+                            "muscle": muscle_final,
+                            "sets": int(new_sets)
+                        })
+                    st.rerun()
+
+    # ══════════════════════════════════════════════════════════
+    # MODE NORMAL (pré-faite ou accès direct)
+    # ══════════════════════════════════════════════════════════
+    elif prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
         s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
         
