@@ -1574,6 +1574,38 @@ with tab_home:
             st.session_state.view = 'accueil'
             st.rerun()
 
+        # ── OPTION C : Passer / Séance manquée ────────────────────────────────
+        st.markdown("""
+        <div style="border:1px solid rgba(255,69,58,0.25); border-radius:14px; padding:16px 14px; margin-top:16px;">
+            <div style="font-size:0.75rem; color:#FF453A; letter-spacing:3px; margin-bottom:8px;">🚩 PASSER UNE SÉANCE</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        _s_act_cs = int(df_h["Semaine"].max() if not df_h.empty else 1)
+        col_ms, col_mb = st.columns([3, 1])
+        with col_ms:
+            seance_a_passer = st.selectbox(
+                "Séance à passer", list(prog_seances.keys()),
+                key="cs_miss_sel", label_visibility="collapsed"
+            )
+        with col_mb:
+            if st.button("🚩 Confirmer", use_container_width=True, key="cs_miss_btn"):
+                _already = df_h[
+                    (df_h["Séance"] == seance_a_passer) &
+                    (df_h["Semaine"] == _s_act_cs) &
+                    (df_h["Exercice"] == "SESSION")
+                ]
+                if _already.empty:
+                    _mrec = pd.DataFrame([{
+                        "Semaine": _s_act_cs, "Séance": seance_a_passer,
+                        "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0,
+                        "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre",
+                        "Date": datetime.now().strftime("%Y-%m-%d")
+                    }])
+                    save_hist(pd.concat([df_h, _mrec], ignore_index=True))
+                st.session_state.view = 'accueil'
+                st.rerun()
+
     # ══════════════════════════════════════════
     # VUE : DASHBOARD ACCUEIL NORMAL
     # ══════════════════════════════════════════
@@ -1941,7 +1973,31 @@ with tab_s:
                     st.rerun()
 
     # ══════════════════════════════════════════════════════════
-    # MODE NORMAL (pré-faite ou accès direct)
+    # AUCUNE SÉANCE SÉLECTIONNÉE
+    # ══════════════════════════════════════════════════════════
+    elif st.session_state.mode_seance is None:
+        st.markdown("""
+        <div style="text-align:center; padding:60px 20px;">
+            <div style="font-size:3rem; margin-bottom:16px;">🏋️</div>
+            <div style="font-size:1.2rem; color:#fff; font-weight:700; margin-bottom:8px;">Aucune séance en cours</div>
+            <div style="font-size:0.9rem; color:#5a7a9a;">Retourne sur l'accueil et clique sur<br><b style="color:#58CCFF;">COMMENCER UNE SÉANCE</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("← Aller à l'accueil", use_container_width=True, key="seance_back_home"):
+            st.session_state.view = 'accueil'
+            components.html("""<script>
+            setTimeout(function(){
+                var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+                for (var i=0; i<tabs.length; i++){
+                    if (tabs[i].textContent.indexOf('ACCUEIL') !== -1){
+                        tabs[i].click(); break;
+                    }
+                }
+            }, 120);
+            </script>""", height=0)
+
+    # ══════════════════════════════════════════════════════════
+    # MODE PRÉ-FAITE
     # ══════════════════════════════════════════════════════════
     elif prog:
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
