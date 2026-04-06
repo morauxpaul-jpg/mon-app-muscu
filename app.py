@@ -831,19 +831,19 @@ def rep_crusher_game():
 # --- 5. CARTE DU CORPS INTERACTIVE ---
 def body_map_section(df_p):
     MUSCLES = {
-        "Pecs":            {"std": 80,  "zid_f": "z-pecs",    "zid_b": None},
-        "Dos":             {"std": 90,  "zid_f": None,         "zid_b": "z-dos"},
-        "Épaules":         {"std": 55,  "zid_f": "z-epaules",  "zid_b": "z-epaules-b"},
-        "Biceps":          {"std": 30,  "zid_f": "z-biceps",   "zid_b": None},
-        "Triceps":         {"std": 35,  "zid_f": None,         "zid_b": "z-triceps"},
-        "Avant-bras":      {"std": 20,  "zid_f": "z-avbras",   "zid_b": "z-avbras-b"},
-        "Abdos":           {"std": 25,  "zid_f": "z-abdos",    "zid_b": None},
-        "Quadriceps":      {"std": 100, "zid_f": "z-quad",     "zid_b": None},
-        "Ischio-jambiers": {"std": 60,  "zid_f": None,         "zid_b": "z-ischio"},
-        "Fessiers":        {"std": 80,  "zid_f": None,         "zid_b": "z-fessiers"},
-        "Mollets":         {"std": 60,  "zid_f": "z-mollets",  "zid_b": "z-mollets-b"},
-        "Bras":            {"std": 30,  "zid_f": "z-biceps",   "zid_b": None},
-        "Jambes":          {"std": 100, "zid_f": "z-quad",     "zid_b": None},
+        "Pecs":            {"std": 140, "zid_f": "z-pecs",    "zid_b": None},
+        "Dos":             {"std": 160, "zid_f": None,         "zid_b": "z-dos"},
+        "Épaules":         {"std": 90,  "zid_f": "z-epaules",  "zid_b": "z-epaules-b"},
+        "Biceps":          {"std": 60,  "zid_f": "z-biceps",   "zid_b": None},
+        "Triceps":         {"std": 70,  "zid_f": None,         "zid_b": "z-triceps"},
+        "Avant-bras":      {"std": 45,  "zid_f": "z-avbras",   "zid_b": "z-avbras-b"},
+        "Abdos":           {"std": 60,  "zid_f": "z-abdos",    "zid_b": None},
+        "Quadriceps":      {"std": 180, "zid_f": "z-quad",     "zid_b": None},
+        "Ischio-jambiers": {"std": 110, "zid_f": None,         "zid_b": "z-ischio"},
+        "Fessiers":        {"std": 140, "zid_f": None,         "zid_b": "z-fessiers"},
+        "Mollets":         {"std": 110, "zid_f": "z-mollets",  "zid_b": "z-mollets-b"},
+        "Bras":            {"std": 60,  "zid_f": "z-biceps",   "zid_b": None},
+        "Jambes":          {"std": 180, "zid_f": "z-quad",     "zid_b": None},
     }
     DISPLAY_MUSCLES = [m for m in MUSCLES if m not in ("Bras", "Jambes")]
 
@@ -937,18 +937,18 @@ def body_map_section(df_p):
   <circle cx="108" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
   <!-- Cou -->
   <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
-  <!-- Torso (courbes bezier — épaules larges, taille étroite, hanches) -->
-  <path d="M92,76 C80,76 60,72 38,82 C26,88 24,102 26,116 C28,130 36,138 38,150 C40,162 38,174 40,184 L70,196 L76,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L124,208 L130,196 L160,184 C162,174 160,162 162,150 C164,138 172,130 174,116 C176,102 174,88 162,82 C140,72 120,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
+  <!-- Torso (courbes bezier — épaules, taille étroite, hanches) -->
+  <path d="M92,76 C84,76 66,72 50,82 C38,88 36,102 38,116 C40,130 46,138 48,150 C50,162 48,174 50,184 L74,196 L78,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L122,208 L126,196 L150,184 C152,174 150,162 152,150 C154,138 160,130 162,116 C164,102 162,88 150,82 C134,72 116,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
   <!-- Bras gauche (upper) -->
-  <path d="M38,82 C30,90 24,104 24,120 C24,134 26,142 30,146 C34,150 40,150 44,144 C48,138 48,120 46,106 C44,92 42,82 38,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M50,82 C42,90 36,104 36,120 C36,134 38,142 42,146 C46,150 52,150 56,144 C60,138 60,120 58,106 C56,92 54,82 50,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
   <!-- Avant-bras gauche -->
-  <path d="M30,148 C26,158 24,172 26,184 C28,192 32,198 36,198 C40,200 44,198 46,192 C48,186 46,172 44,160 C42,150 38,148 30,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="38" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M42,148 C38,158 36,172 38,184 C40,192 44,198 48,198 C52,200 56,198 58,192 C60,186 58,172 56,160 C54,150 50,148 42,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="50" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
   <!-- Bras droit (upper) -->
-  <path d="M162,82 C170,90 176,104 176,120 C176,134 174,142 170,146 C166,150 160,150 156,144 C152,138 152,120 154,106 C156,92 158,82 162,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M150,82 C158,90 164,104 164,120 C164,134 162,142 158,146 C154,150 148,150 144,144 C140,138 140,120 142,106 C144,92 146,82 150,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
   <!-- Avant-bras droit -->
-  <path d="M170,148 C174,158 176,172 174,184 C172,192 168,198 164,198 C160,200 156,198 154,192 C152,186 154,172 156,160 C158,150 162,148 170,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="162" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M158,148 C162,158 164,172 162,184 C160,192 156,198 152,198 C148,200 144,198 142,192 C140,186 142,172 144,160 C146,150 150,148 158,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="150" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
   <!-- Hanches -->
   <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
   <!-- Cuisse gauche -->
@@ -965,8 +965,8 @@ def body_map_section(df_p):
   <!-- ── Zones musculaires FACE ── -->
   <!-- Deltoïdes -->
   <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <path d="M36,82 C26,88 22,102 24,116 C26,126 30,134 34,138 C38,134 40,118 40,106 C40,94 38,84 36,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
-    <path d="M164,82 C174,88 178,102 176,116 C174,126 170,134 166,138 C162,134 160,118 160,106 C160,94 162,84 164,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <path d="M48,82 C38,88 34,102 36,116 C38,126 42,134 46,138 C50,134 52,118 52,106 C52,94 50,84 48,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
+    <path d="M152,82 C162,88 166,102 164,116 C162,126 158,134 154,138 C150,134 148,118 148,106 C148,94 150,84 152,82 Z" fill="{mf('Épaules','gf')}" opacity="{mop('Épaules')}" filter="url(#gw)"/>
   </g>
   <!-- Pectoraux (forme en éventail) -->
   <g id="z-pecs" class="zone" onclick="sel('Pecs')"><title>Pecs</title>
@@ -975,13 +975,13 @@ def body_map_section(df_p):
   </g>
   <!-- Biceps (ovale allongé face antérieure du bras) -->
   <g id="z-biceps" class="zone" onclick="sel('Biceps')"><title>Biceps</title>
-    <path d="M38,86 C32,98 28,114 30,128 C32,138 36,142 40,138 C44,134 46,118 44,106 C42,94 40,86 38,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
-    <path d="M162,86 C168,98 172,114 170,128 C168,138 164,142 160,138 C156,134 154,118 156,106 C158,94 160,86 162,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M50,86 C44,98 40,114 42,128 C44,138 48,142 52,138 C56,134 58,118 56,106 C54,94 52,86 50,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
+    <path d="M150,86 C156,98 160,114 158,128 C156,138 152,142 148,138 C144,134 142,118 144,106 C146,94 148,86 150,86 Z" fill="{mf('Biceps','gf')}" opacity="{mop('Biceps')}" filter="url(#gw)"/>
   </g>
   <!-- Avant-bras -->
   <g id="z-avbras" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <path d="M30,150 C24,162 22,176 24,188 C26,196 30,200 34,198 C38,196 40,186 40,174 C40,162 36,152 30,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
-    <path d="M170,150 C176,162 178,176 176,188 C174,196 170,200 166,198 C162,196 160,186 160,174 C160,162 164,152 170,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <path d="M42,150 C36,162 34,176 36,188 C38,196 42,200 46,198 C50,196 52,186 52,174 C52,162 48,152 42,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
+    <path d="M158,150 C164,162 166,176 164,188 C162,196 158,200 154,198 C150,196 148,186 148,174 C148,162 152,152 158,150 Z" fill="{mf('Avant-bras','gf')}" opacity="{mop('Avant-bras')}" filter="url(#gw)"/>
   </g>
   <!-- Abdominaux (grille 6-pack) -->
   <g id="z-abdos" class="zone" onclick="sel('Abdos')"><title>Abdos</title>
@@ -1016,13 +1016,13 @@ def body_map_section(df_p):
   <!-- ── Silhouette (identique face) ── -->
   <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
   <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
-  <path d="M92,76 C80,76 60,72 38,82 C26,88 24,102 26,116 C28,130 36,138 38,150 C40,162 38,174 40,184 L70,196 L76,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L124,208 L130,196 L160,184 C162,174 160,162 162,150 C164,138 172,130 174,116 C176,102 174,88 162,82 C140,72 120,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
-  <path d="M38,82 C30,90 24,104 24,120 C24,134 26,142 30,146 C34,150 40,150 44,144 C48,138 48,120 46,106 C44,92 42,82 38,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
-  <path d="M30,148 C26,158 24,172 26,184 C28,192 32,198 36,198 C40,200 44,198 46,192 C48,186 46,172 44,160 C42,150 38,148 30,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="38" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
-  <path d="M162,82 C170,90 176,104 176,120 C176,134 174,142 170,146 C166,150 160,150 156,144 C152,138 152,120 154,106 C156,92 158,82 162,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
-  <path d="M170,148 C174,158 176,172 174,184 C172,192 168,198 164,198 C160,200 156,198 154,192 C152,186 154,172 156,160 C158,150 162,148 170,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
-  <ellipse cx="162" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M92,76 C84,76 66,72 50,82 C38,88 36,102 38,116 C40,130 46,138 48,150 C50,162 48,174 50,184 L74,196 L78,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L122,208 L126,196 L150,184 C152,174 150,162 152,150 C154,138 160,130 162,116 C164,102 162,88 150,82 C134,72 116,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
+  <path d="M50,82 C42,90 36,104 36,120 C36,134 38,142 42,146 C46,150 52,150 56,144 C60,138 60,120 58,106 C56,92 54,82 50,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M42,148 C38,158 36,172 38,184 C40,192 44,198 48,198 C52,200 56,198 58,192 C60,186 58,172 56,160 C54,150 50,148 42,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="50" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M150,82 C158,90 164,104 164,120 C164,134 162,142 158,146 C154,150 148,150 144,144 C140,138 140,120 142,106 C144,92 146,82 150,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M158,148 C162,158 164,172 162,184 C160,192 156,198 152,198 C148,200 144,198 142,192 C140,186 142,172 144,160 C146,150 150,148 158,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="150" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
   <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
   <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
   <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
@@ -1034,8 +1034,8 @@ def body_map_section(df_p):
   <!-- ── Zones musculaires DOS ── -->
   <!-- Deltoïdes postérieurs -->
   <g id="z-epaules-b" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
-    <path d="M36,82 C26,88 22,102 24,116 C26,126 30,134 34,138 C38,134 40,118 40,106 C40,94 38,84 36,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
-    <path d="M164,82 C174,88 178,102 176,116 C174,126 170,134 166,138 C162,134 160,118 160,106 C160,94 162,84 164,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <path d="M48,82 C38,88 34,102 36,116 C38,126 42,134 46,138 C50,134 52,118 52,106 C52,94 50,84 48,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
+    <path d="M152,82 C162,88 166,102 164,116 C162,126 158,134 154,138 C150,134 148,118 148,106 C148,94 150,84 152,82 Z" fill="{mf('Épaules','gb')}" opacity="{mop('Épaules')}" filter="url(#gwb)"/>
   </g>
   <!-- Dos : trapèze + grands dorsaux -->
   <g id="z-dos" class="zone" onclick="sel('Dos')"><title>Dos</title>
@@ -1050,13 +1050,13 @@ def body_map_section(df_p):
   </g>
   <!-- Triceps (face postérieure du bras) -->
   <g id="z-triceps" class="zone" onclick="sel('Triceps')"><title>Triceps</title>
-    <path d="M38,86 C32,98 28,114 30,128 C32,138 36,142 40,138 C44,134 46,118 44,106 C42,94 40,86 38,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
-    <path d="M162,86 C168,98 172,114 170,128 C168,138 164,142 160,138 C156,134 154,118 156,106 C158,94 160,86 162,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M50,86 C44,98 40,114 42,128 C44,138 48,142 52,138 C56,134 58,118 56,106 C54,94 52,86 50,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
+    <path d="M150,86 C156,98 160,114 158,128 C156,138 152,142 148,138 C144,134 142,118 144,106 C146,94 148,86 150,86 Z" fill="{mf('Triceps','gb')}" opacity="{mop('Triceps')}" filter="url(#gwb)"/>
   </g>
   <!-- Avant-bras dos -->
   <g id="z-avbras-b" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
-    <path d="M30,150 C24,162 22,176 24,188 C26,196 30,200 34,198 C38,196 40,186 40,174 C40,162 36,152 30,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
-    <path d="M170,150 C176,162 178,176 176,188 C174,196 170,200 166,198 C162,196 160,186 160,174 C160,162 164,152 170,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <path d="M42,150 C36,162 34,176 36,188 C38,196 42,200 46,198 C50,196 52,186 52,174 C52,162 48,152 42,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
+    <path d="M158,150 C164,162 166,176 164,188 C162,196 158,200 154,198 C150,196 148,186 148,174 C148,162 152,152 158,150 Z" fill="{mf('Avant-bras','gb')}" opacity="{mop('Avant-bras')}" filter="url(#gwb)"/>
   </g>
   <!-- Fessiers (grandes fesses arrondies) -->
   <g id="z-fessiers" class="zone" onclick="sel('Fessiers')"><title>Fessiers</title>
@@ -1451,20 +1451,21 @@ tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs(["🏠 ACCUEIL", "�
 
 # --- ONGLET ACCUEIL / WIDGET ---
 with tab_home:
-    
+
     st.markdown("<h1 style='text-align: center; margin-top: 5px; margin-bottom: 20px;'>💪 MUSCU TRACKER PRO</h1>", unsafe_allow_html=True)
-    
-    st.markdown("## 🎯 TABLEAU DE BORD")
-    
+
     # Calculer les stats
     s_act = int(df_h["Semaine"].max() if not df_h.empty else 1)
-    
+
     # Prochaine séance à faire
     def get_next_session():
         for seance in prog_seances.keys():
             seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
             if seance_data.empty:
                 return seance
+            # Skip si marquée comme manquée
+            if not seance_data[seance_data["Exercice"] == "SESSION"].empty:
+                continue
             exos_prog = len([ex for ex in prog[seance]])
             exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
             if exos_done_or_skipped < exos_prog:
@@ -1473,15 +1474,112 @@ with tab_home:
 
     next_session = get_next_session()
 
-    # Volume cette semaine - Formaté avec espaces
-    vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
-    vol_week_formatted = f"{vol_week:,}".replace(',', ' ')  # Format avec espaces
+    # --- SECTION AUJOURD'HUI ---
+    days_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+    months_fr = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                 "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+    today = datetime.now()
+    day_name = days_fr[today.weekday()]
+    date_str = f"{today.day} {months_fr[today.month - 1]} {today.year}"
 
-    # Séances cette semaine
+    st.markdown(f"""
+    <div style="text-align:center; padding:18px 12px 10px; margin-bottom:14px;
+        background:linear-gradient(135deg,rgba(88,204,255,0.07),rgba(0,255,127,0.05));
+        border:1px solid rgba(88,204,255,0.25); border-radius:16px;">
+        <div style="font-size:0.85rem; color:#5a7a9a; letter-spacing:3px; text-transform:uppercase;">{day_name}</div>
+        <div style="font-size:1.5rem; color:#58CCFF; font-weight:900; letter-spacing:2px;">{date_str}</div>
+        <div style="font-size:0.75rem; color:#3a5a7a; margin-top:4px; letter-spacing:2px;">SEMAINE {s_act}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Séances manquées cette semaine
+    missed_this_week = set(df_h[
+        (df_h["Semaine"] == s_act) & (df_h["Exercice"] == "SESSION")
+    ]["Séance"].unique())
+
+    # Statut de chaque séance
+    seance_list = list(prog_seances.keys())
+    seance_status = {}
+    for s in seance_list:
+        sd = df_h[(df_h["Séance"] == s) & (df_h["Semaine"] == s_act)]
+        if s in missed_this_week:
+            seance_status[s] = "missed"
+        elif sd.empty:
+            seance_status[s] = "todo"
+        else:
+            exos_prog = len(prog_seances[s])
+            done = len(sd[(sd["Poids"] > 0) | (sd["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
+            seance_status[s] = "done" if done >= exos_prog else "inprog"
+
+    # Mini-calendrier des séances
+    status_styles = {
+        "todo":   ("rgba(88,204,255,0.08)",  "#58CCFF", "À FAIRE"),
+        "inprog": ("rgba(255,159,10,0.12)",  "#FF9F0A", "EN COURS"),
+        "done":   ("rgba(0,255,127,0.08)",   "#00FF7F", "FAIT ✓"),
+        "missed": ("rgba(255,69,58,0.10)",   "#FF453A", "MANQUÉE 🚩"),
+    }
+    cards_html = '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">'
+    for s, st_key in seance_status.items():
+        bg, col, label = status_styles[st_key]
+        cards_html += (
+            f'<div style="flex:1; min-width:90px; background:{bg}; border:1px solid {col}44;'
+            f' border-radius:10px; padding:10px 8px; text-align:center;">'
+            f'<div style="font-size:10px; font-weight:900; color:{col}; letter-spacing:1px;">{s}</div>'
+            f'<div style="font-size:9px; color:{col}99; margin-top:4px;">{label}</div>'
+            f'</div>'
+        )
+    cards_html += '</div>'
+    st.markdown(cards_html, unsafe_allow_html=True)
+
+    # Choix de la séance du jour
+    st.markdown("#### 📍 Séance du jour")
+    session_options = seance_list + ["🚫 Repos / Manquée"]
+    default_idx = seance_list.index(next_session) if next_session and next_session in seance_list else 0
+
+    col_sel, col_btn = st.columns([2, 1])
+    with col_sel:
+        chosen_today = st.selectbox(
+            "Choisir :", session_options,
+            index=st.session_state.get('home_session_idx', default_idx),
+            key="home_session_choice", label_visibility="collapsed"
+        )
+
+    if chosen_today != "🚫 Repos / Manquée":
+        with col_btn:
+            if st.button("💪 COMMENCER", type="primary", use_container_width=True, key="home_start_btn"):
+                st.session_state['home_selected_session'] = chosen_today
+                st.session_state['home_session_idx'] = session_options.index(chosen_today)
+        if st.session_state.get('home_selected_session') == chosen_today:
+            st.info(f"→ Va dans l'onglet **MA SÉANCE** — **{chosen_today}** est pré-sélectionnée.")
+    else:
+        col_miss, col_miss_btn = st.columns([2, 1])
+        with col_miss:
+            seance_a_manquer = st.selectbox("Quelle séance ?", seance_list, key="home_miss_choice", label_visibility="collapsed")
+        with col_miss_btn:
+            if st.button("🚩 Manquée", use_container_width=True, key="home_miss_btn"):
+                already = df_h[
+                    (df_h["Séance"] == seance_a_manquer) &
+                    (df_h["Semaine"] == s_act) &
+                    (df_h["Exercice"] == "SESSION")
+                ]
+                if already.empty:
+                    m_rec = pd.DataFrame([{
+                        "Semaine": s_act, "Séance": seance_a_manquer, "Exercice": "SESSION",
+                        "Série": 1, "Reps": 0, "Poids": 0.0,
+                        "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre",
+                        "Date": datetime.now().strftime("%Y-%m-%d")
+                    }])
+                    save_hist(pd.concat([df_h, m_rec], ignore_index=True))
+                    st.rerun()
+
+    st.divider()
+
+    # --- STATS SEMAINE ---
+    vol_week = int((df_h[df_h["Semaine"] == s_act]["Poids"] * df_h[df_h["Semaine"] == s_act]["Reps"]).sum())
+    vol_week_formatted = f"{vol_week:,}".replace(',', ' ')
     sessions_done = len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Séance"].unique())
     total_sessions = len(prog_seances.keys())
-    
-    # Streak (semaines consécutives avec au moins une séance)
+
     if not df_h.empty:
         weeks_with_data = sorted(df_h[df_h["Poids"] > 0]["Semaine"].unique(), reverse=True)
         streak = 0
@@ -1492,66 +1590,35 @@ with tab_home:
                 break
     else:
         streak = 0
-    
-    # WIDGET PRINCIPAL - Design Cyber (via components.html)
+
     import streamlit.components.v1 as components
-    
-    widget_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ 
-                margin: 0; 
-                padding: 10px; 
-                background: transparent;
-                overflow: hidden;
-            }}
-        </style>
-    </head>
-    <body>
-        <div style="background: linear-gradient(135deg, rgba(88, 204, 255, 0.1), rgba(0, 255, 127, 0.1)); border: 2px solid #58CCFF; border-radius: 20px; padding: 30px; margin: 10px; box-shadow: 0 0 20px rgba(88, 204, 255, 0.4);">
-            <div style="text-align: center; margin-bottom: 25px;">
-                <h1 style="font-size: 2.5rem; color: #58CCFF; text-shadow: 0 0 20px rgba(88, 204, 255, 0.8); margin: 0; letter-spacing: 3px;">SEMAINE {s_act}</h1>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-                <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(88, 204, 255, 0.3); border-radius: 12px; padding: 20px; text-align: center;">
-                    <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">SÉANCES</div>
-                    <div style="font-size: 2.5rem; color: #58CCFF; font-weight: 900;">{sessions_done}/{total_sessions}</div>
-                </div>
-                <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 255, 127, 0.3); border-radius: 12px; padding: 20px; text-align: center;">
-                    <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">VOLUME</div>
-                    <div style="font-size: 2.5rem; color: #00FF7F; font-weight: 900;">{vol_week_formatted}</div>
-                    <div style="font-size: 0.8rem; color: #888;">kg</div>
-                </div>
-            </div>
-            <div style="background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 20px;">
-                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 5px;">🔥 STREAK</div>
-                <div style="font-size: 2rem; color: #FFD700; font-weight: 900;">{streak} SEMAINES</div>
-            </div>
-            <div style="background: rgba(255, 69, 58, 0.1); border: 2px solid #FF453A; border-radius: 15px; padding: 20px; text-align: center;">
-                <div style="font-size: 1rem; color: #FF453A; margin-bottom: 10px; font-weight: bold;">📍 PROCHAINE SÉANCE</div>
-                <div style="font-size: 1.8rem; color: white; font-weight: 900; letter-spacing: 2px;">{next_session if next_session else "TERMINÉ ✅"}</div>
-            </div>
+    widget_html = f"""<!DOCTYPE html><html><head><style>
+    body{{margin:0;padding:8px;background:transparent;overflow:hidden;font-family:'Courier New',monospace;}}
+    </style></head><body>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div style="background:rgba(88,204,255,0.06);border:1px solid rgba(88,204,255,0.25);border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:0.8rem;color:#5a8aaa;letter-spacing:2px;">SÉANCES</div>
+            <div style="font-size:2.2rem;color:#58CCFF;font-weight:900;">{sessions_done}/{total_sessions}</div>
         </div>
-    </body>
-    </html>
-    """
-    
-    components.html(widget_html, height=650, scrolling=True)
-    
-    # Stats rapides en bas
-    st.divider()
-    st.markdown("### 📊 CETTE SEMAINE")
-    
+        <div style="background:rgba(0,255,127,0.06);border:1px solid rgba(0,255,127,0.25);border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:0.8rem;color:#3a8a5a;letter-spacing:2px;">VOLUME</div>
+            <div style="font-size:2.2rem;color:#00FF7F;font-weight:900;">{vol_week_formatted}</div>
+            <div style="font-size:0.75rem;color:#3a6a4a;">kg cette semaine</div>
+        </div>
+    </div>
+    <div style="background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.25);border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:0.8rem;color:#8a7a2a;letter-spacing:2px;">🔥 STREAK</div>
+        <div style="font-size:1.8rem;color:#FFD700;font-weight:900;">{streak} SEMAINE{"S" if streak > 1 else ""}</div>
+    </div>
+    </body></html>"""
+    components.html(widget_html, height=200, scrolling=False)
+
+    st.markdown("### 📊 DÉTAIL")
     col_m1, col_m2, col_m3 = st.columns(3)
-    
     with col_m1:
         st.metric("💪 Exercices", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Exercice"].unique()))
-    
     with col_m2:
         st.metric("🔢 Séries", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]))
-    
     with col_m3:
         total_reps = int(df_h[df_h["Semaine"] == s_act]["Reps"].sum())
         st.metric("🎯 Reps", total_reps)
@@ -1659,13 +1726,16 @@ with tab_s:
                 seance_data = df_h[(df_h["Séance"] == seance) & (df_h["Semaine"] == s_act)]
                 if seance_data.empty:
                     return seance
+                # Skip si marquée comme manquée
+                if not seance_data[seance_data["Exercice"] == "SESSION"].empty:
+                    continue
                 exos_prog = len([ex for ex in prog_seances[seance]])
                 exos_done_or_skipped = len(seance_data[(seance_data["Poids"] > 0) | (seance_data["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
                 if exos_done_or_skipped < exos_prog:
                     return seance
             return list(prog_seances.keys())[0] if prog_seances else None
 
-        default_s = get_current_session()
+        default_s = st.session_state.pop('home_selected_session', None) or get_current_session()
         s_index = list(prog_seances.keys()).index(default_s) if default_s and default_s in prog_seances.keys() else 0
         choix_s = c_h1.selectbox("Séance :", list(prog_seances.keys()), index=s_index)
         
