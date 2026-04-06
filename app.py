@@ -1882,27 +1882,23 @@ with tab_s:
                 curr_l = df_h[(df_h["Exercice"] == exo_final_l) &
                               (df_h["Séance"] == nom_libre) &
                               (df_h["Semaine"] == s_act_l)]
-                df_base_l = pd.DataFrame({"Série": range(1, p_sets_l + 1),
-                                          "Reps": [0]*p_sets_l,
+                df_base_l = pd.DataFrame({"Reps": [0]*p_sets_l,
                                           "Poids": [0.0]*p_sets_l,
-                                          "Remarque": [""]*p_sets_l})
+                                          "Remarque": [""]*p_sets_l},
+                                         index=pd.RangeIndex(1, p_sets_l + 1, name="Série"))
                 if not curr_l.empty:
                     for _, rl in curr_l.iterrows():
-                        if rl["Série"] <= p_sets_l:
-                            df_base_l.loc[df_base_l["Série"] == rl["Série"],
-                                          ["Reps","Poids","Remarque"]] = [rl["Reps"], rl["Poids"], rl["Remarque"]]
+                        idx_l = int(rl["Série"])
+                        if idx_l in df_base_l.index:
+                            df_base_l.loc[idx_l, ["Reps","Poids","Remarque"]] = [rl["Reps"], rl["Poids"], rl["Remarque"]]
 
                 ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}",
-                                      use_container_width=True, hide_index=True,
-                                      column_config={
-                                          "Série": st.column_config.NumberColumn(disabled=True),
-                                          "Poids": st.column_config.NumberColumn(format="%g")
-                                      },
-                                      column_order=["Série","Reps","Poids","Remarque"])
+                                      use_container_width=True, hide_index=False,
+                                      column_config={"Poids": st.column_config.NumberColumn(format="%g")})
 
                 c_sv_l, c_sk_l = st.columns(2)
                 if c_sv_l.button("💾 Enregistrer", key=f"svl_{exo_final_l}"):
-                    vl = ed_l.copy()
+                    vl = ed_l.reset_index()
                     vl["Série"] = range(1, len(vl) + 1)
                     vl["Semaine"] = s_act_l
                     vl["Séance"] = nom_libre
@@ -1921,6 +1917,20 @@ with tab_s:
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vsk], ignore_index=True))
                     st.rerun()
+
+        # ── Recommencer la séance ────────────────────────────────────────────
+        with st.expander("⚠️ Recommencer cette séance"):
+            st.warning("Effacer toutes les données enregistrées pour cette séance ?")
+            c_rec1, c_rec2 = st.columns(2)
+            if c_rec1.button("🔄 Effacer les données", type="primary", key="libre_reset_data"):
+                mask_r = ~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))
+                save_hist(df_h[mask_r])
+                st.rerun()
+            if c_rec2.button("🗑️ Tout recommencer", key="libre_reset_all"):
+                mask_r = ~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))
+                save_hist(df_h[mask_r])
+                st.session_state.seance_libre_exos = []
+                st.rerun()
 
         # ── Bouton ajouter exercice ────────────────────────────────────────────
         with st.expander("➕ Ajouter un exercice", expanded=len(st.session_state.seance_libre_exos) == 0):
@@ -2146,28 +2156,27 @@ with tab_s:
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
                 else:
-                    df_base = pd.DataFrame({"Série": range(1, p_sets + 1), "Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets})
+                    df_base = pd.DataFrame({"Reps": [0]*p_sets, "Poids": [0.0]*p_sets, "Remarque": [""]*p_sets},
+                                           index=pd.RangeIndex(1, p_sets + 1, name="Série"))
                     if not curr.empty:
                         for _, r in curr.iterrows():
-                            if r["Série"] <= p_sets: df_base.loc[df_base["Série"] == r["Série"], ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-                    
+                            idx = int(r["Série"])
+                            if idx in df_base.index:
+                                df_base.loc[idx, ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
+
                     ed = st.data_editor(
-                        df_base, 
+                        df_base,
                         num_rows="dynamic",
-                        key=editor_key, 
+                        key=editor_key,
                         use_container_width=True,
-                        column_config={
-                            "Série": st.column_config.NumberColumn(disabled=True), 
-                            "Poids": st.column_config.NumberColumn(format="%g")
-                        },
-                        column_order=["Série", "Reps", "Poids", "Remarque"],
-                        hide_index=True
+                        column_config={"Poids": st.column_config.NumberColumn(format="%g")},
+                        hide_index=False
                     )
-                    
+
                     # MODE MANUEL UNIQUEMENT
                     c_save, c_skip = st.columns(2)
                     if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
-                        v = ed.copy()
+                        v = ed.reset_index()
                         v["Série"] = range(1, len(v) + 1)
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
