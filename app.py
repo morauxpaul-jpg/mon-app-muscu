@@ -1747,10 +1747,13 @@ with tab_home:
         _week_dates = [(_monday + timedelta(days=k)) for k in range(7)]
 
         # Helper : calcule le statut d'une journée à partir des données réelles
+        _planning_map = prog.get('_planning', {})
         def _day_status(day_date):
             """Renvoie {status, title, badge, color} basé sur les perfs réelles."""
             d_str = day_date.strftime("%Y-%m-%d")
             day_rows = df_h[df_h["Date"] == d_str]
+            _day_name_fr = _DAYS_FR[day_date.weekday()]
+            _is_rest = _day_name_fr in _planning_map and not _planning_map.get(_day_name_fr, "")
             real = day_rows[
                 (day_rows["Exercice"] != "SESSION") &
                 ((day_rows["Poids"] > 0) | (day_rows["Reps"] > 0) |
@@ -1760,6 +1763,10 @@ with tab_home:
                 top = real.groupby("Séance")["Exercice"].nunique().sort_values(ascending=False)
                 return {"status": "done", "title": str(top.index[0]),
                         "badge": "FAIT", "color": "#00FF7F"}
+            # Jour de repos planifié (et aucune perf enregistrée)
+            if _is_rest:
+                return {"status": "rest", "title": "Repos",
+                        "badge": "REPOS", "color": "#5a7a9a"}
             # Marqueur SESSION "SÉANCE MANQUÉE" explicite
             if not day_rows[
                 (day_rows["Exercice"] == "SESSION") &
