@@ -1,9 +1,90 @@
 {% extends "base.html" %}
 {% block title %}Gestion · Muscu PRO{% endblock %}
+
 {% block content %}
-  <h1>Gestion</h1>
-  <div class="card stub">
-    <span class="tag">À MIGRER — COMMIT 6</span>
-    <p>Admin, édition manuelle de l'historique, archives.</p>
+  <h1>⚙️ Gestion</h1>
+
+  {% if request.args.get('updated') %}
+    <div class="card" style="border-color: var(--success);">
+      ✅ {{ request.args.get('updated') }} exercice(s) mis à jour, {{ request.args.get('skipped') }} non reconnu(s).
+    </div>
+  {% endif %}
+  {% if request.args.get('reset') == 'soft' %}
+    <div class="card" style="border-color: var(--success);">✅ Reset soft effectué. Les records sont archivés.</div>
+  {% endif %}
+  {% if request.args.get('reset') == 'total' %}
+    <div class="card" style="border-color: var(--success);">✅ Reset total effectué. Tout est vide.</div>
+  {% endif %}
+  {% if request.args.get('archive') == 'cleared' %}
+    <div class="card" style="border-color: var(--success);">✅ Archive vidée.</div>
+  {% endif %}
+
+  <div class="card">
+    <h3>📊 État</h3>
+    <div class="detail-row">
+      <div class="detail-metric"><div class="detail-label">SÉANCES</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_seances }}</div></div>
+      <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_exos }}</div></div>
+      <div class="detail-metric"><div class="detail-label">LIGNES HIST.</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_hist }}</div></div>
+    </div>
+    <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+      Archive : {{ nb_archive }} record(s)
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎛️ Paramètres d'affichage</h3>
+    <form method="post" action="/gestion/settings">
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="auto_collapse" {% if settings.auto_collapse %}checked{% endif %}>
+        <span>Replier automatiquement les exercices terminés</span>
+      </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="show_1rm" {% if settings.show_1rm %}checked{% endif %}>
+        <span>Afficher l'estimation 1RM</span>
+      </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %}>
+        <span>Animations du thème (cartes, glow, pulse)</span>
+      </label>
+      <label class="field-label">Nombre de semaines précédentes affichées en séance</label>
+      <input type="number" name="show_previous_weeks" min="0" max="10" value="{{ settings.show_previous_weeks }}" class="field">
+      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">💾 Sauvegarder</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>🪄 Auto-assigner les muscles</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Détecte automatiquement les muscles selon le nom de chaque exercice du programme.</p>
+    <form method="post" action="/gestion/auto-muscles">
+      <button type="submit" class="btn primary" style="width:100%;">🪄 Lancer l'auto-assignation</button>
+    </form>
+  </div>
+
+  <div class="card" style="border-color: rgba(255,159,10,0.4);">
+    <h3>🧹 Vider l'archive</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Supprime les records historiques archivés. L'historique en cours est conservé.</p>
+    <form method="post" action="/gestion/clear-archive" onsubmit="return confirm('Vider l\'archive ?');">
+      <button type="submit" class="btn" style="width:100%;">🧹 Confirmer</button>
+    </form>
+  </div>
+
+  <div class="card" style="border-color: rgba(255,159,10,0.4);">
+    <h3>♻️ Reset soft</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Vide l'historique mais archive les meilleurs sets par exo/semaine. Tu reprends en S1, les records restent visibles dans Progrès.</p>
+    <form method="post" action="/gestion/reset-soft" onsubmit="return confirm('Reset soft : vider l\'historique et archiver les records ?');">
+      <button type="submit" class="btn" style="width:100%;">♻️ Confirmer le reset soft</button>
+    </form>
+  </div>
+
+  <div class="card" style="border-color: rgba(255,69,58,0.5);">
+    <h3 style="color: var(--danger);">💥 Reset total</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">⚠️ Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
+    <form method="post" action="/gestion/reset-total" onsubmit="return confirm('RESET TOTAL : tout effacer SANS retour ?');">
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="confirm" value="yes" required>
+        <span>Je comprends, je veux tout effacer</span>
+      </label>
+      <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);">💥 RESET TOTAL</button>
+    </form>
   </div>
 {% endblock %}

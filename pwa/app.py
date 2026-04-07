@@ -10,22 +10,19 @@ from routes.accueil import bp as accueil_bp
 from routes.seance import bp as seance_bp
 from routes.programme import bp as programme_bp
 from routes.progres import bp as progres_bp
+from routes.gestion import bp as gestion_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.register_blueprint(accueil_bp)
 app.register_blueprint(seance_bp)
 app.register_blueprint(programme_bp)
 app.register_blueprint(progres_bp)
+app.register_blueprint(gestion_bp)
 
 
 # ────────────────────────────────────────────────────────────────
 # Routes pages — les pages non encore migrées restent des stubs
 # ────────────────────────────────────────────────────────────────
-
-
-@app.route("/gestion")
-def gestion():
-    return render_template("gestion.html", active="gestion")
 
 
 @app.route("/arcade")
