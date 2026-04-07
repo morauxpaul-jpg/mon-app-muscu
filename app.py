@@ -1583,7 +1583,7 @@ with tab_home:
             n_exos = len(prog_seances[sname])
             jours_s = prog.get('_jours', {}).get(sname, "")
             jours_label = f" · {jours_s}" if jours_s else ""
-            next_marker = " ⚡" if sname == get_next_session() else ""
+            next_marker = " " if sname == get_next_session() else ""
 
             c_info, c_btn = st.columns([3, 1])
             with c_info:
