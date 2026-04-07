@@ -1467,7 +1467,14 @@ if not df_p.empty:
     df_p["1RM"] = df_p.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1)
 
 # Onglets
-tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs(["🏠 ACCUEIL", "📅 PROGRAMME", "🏋️‍♂️ MA SÉANCE", "📈 PROGRÈS", "🏃 CARDIO", "🎮 ARCADE"])
+tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs([
+    ":material/home: ACCUEIL",
+    ":material/calendar_month: PROGRAMME",
+    ":material/fitness_center: MA SÉANCE",
+    ":material/trending_up: PROGRÈS",
+    ":material/directions_run: CARDIO",
+    ":material/sports_esports: ARCADE",
+])
 
 # --- ONGLET ACCUEIL ---
 with tab_home:
@@ -1572,7 +1579,7 @@ with tab_home:
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("🎯 Créer ma séance", type="primary", use_container_width=True, key="cs_libre"):
+        if st.button(":material/edit_note: Créer ma séance", type="primary", use_container_width=True, key="cs_libre"):
             st.session_state.seance_libre_exos = []
             st.session_state.mode_seance = 'libre'
             st.session_state.switch_to_seance = True
@@ -1594,7 +1601,7 @@ with tab_home:
                 key="cs_miss_sel", label_visibility="collapsed"
             )
         with col_mb:
-            if st.button("🚩 Confirmer", use_container_width=True, key="cs_miss_btn"):
+            if st.button(":material/flag: Confirmer", use_container_width=True, key="cs_miss_btn"):
                 _already = df_h[
                     (df_h["Séance"] == seance_a_passer) &
                     (df_h["Semaine"] == _s_act_cs) &
@@ -1615,7 +1622,7 @@ with tab_home:
     # VUE : DASHBOARD ACCUEIL NORMAL
     # ══════════════════════════════════════════
     else:
-        st.markdown("<h1 style='text-align:center; margin-top:5px; margin-bottom:16px;'>💪 MUSCU TRACKER PRO</h1>",
+        st.markdown("<h1 style='text-align:center; margin-top:5px; margin-bottom:16px;'>MUSCU TRACKER PRO</h1>",
                     unsafe_allow_html=True)
 
         # Date + semaine
@@ -1630,7 +1637,7 @@ with tab_home:
         """, unsafe_allow_html=True)
 
         # Bouton CTA principal
-        if st.button("💪  COMMENCER UNE SÉANCE", type="primary", use_container_width=True, key="cta_commencer"):
+        if st.button(":material/play_arrow: COMMENCER UNE SÉANCE", type="primary", use_container_width=True, key="cta_commencer"):
             st.session_state.view = 'choix_seance'
             st.rerun()
 
@@ -1732,15 +1739,15 @@ with tab_home:
         </body></html>"""
         components.html(widget_html, height=185, scrolling=False)
 
-        st.markdown("### 📊 DÉTAIL")
+        st.markdown("### :material/analytics: DÉTAIL")
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
-            st.metric("💪 Exercices", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Exercice"].unique()))
+            st.metric(":material/fitness_center: Exercices", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]["Exercice"].unique()))
         with col_m2:
-            st.metric("🔢 Séries", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]))
+            st.metric(":material/format_list_numbered: Séries", len(df_h[(df_h["Semaine"] == s_act) & (df_h["Poids"] > 0)]))
         with col_m3:
             total_reps = int(df_h[df_h["Semaine"] == s_act]["Reps"].sum())
-            st.metric("🎯 Reps", total_reps)
+            st.metric(":material/track_changes: Reps", total_reps)
 
 # --- ONGLET PROGRAMME ---
 with tab_p:
@@ -1845,9 +1852,9 @@ with tab_s:
 
         c_tl, c_tr = st.columns([3, 1])
         with c_tl:
-            st.markdown("### 🎯 SÉANCE PERSONNALISÉE")
+            st.markdown("### :material/edit_note: SÉANCE PERSONNALISÉE")
         with c_tr:
-            if st.button("✕ Annuler la séance", key="libre_fin", use_container_width=True):
+            if st.button(":material/close: Annuler la séance", key="libre_fin", use_container_width=True):
                 # Mode libre = pas d'enregistrement "manquée" : on ferme juste
                 st.session_state.mode_seance = None
                 st.session_state.seance_libre_exos = []
@@ -1920,7 +1927,7 @@ with tab_s:
                                       column_config={"Poids": st.column_config.NumberColumn(format="%g")})
 
                 c_sv_l, c_sk_l = st.columns(2)
-                if c_sv_l.button("💾 Enregistrer", key=f"svl_{exo_final_l}"):
+                if c_sv_l.button(":material/save: Enregistrer", key=f"svl_{exo_final_l}"):
                     vl = ed_l.reset_index()
                     vl["Série"] = range(1, len(vl) + 1)
                     vl["Semaine"] = s_act_l
@@ -1931,7 +1938,7 @@ with tab_s:
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vl], ignore_index=True))
                     st.rerun()
-                if c_sk_l.button("⏩ Skip", key=f"skl_{exo_final_l}"):
+                if c_sk_l.button(":material/skip_next: Skip", key=f"skl_{exo_final_l}"):
                     vsk = pd.DataFrame([{"Semaine": s_act_l, "Séance": nom_libre,
                                          "Exercice": exo_final_l, "Série": 1,
                                          "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫",
@@ -1945,25 +1952,25 @@ with tab_s:
         if st.session_state.get('confirming_reset_libre'):
             st.warning("Effacer toutes les données de cette séance ?")
             _rl1, _rl2, _rl3 = st.columns(3)
-            if _rl1.button("✅ Effacer données", type="primary", key="libre_conf_data"):
+            if _rl1.button(":material/check: Effacer données", type="primary", key="libre_conf_data"):
                 save_hist(df_h[~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))])
                 st.session_state.confirming_reset_libre = False
                 st.rerun()
-            if _rl2.button("🗑️ Tout recommencer", key="libre_conf_all"):
+            if _rl2.button(":material/delete: Tout recommencer", key="libre_conf_all"):
                 save_hist(df_h[~((df_h["Semaine"] == s_act_l) & (df_h["Séance"] == nom_libre))])
                 st.session_state.seance_libre_exos = []
                 st.session_state.confirming_reset_libre = False
                 st.rerun()
-            if _rl3.button("❌ Annuler", key="libre_conf_cancel"):
+            if _rl3.button(":material/close: Annuler", key="libre_conf_cancel"):
                 st.session_state.confirming_reset_libre = False
                 st.rerun()
         else:
-            if st.button("🔄 Recommencer cette séance", use_container_width=True, key="libre_reset_btn"):
+            if st.button(":material/refresh: Recommencer cette séance", use_container_width=True, key="libre_reset_btn"):
                 st.session_state.confirming_reset_libre = True
                 st.rerun()
 
         # ── Bouton ajouter exercice ────────────────────────────────────────────
-        with st.expander("➕ Ajouter un exercice", expanded=len(st.session_state.seance_libre_exos) == 0):
+        with st.expander(":material/add_circle: Ajouter un exercice", expanded=len(st.session_state.seance_libre_exos) == 0):
             mode_ajout = st.radio("", ["Depuis mes programmes", "Nouvel exercice"],
                                   horizontal=True, key="libre_mode_ajout")
 
@@ -1999,7 +2006,7 @@ with tab_s:
                 new_name = st.text_input("Nom de l'exercice", key="libre_new_name")
                 new_muscle = st.selectbox("Muscle principal", _MUSCLE_LIST_S, key="libre_new_muscle")
                 new_sets = st.number_input("Nombre de séries", 1, 10, 3, key="libre_new_sets")
-                if st.button("➕ Ajouter cet exercice", key="libre_add_new",
+                if st.button(":material/add: Ajouter cet exercice", key="libre_add_new",
                              disabled=not new_name.strip()):
                     already_names2 = [e['name'] for e in st.session_state.seance_libre_exos]
                     if new_name.strip() not in already_names2:
@@ -2080,7 +2087,7 @@ with tab_s:
             s_index = list(prog_seances.keys()).index(default_s) if default_s and default_s in prog_seances.keys() else 0
             choix_s = c_h1.selectbox("Séance :", list(prog_seances.keys()), index=s_index)
         
-        if c_h3.button("🚩 Séance Manquée", use_container_width=True):
+        if c_h3.button(":material/flag: Séance Manquée", use_container_width=True):
             # Évite le doublon si déjà marquée
             _already_miss = df_h[
                 (df_h["Séance"] == choix_s) &
@@ -2102,20 +2109,20 @@ with tab_s:
         if st.session_state.get('confirming_reset_seance') == choix_s:
             st.warning(f"⚠️ Effacer **{choix_s}** semaine **{s_act}** ?")
             _cr1, _cr2 = st.columns(2)
-            if _cr1.button("✅ Recommencer", type="primary", key="seance_confirm_yes"):
+            if _cr1.button(":material/check: Recommencer", type="primary", key="seance_confirm_yes"):
                 save_hist(df_h[~((df_h["Semaine"] == s_act) & (df_h["Séance"] == choix_s))])
                 st.session_state.confirming_reset_seance = None
                 st.rerun()
-            if _cr2.button("❌ Annuler", key="seance_confirm_no"):
+            if _cr2.button(":material/close: Annuler", key="seance_confirm_no"):
                 st.session_state.confirming_reset_seance = None
                 st.rerun()
         else:
             if not current_session_data.empty:
-                if st.button("🔄 Recommencer cette séance", use_container_width=True, key="reset_seance_btn"):
+                if st.button(":material/refresh: Recommencer cette séance", use_container_width=True, key="reset_seance_btn"):
                     st.session_state.confirming_reset_seance = choix_s
                     st.rerun()
 
-        st.markdown("### 🔋 RÉCUPÉRATION")
+        st.markdown("### :material/battery_charging_full: RÉCUPÉRATION")
         recup_cols = ["Pecs","Dos","Épaules","Biceps","Triceps","Abdos","Quadriceps","Mollets"]
         html_recup = "<div class='recup-container'>"
         for m in recup_cols:
@@ -2178,7 +2185,7 @@ with tab_s:
                 if st.session_state.get(_rkey):
                     st.warning("Effacer les données de cet exercice ?")
                     _cy, _cn = st.columns(2)
-                    if _cy.button("✅ Recommencer", type="primary", key=f"yes_r_{exo_base}_{i}"):
+                    if _cy.button(":material/check: Recommencer", type="primary", key=f"yes_r_{exo_base}_{i}"):
                         mask_exo = ~(
                             (df_h["Semaine"] == s_act) &
                             (df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) &
@@ -2187,12 +2194,12 @@ with tab_s:
                         st.session_state[_rkey] = False
                         st.session_state.editing_exo.discard(exo_base)
                         st.rerun()
-                    if _cn.button("❌ Annuler", key=f"no_r_{exo_base}_{i}"):
+                    if _cn.button(":material/close: Annuler", key=f"no_r_{exo_base}_{i}"):
                         st.session_state[_rkey] = False
                         st.rerun()
                 else:
                     if curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0:
-                        if st.button("🔄 Recommencer cet exercice", key=f"rec_r_{exo_base}_{i}"):
+                        if st.button(":material/refresh: Recommencer cet exercice", key=f"rec_r_{exo_base}_{i}"):
                             st.session_state[_rkey] = True
                             st.rerun()
 
@@ -2244,14 +2251,14 @@ with tab_s:
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     render_table(curr[["Série", "Reps", "Poids", "Remarque"]].reset_index(drop=True), hist_prev=hist_prev_df)
-                    if st.button("🔄 Modifier", key=f"m_{exo_final}_{i}"):
+                    if st.button(":material/edit: Modifier", key=f"m_{exo_final}_{i}"):
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
                 else:
                     # Bouton "+ Série" persistant : ajoute une ligne au df_base qui survit au rerun
                     _ek_extra = f"extra_sets_{exo_final}_{s_act}"
                     extra_n = int(st.session_state.get(_ek_extra, 0))
-                    if st.button("➕ Série", key=f"add_set_{exo_final}_{i}"):
+                    if st.button(":material/add: Série", key=f"add_set_{exo_final}_{i}"):
                         st.session_state[_ek_extra] = extra_n + 1
                         st.rerun()
 
@@ -2274,7 +2281,7 @@ with tab_s:
                         hide_index=False)
 
                     c_save, c_skip = st.columns(2)
-                    if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}_{i}"):
+                    if c_save.button(":material/save: Enregistrer", key=f"sv_{exo_final}_{i}"):
                         v = ed.reset_index()
                         v["Série"] = range(1, len(v) + 1)
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
@@ -2283,7 +2290,7 @@ with tab_s:
                         st.session_state.pop(_ek_extra, None)
                         st.rerun()
 
-                    if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}_{i}"):
+                    if c_skip.button(":material/skip_next: Skip Exo", key=f"sk_{exo_final}_{i}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                         st.session_state.pop(_ek_extra, None)
@@ -2291,13 +2298,13 @@ with tab_s:
 
                 # Bouton retirer un extra (uniquement pour les exos ajoutés à la volée)
                 if _is_extra:
-                    if st.button("🗑 Retirer cet exercice", key=f"rm_extra_{choix_s}_{i}"):
+                    if st.button(":material/delete: Retirer cet exercice", key=f"rm_extra_{choix_s}_{i}"):
                         _idx_extra = i - _n_prog
                         st.session_state.extra_exos[choix_s].pop(_idx_extra)
                         st.rerun()
 
         # ── Ajouter un exercice à la séance pré-faite ─────────────────────────
-        with st.expander("➕ Ajouter un exercice à cette séance",
+        with st.expander(":material/add_circle: Ajouter un exercice à cette séance",
                          expanded=False):
             _mode_pref = st.radio("", ["Depuis mes programmes", "Nouvel exercice"],
                                   horizontal=True, key=f"pref_mode_ajout_{choix_s}")
@@ -2331,7 +2338,7 @@ with tab_s:
                 _new_name_p = st.text_input("Nom de l'exercice", key=f"pref_new_name_{choix_s}")
                 _new_muscle_p = st.selectbox("Muscle principal", _MUSCLE_LIST_S, key=f"pref_new_muscle_{choix_s}")
                 _new_sets_p = st.number_input("Nombre de séries", 1, 10, 3, key=f"pref_new_sets_{choix_s}")
-                if st.button("➕ Ajouter cet exercice", key=f"pref_add_new_{choix_s}",
+                if st.button(":material/add: Ajouter cet exercice", key=f"pref_add_new_{choix_s}",
                              disabled=not _new_name_p.strip()):
                     _detected_p = auto_muscles(_new_name_p.strip())
                     _muscle_final_p = _detected_p if _detected_p else _new_muscle_p
