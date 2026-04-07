@@ -2,9 +2,22 @@ import streamlit as st
 import pandas as pd
 import json
 import gspread
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
+
+# ── Fuseau horaire Europe/Paris (toutes les dates de l'app passent par là) ──
+PARIS_TZ = ZoneInfo("Europe/Paris")
+def now_paris():
+    """Datetime maintenant en heure de Paris."""
+    return datetime.now(PARIS_TZ)
+def today_paris():
+    """Date du jour en heure de Paris (date pure, sans heure)."""
+    return now_paris().date()
+def today_paris_str():
+    """Date du jour Paris au format YYYY-MM-DD."""
+    return today_paris().strftime("%Y-%m-%d")
 
 # --- 1. CONFIGURATION PAGE ---
 st.set_page_config(page_title="Muscu Tracker PRO", layout="centered", page_icon="💪")
@@ -40,6 +53,11 @@ if 'switch_to_seance' not in st.session_state:
 # Format : { "Nom Séance": [ {"name","muscle","sets"}, ... ] }
 if 'extra_exos' not in st.session_state:
     st.session_state.extra_exos = {}
+
+# Date cible d'une séance lancée depuis le calendrier accueil (rattrapage possible)
+# Format : "YYYY-MM-DD" ou None (= utiliser today_paris)
+if 'seance_target_date' not in st.session_state:
+    st.session_state.seance_target_date = None
 
 # --- 2. CSS : DESIGN CYBER-RPG MOBILE-FRIENDLY ---
 animations_css = """
@@ -1334,7 +1352,7 @@ def cardio_section(df_h, s_act):
         detail = json.dumps({"speed":speed,"inc":inc,"floors":floors,"res":res,"feel":feel,"note":note},ensure_ascii=False)
         row = pd.DataFrame([{"Semaine":s_act,"Séance":"CARDIO","Exercice":st.session_state.cardio_act,
             "Série":1,"Reps":dur,"Poids":dist,"Remarque":detail,"Muscle":"Cardio",
-            "Date":datetime.now().strftime("%Y-%m-%d")}])
+            "Date":today_paris_str()}])
         save_hist(pd.concat([df_h,row],ignore_index=True))
         st.success(f"✅ {dur} min · {dist:.1f} km enregistrés !")
         st.rerun()
@@ -1434,6 +1452,15 @@ def save_prog(prog_dict):
 df_h = get_hist()
 prog = get_prog()
 
+# Init du planning hebdo si absent (jour -> nom de séance assignée, "" = repos)
+_DAYS_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+if '_planning' not in prog:
+    prog['_planning'] = {j: "" for j in _DAYS_FR}
+else:
+    # Garantit que les 7 jours existent (compatibilité ascendante)
+    for _j in _DAYS_FR:
+        prog['_planning'].setdefault(_j, "")
+
 # Clés réservées aux données internes (pas des séances)
 prog_seances = {k: v for k, v in prog.items() if not k.startswith('_')}
 muscle_mapping = {ex["name"]: ex.get("muscle", "Autre") for s in prog_seances for ex in prog_seances[s]}
@@ -1480,7 +1507,7 @@ with tab_home:
     days_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
     months_fr = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
                  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
-    today = datetime.now()
+    today = now_paris()
     day_name = days_fr[today.weekday()]
     date_str = f"{today.day} {months_fr[today.month - 1]} {today.year}"
 
@@ -1607,7 +1634,7 @@ with tab_home:
                         "Semaine": _s_act_cs, "Séance": seance_a_passer,
                         "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0,
                         "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre",
-                        "Date": datetime.now().strftime("%Y-%m-%d")
+                        "Date": today_paris_str()
                     }])
                     save_hist(pd.concat([df_h, _mrec], ignore_index=True))
                 st.session_state.view = 'accueil'
@@ -1631,68 +1658,92 @@ with tab_home:
         </div>
         """, unsafe_allow_html=True)
 
-        # Bouton CTA principal
-        if st.button(":material/play_arrow: COMMENCER UNE SÉANCE", type="primary", use_container_width=True, key="cta_commencer"):
-            st.session_state.view = 'choix_seance'
-            st.rerun()
+        # ══════════════════════════════════════════
+        # GRILLE CALENDRIER 7 JOURS (semaine en cours, lundi -> dimanche)
+        # ══════════════════════════════════════════
+        # Calcul du lundi de la semaine en cours en heure de Paris
+        _today_p = today_paris()
+        _monday = _today_p - timedelta(days=_today_p.weekday())
+        _week_dates = [(_monday + timedelta(days=k)) for k in range(7)]
+
+        # Helper : calcule le statut d'une journée
+        def _day_status(day_date, seance_name):
+            """Renvoie un dict {status, label, color} pour le jour donné."""
+            if not seance_name:
+                return {"status": "rest", "label": "Repos", "color": "#3a4a5a"}
+            d_str = day_date.strftime("%Y-%m-%d")
+            day_rows = df_h[(df_h["Date"] == d_str) & (df_h["Séance"] == seance_name)]
+            # Marquée manquée explicitement
+            if not day_rows[day_rows["Exercice"] == "SESSION"].empty:
+                return {"status": "missed", "label": "Manquée", "color": "#FF453A"}
+            done_exos = day_rows[(day_rows["Poids"] > 0) | (day_rows["Remarque"].str.contains("SKIP", na=False))]["Exercice"].nunique()
+            n_prog = len(prog_seances.get(seance_name, []))
+            if done_exos == 0:
+                if day_date < _today_p:
+                    return {"status": "missed", "label": "Manquée", "color": "#FF453A"}
+                elif day_date == _today_p:
+                    return {"status": "today", "label": "Aujourd'hui", "color": "#58CCFF"}
+                else:
+                    return {"status": "upcoming", "label": "À venir", "color": "#5a7a9a"}
+            elif done_exos >= n_prog:
+                return {"status": "done", "label": "Fait", "color": "#00FF7F"}
+            else:
+                return {"status": "inprog", "label": "En cours", "color": "#FF9F0A"}
+
+        st.markdown("### :material/calendar_view_week: Cette semaine")
+
+        for _i, _d in enumerate(_week_dates):
+            _day_label = _DAYS_FR[_i]
+            _assigned = prog['_planning'].get(_day_label, "")
+            _stinfo = _day_status(_d, _assigned)
+            _date_short = f"{_d.day:02d}/{_d.month:02d}"
+            _is_today = (_d == _today_p)
+
+            _border = "2px" if _is_today else "1px"
+            _bg_card = f"rgba({','.join(['88','204','255'])},0.08)" if _is_today else "rgba(255,255,255,0.03)"
+
+            with st.container():
+                st.markdown(
+                    f"""<div style='background:{_bg_card}; border:{_border} solid {_stinfo['color']}66;
+                         border-radius:12px; padding:10px 14px; margin-bottom:6px;
+                         display:flex; align-items:center; justify-content:space-between;'>
+                         <div>
+                           <div style='font-size:11px; color:#5a7a9a; letter-spacing:2px;'>{_day_label.upper()} · {_date_short}</div>
+                           <div style='font-size:1rem; color:#fff; font-weight:700; margin-top:2px;'>
+                             {_assigned if _assigned else '<span style="color:#3a4a5a; font-weight:400;">Repos</span>'}
+                           </div>
+                         </div>
+                         <div style='font-size:11px; color:{_stinfo['color']}; font-weight:800; letter-spacing:1px;'>
+                           {_stinfo['label'].upper()}
+                         </div>
+                       </div>""",
+                    unsafe_allow_html=True
+                )
+                # Bouton de lancement (sauf jour de repos)
+                if _assigned:
+                    _btn_lbl = {
+                        "today":    ":material/play_arrow: Lancer la séance",
+                        "upcoming": ":material/visibility: Préparer / Faire en avance",
+                        "missed":   ":material/replay: Rattraper cette séance",
+                        "done":     ":material/edit: Modifier",
+                        "inprog":   ":material/play_arrow: Continuer",
+                    }.get(_stinfo["status"], "Ouvrir")
+                    _btn_type = "primary" if _stinfo["status"] in ("today", "inprog") else "secondary"
+                    if st.button(_btn_lbl, key=f"day_btn_{_i}", use_container_width=True, type=_btn_type):
+                        st.session_state.seance_selectionnee = _assigned
+                        st.session_state.mode_seance = 'prefaite'
+                        st.session_state.seance_target_date = _d.strftime("%Y-%m-%d")
+                        st.session_state.switch_to_seance = True
+                        st.session_state.extra_exos.pop(_assigned, None)
+                        st.rerun()
 
         st.divider()
 
-        # Statut séances cette semaine
-        missed_this_week = set(df_h[
-            (df_h["Semaine"] == s_act) & (df_h["Exercice"] == "SESSION")
-        ]["Séance"].unique())
-        seance_list = list(prog_seances.keys())
-        seance_status = {}
-        for _s in seance_list:
-            sd = df_h[(df_h["Séance"] == _s) & (df_h["Semaine"] == s_act)]
-            if _s in missed_this_week:
-                seance_status[_s] = "missed"
-            elif sd.empty:
-                seance_status[_s] = "todo"
-            else:
-                exos_prog = len(prog_seances[_s])
-                done = len(sd[(sd["Poids"] > 0) | (sd["Remarque"].str.contains("SKIP", na=False))]["Exercice"].unique())
-                seance_status[_s] = "done" if done >= exos_prog else "inprog"
-
-        _st_styles = {
-            "todo":   ("rgba(88,204,255,0.08)",  "#58CCFF", "À FAIRE"),
-            "inprog": ("rgba(255,159,10,0.12)",  "#FF9F0A", "EN COURS"),
-            "done":   ("rgba(0,255,127,0.08)",   "#00FF7F", "FAIT ✓"),
-            "missed": ("rgba(255,69,58,0.10)",   "#FF453A", "MANQUÉE 🚩"),
-        }
-        cards_html = '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">'
-        for _s, _stk in seance_status.items():
-            _bg, _col, _lbl = _st_styles[_stk]
-            cards_html += (
-                f'<div style="flex:1; min-width:80px; background:{_bg}; border:1px solid {_col}44;'
-                f' border-radius:10px; padding:10px 6px; text-align:center;">'
-                f'<div style="font-size:10px; font-weight:900; color:{_col}; letter-spacing:1px;">{_s}</div>'
-                f'<div style="font-size:9px; color:{_col}99; margin-top:3px;">{_lbl}</div>'
-                f'</div>'
-            )
-        cards_html += '</div>'
-        st.markdown(cards_html, unsafe_allow_html=True)
-
-        # Marquage séance manquée rapide
-        with st.expander("🚩 Marquer une séance comme manquée"):
-            col_miss, col_miss_btn = st.columns([2, 1])
-            with col_miss:
-                seance_a_manquer = st.selectbox("Séance", seance_list, key="home_miss_choice", label_visibility="collapsed")
-            with col_miss_btn:
-                if st.button("Confirmer", use_container_width=True, key="home_miss_btn"):
-                    already = df_h[
-                        (df_h["Séance"] == seance_a_manquer) & (df_h["Semaine"] == s_act) & (df_h["Exercice"] == "SESSION")
-                    ]
-                    if already.empty:
-                        m_rec = pd.DataFrame([{
-                            "Semaine": s_act, "Séance": seance_a_manquer, "Exercice": "SESSION",
-                            "Série": 1, "Reps": 0, "Poids": 0.0,
-                            "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre",
-                            "Date": datetime.now().strftime("%Y-%m-%d")
-                        }])
-                        save_hist(pd.concat([df_h, m_rec], ignore_index=True))
-                        st.rerun()
+        # Bouton secondaire : séance libre / hors planning
+        if st.button(":material/edit_note: Séance libre / hors planning",
+                     use_container_width=True, key="cta_libre_home"):
+            st.session_state.view = 'choix_seance'
+            st.rerun()
 
         st.divider()
 
@@ -1780,7 +1831,28 @@ with tab_p:
     st.divider()
 
     # ══════════════════════════════════════════
-    # SECTION 2 : PROGRAMME & EXERCICES
+    # SECTION 2 : PLANNING HEBDOMADAIRE
+    # ══════════════════════════════════════════
+    st.markdown("## :material/event: Planning hebdomadaire")
+    st.caption("Assigne une séance à chaque jour de la semaine. Laisser vide = jour de repos.")
+    _seance_options = ["— Repos —"] + list(prog_seances.keys())
+    _planning_changed = False
+    for _day in _DAYS_FR:
+        _curr_assigned = prog['_planning'].get(_day, "")
+        _idx = _seance_options.index(_curr_assigned) if _curr_assigned in _seance_options else 0
+        _new = st.selectbox(_day, _seance_options, index=_idx, key=f"plan_{_day}")
+        _new_val = "" if _new == "— Repos —" else _new
+        if _new_val != _curr_assigned:
+            prog['_planning'][_day] = _new_val
+            _planning_changed = True
+    if _planning_changed:
+        save_prog(prog)
+        st.toast("Planning sauvegardé", icon="✅")
+
+    st.divider()
+
+    # ══════════════════════════════════════════
+    # SECTION 3 : PROGRAMME & EXERCICES
     # ══════════════════════════════════════════
     st.markdown("## :material/calendar_month: Programme & exercices")
     jours = list(prog_seances.keys())
@@ -1897,6 +1969,7 @@ with tab_s:
                 st.session_state.mode_seance = None
                 st.session_state.seance_libre_exos = []
                 st.session_state.seance_selectionnee = None
+                st.session_state.seance_target_date = None
                 st.session_state.view = 'accueil'
                 st.rerun()
 
@@ -1972,7 +2045,7 @@ with tab_s:
                     vl["Séance"] = nom_libre
                     vl["Exercice"] = exo_final_l
                     vl["Muscle"] = muscle_grp_l
-                    vl["Date"] = datetime.now().strftime("%Y-%m-%d")
+                    vl["Date"] = today_paris_str()
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vl], ignore_index=True))
                     st.rerun()
@@ -1981,7 +2054,7 @@ with tab_s:
                                          "Exercice": exo_final_l, "Série": 1,
                                          "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫",
                                          "Muscle": muscle_grp_l,
-                                         "Date": datetime.now().strftime("%Y-%m-%d")}])
+                                         "Date": today_paris_str()}])
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vsk], ignore_index=True))
                     st.rerun()
@@ -2105,10 +2178,19 @@ with tab_s:
         # Priorité : séance choisie depuis l'accueil → legacy home_selected_session → auto
         if st.session_state.seance_selectionnee and st.session_state.seance_selectionnee in prog_seances:
             choix_s = st.session_state.seance_selectionnee
+            # Banderole : nom + date cible (utile en cas de rattrapage)
+            _td = st.session_state.seance_target_date
+            _td_label = ""
+            if _td:
+                try:
+                    _td_dt = datetime.strptime(_td, "%Y-%m-%d").date()
+                    _td_label = f" · {_DAYS_FR[_td_dt.weekday()]} {_td_dt.day:02d}/{_td_dt.month:02d}"
+                except Exception:
+                    pass
             with c_h1:
                 st.markdown(
                     f"<div style='padding:6px 4px 0;'>"
-                    f"<div style='font-size:11px; color:#5a7a9a; letter-spacing:2px;'>SÉANCE</div>"
+                    f"<div style='font-size:11px; color:#5a7a9a; letter-spacing:2px;'>SÉANCE{_td_label.upper()}</div>"
                     f"<div style='font-size:1.05rem; color:#58CCFF; font-weight:800;'>{choix_s}</div>"
                     f"</div>",
                     unsafe_allow_html=True
@@ -2116,7 +2198,8 @@ with tab_s:
                 if st.button("↺ Changer de séance", key="changer_seance", use_container_width=True):
                     st.session_state.seance_selectionnee = None
                     st.session_state.mode_seance = None
-                    st.session_state.view = 'choix_seance'
+                    st.session_state.seance_target_date = None
+                    st.session_state.view = 'accueil'
                     st.rerun()
         else:
             default_s = st.session_state.pop('home_selected_session', None) or get_current_session()
@@ -2131,11 +2214,12 @@ with tab_s:
                 (df_h["Exercice"] == "SESSION")
             ]
             if _already_miss.empty:
-                m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
+                m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": (st.session_state.seance_target_date or today_paris_str())}])
                 save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             # Ferme la séance et revient à l'accueil
             st.session_state.mode_seance = None
             st.session_state.seance_selectionnee = None
+            st.session_state.seance_target_date = None
             st.session_state.extra_exos.pop(choix_s, None)
             st.session_state.view = 'accueil'
             st.rerun()
@@ -2168,7 +2252,7 @@ with tab_s:
                 last_d = trained_this_week["Date"].max()
                 if pd.notna(last_d) and last_d != "":
                     try:
-                        diff = (datetime.now() - datetime.strptime(last_d, "%Y-%m-%d")).days
+                        diff = (now_paris().replace(tzinfo=None) - datetime.strptime(last_d, "%Y-%m-%d")).days
                         if diff < 1: sc, lab = "#FF0000", "REPAR."
                         elif diff < 2: sc, lab = "#FFA500", "RECON."
                     except: pass
@@ -2320,14 +2404,14 @@ with tab_s:
                     if c_save.button(":material/save: Enregistrer", key=f"sv_{exo_final}_{i}"):
                         v = ed.reset_index()
                         v["Série"] = range(1, len(v) + 1)
-                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
+                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, (st.session_state.seance_target_date or today_paris_str())
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final)
                         st.session_state.pop(_ek_extra, None)
                         st.rerun()
 
                     if c_skip.button(":material/skip_next: Skip Exo", key=f"sk_{exo_final}_{i}"):
-                        v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
+                        v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": (st.session_state.seance_target_date or today_paris_str())}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                         st.session_state.pop(_ek_extra, None)
                         st.rerun()
