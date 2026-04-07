@@ -1960,12 +1960,12 @@ with tab_s:
                         if idx_l in df_base_l.index:
                             df_base_l.loc[idx_l, ["Reps","Poids","Remarque"]] = [rl["Reps"], rl["Poids"], rl["Remarque"]]
 
-                ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}",
+                ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}_{li}",
                                       use_container_width=True, hide_index=False,
                                       column_config={"Poids": st.column_config.NumberColumn(format="%g")})
 
                 c_sv_l, c_sk_l = st.columns(2)
-                if c_sv_l.button(":material/save: Enregistrer", key=f"svl_{exo_final_l}"):
+                if c_sv_l.button(":material/save: Enregistrer", key=f"svl_{exo_final_l}_{li}"):
                     vl = ed_l.reset_index()
                     vl["Série"] = range(1, len(vl) + 1)
                     vl["Semaine"] = s_act_l
@@ -1976,7 +1976,7 @@ with tab_s:
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vl], ignore_index=True))
                     st.rerun()
-                if c_sk_l.button(":material/skip_next: Skip", key=f"skl_{exo_final_l}"):
+                if c_sk_l.button(":material/skip_next: Skip", key=f"skl_{exo_final_l}_{li}"):
                     vsk = pd.DataFrame([{"Semaine": s_act_l, "Séance": nom_libre,
                                          "Exercice": exo_final_l, "Série": 1,
                                          "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫",
@@ -2027,12 +2027,12 @@ with tab_s:
                                  if muscle_filter == "Tous"
                                  or muscle_filter in str(e.get('muscle', ''))]
 
-                already_names = [e['name'] for e in st.session_state.seance_libre_exos]
+                # Pas de dédup : on autorise le même exercice plusieurs fois
+                # (l'utilisateur choisira ensuite une variante différente par bloc)
                 for _fe in filtered_exos:
                     _col_n, _col_b = st.columns([3, 1])
                     _col_n.write(f"**{_fe['name']}** · {_fe.get('muscle','')}")
-                    _btn_lbl = "✓ Ajouté" if _fe['name'] in already_names else "+ Ajouter"
-                    if _col_b.button(_btn_lbl, key=f"add_prog_{_fe['name']}", disabled=_fe['name'] in already_names):
+                    if _col_b.button("+ Ajouter", key=f"add_prog_{_fe['name']}"):
                         st.session_state.seance_libre_exos.append({
                             "name": _fe['name'],
                             "muscle": _fe.get('muscle', 'Autre'),
@@ -2046,16 +2046,14 @@ with tab_s:
                 new_sets = st.number_input("Nombre de séries", 1, 10, 3, key="libre_new_sets")
                 if st.button(":material/add: Ajouter cet exercice", key="libre_add_new",
                              disabled=not new_name.strip()):
-                    already_names2 = [e['name'] for e in st.session_state.seance_libre_exos]
-                    if new_name.strip() not in already_names2:
-                        # Auto-détect muscle si non renseigné
-                        detected = auto_muscles(new_name.strip())
-                        muscle_final = detected if detected else new_muscle
-                        st.session_state.seance_libre_exos.append({
-                            "name": new_name.strip(),
-                            "muscle": muscle_final,
-                            "sets": int(new_sets)
-                        })
+                    # Auto-détect muscle si non renseigné. Doublons autorisés.
+                    detected = auto_muscles(new_name.strip())
+                    muscle_final = detected if detected else new_muscle
+                    st.session_state.seance_libre_exos.append({
+                        "name": new_name.strip(),
+                        "muscle": muscle_final,
+                        "sets": int(new_sets)
+                    })
                     st.rerun()
 
     # ══════════════════════════════════════════════════════════
