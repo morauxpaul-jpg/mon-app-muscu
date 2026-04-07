@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "nixpacks",
+    "buildCommand": "cd pwa && pip install -r requirements.txt"
+  },
+  "deploy": {
+    "startCommand": "cd pwa && gunicorn app:app"
+  }
+}
