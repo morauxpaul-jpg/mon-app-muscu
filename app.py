@@ -1544,13 +1544,28 @@ with tab_home:
     if st.session_state.view == 'choix_seance':
 
         if st.button("← Retour", key="back_accueil"):
+            st.session_state.seance_target_date = None
             st.session_state.view = 'accueil'
             st.rerun()
 
+        _tgt = st.session_state.seance_target_date
+        if _tgt:
+            from datetime import datetime as _dt
+            _tgt_d = _dt.strptime(_tgt, "%Y-%m-%d")
+            _JOURS_FR = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"]
+            _MOIS_FR  = ["jan","fév","mar","avr","mai","juin","juil","août","sep","oct","nov","déc"]
+            _tgt_label = f"{_JOURS_FR[_tgt_d.weekday()]} {_tgt_d.day} {_MOIS_FR[_tgt_d.month-1]}"
+            _titre_cs = f"Rattrapage du {_tgt_label}"
+            _subtitle_cs = f'<div style="font-size:0.75rem; color:#FF9500; letter-spacing:2px; margin-top:4px;">SÉANCE MANQUÉE</div>'
+        else:
+            _tgt_label = f"{day_name.upper()} · {date_str}"
+            _titre_cs = "Quelle séance aujourd'hui ?"
+            _subtitle_cs = ""
         st.markdown(f"""
         <div style="text-align:center; padding:12px 8px 6px; margin-bottom:20px;">
-            <div style="font-size:0.8rem; color:#5a7a9a; letter-spacing:3px;">{day_name.upper()} · {date_str}</div>
-            <div style="font-size:1.6rem; color:#fff; font-weight:900; margin-top:4px;">Quelle séance aujourd'hui ?</div>
+            <div style="font-size:0.8rem; color:#5a7a9a; letter-spacing:3px;">{_tgt_label.upper() if not _tgt else _tgt_label}</div>
+            <div style="font-size:1.6rem; color:#fff; font-weight:900; margin-top:4px;">{_titre_cs}</div>
+            {_subtitle_cs}
         </div>
         """, unsafe_allow_html=True)
 
@@ -1730,18 +1745,24 @@ with tab_home:
                     }.get(_stinfo["status"], "Ouvrir")
                     _btn_type = "primary" if _stinfo["status"] in ("today", "inprog") else "secondary"
                     if st.button(_btn_lbl, key=f"day_btn_{_i}", use_container_width=True, type=_btn_type):
-                        st.session_state.seance_selectionnee = _assigned
-                        st.session_state.mode_seance = 'prefaite'
                         st.session_state.seance_target_date = _d.strftime("%Y-%m-%d")
-                        st.session_state.switch_to_seance = True
-                        st.session_state.extra_exos.pop(_assigned, None)
-                        st.rerun()
+                        if _stinfo["status"] == "missed":
+                            # Rattrapage : laisser le choix entre pré-faite et personnalisée
+                            st.session_state.view = 'choix_seance'
+                            st.rerun()
+                        else:
+                            st.session_state.seance_selectionnee = _assigned
+                            st.session_state.mode_seance = 'prefaite'
+                            st.session_state.switch_to_seance = True
+                            st.session_state.extra_exos.pop(_assigned, None)
+                            st.rerun()
 
         st.divider()
 
         # Bouton secondaire : séance libre / hors planning
         if st.button(":material/edit_note: Séance libre / hors planning",
                      use_container_width=True, key="cta_libre_home"):
+            st.session_state.seance_target_date = None
             st.session_state.view = 'choix_seance'
             st.rerun()
 
