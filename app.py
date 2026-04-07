@@ -1760,6 +1760,13 @@ with tab_home:
                 top = real.groupby("Séance")["Exercice"].nunique().sort_values(ascending=False)
                 return {"status": "done", "title": str(top.index[0]),
                         "badge": "FAIT", "color": "#00FF7F"}
+            # Marqueur SESSION "SÉANCE MANQUÉE" explicite
+            if not day_rows[
+                (day_rows["Exercice"] == "SESSION") &
+                day_rows["Remarque"].fillna("").str.contains("MANQUÉE", na=False)
+            ].empty:
+                return {"status": "missed", "title": "Manquée",
+                        "badge": "MANQUÉE", "color": "#FF453A"}
             if day_date < _today_p:
                 return {"status": "missed", "title": "Manquée",
                         "badge": "MANQUÉE", "color": "#FF453A"}
