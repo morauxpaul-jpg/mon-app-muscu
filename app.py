@@ -2067,12 +2067,17 @@ with tab_s:
                 exo_final_l = f"{exo_base_l} ({var_l})" if var_l != "Standard" else exo_base_l
 
                 # Record perso toutes séances, spécifique à la variante sélectionnée
+                _is_bw_l = (var_l != "Lesté")
                 f_h_l = df_h[df_h["Exercice"] == exo_final_l]
                 if not f_h_l.empty and not f_h_l[f_h_l["Reps"] > 0].empty:
-                    best_w_l = f_h_l["Poids"].max()
-                    best_1rm_l = f_h_l[f_h_l["Reps"] > 0].apply(
-                        lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
-                    st.caption(f"🏆 Record : **{best_w_l:g}kg** | ⚡ 1RM estimé : **{best_1rm_l:.1f}kg**")
+                    if _is_bw_l:
+                        _best_reps_l = int(f_h_l[f_h_l["Reps"] > 0]["Reps"].max())
+                        st.caption(f"🏆 Record : **{_best_reps_l} reps**")
+                    else:
+                        best_w_l = f_h_l["Poids"].max()
+                        best_1rm_l = f_h_l[f_h_l["Reps"] > 0].apply(
+                            lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
+                        st.caption(f"🏆 Record : **{best_w_l:g}kg** | ⚡ 1RM estimé : **{best_1rm_l:.1f}kg**")
 
                 curr_l = df_h[(df_h["Exercice"] == exo_final_l) &
                               (df_h["Séance"] == nom_libre) &
@@ -2087,24 +2092,34 @@ with tab_s:
 
                 _n_rows_l = max(p_sets_l, len(curr_l)) if not curr_l.empty else p_sets_l
                 _n_rows_l += extra_n_l
-                df_base_l = pd.DataFrame({"Reps": [0]*_n_rows_l,
-                                          "Poids": [0.0]*_n_rows_l,
-                                          "Remarque": [""]*_n_rows_l},
-                                         index=pd.RangeIndex(1, _n_rows_l + 1, name="Série"))
-                if not curr_l.empty:
-                    for _, rl in curr_l.iterrows():
-                        idx_l = int(rl["Série"])
-                        if idx_l in df_base_l.index:
-                            df_base_l.loc[idx_l, ["Reps","Poids","Remarque"]] = [rl["Reps"], rl["Poids"], rl["Remarque"]]
-
-                ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}_{li}",
-                                      use_container_width=True, hide_index=False,
-                                      column_config={"Poids": st.column_config.NumberColumn(format="%g")})
+                if _is_bw_l:
+                    df_base_l = pd.DataFrame({"Reps": [0]*_n_rows_l, "Remarque": [""]*_n_rows_l},
+                                             index=pd.RangeIndex(1, _n_rows_l + 1, name="Série"))
+                    if not curr_l.empty:
+                        for _, rl in curr_l.iterrows():
+                            idx_l = int(rl["Série"])
+                            if idx_l in df_base_l.index:
+                                df_base_l.loc[idx_l, ["Reps","Remarque"]] = [rl["Reps"], rl["Remarque"]]
+                    ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}_{li}",
+                                          use_container_width=True, hide_index=False)
+                else:
+                    df_base_l = pd.DataFrame({"Reps": [0]*_n_rows_l, "Poids": [0.0]*_n_rows_l, "Remarque": [""]*_n_rows_l},
+                                             index=pd.RangeIndex(1, _n_rows_l + 1, name="Série"))
+                    if not curr_l.empty:
+                        for _, rl in curr_l.iterrows():
+                            idx_l = int(rl["Série"])
+                            if idx_l in df_base_l.index:
+                                df_base_l.loc[idx_l, ["Reps","Poids","Remarque"]] = [rl["Reps"], rl["Poids"], rl["Remarque"]]
+                    ed_l = st.data_editor(df_base_l, num_rows="dynamic", key=f"edl_{exo_final_l}_{s_act_l}_{li}",
+                                          use_container_width=True, hide_index=False,
+                                          column_config={"Poids": st.column_config.NumberColumn(format="%g")})
 
                 c_sv_l, c_sk_l = st.columns(2)
                 if c_sv_l.button(":material/save: Enregistrer", key=f"svl_{exo_final_l}_{li}"):
                     vl = ed_l.reset_index()
                     vl["Série"] = range(1, len(vl) + 1)
+                    if _is_bw_l:
+                        vl["Poids"] = 0.0
                     vl["Semaine"] = s_act_l
                     vl["Séance"] = nom_libre
                     vl["Exercice"] = exo_final_l
@@ -2193,6 +2208,18 @@ with tab_s:
                         "sets": int(new_sets)
                     })
                     st.rerun()
+
+        # ── Bouton Terminer la séance libre ───────────────────────────────────
+        if st.session_state.seance_libre_exos:
+            st.divider()
+            if st.button(":material/check_circle: Terminer la séance", type="primary",
+                         use_container_width=True, key="libre_done"):
+                st.session_state.mode_seance = None
+                st.session_state.seance_libre_exos = []
+                st.session_state.seance_selectionnee = None
+                st.session_state.seance_target_date = None
+                st.session_state.view = 'accueil'
+                st.rerun()
 
     # ══════════════════════════════════════════════════════════
     # AUCUNE SÉANCE SÉLECTIONNÉE
@@ -2401,18 +2428,21 @@ with tab_s:
                     st.caption(f"ℹ️ Exercice pratiqué avec {len(all_variants)} variantes différentes")
 
                 # Record toutes séances confondues, spécifique à la variante sélectionnée
+                _is_bw = (var != "Lesté")
                 f_h_all = df_h[df_h["Exercice"] == exo_final]
                 if not f_h_all.empty:
-                    best_w = f_h_all["Poids"].max()
                     _f_h_reps = f_h_all[f_h_all["Reps"] > 0]
                     if not _f_h_reps.empty:
-                        best_1rm = _f_h_reps.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
-                        if st.session_state.settings['show_1rm']:
-                            st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
+                        if _is_bw:
+                            _best_reps = int(_f_h_reps["Reps"].max())
+                            st.caption(f"🏆 Record : **{_best_reps} reps**")
                         else:
-                            st.caption(f"🏆 Record : **{best_w:g}kg**")
-                    elif best_w > 0:
-                        st.caption(f"🏆 Record : **{best_w:g}kg**")
+                            best_w = f_h_all["Poids"].max()
+                            best_1rm = _f_h_reps.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
+                            if st.session_state.settings['show_1rm']:
+                                st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
+                            else:
+                                st.caption(f"🏆 Record : **{best_w:g}kg**")
 
                 hist_weeks_all = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
                 hist_weeks = [w for w in hist_weeks_all if not f_h[(f_h["Semaine"] == w) & (f_h["Poids"] > 0)].empty]
@@ -2467,25 +2497,36 @@ with tab_s:
                     # Fix : df_base taille = max(séries programme, séries déjà sauvegardées) + extras
                     n_rows = max(p_sets, len(curr)) if not curr.empty else p_sets
                     n_rows += extra_n
-                    df_base = pd.DataFrame(
-                        {"Reps": [0]*n_rows, "Poids": [0.0]*n_rows, "Remarque": [""]*n_rows},
-                        index=pd.RangeIndex(1, n_rows + 1, name="Série"))
-                    if not curr.empty:
-                        for _, r in curr.iterrows():
-                            idx = int(r["Série"])
-                            if idx in df_base.index:
-                                df_base.loc[idx, ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
-
-                    ed = st.data_editor(
-                        df_base, num_rows="dynamic", key=editor_key,
-                        use_container_width=True,
-                        column_config={"Poids": st.column_config.NumberColumn(format="%g")},
-                        hide_index=False)
+                    if _is_bw:
+                        df_base = pd.DataFrame(
+                            {"Reps": [0]*n_rows, "Remarque": [""]*n_rows},
+                            index=pd.RangeIndex(1, n_rows + 1, name="Série"))
+                        if not curr.empty:
+                            for _, r in curr.iterrows():
+                                idx = int(r["Série"])
+                                if idx in df_base.index:
+                                    df_base.loc[idx, ["Reps", "Remarque"]] = [r["Reps"], r["Remarque"]]
+                        ed = st.data_editor(df_base, num_rows="dynamic", key=editor_key,
+                                            use_container_width=True, hide_index=False)
+                    else:
+                        df_base = pd.DataFrame(
+                            {"Reps": [0]*n_rows, "Poids": [0.0]*n_rows, "Remarque": [""]*n_rows},
+                            index=pd.RangeIndex(1, n_rows + 1, name="Série"))
+                        if not curr.empty:
+                            for _, r in curr.iterrows():
+                                idx = int(r["Série"])
+                                if idx in df_base.index:
+                                    df_base.loc[idx, ["Reps", "Poids", "Remarque"]] = [r["Reps"], r["Poids"], r["Remarque"]]
+                        ed = st.data_editor(df_base, num_rows="dynamic", key=editor_key,
+                                            use_container_width=True, hide_index=False,
+                                            column_config={"Poids": st.column_config.NumberColumn(format="%g")})
 
                     c_save, c_skip = st.columns(2)
                     if c_save.button(":material/save: Enregistrer", key=f"sv_{exo_final}_{i}"):
                         v = ed.reset_index()
                         v["Série"] = range(1, len(v) + 1)
+                        if _is_bw:
+                            v["Poids"] = 0.0
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, (st.session_state.seance_target_date or today_paris_str())
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final)
