@@ -6,15 +6,15 @@ Commit 1 : squelette + layout de base. Les pages sont des stubs.
 import os
 from flask import Flask, render_template, send_from_directory
 
+from routes.accueil import bp as accueil_bp
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.register_blueprint(accueil_bp)
 
 
 # ────────────────────────────────────────────────────────────────
-# Routes pages — stubs pour commit 1, seront remplis page par page
+# Routes pages — les pages non encore migrées restent des stubs
 # ────────────────────────────────────────────────────────────────
-@app.route("/")
-def accueil():
-    return render_template("accueil.html", active="accueil")
 
 
 @app.route("/seance")

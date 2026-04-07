@@ -70,6 +70,137 @@
   transition: width 1s ease-out;
 }
 
+/* ── Accueil ── */
+.date-hero {
+  text-align: center;
+  padding: 14px 12px 10px;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(88,204,255,0.07), rgba(0,255,127,0.05));
+  border: 1px solid rgba(88,204,255,0.25);
+  border-radius: 16px;
+}
+.date-hero .day-name {
+  font-size: 0.85rem;
+  color: #5a7a9a;
+  letter-spacing: 3px;
+}
+.date-hero .date-str {
+  font-size: 1.5rem;
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: 2px;
+  font-family: 'Courier New', monospace;
+}
+.date-hero .week-num {
+  font-size: 0.75rem;
+  color: #3a5a7a;
+  margin-top: 4px;
+  letter-spacing: 2px;
+}
+
+.week-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+.day-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid color-mix(in srgb, var(--day-color) 40%, transparent);
+  text-decoration: none;
+  color: var(--text);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+.day-card:active { transform: scale(0.98); }
+.day-card.today {
+  border-width: 2px;
+  background: rgba(88, 204, 255, 0.08);
+}
+.day-card .day-label {
+  font-size: 11px;
+  color: #5a7a9a;
+  letter-spacing: 2px;
+}
+.day-card .day-title {
+  font-size: 1rem;
+  color: #fff;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.day-card .day-badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--day-color);
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 1rem 0 0.6rem;
+}
+.stat-card {
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+}
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 900;
+  margin-top: 2px;
+}
+.stat-card .stat-sub {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+.stat-blue  { background: rgba(88,204,255,0.06); border: 1px solid rgba(88,204,255,0.25); }
+.stat-blue  .stat-label { color: #5a8aaa; }
+.stat-blue  .stat-value { color: var(--accent); }
+.stat-green { background: rgba(0,255,127,0.06); border: 1px solid rgba(0,255,127,0.25); }
+.stat-green .stat-label { color: #3a8a5a; }
+.stat-green .stat-value { color: var(--success); }
+.stat-green .stat-sub   { color: #3a6a4a; }
+.stat-gold  { background: rgba(255,215,0,0.07); border: 1px solid rgba(255,215,0,0.25); }
+.stat-gold  .stat-label { color: #8a7a2a; }
+.stat-gold  .stat-value { font-size: 1.6rem; color: var(--gold); }
+
+.detail-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.detail-metric {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(88,204,255,0.15);
+  border-radius: 12px;
+  padding: 12px 6px;
+  text-align: center;
+}
+.detail-metric .detail-label {
+  font-size: 0.7rem;
+  color: #5a7a9a;
+  letter-spacing: 1px;
+}
+.detail-metric .detail-value {
+  font-family: 'Courier New', monospace;
+  font-size: 1.8rem;
+  color: var(--accent);
+  font-weight: 900;
+  text-shadow: 0 0 20px rgba(88, 204, 255, 0.6);
+  animation: pulse 2s infinite;
+}
+
 /* Stub placeholder pour les pages non encore migrées */
 .stub {
   text-align: center;

@@ -1,9 +1,68 @@
 {% extends "base.html" %}
 {% block title %}Accueil · Muscu PRO{% endblock %}
+
 {% block content %}
-  <h1>Accueil</h1>
-  <div class="card stub">
-    <span class="tag">À MIGRER — COMMIT 2</span>
-    <p>Page d'accueil : dashboard, planning hebdo, cadres des jours cliquables.</p>
+  {% if error %}
+    <div class="card" style="border-color: var(--danger);">
+      <strong style="color: var(--danger);">Erreur de connexion Google Sheets</strong>
+      <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 6px;">{{ error }}</div>
+    </div>
+  {% else %}
+
+  <h1 style="text-align:center;">Muscu Tracker PRO</h1>
+
+  <div class="date-hero">
+    <div class="day-name">{{ day_name }}</div>
+    <div class="date-str">{{ date_str }}</div>
+    <div class="week-num">SEMAINE {{ s_act }}</div>
   </div>
+
+  <h3>📅 Cette semaine</h3>
+  <div class="week-grid">
+    {% for d in week %}
+      <a href="/seance?date={{ d.date_iso }}" class="day-card {% if d.is_today %}today{% endif %}"
+         style="--day-color: {{ d.color }};">
+        <div>
+          <div class="day-label">{{ d.day_label|upper }} · {{ d.date_short }}</div>
+          <div class="day-title">{{ d.title }}</div>
+        </div>
+        <div class="day-badge">{{ d.badge }}</div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card stat-blue">
+      <div class="stat-label">SÉANCES</div>
+      <div class="stat-value">{{ sessions_done }}/{{ total_sessions }}</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-label">VOLUME</div>
+      <div class="stat-value">{{ vol_week }}</div>
+      <div class="stat-sub">kg cette semaine</div>
+    </div>
+  </div>
+
+  <div class="stat-card stat-gold" style="margin-bottom: 1rem;">
+    <div class="stat-label">🔥 STREAK</div>
+    <div class="stat-value">{{ streak }} SEMAINE{% if streak > 1 %}S{% endif %}</div>
+  </div>
+
+  <h3>📊 Détail</h3>
+  <div class="detail-row">
+    <div class="detail-metric">
+      <div class="detail-label">💪 Exercices</div>
+      <div class="detail-value">{{ exos_count }}</div>
+    </div>
+    <div class="detail-metric">
+      <div class="detail-label">🔢 Séries</div>
+      <div class="detail-value">{{ sets_count }}</div>
+    </div>
+    <div class="detail-metric">
+      <div class="detail-label">🎯 Reps</div>
+      <div class="detail-value">{{ reps_count }}</div>
+    </div>
+  </div>
+
+  {% endif %}
 {% endblock %}
