@@ -2067,7 +2067,8 @@ with tab_s:
                 exo_final_l = f"{exo_base_l} ({var_l})" if var_l != "Standard" else exo_base_l
 
                 # Record perso toutes séances, spécifique à la variante sélectionnée
-                _is_bw_l = (var_l != "Lesté")
+                _BW_EXOS = {"Dips", "Tractions"}
+                _is_bw_l = (exo_base_l in _BW_EXOS and var_l != "Lesté")
                 f_h_l = df_h[df_h["Exercice"] == exo_final_l]
                 if not f_h_l.empty and not f_h_l[f_h_l["Reps"] > 0].empty:
                     if _is_bw_l:
@@ -2428,7 +2429,8 @@ with tab_s:
                     st.caption(f"ℹ️ Exercice pratiqué avec {len(all_variants)} variantes différentes")
 
                 # Record toutes séances confondues, spécifique à la variante sélectionnée
-                _is_bw = (var != "Lesté")
+                _BW_EXOS = {"Dips", "Tractions"}
+                _is_bw = (exo_base in _BW_EXOS and var != "Lesté")
                 f_h_all = df_h[df_h["Exercice"] == exo_final]
                 if not f_h_all.empty:
                     _f_h_reps = f_h_all[f_h_all["Reps"] > 0]
