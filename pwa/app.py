@@ -9,21 +9,18 @@ from flask import Flask, render_template, send_from_directory
 from routes.accueil import bp as accueil_bp
 from routes.seance import bp as seance_bp
 from routes.programme import bp as programme_bp
+from routes.progres import bp as progres_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.register_blueprint(accueil_bp)
 app.register_blueprint(seance_bp)
 app.register_blueprint(programme_bp)
+app.register_blueprint(progres_bp)
 
 
 # ────────────────────────────────────────────────────────────────
 # Routes pages — les pages non encore migrées restent des stubs
 # ────────────────────────────────────────────────────────────────
-
-
-@app.route("/progres")
-def progres():
-    return render_template("progres.html", active="progres")
 
 
 @app.route("/gestion")

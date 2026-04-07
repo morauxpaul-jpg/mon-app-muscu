@@ -1,0 +1,138 @@
+{# Corps anatomique SVG — porté verbatim de app.py body_map_section.
+   Utilise svg_ctx (préparé côté Python) pour les fills.
+   Les macros évitent de répéter `fill="..." opacity="..." filter="url(#...)"` partout. #}
+
+{% macro zone_attrs(m, side) -%}
+  {% set s = svg_ctx[m] %}
+  fill="{{ s.fill_f if side == 'f' else s.fill_b }}" opacity="{{ s.opacity }}" filter="url(#{{ 'gw' if side == 'f' else 'gwb' }})"
+{%- endmacro %}
+
+{% macro gradient_defs(pfx) -%}
+  {% for m, s in svg_ctx.items() if s.active %}
+    <radialGradient id="{{ pfx }}{{ s.sid }}" cx="50%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="{{ s.col }}" stop-opacity="1"/>
+      <stop offset="50%" stop-color="{{ s.col }}" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="{{ s.col }}" stop-opacity="0.06"/>
+    </radialGradient>
+  {% endfor %}
+{%- endmacro %}
+
+{# ─── SVG FACE ─── #}
+<svg id="svg-front" viewBox="0 0 200 420" width="148" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="gw" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    {{ gradient_defs("gf") }}
+  </defs>
+  <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
+  <circle cx="92" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
+  <circle cx="108" cy="28" r="2" fill="#58CCFF" opacity="0.22"/>
+  <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
+  <path d="M92,76 C84,76 66,72 50,82 C38,88 36,102 38,116 C40,130 46,138 48,150 C50,162 48,174 50,184 L74,196 L78,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L122,208 L126,196 L150,184 C152,174 150,162 152,150 C154,138 160,130 162,116 C164,102 162,88 150,82 C134,72 116,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
+  <path d="M50,82 C42,90 36,104 36,120 C36,134 38,142 42,146 C46,150 52,150 56,144 C60,138 60,120 58,106 C56,92 54,82 50,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M42,148 C38,158 36,172 38,184 C40,192 44,198 48,198 C52,200 56,198 58,192 C60,186 58,172 56,160 C54,150 50,148 42,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="50" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M150,82 C158,90 164,104 164,120 C164,134 162,142 158,146 C154,150 148,150 144,144 C140,138 140,120 142,106 C144,92 146,82 150,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M158,148 C162,158 164,172 162,184 C160,192 156,198 152,198 C148,200 144,198 142,192 C140,186 142,172 144,160 C146,150 150,148 158,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="150" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
+  <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M72,314 C70,328 68,350 70,372 C72,384 74,392 76,396 C80,400 86,399 88,394 C90,388 90,372 88,352 C86,330 80,316 72,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+  <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+
+  <g id="z-epaules" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
+    <path d="M48,82 C38,88 34,102 36,116 C38,126 42,134 46,138 C50,134 52,118 52,106 C52,94 50,84 48,82 Z" {{ zone_attrs("Épaules", "f") }}/>
+    <path d="M152,82 C162,88 166,102 164,116 C162,126 158,134 154,138 C150,134 148,118 148,106 C148,94 150,84 152,82 Z" {{ zone_attrs("Épaules", "f") }}/>
+  </g>
+  <g id="z-pecs" class="zone" onclick="sel('Pecs')"><title>Pecs</title>
+    <path d="M70,80 C84,72 102,80 104,112 C88,122 72,116 66,102 C64,92 64,84 70,80 Z" {{ zone_attrs("Pecs", "f") }}/>
+    <path d="M130,80 C116,72 98,80 96,112 C112,122 128,116 134,102 C136,92 136,84 130,80 Z" {{ zone_attrs("Pecs", "f") }}/>
+  </g>
+  <g id="z-biceps" class="zone" onclick="sel('Biceps')"><title>Biceps</title>
+    <path d="M50,86 C44,98 40,114 42,128 C44,138 48,142 52,138 C56,134 58,118 56,106 C54,94 52,86 50,86 Z" {{ zone_attrs("Biceps", "f") }}/>
+    <path d="M150,86 C156,98 160,114 158,128 C156,138 152,142 148,138 C144,134 142,118 144,106 C146,94 148,86 150,86 Z" {{ zone_attrs("Biceps", "f") }}/>
+  </g>
+  <g id="z-avbras" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
+    <path d="M42,150 C36,162 34,176 36,188 C38,196 42,200 46,198 C50,196 52,186 52,174 C52,162 48,152 42,150 Z" {{ zone_attrs("Avant-bras", "f") }}/>
+    <path d="M158,150 C164,162 166,176 164,188 C162,196 158,200 154,198 C150,196 148,186 148,174 C148,162 152,152 158,150 Z" {{ zone_attrs("Avant-bras", "f") }}/>
+  </g>
+  <g id="z-abdos" class="zone" onclick="sel('Abdos')"><title>Abdos</title>
+    <rect x="85" y="110" width="13" height="15" rx="4" {{ zone_attrs("Abdos", "f") }}/>
+    <rect x="102" y="110" width="13" height="15" rx="4" {{ zone_attrs("Abdos", "f") }}/>
+    <rect x="85" y="129" width="13" height="14" rx="4" {{ zone_attrs("Abdos", "f") }}/>
+    <rect x="102" y="129" width="13" height="14" rx="4" {{ zone_attrs("Abdos", "f") }}/>
+    <rect x="86" y="147" width="12" height="13" rx="3" {{ zone_attrs("Abdos", "f") }}/>
+    <rect x="102" y="147" width="12" height="13" rx="3" {{ zone_attrs("Abdos", "f") }}/>
+  </g>
+  <g id="z-quad" class="zone" onclick="sel('Quadriceps')"><title>Quadriceps</title>
+    <path d="M68,200 C64,216 62,240 64,268 C66,290 68,304 70,314 C76,322 86,322 90,314 C94,304 92,280 90,254 C88,226 84,204 68,200 Z" {{ zone_attrs("Quadriceps", "f") }}/>
+    <path d="M132,200 C136,216 138,240 136,268 C134,290 132,304 130,314 C124,322 114,322 110,314 C106,304 108,280 110,254 C112,226 116,204 132,200 Z" {{ zone_attrs("Quadriceps", "f") }}/>
+  </g>
+  <g id="z-mollets" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
+    <path d="M74,316 C70,330 68,352 70,374 C72,386 74,394 76,398 C80,402 86,401 88,396 C90,390 90,372 88,350 C86,328 80,318 74,316 Z" {{ zone_attrs("Mollets", "f") }}/>
+    <path d="M126,316 C130,330 132,352 130,374 C128,386 126,394 124,398 C120,402 114,401 112,396 C110,390 110,372 112,350 C114,328 120,318 126,316 Z" {{ zone_attrs("Mollets", "f") }}/>
+  </g>
+</svg>
+
+{# ─── SVG DOS ─── #}
+<svg id="svg-back" viewBox="0 0 200 420" width="148" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+  <defs>
+    <filter id="gwb" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    {{ gradient_defs("gb") }}
+  </defs>
+  <ellipse cx="100" cy="33" rx="23" ry="27" fill="#0b1724" stroke="#1c3a58" stroke-width="1.1"/>
+  <path d="M93,58 C91,64 91,70 92,76 L108,76 C109,70 109,64 107,58 Z" fill="#0b1724" stroke="#1c3a58" stroke-width="0.9"/>
+  <path d="M92,76 C84,76 66,72 50,82 C38,88 36,102 38,116 C40,130 46,138 48,150 C50,162 48,174 50,184 L74,196 L78,208 L88,210 C92,212 96,214 100,214 C104,214 108,212 112,210 L122,208 L126,196 L150,184 C152,174 150,162 152,150 C154,138 160,130 162,116 C164,102 162,88 150,82 C134,72 116,76 108,76 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.9" opacity="0.92"/>
+  <path d="M50,82 C42,90 36,104 36,120 C36,134 38,142 42,146 C46,150 52,150 56,144 C60,138 60,120 58,106 C56,92 54,82 50,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M42,148 C38,158 36,172 38,184 C40,192 44,198 48,198 C52,200 56,198 58,192 C60,186 58,172 56,160 C54,150 50,148 42,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="50" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <path d="M150,82 C158,90 164,104 164,120 C164,134 162,142 158,146 C154,150 148,150 144,144 C140,138 140,120 142,106 C144,92 146,82 150,82 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.92"/>
+  <path d="M158,148 C162,158 164,172 162,184 C160,192 156,198 152,198 C148,200 144,198 142,192 C140,186 142,172 144,160 C146,150 150,148 158,148 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="150" cy="202" rx="10" ry="5.5" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.5"/>
+  <ellipse cx="100" cy="196" rx="31" ry="11" fill="#080e1c" stroke="#1c3a58" stroke-width="0.8" opacity="0.8"/>
+  <path d="M70,198 C66,212 64,236 66,264 C68,286 70,300 72,312 C76,320 86,321 90,314 C94,306 92,284 90,258 C88,230 84,206 70,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M130,198 C134,212 136,236 134,264 C132,286 130,300 128,312 C124,320 114,321 110,314 C106,306 108,284 110,258 C112,230 116,206 130,198 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M72,314 C70,328 68,350 70,372 C72,384 74,392 76,396 C80,400 86,399 88,394 C90,388 90,372 88,352 C86,330 80,316 72,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <path d="M128,314 C130,328 132,350 130,372 C128,384 126,392 124,396 C120,400 114,399 112,394 C110,388 110,372 112,352 C114,330 120,316 128,314 Z" fill="#080e1c" stroke="#1c3a58" stroke-width="0.7" opacity="0.92"/>
+  <ellipse cx="80" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+  <ellipse cx="120" cy="401" rx="18" ry="6" fill="#080e1c" stroke="#1c3a58" stroke-width="0.6" opacity="0.4"/>
+
+  <g id="z-epaules-b" class="zone" onclick="sel('Épaules')"><title>Épaules</title>
+    <path d="M48,82 C38,88 34,102 36,116 C38,126 42,134 46,138 C50,134 52,118 52,106 C52,94 50,84 48,82 Z" {{ zone_attrs("Épaules", "b") }}/>
+    <path d="M152,82 C162,88 166,102 164,116 C162,126 158,134 154,138 C150,134 148,118 148,106 C148,94 150,84 152,82 Z" {{ zone_attrs("Épaules", "b") }}/>
+  </g>
+  <g id="z-dos" class="zone" onclick="sel('Dos')"><title>Dos</title>
+    <path d="M88,74 C92,70 100,68 108,74 L118,94 C108,100 100,102 92,94 Z" {{ zone_attrs("Dos", "b") }}/>
+    <path d="M72,90 C64,102 60,124 64,150 C66,164 72,170 78,167 C84,162 86,148 86,128 C86,110 82,92 72,90 Z" {{ zone_attrs("Dos", "b") }}/>
+    <path d="M128,90 C136,102 140,124 136,150 C134,164 128,170 122,167 C116,162 114,148 114,128 C114,110 118,92 128,90 Z" {{ zone_attrs("Dos", "b") }}/>
+    <path d="M90,98 C94,94 100,92 106,98 L112,136 C108,144 100,146 92,136 Z" {{ zone_attrs("Dos", "b") }}/>
+  </g>
+  <g id="z-triceps" class="zone" onclick="sel('Triceps')"><title>Triceps</title>
+    <path d="M50,86 C44,98 40,114 42,128 C44,138 48,142 52,138 C56,134 58,118 56,106 C54,94 52,86 50,86 Z" {{ zone_attrs("Triceps", "b") }}/>
+    <path d="M150,86 C156,98 160,114 158,128 C156,138 152,142 148,138 C144,134 142,118 144,106 C146,94 148,86 150,86 Z" {{ zone_attrs("Triceps", "b") }}/>
+  </g>
+  <g id="z-avbras-b" class="zone" onclick="sel('Avant-bras')"><title>Avant-bras</title>
+    <path d="M42,150 C36,162 34,176 36,188 C38,196 42,200 46,198 C50,196 52,186 52,174 C52,162 48,152 42,150 Z" {{ zone_attrs("Avant-bras", "b") }}/>
+    <path d="M158,150 C164,162 166,176 164,188 C162,196 158,200 154,198 C150,196 148,186 148,174 C148,162 152,152 158,150 Z" {{ zone_attrs("Avant-bras", "b") }}/>
+  </g>
+  <g id="z-fessiers" class="zone" onclick="sel('Fessiers')"><title>Fessiers</title>
+    <path d="M68,198 C64,210 64,228 68,240 C72,252 82,258 94,254 C102,250 104,238 102,224 C100,208 94,198 80,196 Z" {{ zone_attrs("Fessiers", "b") }}/>
+    <path d="M132,198 C136,210 136,228 132,240 C128,252 118,258 106,254 C98,250 96,238 98,224 C100,208 106,198 120,196 Z" {{ zone_attrs("Fessiers", "b") }}/>
+  </g>
+  <g id="z-ischio" class="zone" onclick="sel('Ischio-jambiers')"><title>Ischio-jambiers</title>
+    <path d="M68,202 C64,218 62,242 64,270 C66,292 68,306 70,316 C76,322 86,322 90,314 C94,304 92,280 90,254 C88,226 84,206 68,202 Z" {{ zone_attrs("Ischio-jambiers", "b") }}/>
+    <path d="M132,202 C136,218 138,242 136,270 C134,292 132,306 130,316 C124,322 114,322 110,314 C106,304 108,280 110,254 C112,226 116,206 132,202 Z" {{ zone_attrs("Ischio-jambiers", "b") }}/>
+  </g>
+  <g id="z-mollets-b" class="zone" onclick="sel('Mollets')"><title>Mollets</title>
+    <path d="M72,318 C68,334 66,356 68,378 C70,390 72,398 74,402 C78,406 86,405 88,400 C90,392 90,374 88,354 C86,332 80,320 72,318 Z" {{ zone_attrs("Mollets", "b") }}/>
+    <path d="M128,318 C132,334 134,356 132,378 C130,390 128,398 126,402 C122,406 114,405 112,400 C110,392 110,374 112,354 C114,332 120,320 128,318 Z" {{ zone_attrs("Mollets", "b") }}/>
+  </g>
+</svg>

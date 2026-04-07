@@ -1,9 +1,238 @@
 {% extends "base.html" %}
 {% block title %}Progrès · Muscu PRO{% endblock %}
+
+{% block head_extra %}
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    .bm-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .bm-views { display:flex; gap:8px; margin-bottom:4px; }
+    .vbtn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text); border-radius: 10px;
+      padding: 6px 14px; font-size: 0.8rem; cursor:pointer;
+      letter-spacing:1px;
+    }
+    .vbtn.active { border-color: var(--accent); color: var(--accent); background: rgba(88,204,255,0.1); }
+    .zone { cursor:pointer; transition: opacity 0.2s; }
+    .zone:hover { opacity: 1 !important; }
+    .legend { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; font-size:0.7rem; color:#5a7a9a; margin-top:6px; }
+    .legend span { display:inline-flex; align-items:center; gap:4px; }
+    .legend i { width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+    .mdetail { display:none; }
+    .mdetail.on { display:block; animation: slideIn 0.3s ease-out; }
+    .back {
+      background: none; border:0; color: var(--accent); cursor:pointer;
+      font-size: 0.85rem; padding: 0; margin-bottom: 8px;
+    }
+    .mrow { display:flex; justify-content:space-between; padding: 6px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.85rem; }
+    .mrow:last-child { border-bottom: 0; }
+    .mrow b { color:#fff; }
+
+    .podium { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:10px; }
+    .podium-item { text-align:center; padding:12px 6px; border-radius:12px; font-size:0.8rem; }
+    .podium-gold   { background: rgba(255,215,0,0.08);  border:1px solid rgba(255,215,0,0.35); }
+    .podium-silver { background: rgba(192,192,192,0.08); border:1px solid rgba(192,192,192,0.3); }
+    .podium-bronze { background: rgba(205,127,50,0.08);  border:1px solid rgba(205,127,50,0.3); }
+    .podium-item .rank { font-size:1.3rem; font-weight:900; }
+    .podium-item .exo { color:#fff; font-weight:700; margin-top:3px; }
+    .podium-item .rm  { color: var(--accent); font-size:0.75rem; margin-top:2px; }
+
+    .ltable { width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:8px; }
+    .ltable th, .ltable td { padding:5px 4px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; }
+    .ltable th { color: var(--accent); font-weight:600; }
+  </style>
+{% endblock %}
+
 {% block content %}
   <h1>Progrès</h1>
-  <div class="card stub">
-    <span class="tag">À MIGRER — COMMIT 5</span>
-    <p>Graphiques Plotly.js, 1RM, volume par muscle.</p>
+
+  {% if not has_data %}
+    <div class="card stub"><p>Aucune donnée. Enregistre une séance pour voir tes progrès.</p></div>
+  {% else %}
+
+  {# ── Carte du corps ─────────────────────────────────── #}
+  <div class="card">
+    <h3>🗺️ Carte musculaire</h3>
+    <div class="bm-wrap">
+      <div class="bm-views">
+        <button class="vbtn active" id="vbtn-front" onclick="switchView('front')">FACE</button>
+        <button class="vbtn" id="vbtn-back" onclick="switchView('back')">DOS</button>
+      </div>
+      <div id="bm-svg-container">
+        {% include "_body_map_svg.html" %}
+      </div>
+      <div class="legend">
+        <span><i style="background:#1a2a3a"></i>Aucune</span>
+        <span><i style="background:#FF453A"></i>&lt;40%</span>
+        <span><i style="background:#FF9F0A"></i>40-70%</span>
+        <span><i style="background:#58CCFF"></i>70-95%</span>
+        <span><i style="background:#00FF7F"></i>≥95%</span>
+      </div>
+    </div>
   </div>
+
+  {# ── Détail muscle sélectionné ──────────────────────── #}
+  <div class="card mdetail" id="mdetail">
+    <button class="back" onclick="closeDetail()">← Retour</button>
+    <h3 id="md-title">—</h3>
+    <div id="md-content"></div>
+    <div id="md-chart" style="width:100%; height:180px; margin-top:10px;"></div>
+  </div>
+
+  {# ── Hall of Fame ───────────────────────────────────── #}
+  <div class="card">
+    <h3>🏆 Hall of Fame</h3>
+    <form method="get" action="/progres#hof">
+      <div class="muscle-checks">
+        {% for m in filter_muscles %}
+          <label class="muscle-check">
+            <input type="checkbox" name="m" value="{{ m }}" {% if m in selected_muscles %}checked{% endif %}>
+            <span>{{ m }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% if sel_exo %}<input type="hidden" name="exo" value="{{ sel_exo }}">{% endif %}
+      <button type="submit" class="btn" style="width:100%; margin-top:8px;">🔍 Filtrer</button>
+    </form>
+    {% if podium %}
+      <div class="podium">
+        {% set classes = ['podium-gold','podium-silver','podium-bronze'] %}
+        {% set medals = ['🥇','🥈','🥉'] %}
+        {% for exo, rm in podium %}
+          <div class="podium-item {{ classes[loop.index0] }}">
+            <div class="rank">{{ medals[loop.index0] }}</div>
+            <div class="exo">{{ exo }}</div>
+            <div class="rm">1RM {{ rm|round(1) }} kg</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="text-align:center; color:var(--text-dim); font-size:0.85rem;">Aucun mouvement pour ce filtre.</p>
+    {% endif %}
+  </div>
+
+  {# ── Zoom mouvement ─────────────────────────────────── #}
+  <div class="card" id="zoom">
+    <h3>🔎 Zoom mouvement</h3>
+    <form method="get" action="/progres#zoom">
+      {% for m in selected_muscles %}<input type="hidden" name="m" value="{{ m }}">{% endfor %}
+      <label class="field-label" style="margin-top:0;">Exercice</label>
+      <select name="exo" class="field" onchange="this.form.submit()">
+        {% for e in all_exos %}
+          <option value="{{ e }}" {% if e == sel_exo %}selected{% endif %}>{{ e }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% if zoom %}
+      <div class="detail-row" style="margin-top:12px;">
+        <div class="detail-metric"><div class="detail-label">MEILLEUR</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.best_w }}×{{ zoom.best_r }}</div></div>
+        <div class="detail-metric"><div class="detail-label">1RM</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.one_rm }}</div></div>
+        <div class="detail-metric"><div class="detail-label">SÉRIES</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.table|length }}</div></div>
+      </div>
+
+      {% if zoom.rep_ests %}
+        <div class="field-label" style="margin-top:12px;">Estimations par reps</div>
+        <table class="ltable">
+          <tr>{% for reps, _ in zoom.rep_ests %}<th>{{ reps }}r</th>{% endfor %}</tr>
+          <tr>{% for _, w in zoom.rep_ests %}<td>{{ w }}kg</td>{% endfor %}</tr>
+        </table>
+      {% endif %}
+
+      <div id="zoom-chart" style="width:100%; height:220px; margin-top:14px;"></div>
+
+      <div class="field-label" style="margin-top:12px;">Historique</div>
+      <table class="ltable">
+        <thead><tr><th>S</th><th>Poids</th><th>Reps</th></tr></thead>
+        <tbody>
+          {% for r in zoom.table[:15] %}
+            <tr><td>{{ r.Semaine }}</td><td>{{ r.Poids }}</td><td>{{ r.Reps }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <script>
+        Plotly.newPlot('zoom-chart', [{
+          x: {{ zoom.chart_x|tojson }},
+          y: {{ zoom.chart_y|tojson }},
+          mode: 'lines+markers',
+          line: { color: '#58CCFF', width: 3 },
+          marker: { color: '#00FF7F', size: 8 },
+          fill: 'tozeroy', fillcolor: 'rgba(88,204,255,0.1)'
+        }], {
+          margin: { l: 40, r: 10, t: 10, b: 30 },
+          paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+          font: { color: '#5a7a9a', size: 10 },
+          xaxis: { title: 'Semaine', gridcolor: 'rgba(88,204,255,0.1)' },
+          yaxis: { title: 'Poids (kg)', gridcolor: 'rgba(88,204,255,0.1)' }
+        }, { displayModeBar: false, responsive: true });
+      </script>
+    {% endif %}
+  </div>
+
+  <script>
+    const MDATA = {{ muscle_data|tojson }};
+
+    function switchView(v) {
+      document.getElementById('svg-front').style.display = v === 'front' ? '' : 'none';
+      document.getElementById('svg-back').style.display  = v === 'back'  ? '' : 'none';
+      document.getElementById('vbtn-front').classList.toggle('active', v === 'front');
+      document.getElementById('vbtn-back').classList.toggle('active', v === 'back');
+    }
+    // init : back caché
+    document.getElementById('svg-back').style.display = 'none';
+
+    function sel(name) {
+      const d = MDATA[name];
+      if (!d) return;
+      document.getElementById('md-title').textContent = name + ' — ' + d.pct + '%';
+      let html = '';
+      html += '<div class="mrow"><span>1RM max</span><b>' + d.rm + ' kg</b></div>';
+      html += '<div class="mrow"><span>Meilleur set</span><b>' + d.best.w + ' × ' + d.best.r + '</b></div>';
+      html += '<div class="mrow"><span>Standard</span><b>' + d.std + ' kg</b></div>';
+      if (d.exos && d.exos.length) {
+        html += '<div class="field-label" style="margin-top:10px;">Top exercices</div>';
+        d.exos.forEach(e => {
+          html += '<div class="mrow"><span>' + e.name + '</span><b>' + e.w + '×' + e.r + '</b></div>';
+        });
+      }
+      if (d.last && d.last.length) {
+        html += '<div class="field-label" style="margin-top:10px;">4 dernières semaines</div>';
+        d.last.forEach(l => {
+          html += '<div class="mrow"><span>S' + l.s + '</span><b>' + l.w + '×' + l.r + '</b></div>';
+        });
+      }
+      document.getElementById('md-content').innerHTML = html;
+
+      const md = document.getElementById('mdetail');
+      md.classList.add('on');
+      md.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      if (d.evo && d.evo.length > 1) {
+        Plotly.newPlot('md-chart', [{
+          x: d.evo.map(e => e.w),
+          y: d.evo.map(e => e.r),
+          mode: 'lines+markers',
+          line: { color: d.col, width: 3 },
+          marker: { color: d.col, size: 7 },
+          fill: 'tozeroy', fillcolor: 'rgba(88,204,255,0.08)'
+        }], {
+          margin: { l: 40, r: 10, t: 10, b: 28 },
+          paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+          font: { color: '#5a7a9a', size: 9 },
+          xaxis: { gridcolor: 'rgba(88,204,255,0.08)' },
+          yaxis: { gridcolor: 'rgba(88,204,255,0.08)' }
+        }, { displayModeBar: false, responsive: true });
+      } else {
+        document.getElementById('md-chart').innerHTML = '';
+      }
+    }
+    function closeDetail() {
+      document.getElementById('mdetail').classList.remove('on');
+    }
+  </script>
+
+  {% endif %}
 {% endblock %}
