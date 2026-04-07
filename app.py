@@ -2005,9 +2005,33 @@ with tab_s:
                 st.session_state.view = 'accueil'
                 st.rerun()
 
-        s_act_l = st.number_input("Semaine", 1, 52,
-                                  int(df_h["Semaine"].max() if not df_h.empty else 1),
-                                  key="semaine_libre")
+        # Date cible (rattrapage) capturée une fois pour toute la séance libre
+        _libre_target = st.session_state.seance_target_date
+        _libre_date = _libre_target or today_paris_str()
+
+        # Banderole visible si rattrapage
+        if _libre_target:
+            try:
+                _lt_dt = datetime.strptime(_libre_target, "%Y-%m-%d").date()
+                _lt_lbl = f"{_DAYS_FR[_lt_dt.weekday()]} {_lt_dt.day:02d}/{_lt_dt.month:02d}/{_lt_dt.year}"
+                st.markdown(
+                    f"<div style='background:rgba(255,149,0,0.12); border:1px solid rgba(255,149,0,0.4);"
+                    f" border-radius:10px; padding:8px 12px; margin-bottom:10px;'>"
+                    f"<span style='font-size:11px; color:#FF9500; letter-spacing:2px;'>RATTRAPAGE · </span>"
+                    f"<span style='font-size:13px; color:#fff; font-weight:700;'>{_lt_lbl}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+            except Exception:
+                pass
+
+        # Calcule la semaine ISO correspondant à la date cible (pour un rattrapage cohérent)
+        try:
+            _iso_w_libre = datetime.strptime(_libre_date, "%Y-%m-%d").isocalendar().week
+        except Exception:
+            _iso_w_libre = int(df_h["Semaine"].max() if not df_h.empty else 1)
+
+        s_act_l = st.number_input("Semaine", 1, 52, _iso_w_libre, key="semaine_libre")
         nom_libre = st.text_input("Nom de la séance", value="Séance Libre", key="nom_libre")
 
         st.divider()
@@ -2107,7 +2131,7 @@ with tab_s:
                     vl["Séance"] = nom_libre
                     vl["Exercice"] = exo_final_l
                     vl["Muscle"] = muscle_grp_l
-                    vl["Date"] = st.session_state.seance_target_date or today_paris_str()
+                    vl["Date"] = _libre_date
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vl], ignore_index=True))
                     st.session_state.pop(_ek_extra_l, None)
@@ -2117,7 +2141,7 @@ with tab_s:
                                          "Exercice": exo_final_l, "Série": 1,
                                          "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫",
                                          "Muscle": muscle_grp_l,
-                                         "Date": st.session_state.seance_target_date or today_paris_str()}])
+                                         "Date": _libre_date}])
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vsk], ignore_index=True))
                     st.rerun()
@@ -2232,8 +2256,17 @@ with tab_s:
     # MODE PRÉ-FAITE
     # ══════════════════════════════════════════════════════════
     elif prog:
+        # Date cible (rattrapage) capturée une fois pour toute la séance
+        _pf_target = st.session_state.seance_target_date
+        _pf_date = _pf_target or today_paris_str()
+
         c_h1, c_h2, c_h3 = st.columns([2, 1, 1])
-        s_act = c_h2.number_input("Semaine actuelle", 1, 52, int(df_h["Semaine"].max() if not df_h.empty else 1))
+        # Semaine pré-remplie = semaine ISO de la date cible (rattrapage cohérent)
+        try:
+            _pf_iso_w = datetime.strptime(_pf_date, "%Y-%m-%d").isocalendar().week
+        except Exception:
+            _pf_iso_w = int(df_h["Semaine"].max() if not df_h.empty else 1)
+        s_act = c_h2.number_input("Semaine actuelle", 1, 52, _pf_iso_w)
         
         # AUTO-SÉLECTION AVEC SKIP
         def get_current_session():
@@ -2289,7 +2322,7 @@ with tab_s:
                 (df_h["Exercice"] == "SESSION")
             ]
             if _already_miss.empty:
-                m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": (st.session_state.seance_target_date or today_paris_str())}])
+                m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": _pf_date}])
                 save_hist(pd.concat([df_h, m_rec], ignore_index=True))
             # Ferme la séance et revient à l'accueil
             st.session_state.mode_seance = None
@@ -2511,14 +2544,14 @@ with tab_s:
                         v["Série"] = range(1, len(v) + 1)
                         if _is_bw:
                             v["Poids"] = 0.0
-                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, (st.session_state.seance_target_date or today_paris_str())
+                        v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, _pf_date
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final)
                         st.session_state.pop(_ek_extra, None)
                         st.rerun()
 
                     if c_skip.button(":material/skip_next: Skip Exo", key=f"sk_{exo_final}_{i}"):
-                        v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": (st.session_state.seance_target_date or today_paris_str())}])
+                        v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": _pf_date}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
                         st.session_state.pop(_ek_extra, None)
                         st.rerun()
