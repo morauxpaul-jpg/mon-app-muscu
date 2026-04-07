@@ -380,6 +380,57 @@
   animation: pulse 1.5s infinite;
 }
 
+/* ── Programme ── */
+.muscle-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 4px;
+}
+.muscle-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(88,204,255,0.2);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+.muscle-check input { margin: 0; }
+.muscle-check:has(input:checked) {
+  background: rgba(88,204,255,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.prog-exo-row {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(88,204,255,0.12);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.prog-exo-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+.prog-exo-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.prog-exo-actions form { flex: 1; }
+.btn.mini {
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
 /* Stub placeholder pour les pages non encore migrées */
 .stub {
   text-align: center;

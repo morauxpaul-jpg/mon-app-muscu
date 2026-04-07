@@ -1,9 +1,136 @@
 {% extends "base.html" %}
 {% block title %}Programme · Muscu PRO{% endblock %}
+
 {% block content %}
   <h1>Programme</h1>
-  <div class="card stub">
-    <span class="tag">À MIGRER — COMMIT 4</span>
-    <p>Config des jours d'entraînement et des séances.</p>
+
+  {# ── Planning hebdomadaire ───────────────────────────── #}
+  <div class="card" id="planning">
+    <h3>📅 Planning hebdomadaire</h3>
+    <div class="field-label" style="margin-top:0;">Assigne une séance à chaque jour. Vide = repos.</div>
+    <form method="post" action="/programme/planning">
+      {% for day in days_fr %}
+        <label class="field-label">{{ day }}</label>
+        <select name="plan_{{ day }}" class="field">
+          <option value="__rest__" {% if not planning[day] %}selected{% endif %}>— Repos —</option>
+          {% for s in seance_names %}
+            <option value="{{ s }}" {% if planning[day] == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      {% endfor %}
+      <button type="submit" class="btn primary" style="width:100%; margin-top:12px;">💾 Sauvegarder le planning</button>
+    </form>
   </div>
+
+  {# ── Séances & exercices ─────────────────────────────── #}
+  <h3>📦 Séances</h3>
+
+  {% for sname, exos in seances %}
+    <div class="card" id="s-{{ sname }}" x-data="{ open: false }">
+      <div class="exo-head" @click="open = !open">
+        <div class="exo-title">{{ sname }}</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:#5a7a9a;">{{ exos|length }} exos</span>
+          <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
+        </div>
+      </div>
+
+      <div class="exo-body" x-show="open" x-transition>
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          <form method="post" action="/programme/seance/move">
+            <input type="hidden" name="name" value="{{ sname }}">
+            <input type="hidden" name="direction" value="up">
+            <button type="submit" class="btn">⬆️ Monter</button>
+          </form>
+          <form method="post" action="/programme/seance/move">
+            <input type="hidden" name="name" value="{{ sname }}">
+            <input type="hidden" name="direction" value="down">
+            <button type="submit" class="btn">⬇️ Descendre</button>
+          </form>
+          <form method="post" action="/programme/seance/delete"
+                onsubmit="return confirm('Supprimer la séance {{ sname }} ?');">
+            <input type="hidden" name="name" value="{{ sname }}">
+            <button type="submit" class="btn">🗑️ Supprimer</button>
+          </form>
+        </div>
+
+        {% for ex in exos %}
+          {% set current_muscles = (ex.muscle or 'Autre').split(',') %}
+          <div class="prog-exo-row">
+            <form method="post" action="/programme/exo/update" class="prog-exo-form">
+              <input type="hidden" name="seance" value="{{ sname }}">
+              <input type="hidden" name="index" value="{{ loop.index0 }}">
+              <div class="prog-exo-name">{{ ex.name }}</div>
+              <div class="prog-exo-fields">
+                <label class="field-label" style="margin-top:4px;">Séries</label>
+                <input type="number" name="sets" min="1" max="15" value="{{ ex.sets|default(3) }}" class="field">
+                <label class="field-label">Muscle(s)</label>
+                <div class="muscle-checks">
+                  {% for m in muscle_list %}
+                    <label class="muscle-check">
+                      <input type="checkbox" name="muscles" value="{{ m }}"
+                             {% if m in current_muscles %}checked{% endif %}>
+                      <span>{{ m }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+                <button type="submit" class="btn primary" style="width:100%; margin-top:6px;">💾 Mettre à jour</button>
+              </div>
+            </form>
+            <div class="prog-exo-actions">
+              <form method="post" action="/programme/exo/move">
+                <input type="hidden" name="seance" value="{{ sname }}">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <input type="hidden" name="direction" value="up">
+                <button type="submit" class="btn mini">⬆️</button>
+              </form>
+              <form method="post" action="/programme/exo/move">
+                <input type="hidden" name="seance" value="{{ sname }}">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <input type="hidden" name="direction" value="down">
+                <button type="submit" class="btn mini">⬇️</button>
+              </form>
+              <form method="post" action="/programme/exo/delete"
+                    onsubmit="return confirm('Supprimer {{ ex.name }} ?');">
+                <input type="hidden" name="seance" value="{{ sname }}">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="btn mini">🗑️</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+
+        <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
+
+        <form method="post" action="/programme/exo/add">
+          <input type="hidden" name="seance" value="{{ sname }}">
+          <label class="field-label" style="margin-top:0;">Nouvel exercice</label>
+          <input type="text" name="name" class="field" required placeholder="Nom de l'exercice">
+          <label class="field-label">Séries</label>
+          <input type="number" name="sets" class="field" min="1" max="15" value="3">
+          <label class="field-label">Muscle(s) — vide = auto-détection</label>
+          <div class="muscle-checks">
+            {% for m in muscle_list %}
+              <label class="muscle-check">
+                <input type="checkbox" name="muscles" value="{{ m }}">
+                <span>{{ m }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">➕ Ajouter l'exercice</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  {# ── Nouvelle séance ─────────────────────────────── #}
+  <div class="card">
+    <h3>🎯 Créer une séance</h3>
+    <form method="post" action="/programme/seance/new">
+      <input type="text" name="name" class="field" placeholder="Nom de la séance (ex: Push)" required>
+      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">➕ Créer</button>
+    </form>
+  </div>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 {% endblock %}
