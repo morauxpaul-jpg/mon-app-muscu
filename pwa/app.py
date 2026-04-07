@@ -33,9 +33,9 @@ def arcade():
 # ────────────────────────────────────────────────────────────────
 # Manifest et service worker servis depuis la racine pour scope /
 # ────────────────────────────────────────────────────────────────
-@app.route("/manifest.webmanifest")
+@app.route("/manifest.json")
 def manifest():
-    return send_from_directory("static", "manifest.webmanifest", mimetype="application/manifest+json")
+    return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
 
 
 @app.route("/service-worker.js")
