@@ -1920,9 +1920,9 @@ with tab_p:
                 st.warning(f":material/warning: {len(skipped)} exercice(s) non reconnus : {', '.join(skipped)}")
             st.rerun()
 
-    with st.expander(":material/restart_alt: Réinitialiser les séances"):
-        st.warning("Remet à zéro toutes les séances (semaine 1, historique vide). L'historique est archivé.")
-        if st.button(":material/warning: Confirmer la réinitialisation", type="primary", key="reset_all"):
+    with st.expander(":material/restart_alt: Réinitialiser les séances (soft, conserve l'archive)"):
+        st.warning("Remet à zéro l'historique. Les records sont conservés dans l'archive et resteront visibles dans l'onglet Progrès.")
+        if st.button(":material/warning: Confirmer le reset soft", type="primary", key="reset_all"):
             v_tot_save = int((df_h['Poids'] * df_h['Reps']).sum()) if not df_h.empty else 0
             prog['_legacy_volume'] = prog.get('_legacy_volume', 0) + v_tot_save
             if not df_h.empty:
@@ -1936,11 +1936,40 @@ with tab_p:
                     prog['_archive'] = existing[-2000:]
             save_prog(prog)
             save_hist(pd.DataFrame(columns=["Semaine","Séance","Exercice","Série","Reps","Poids","Remarque","Muscle","Date"]))
-            st.success("Réinitialisation effectuée. Reprends en semaine 1 !")
+            st.success("Reset soft effectué. Reprends en semaine 1.")
             st.rerun()
 
-    with st.expander(":material/delete_sweep: Vider l'archive"):
-        st.warning("Supprime toutes les données archivées (records historiques et volume cumulé).")
+    with st.expander(":material/delete_forever: RESET TOTAL (efface tout, sans retour)"):
+        st.error("⚠️ Efface DÉFINITIVEMENT : historique + archive + records + extras. "
+                 "Le programme et le planning hebdo sont conservés.")
+        _confirm_total = st.checkbox("Je comprends, je veux tout effacer", key="reset_total_chk")
+        if st.button(":material/delete_forever: RESET TOTAL", type="primary", key="reset_total_btn",
+                     disabled=not _confirm_total):
+            # 1. Vide l'historique Sheet
+            save_hist(pd.DataFrame(columns=["Semaine","Séance","Exercice","Série","Reps","Poids","Remarque","Muscle","Date"]))
+            # 2. Vide l'archive et le volume legacy dans le programme
+            prog.pop('_archive', None)
+            prog.pop('_legacy_volume', None)
+            save_prog(prog)
+            # 3. Vide les caches
+            get_hist.clear()
+            get_prog.clear()
+            # 4. Vide les états transitoires de la session
+            st.session_state.extra_exos = {}
+            st.session_state.editing_exo = set()
+            st.session_state.seance_libre_exos = []
+            st.session_state.seance_target_date = None
+            st.session_state.seance_selectionnee = None
+            st.session_state.mode_seance = None
+            # Purge tous les compteurs extra_sets_*
+            for _k in list(st.session_state.keys()):
+                if isinstance(_k, str) and (_k.startswith("extra_sets_") or _k.startswith("conf_reset_")):
+                    del st.session_state[_k]
+            st.success("Reset total effectué. Tout est vide.")
+            st.rerun()
+
+    with st.expander(":material/delete_sweep: Vider uniquement l'archive"):
+        st.warning("Supprime les records historiques archivés mais garde l'historique en cours.")
         if st.button(":material/warning: Confirmer la suppression de l'archive", type="primary", key="clear_archive"):
             prog.pop('_archive', None)
             prog.pop('_legacy_volume', None)
@@ -2023,10 +2052,20 @@ with tab_s:
                 curr_l = df_h[(df_h["Exercice"] == exo_final_l) &
                               (df_h["Séance"] == nom_libre) &
                               (df_h["Semaine"] == s_act_l)]
-                df_base_l = pd.DataFrame({"Reps": [0]*p_sets_l,
-                                          "Poids": [0.0]*p_sets_l,
-                                          "Remarque": [""]*p_sets_l},
-                                         index=pd.RangeIndex(1, p_sets_l + 1, name="Série"))
+
+                # Compteur de séries supplémentaires (survit au rerun)
+                _ek_extra_l = f"extra_sets_libre_{exo_final_l}_{s_act_l}_{li}"
+                extra_n_l = int(st.session_state.get(_ek_extra_l, 0))
+                if st.button(":material/add: +1 série", key=f"add_set_libre_{li}", use_container_width=True):
+                    st.session_state[_ek_extra_l] = extra_n_l + 1
+                    st.rerun()
+
+                _n_rows_l = max(p_sets_l, len(curr_l)) if not curr_l.empty else p_sets_l
+                _n_rows_l += extra_n_l
+                df_base_l = pd.DataFrame({"Reps": [0]*_n_rows_l,
+                                          "Poids": [0.0]*_n_rows_l,
+                                          "Remarque": [""]*_n_rows_l},
+                                         index=pd.RangeIndex(1, _n_rows_l + 1, name="Série"))
                 if not curr_l.empty:
                     for _, rl in curr_l.iterrows():
                         idx_l = int(rl["Série"])
@@ -2048,6 +2087,7 @@ with tab_s:
                     vl["Date"] = today_paris_str()
                     mask = ~((df_h["Semaine"] == s_act_l) & (df_h["Exercice"] == exo_final_l) & (df_h["Séance"] == nom_libre))
                     save_hist(pd.concat([df_h[mask], vl], ignore_index=True))
+                    st.session_state.pop(_ek_extra_l, None)
                     st.rerun()
                 if c_sk_l.button(":material/skip_next: Skip", key=f"skl_{exo_final_l}_{li}"):
                     vsk = pd.DataFrame([{"Semaine": s_act_l, "Séance": nom_libre,
@@ -2368,17 +2408,24 @@ with tab_s:
                 is_reset = not curr.empty and (curr["Poids"].sum() == 0 and curr["Reps"].sum() == 0) and "SKIP" not in str(curr["Remarque"].iloc[0])
                 editor_key = f"ed_{exo_final}_{s_act}"
 
+                # Clé du compteur d'extra-séries (persistant via session_state)
+                _ek_extra = f"extra_sets_{exo_final}_{s_act}"
+
                 if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
                     st.markdown("##### ✅ Validé")
                     render_table(curr[["Série", "Reps", "Poids", "Remarque"]].reset_index(drop=True), hist_prev=hist_prev_df)
-                    if st.button(":material/edit: Modifier", key=f"m_{exo_final}_{i}"):
+                    _cm1, _cm2 = st.columns(2)
+                    if _cm1.button(":material/edit: Modifier", key=f"m_{exo_final}_{i}", use_container_width=True):
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
+                    if _cm2.button(":material/add: +1 série", key=f"add_set_v_{exo_final}_{i}", use_container_width=True):
+                        # Passe en mode édition ET ajoute une ligne d'un coup
+                        st.session_state.editing_exo.add(exo_final)
+                        st.session_state[_ek_extra] = int(st.session_state.get(_ek_extra, 0)) + 1
+                        st.rerun()
                 else:
-                    # Bouton "+ Série" persistant : ajoute une ligne au df_base qui survit au rerun
-                    _ek_extra = f"extra_sets_{exo_final}_{s_act}"
                     extra_n = int(st.session_state.get(_ek_extra, 0))
-                    if st.button(":material/add: Série", key=f"add_set_{exo_final}_{i}"):
+                    if st.button(":material/add: +1 série", key=f"add_set_{exo_final}_{i}", use_container_width=True):
                         st.session_state[_ek_extra] = extra_n + 1
                         st.rerun()
 
