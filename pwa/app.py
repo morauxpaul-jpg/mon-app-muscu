@@ -7,19 +7,16 @@ import os
 from flask import Flask, render_template, send_from_directory
 
 from routes.accueil import bp as accueil_bp
+from routes.seance import bp as seance_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.register_blueprint(accueil_bp)
+app.register_blueprint(seance_bp)
 
 
 # ────────────────────────────────────────────────────────────────
 # Routes pages — les pages non encore migrées restent des stubs
 # ────────────────────────────────────────────────────────────────
-
-
-@app.route("/seance")
-def seance():
-    return render_template("seance.html", active="seance")
 
 
 @app.route("/programme")

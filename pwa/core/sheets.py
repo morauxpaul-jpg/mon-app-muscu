@@ -104,12 +104,59 @@ def get_hist():
     return cleaned
 
 
+HEADERS = ["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque", "Muscle", "Date"]
+
+
 def save_hist(rows):
     """Écrase l'onglet historique avec la liste de dicts fournie."""
     ws_h, _ = get_worksheets()
-    headers = ["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque", "Muscle", "Date"]
-    data = [headers]
+    data = [HEADERS]
     for r in rows:
-        data.append([r.get(h, "") if r.get(h, "") is not None else "" for h in headers])
+        data.append([r.get(h, "") if r.get(h, "") is not None else "" for h in HEADERS])
     ws_h.clear()
     ws_h.update(data, value_input_option="USER_ENTERED")
+
+
+# ── Opérations ciblées sur l'historique (réplique de la logique app.py) ──
+
+def replace_exo_rows(semaine, seance, exercice, new_rows):
+    """Remplace toutes les lignes (semaine, séance, exercice) par new_rows."""
+    hist = get_hist()
+    kept = [r for r in hist
+            if not (r["Semaine"] == semaine and r["Séance"] == seance and r["Exercice"] == exercice)]
+    save_hist(kept + new_rows)
+
+
+def delete_exo_rows(semaine, seance, exercice):
+    hist = get_hist()
+    kept = [r for r in hist
+            if not (r["Semaine"] == semaine and r["Séance"] == seance and r["Exercice"] == exercice)]
+    save_hist(kept)
+
+
+def delete_session_rows(semaine, seance):
+    hist = get_hist()
+    kept = [r for r in hist if not (r["Semaine"] == semaine and r["Séance"] == seance)]
+    save_hist(kept)
+
+
+def mark_session_missed(semaine, seance_name, date_str):
+    """Ajoute un marqueur SESSION 'SÉANCE MANQUÉE' si absent."""
+    hist = get_hist()
+    already = any(r for r in hist
+                  if r["Date"] == date_str and r["Exercice"] == "SESSION"
+                  and (r["Séance"] == seance_name or seance_name == "Séance manquée"))
+    if already:
+        return
+    hist.append({
+        "Semaine": semaine,
+        "Séance": seance_name,
+        "Exercice": "SESSION",
+        "Série": 1,
+        "Reps": 0,
+        "Poids": 0.0,
+        "Remarque": "SÉANCE MANQUÉE 🚩",
+        "Muscle": "Autre",
+        "Date": date_str,
+    })
+    save_hist(hist)

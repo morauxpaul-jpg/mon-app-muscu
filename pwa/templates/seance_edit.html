@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}{{ seance_name }} · Muscu PRO{% endblock %}
+
+{% block head_extra %}
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+{% endblock %}
+
+{% block content %}
+  <a href="/seance?date={{ date_iso }}" class="btn" style="display:inline-block; margin-bottom: 10px;">← Changer de séance</a>
+
+  {% if is_rattrapage %}
+    <div style="background:rgba(255,149,0,0.12); border:1px solid rgba(255,149,0,0.4); border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+      <span style="font-size:11px; color:#FF9500; letter-spacing:2px;">RATTRAPAGE · </span>
+      <span style="font-size:13px; color:#fff; font-weight:700;">{{ date_label }}</span>
+    </div>
+  {% endif %}
+
+  <div class="seance-header">
+    <div class="seance-label">SÉANCE · SEMAINE {{ s_act }}</div>
+    <div class="seance-title">{{ seance_name }}</div>
+  </div>
+
+  <form method="post" action="/seance/mark-missed" style="margin-bottom: 8px;">
+    <input type="hidden" name="date" value="{{ date_iso }}">
+    <input type="hidden" name="seance_name" value="{{ seance_name }}">
+    <button type="submit" class="btn">🚩 Séance Manquée</button>
+  </form>
+
+  <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;"
+        onsubmit="return confirm('Effacer toute la séance {{ seance_name }} semaine {{ s_act }} ?');">
+    <input type="hidden" name="date" value="{{ date_iso }}">
+    <input type="hidden" name="semaine" value="{{ s_act }}">
+    <input type="hidden" name="seance_name" value="{{ seance_name }}">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    <input type="hidden" name="name" value="{{ seance_name }}">
+    <button type="submit" class="btn">🔄 Recommencer cette séance</button>
+  </form>
+
+  <h3>🔋 Récupération</h3>
+  <div class="recup-container">
+    {% for r in recup %}
+      <div class="recup-card">
+        <small>{{ r.muscle|upper }}</small><br>
+        <span class="status-dot" style="background:{{ r.color }};"></span>
+        <b style="color:{{ r.color }}; font-size:10px;">{{ r.label }}</b>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if vol_prev > 0 %}
+    <div class="vol-container">
+      <small>⚡ Volume : <b>{{ vol_curr }} / {{ vol_prev }} kg</b></small>
+      <div class="xp-bar-bg">
+        <div class="xp-bar-fill{% if vol_overload %} vol-overload{% endif %}"
+             style="width: {{ (vol_ratio * 100)|round(0) }}%;"></div>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── Exercices ──────────────────────────────────────────────── #}
+  {% for exo in exos %}
+    <div class="exo-card {% if exo.completed %}done{% endif %}"
+         x-data="exoBlock({{ loop.index0 }}, {{ exo|tojson }})">
+      <div class="exo-head" @click="open = !open">
+        <div>
+          <div class="exo-title">🔹 {{ exo.base|upper }}</div>
+          <div class="exo-meta">
+            <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
+            {% if exo.completed %} · <span style="color: var(--success);">✅</span>{% endif %}
+          </div>
+        </div>
+        <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
+      </div>
+
+      <div class="exo-body" x-show="open" x-transition>
+
+        {% if exo.record %}
+          <div class="record-line">
+            {% if exo.is_bw %}
+              🏆 Record : <b>{{ exo.record.reps }} reps</b>
+            {% else %}
+              🏆 Record : <b>{{ '%g'|format(exo.record.weight) }}kg</b>
+              · ⚡ 1RM : <b>{{ exo.record.one_rm }}kg</b>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <label class="field-label">Équipement</label>
+        <select class="field" x-model="variant">
+          {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+        </select>
+
+        {% if exo.prev_weeks %}
+          {% for pw in exo.prev_weeks %}
+            {% if pw.missed %}
+              <div class="prev-week-line">📅 Semaine {{ pw.week }} — 🚩 SÉANCE MANQUÉE</div>
+            {% else %}
+              <div class="prev-week-line">📅 Semaine {{ pw.week }}</div>
+              <table class="prev-table">
+                <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
+                <tbody>
+                {% for r in pw.rows %}
+                  <tr><td>{{ r.Série }}</td><td>{{ r.Reps }}</td><td>{{ '%g'|format(r.Poids) }}</td><td>{{ r.Remarque }}</td></tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
+        {# ── Table éditable des séries ─── #}
+        <table class="sets-table">
+          <thead>
+            <tr>
+              <th>Sér.</th>
+              <th>Reps</th>
+              {% if not exo.is_bw %}<th>Poids</th>{% endif %}
+              <th>Remarque</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(s, i) in sets" :key="i">
+              <tr>
+                <td x-text="i + 1"></td>
+                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input"></td>
+                {% if not exo.is_bw %}
+                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input"></td>
+                {% endif %}
+                <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
+                <td>
+                  <button type="button" class="mini-btn" @click="removeSet(i)" title="Retirer">×</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <button type="button" class="btn" style="width:100%; margin-top:6px;" @click="addSet()">➕ +1 série</button>
+
+        <div class="exo-actions">
+          <form method="post" action="/seance/save-exo" @submit="prepareSave($event)">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="semaine" value="{{ s_act }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="exo_base" value="{{ exo.base }}">
+            <input type="hidden" name="muscle" value="{{ exo.muscle }}">
+            <input type="hidden" name="is_bw" value="{{ '1' if exo.is_bw else '0' }}">
+            <input type="hidden" name="variant" :value="variant">
+            <input type="hidden" name="sets_json" :value="JSON.stringify(sets)">
+            <button type="submit" class="btn primary" style="width:100%;">💾 Enregistrer</button>
+          </form>
+          <form method="post" action="/seance/skip-exo">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="semaine" value="{{ s_act }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="exo_base" value="{{ exo.base }}">
+            <input type="hidden" name="muscle" value="{{ exo.muscle }}">
+            <input type="hidden" name="variant" :value="variant">
+            <button type="submit" class="btn">⏭️ Skip</button>
+          </form>
+        </div>
+
+        <form method="post" action="/seance/reset-exo" style="margin-top:6px;"
+              onsubmit="return confirm('Effacer les données de {{ exo.base }} ?');">
+          <input type="hidden" name="mode" value="{{ mode }}">
+          <input type="hidden" name="name" value="{{ seance_name }}">
+          <input type="hidden" name="date" value="{{ date_iso }}">
+          <input type="hidden" name="semaine" value="{{ s_act }}">
+          <input type="hidden" name="seance_name" value="{{ seance_name }}">
+          <input type="hidden" name="exo_base" value="{{ exo.base }}">
+          <input type="hidden" name="variant" :value="variant">
+          <button type="submit" class="btn" style="width:100%;">🔄 Recommencer cet exercice</button>
+        </form>
+
+        {% if exo.is_extra %}
+          <form method="post" action="/seance/remove-extra" style="margin-top:6px;">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="index" value="{{ loop.index0 - (exos|length - (exos|selectattr('is_extra')|list|length)) }}">
+            <button type="submit" class="btn" style="width:100%;">🗑️ Retirer cet exercice</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+
+  {# ── Ajouter un exercice ─────────────────────────── #}
+  <div class="card" x-data="{ tab: 'prog', muscle: 'Tous' }">
+    <h3>➕ Ajouter un exercice</h3>
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button type="button" class="btn" :class="{ primary: tab==='prog' }" @click="tab='prog'">Depuis mes programmes</button>
+      <button type="button" class="btn" :class="{ primary: tab==='new' }" @click="tab='new'">Nouvel exercice</button>
+    </div>
+
+    <div x-show="tab==='prog'">
+      <label class="field-label">Filtrer par muscle</label>
+      <select class="field" x-model="muscle">
+        <option value="Tous">Tous</option>
+        {% for m in muscle_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+      {% for e in all_prog_exos %}
+        <div class="seance-choice-row"
+             x-show="muscle === 'Tous' || '{{ e.muscle|default('') }}'.includes(muscle)">
+          <div>
+            <div class="seance-name">{{ e.name }}</div>
+            <div class="seance-meta">{{ e.muscle|default('') }}</div>
+          </div>
+          <form method="post" action="/seance/add-extra">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="exo_name" value="{{ e.name }}">
+            <input type="hidden" name="muscle" value="{{ e.muscle|default('Autre') }}">
+            <input type="hidden" name="sets_count" value="{{ e.sets|default(3) }}">
+            <button type="submit" class="btn">+ Ajouter</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" action="/seance/add-extra" x-show="tab==='new'">
+      <input type="hidden" name="mode" value="{{ mode }}">
+      <input type="hidden" name="name" value="{{ seance_name }}">
+      <input type="hidden" name="date" value="{{ date_iso }}">
+      <input type="hidden" name="seance_name" value="{{ seance_name }}">
+      <label class="field-label">Nom de l'exercice</label>
+      <input type="text" name="exo_name" class="field" required>
+      <label class="field-label">Muscle principal</label>
+      <select name="muscle" class="field">
+        {% for m in muscle_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+      <label class="field-label">Nombre de séries</label>
+      <input type="number" name="sets_count" min="1" max="10" value="3" class="field">
+      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">➕ Ajouter cet exercice</button>
+    </form>
+  </div>
+
+  <form method="post" action="/seance/finish">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    <input type="hidden" name="seance_name" value="{{ seance_name }}">
+    <input type="hidden" name="date" value="{{ date_iso }}">
+    <button type="submit" class="btn primary" style="width:100%;">✅ Terminer la séance</button>
+  </form>
+
+  <script>
+  function exoBlock(index, data) {
+    return {
+      open: !data.completed,
+      variant: data.variant,
+      sets: data.sets.map(s => ({ reps: s.reps, poids: s.poids, remarque: s.remarque })),
+      addSet() {
+        this.sets.push({ reps: 0, poids: 0, remarque: "" });
+      },
+      removeSet(i) {
+        if (this.sets.length > 1) this.sets.splice(i, 1);
+      },
+      prepareSave(e) {
+        // sets_json est déjà bindé via x-bind; rien à faire, juste laisser submit
+      }
+    };
+  }
+  </script>
+{% endblock %}
