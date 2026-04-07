@@ -39,6 +39,11 @@ if 'seance_libre_exos' not in st.session_state:
 if 'switch_to_seance' not in st.session_state:
     st.session_state.switch_to_seance = False
 
+# Exos ajoutés à la volée à une séance pré-faite (variantes du même exo, etc.)
+# Format : { "Nom Séance": [ {"name","muscle","sets"}, ... ] }
+if 'extra_exos' not in st.session_state:
+    st.session_state.extra_exos = {}
+
 # --- 2. CSS : DESIGN CYBER-RPG MOBILE-FRIENDLY ---
 animations_css = """
     @keyframes pulse {
@@ -1842,9 +1847,12 @@ with tab_s:
         with c_tl:
             st.markdown("### 🎯 SÉANCE PERSONNALISÉE")
         with c_tr:
-            if st.button("✕ Terminer", key="libre_fin", use_container_width=True):
+            if st.button("✕ Annuler la séance", key="libre_fin", use_container_width=True):
+                # Mode libre = pas d'enregistrement "manquée" : on ferme juste
                 st.session_state.mode_seance = None
                 st.session_state.seance_libre_exos = []
+                st.session_state.seance_selectionnee = None
+                st.session_state.view = 'accueil'
                 st.rerun()
 
         s_act_l = st.number_input("Semaine", 1, 52,
@@ -1860,7 +1868,22 @@ with tab_s:
             muscle_grp_l = exo_obj.get('muscle', 'Autre')
             p_sets_l = exo_obj.get('sets', 3)
 
-            with st.expander(f"🔹 {exo_base_l.upper()}", expanded=True):
+            # Auto-collapse : on referme l'exo quand il a déjà des données saisies
+            _curr_check_l = df_h[
+                df_h["Exercice"].str.contains(exo_base_l, regex=False, na=False) &
+                (df_h["Séance"] == nom_libre) &
+                (df_h["Semaine"] == s_act_l)
+            ]
+            _has_data_l = (not _curr_check_l.empty) and (
+                _curr_check_l["Poids"].sum() > 0
+                or _curr_check_l["Reps"].sum() > 0
+                or _curr_check_l["Remarque"].str.contains("SKIP", na=False).any()
+            )
+            _expanded_l = (not _has_data_l) or (exo_base_l in [
+                e.split("(")[0].strip() for e in st.session_state.editing_exo
+            ])
+
+            with st.expander(f"🔹 {exo_base_l.upper()}", expanded=_expanded_l):
                 col_rm = st.columns([4, 1])
                 with col_rm[1]:
                     if st.button("✕", key=f"rm_libre_{li}", help="Retirer cet exercice"):
@@ -2036,13 +2059,42 @@ with tab_s:
                     return seance
             return list(prog_seances.keys())[0] if prog_seances else None
 
-        default_s = st.session_state.pop('home_selected_session', None) or get_current_session()
-        s_index = list(prog_seances.keys()).index(default_s) if default_s and default_s in prog_seances.keys() else 0
-        choix_s = c_h1.selectbox("Séance :", list(prog_seances.keys()), index=s_index)
+        # Priorité : séance choisie depuis l'accueil → legacy home_selected_session → auto
+        if st.session_state.seance_selectionnee and st.session_state.seance_selectionnee in prog_seances:
+            choix_s = st.session_state.seance_selectionnee
+            with c_h1:
+                st.markdown(
+                    f"<div style='padding:6px 4px 0;'>"
+                    f"<div style='font-size:11px; color:#5a7a9a; letter-spacing:2px;'>SÉANCE</div>"
+                    f"<div style='font-size:1.05rem; color:#58CCFF; font-weight:800;'>{choix_s}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                if st.button("↺ Changer de séance", key="changer_seance", use_container_width=True):
+                    st.session_state.seance_selectionnee = None
+                    st.session_state.mode_seance = None
+                    st.session_state.view = 'choix_seance'
+                    st.rerun()
+        else:
+            default_s = st.session_state.pop('home_selected_session', None) or get_current_session()
+            s_index = list(prog_seances.keys()).index(default_s) if default_s and default_s in prog_seances.keys() else 0
+            choix_s = c_h1.selectbox("Séance :", list(prog_seances.keys()), index=s_index)
         
         if c_h3.button("🚩 Séance Manquée", use_container_width=True):
-            m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
-            save_hist(pd.concat([df_h, m_rec], ignore_index=True))
+            # Évite le doublon si déjà marquée
+            _already_miss = df_h[
+                (df_h["Séance"] == choix_s) &
+                (df_h["Semaine"] == s_act) &
+                (df_h["Exercice"] == "SESSION")
+            ]
+            if _already_miss.empty:
+                m_rec = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": "SESSION", "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SÉANCE MANQUÉE 🚩", "Muscle": "Autre", "Date": datetime.now().strftime("%Y-%m-%d")}])
+                save_hist(pd.concat([df_h, m_rec], ignore_index=True))
+            # Ferme la séance et revient à l'accueil
+            st.session_state.mode_seance = None
+            st.session_state.seance_selectionnee = None
+            st.session_state.extra_exos.pop(choix_s, None)
+            st.session_state.view = 'accueil'
             st.rerun()
         
         # Recommencer séance — confirmation inline
@@ -2088,8 +2140,13 @@ with tab_s:
 
         st.divider()
 
-        for i, ex_obj in enumerate(prog[choix_s]):
+        # Combine programme + extras (exos ajoutés à la volée pour cette séance)
+        _extras_seance = st.session_state.extra_exos.get(choix_s, [])
+        _exos_seance = list(prog[choix_s]) + list(_extras_seance)
+        _n_prog = len(prog[choix_s])
+        for i, ex_obj in enumerate(_exos_seance):
             exo_base, p_sets, muscle_grp = ex_obj["name"], ex_obj.get("sets", 3), ex_obj.get("muscle", "Autre")
+            _is_extra = i >= _n_prog
             
             # SAUVEGARDER VARIANTE
             variants = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
@@ -2191,8 +2248,16 @@ with tab_s:
                         st.session_state.editing_exo.add(exo_final)
                         st.rerun()
                 else:
-                    # Fix : df_base taille = max(séries programme, séries déjà sauvegardées)
+                    # Bouton "+ Série" persistant : ajoute une ligne au df_base qui survit au rerun
+                    _ek_extra = f"extra_sets_{exo_final}_{s_act}"
+                    extra_n = int(st.session_state.get(_ek_extra, 0))
+                    if st.button("➕ Série", key=f"add_set_{exo_final}_{i}"):
+                        st.session_state[_ek_extra] = extra_n + 1
+                        st.rerun()
+
+                    # Fix : df_base taille = max(séries programme, séries déjà sauvegardées) + extras
                     n_rows = max(p_sets, len(curr)) if not curr.empty else p_sets
+                    n_rows += extra_n
                     df_base = pd.DataFrame(
                         {"Reps": [0]*n_rows, "Poids": [0.0]*n_rows, "Remarque": [""]*n_rows},
                         index=pd.RangeIndex(1, n_rows + 1, name="Série"))
@@ -2209,18 +2274,73 @@ with tab_s:
                         hide_index=False)
 
                     c_save, c_skip = st.columns(2)
-                    if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}"):
+                    if c_save.button("💾 Enregistrer", key=f"sv_{exo_final}_{i}"):
                         v = ed.reset_index()
                         v["Série"] = range(1, len(v) + 1)
                         v["Semaine"], v["Séance"], v["Exercice"], v["Muscle"], v["Date"] = s_act, choix_s, exo_final, muscle_grp, datetime.now().strftime("%Y-%m-%d")
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v], ignore_index=True))
                         st.session_state.editing_exo.discard(exo_final)
+                        st.session_state.pop(_ek_extra, None)
                         st.rerun()
 
-                    if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}"):
+                    if c_skip.button("⏩ Skip Exo", key=f"sk_{exo_final}_{i}"):
                         v_skip = pd.DataFrame([{"Semaine": s_act, "Séance": choix_s, "Exercice": exo_final, "Série": 1, "Reps": 0, "Poids": 0.0, "Remarque": "SKIP 🚫", "Muscle": muscle_grp, "Date": datetime.now().strftime("%Y-%m-%d")}])
                         save_hist(pd.concat([df_h[~((df_h["Semaine"] == s_act) & (df_h["Exercice"] == exo_final) & (df_h["Séance"] == choix_s))], v_skip], ignore_index=True))
+                        st.session_state.pop(_ek_extra, None)
                         st.rerun()
+
+                # Bouton retirer un extra (uniquement pour les exos ajoutés à la volée)
+                if _is_extra:
+                    if st.button("🗑 Retirer cet exercice", key=f"rm_extra_{choix_s}_{i}"):
+                        _idx_extra = i - _n_prog
+                        st.session_state.extra_exos[choix_s].pop(_idx_extra)
+                        st.rerun()
+
+        # ── Ajouter un exercice à la séance pré-faite ─────────────────────────
+        with st.expander("➕ Ajouter un exercice à cette séance",
+                         expanded=False):
+            _mode_pref = st.radio("", ["Depuis mes programmes", "Nouvel exercice"],
+                                  horizontal=True, key=f"pref_mode_ajout_{choix_s}")
+
+            if _mode_pref == "Depuis mes programmes":
+                _all_exos_p = {}
+                for _sn, _exos in prog_seances.items():
+                    for _e in _exos:
+                        if _e['name'] not in _all_exos_p:
+                            _all_exos_p[_e['name']] = _e
+
+                _muscle_filter_p = st.selectbox("Filtrer par muscle",
+                                                ["Tous"] + _MUSCLE_LIST_S,
+                                                key=f"pref_muscle_filter_{choix_s}")
+                _filtered_p = [e for e in _all_exos_p.values()
+                               if _muscle_filter_p == "Tous"
+                               or _muscle_filter_p in str(e.get('muscle', ''))]
+
+                for _fe in _filtered_p:
+                    _cn, _cb = st.columns([3, 1])
+                    _cn.write(f"**{_fe['name']}** · {_fe.get('muscle','')}")
+                    if _cb.button("+ Ajouter", key=f"pref_add_prog_{choix_s}_{_fe['name']}"):
+                        st.session_state.extra_exos.setdefault(choix_s, []).append({
+                            "name": _fe['name'],
+                            "muscle": _fe.get('muscle', 'Autre'),
+                            "sets": _fe.get('sets', 3)
+                        })
+                        st.rerun()
+
+            else:  # Nouvel exercice
+                _new_name_p = st.text_input("Nom de l'exercice", key=f"pref_new_name_{choix_s}")
+                _new_muscle_p = st.selectbox("Muscle principal", _MUSCLE_LIST_S, key=f"pref_new_muscle_{choix_s}")
+                _new_sets_p = st.number_input("Nombre de séries", 1, 10, 3, key=f"pref_new_sets_{choix_s}")
+                if st.button("➕ Ajouter cet exercice", key=f"pref_add_new_{choix_s}",
+                             disabled=not _new_name_p.strip()):
+                    _detected_p = auto_muscles(_new_name_p.strip())
+                    _muscle_final_p = _detected_p if _detected_p else _new_muscle_p
+                    st.session_state.extra_exos.setdefault(choix_s, []).append({
+                        "name": _new_name_p.strip(),
+                        "muscle": _muscle_final_p,
+                        "sets": int(_new_sets_p)
+                    })
+                    st.rerun()
 
 
 # --- ONGLET PROGRÈS (OPTIMISÉ MOBILE) ---
