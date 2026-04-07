@@ -2036,9 +2036,15 @@ with tab_s:
             muscle_grp_l = exo_obj.get('muscle', 'Autre')
             p_sets_l = exo_obj.get('sets', 3)
 
+            # Calcul précoce de exo_final_l à partir de la valeur déjà en session_state
+            # (la selectbox met à jour la clé dès le 1er render)
+            _var_pre_l = st.session_state.get(f"vl_{exo_base_l}_{li}", "Standard")
+            exo_final_l_pre = f"{exo_base_l} ({_var_pre_l})" if _var_pre_l != "Standard" else exo_base_l
+
             # Auto-collapse : on referme l'exo quand il a déjà des données saisies
+            # Correspondance exacte sur la variante pour ne pas croiser deux variantes du même exo
             _curr_check_l = df_h[
-                df_h["Exercice"].str.contains(exo_base_l, regex=False, na=False) &
+                (df_h["Exercice"] == exo_final_l_pre) &
                 (df_h["Séance"] == nom_libre) &
                 (df_h["Semaine"] == s_act_l)
             ]
@@ -2047,9 +2053,7 @@ with tab_s:
                 or _curr_check_l["Reps"].sum() > 0
                 or _curr_check_l["Remarque"].str.contains("SKIP", na=False).any()
             )
-            _expanded_l = (not _has_data_l) or (exo_base_l in [
-                e.split("(")[0].strip() for e in st.session_state.editing_exo
-            ])
+            _expanded_l = (not _has_data_l) or (exo_final_l_pre in st.session_state.editing_exo)
 
             with st.expander(f"🔹 {exo_base_l.upper()}", expanded=_expanded_l):
                 col_rm = st.columns([4, 1])
@@ -2062,8 +2066,8 @@ with tab_s:
                 var_l = col_rm[0].selectbox("Équipement", variants_l, key=f"vl_{exo_base_l}_{li}")
                 exo_final_l = f"{exo_base_l} ({var_l})" if var_l != "Standard" else exo_base_l
 
-                # Record perso toutes séances confondues
-                f_h_l = df_h[df_h["Exercice"].str.contains(exo_base_l, regex=False, na=False)]
+                # Record perso toutes séances, spécifique à la variante sélectionnée
+                f_h_l = df_h[df_h["Exercice"] == exo_final_l]
                 if not f_h_l.empty and not f_h_l[f_h_l["Reps"] > 0].empty:
                     best_w_l = f_h_l["Poids"].max()
                     best_1rm_l = f_h_l[f_h_l["Reps"] > 0].apply(
@@ -2348,17 +2352,21 @@ with tab_s:
                     var_index = 0
             else:
                 var_index = 0
-            
+
+            # Calcul précoce de exo_final à partir de la valeur déjà en session_state
+            _var_pre = st.session_state.get(f"v_{exo_base}_{i}", variants[var_index])
+            exo_final_pre = f"{exo_base} ({_var_pre})" if _var_pre != "Standard" else exo_base
+
             # Auto-collapse : exercice replié une fois complété
+            # Correspondance exacte sur la variante pour ne pas croiser deux variantes du même exo
             curr_all = df_h[
-                (df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) &
+                (df_h["Exercice"] == exo_final_pre) &
                 (df_h["Séance"] == choix_s) & (df_h["Semaine"] == s_act)]
             exo_completed = not curr_all.empty and (
                 (curr_all["Poids"].sum() > 0 or curr_all["Reps"].sum() > 0) or
                 curr_all["Remarque"].str.contains("SKIP", na=False).any()
             )
-            expanded_state = not exo_completed or exo_base in [
-                e.split("(")[0].strip() for e in st.session_state.editing_exo]
+            expanded_state = not exo_completed or exo_final_pre in st.session_state.editing_exo
 
             with st.expander(f"🔹 {exo_base.upper()}", expanded=expanded_state):
                 # ── Bouton Recommencer (haut, confirmation inline) ──────────
@@ -2369,11 +2377,11 @@ with tab_s:
                     if _cy.button(":material/check: Recommencer", type="primary", key=f"yes_r_{exo_base}_{i}"):
                         mask_exo = ~(
                             (df_h["Semaine"] == s_act) &
-                            (df_h["Exercice"].str.contains(exo_base, regex=False, na=False)) &
+                            (df_h["Exercice"] == exo_final_pre) &
                             (df_h["Séance"] == choix_s))
                         save_hist(df_h[mask_exo])
                         st.session_state[_rkey] = False
-                        st.session_state.editing_exo.discard(exo_base)
+                        st.session_state.editing_exo.discard(exo_final_pre)
                         st.rerun()
                     if _cn.button(":material/close: Annuler", key=f"no_r_{exo_base}_{i}"):
                         st.session_state[_rkey] = False
@@ -2392,12 +2400,18 @@ with tab_s:
                 if len(all_variants) > 1:
                     st.caption(f"ℹ️ Exercice pratiqué avec {len(all_variants)} variantes différentes")
 
-                if not f_h.empty:
-                    best_w = f_h["Poids"].max()
-                    best_1rm = f_h.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
-                    if st.session_state.settings['show_1rm']:
-                        st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
-                    else:
+                # Record toutes séances confondues, spécifique à la variante sélectionnée
+                f_h_all = df_h[df_h["Exercice"] == exo_final]
+                if not f_h_all.empty:
+                    best_w = f_h_all["Poids"].max()
+                    _f_h_reps = f_h_all[f_h_all["Reps"] > 0]
+                    if not _f_h_reps.empty:
+                        best_1rm = _f_h_reps.apply(lambda x: calc_1rm(x["Poids"], x["Reps"]), axis=1).max()
+                        if st.session_state.settings['show_1rm']:
+                            st.caption(f"🏆 Record : **{best_w:g}kg** | ⚡ 1RM : **{best_1rm:.1f}kg**")
+                        else:
+                            st.caption(f"🏆 Record : **{best_w:g}kg**")
+                    elif best_w > 0:
                         st.caption(f"🏆 Record : **{best_w:g}kg**")
 
                 hist_weeks_all = sorted(f_h[f_h["Semaine"] < s_act]["Semaine"].unique())
