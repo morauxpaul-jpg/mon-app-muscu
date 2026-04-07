@@ -12,6 +12,9 @@
   {% if request.args.get('reset') == 'soft' %}
     <div class="card" style="border-color: var(--success);">✅ Historique réinitialisé. Les records sont archivés.</div>
   {% endif %}
+  {% if request.args.get('reset') == 'total' %}
+    <div class="card" style="border-color: var(--success);">✅ Tout a été remis à zéro.</div>
+  {% endif %}
 
   <div class="card">
     <h3>📊 État</h3>
@@ -59,6 +62,18 @@
     <p style="font-size:0.85rem; color:var(--text-dim);">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-soft" onsubmit="return confirm('Réinitialiser : vider l\'historique et archiver les records ?');">
       <button type="submit" class="btn" style="width:100%; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;">♻️ Confirmer la réinitialisation</button>
+    </form>
+  </div>
+
+  <div class="card" style="border-color: rgba(255,69,58,0.5);">
+    <h3 style="color: var(--danger);">💥 Tout remettre à zéro</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">⚠️ Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
+    <form method="post" action="/gestion/reset-total" onsubmit="return confirm('TOUT REMETTRE À ZÉRO : effacer SANS retour ?');">
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="confirm" value="yes" required>
+        <span>Je comprends, je veux tout effacer</span>
+      </label>
+      <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);">💥 TOUT REMETTRE À ZÉRO</button>
     </form>
   </div>
 {% endblock %}
