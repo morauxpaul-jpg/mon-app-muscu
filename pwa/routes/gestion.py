@@ -123,24 +123,3 @@ def reset_soft():
     return redirect(url_for("gestion.gestion") + "?reset=soft")
 
 
-@bp.route("/gestion/reset-total", methods=["POST"])
-def reset_total():
-    if request.form.get("confirm") != "yes":
-        return redirect(url_for("gestion.gestion"))
-    prog = get_prog()
-    prog.pop("_archive", None)
-    prog.pop("_legacy_volume", None)
-    prog.pop("_extras", None)
-    prog.pop("_libre_draft", None)
-    save_prog(prog)
-    save_hist([])
-    return redirect(url_for("gestion.gestion") + "?reset=total")
-
-
-@bp.route("/gestion/clear-archive", methods=["POST"])
-def clear_archive():
-    prog = get_prog()
-    prog.pop("_archive", None)
-    prog.pop("_legacy_volume", None)
-    save_prog(prog)
-    return redirect(url_for("gestion.gestion") + "?archive=cleared")

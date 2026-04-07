@@ -136,8 +136,8 @@
       {% if zoom.rep_ests %}
         <div class="field-label" style="margin-top:12px;">Estimations par reps</div>
         <table class="ltable">
-          <tr>{% for reps, _ in zoom.rep_ests %}<th>{{ reps }}r</th>{% endfor %}</tr>
-          <tr>{% for _, w in zoom.rep_ests %}<td>{{ w }}kg</td>{% endfor %}</tr>
+          <tr>{% for reps, w in zoom.rep_ests.items() %}<th>{{ reps }}r</th>{% endfor %}</tr>
+          <tr>{% for reps, w in zoom.rep_ests.items() %}<td>{{ w }}kg</td>{% endfor %}</tr>
         </table>
       {% endif %}
 
