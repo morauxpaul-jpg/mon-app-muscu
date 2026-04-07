@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import gspread
-from datetime import datetime, timedelta
+from datetime import datetime
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
 
@@ -20,9 +20,6 @@ if 'settings' not in st.session_state:
 
 if 'editing_exo' not in st.session_state:
     st.session_state.editing_exo = set()
-
-if 'active_tab' not in st.session_state:
-    st.session_state.active_tab = 'seance'
 
 if 'view' not in st.session_state:
     st.session_state.view = 'accueil'
@@ -324,14 +321,20 @@ components.html("""
 """, height=0)
 
 
-# --- 3. FONCTIONS TECHNIQUES ---
+# ============================================================
+# 3. FONCTIONS TECHNIQUES (calculs muscu, helpers data)
+# ============================================================
+
 def calc_1rm(weight, reps):
+    """Estimation Epley du 1RM (charge maxi théorique pour 1 répétition)."""
     return weight * (1 + reps / 30) if reps > 0 else 0
 
 def get_rep_estimations(one_rm):
+    """Renvoie un dict {n_reps: poids_estimé} basé sur le 1RM."""
     return {r: round(one_rm * pct, 1) for r, pct in {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
 def get_base_name(full_name):
+    """Retire la variante entre parenthèses : 'Développé couché (Barre)' -> 'Développé couché'."""
     return full_name.split("(")[0].strip() if "(" in full_name else full_name
 
 def fix_muscle(exercice, muscle):
@@ -457,23 +460,10 @@ def render_table(df, hist_prev=None):
     html += "</tbody></table></div>"
     st.markdown(html, unsafe_allow_html=True)
 
-def style_comparaison(row, hist_prev):
-    if hist_prev is None or hist_prev.empty: return ["", "", "", ""]
-    prev_set = hist_prev[hist_prev["Série"] == row["Série"]]
-    v, r = "background-color: rgba(0, 255, 127, 0.2); color: #00FF7F;", "background-color: rgba(255, 69, 58, 0.2); color: #FF453A;"
-    colors = ["", "", "", ""] 
-    if not prev_set.empty:
-        pw, pr = float(prev_set.iloc[0]["Poids"]), int(prev_set.iloc[0]["Reps"])
-        cw, cr = float(row["Poids"]), int(row["Reps"])
-        if cw < pw: colors[1], colors[2] = r, r
-        elif cw > pw: colors[1], colors[2] = v, v
-        elif cw == pw:
-            if cr > pr: colors[1] = v
-            elif cr < pr: colors[1] = r
-    return colors
+# ============================================================
+# 4. MINI-JEUX (Flappy & Rep Crusher) - canvas HTML+JS embarqués
+# ============================================================
 
-
-# --- 4. JEUX CYBER (ADAPTATIFS MOBILE/DESKTOP) ---
 def muscle_flappy_game():
     st.markdown("### 💪 MUSCLE FLAPPY")
     
@@ -848,7 +838,10 @@ def rep_crusher_game():
     components.html(game_html, height=580)
 
 
-# --- 5. CARTE DU CORPS INTERACTIVE ---
+# ============================================================
+# 5. CARTE DU CORPS INTERACTIVE (SVG anatomique colorisé selon 1RM)
+# ============================================================
+
 def body_map_section(df_p):
     MUSCLES = {
         "Pecs":            {"std": 140, "zid_f": "z-pecs",    "zid_b": None},
@@ -1476,7 +1469,9 @@ tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs([
     ":material/sports_esports: ARCADE",
 ])
 
-# --- ONGLET ACCUEIL ---
+# ============================================================
+# ONGLET ACCUEIL : dashboard, sélection séance, statut semaine
+# ============================================================
 with tab_home:
 
     s_act = int(df_h["Semaine"].max() if not df_h.empty else 1)
@@ -1881,7 +1876,9 @@ with tab_p:
             st.success("Archive vidée.")
             st.rerun()
 
-# --- ONGLET MA SÉANCE ---
+# ============================================================
+# ONGLET MA SÉANCE : trois modes -> libre, aucun, pré-faite
+# ============================================================
 with tab_s:
     _MUSCLE_LIST_S = ["Pecs","Dos","Épaules","Biceps","Triceps","Avant-bras","Abdos",
                       "Quadriceps","Ischio-jambiers","Fessiers","Mollets","Autre"]
@@ -2391,7 +2388,9 @@ with tab_s:
                     st.rerun()
 
 
-# --- ONGLET PROGRÈS (OPTIMISÉ MOBILE) ---
+# ============================================================
+# ONGLET PROGRÈS : carte du corps, hall of fame, zoom mouvement
+# ============================================================
 with tab_st:
     st.markdown("### 🫁 Carte du Corps")
     body_map_section(df_p)
