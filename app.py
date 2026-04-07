@@ -1469,7 +1469,7 @@ if not df_p.empty:
 # Onglets
 tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs([
     ":material/home: ACCUEIL",
-    ":material/calendar_month: PROGRAMME",
+    ":material/settings: GESTION",
     ":material/fitness_center: MA SÉANCE",
     ":material/trending_up: PROGRÈS",
     ":material/directions_run: CARDIO",
@@ -1749,9 +1749,45 @@ with tab_home:
             total_reps = int(df_h[df_h["Semaine"] == s_act]["Reps"].sum())
             st.metric(":material/track_changes: Reps", total_reps)
 
-# --- ONGLET PROGRAMME ---
+# --- ONGLET GESTION ---
 with tab_p:
-    st.markdown("## ⚙️ Configuration")
+    st.markdown("# :material/settings: GESTION")
+    st.caption("Tous les réglages, le programme et les opérations admin sont regroupés ici.")
+
+    # ══════════════════════════════════════════
+    # SECTION 1 : PARAMÈTRES VISUELS
+    # ══════════════════════════════════════════
+    with st.expander(":material/tune: Paramètres d'affichage", expanded=False):
+        _s = st.session_state.settings
+        _s['auto_collapse'] = st.toggle(
+            "Replier automatiquement les exercices terminés",
+            value=_s.get('auto_collapse', True),
+            key="set_auto_collapse"
+        )
+        _s['show_1rm'] = st.toggle(
+            "Afficher l'estimation 1RM",
+            value=_s.get('show_1rm', True),
+            key="set_show_1rm"
+        )
+        _s['theme_animations'] = st.toggle(
+            "Animations du thème (cartes, glow, pulse)",
+            value=_s.get('theme_animations', True),
+            key="set_theme_anim",
+            help="Désactive si l'app est lente sur ton mobile"
+        )
+        _s['show_previous_weeks'] = st.number_input(
+            "Nombre de semaines précédentes affichées dans la séance",
+            min_value=0, max_value=10,
+            value=int(_s.get('show_previous_weeks', 2)),
+            key="set_prev_weeks"
+        )
+
+    st.divider()
+
+    # ══════════════════════════════════════════
+    # SECTION 2 : PROGRAMME & EXERCICES
+    # ══════════════════════════════════════════
+    st.markdown("## :material/calendar_month: Programme & exercices")
     jours = list(prog_seances.keys())
     for idx_j, j in enumerate(jours):
         with st.expander(f"📦 {j}"):
@@ -1792,8 +1828,13 @@ with tab_p:
     if st.button("🎯 Valider") and nvs: prog[nvs] = []; save_prog(prog); st.rerun()
 
     st.divider()
-    with st.expander("⚙️ Avancé — Gestion"):
-        if st.button("🤖 Auto-assigner les muscles", type="primary", use_container_width=True, help="Assigne automatiquement les muscles selon le nom de chaque exercice"):
+
+    # ══════════════════════════════════════════
+    # SECTION 3 : OPÉRATIONS AVANCÉES (DANGER)
+    # ══════════════════════════════════════════
+    st.markdown("## :material/build: Opérations avancées")
+    with st.expander(":material/auto_fix_high: Auto-assigner les muscles"):
+        if st.button(":material/auto_fix_high: Lancer l'auto-assignation", type="primary", use_container_width=True, help="Assigne automatiquement les muscles selon le nom de chaque exercice"):
             updated, skipped = [], []
             for s in prog_seances:
                 for ex in prog[s]:
@@ -1809,36 +1850,36 @@ with tab_p:
                 with st.expander("Détail"):
                     for line in updated: st.caption(line)
             if skipped:
-                st.warning(f"⚠️ {len(skipped)} exercice(s) non reconnus : {', '.join(skipped)}")
+                st.warning(f":material/warning: {len(skipped)} exercice(s) non reconnus : {', '.join(skipped)}")
             st.rerun()
 
-        with st.expander("⚠️ Réinitialiser les séances"):
-            st.warning("Remet à zéro toutes les séances (semaine 1, historique vide). L'historique est archivé.")
-            if st.button("🔴 Confirmer la réinitialisation", type="primary", key="reset_all"):
-                v_tot_save = int((df_h['Poids'] * df_h['Reps']).sum()) if not df_h.empty else 0
-                prog['_legacy_volume'] = prog.get('_legacy_volume', 0) + v_tot_save
-                if not df_h.empty:
-                    arch_src = df_h[df_h['Reps'] > 0].copy()
-                    if not arch_src.empty:
-                        weekly_max = arch_src.groupby(['Exercice', 'Semaine']).apply(
-                            lambda g: pd.Series({'Poids': g['Poids'].max(), 'Reps': int(g.loc[g['Poids'].idxmax(), 'Reps']), 'Muscle': g['Muscle'].iloc[0]})
-                        ).reset_index()
-                        existing = prog.get('_archive', [])
-                        existing.extend(weekly_max.to_dict('records'))
-                        prog['_archive'] = existing[-2000:]
-                save_prog(prog)
-                save_hist(pd.DataFrame(columns=["Semaine","Séance","Exercice","Série","Reps","Poids","Remarque","Muscle","Date"]))
-                st.success("Réinitialisation effectuée. Reprends en semaine 1 !")
-                st.rerun()
+    with st.expander(":material/restart_alt: Réinitialiser les séances"):
+        st.warning("Remet à zéro toutes les séances (semaine 1, historique vide). L'historique est archivé.")
+        if st.button(":material/warning: Confirmer la réinitialisation", type="primary", key="reset_all"):
+            v_tot_save = int((df_h['Poids'] * df_h['Reps']).sum()) if not df_h.empty else 0
+            prog['_legacy_volume'] = prog.get('_legacy_volume', 0) + v_tot_save
+            if not df_h.empty:
+                arch_src = df_h[df_h['Reps'] > 0].copy()
+                if not arch_src.empty:
+                    weekly_max = arch_src.groupby(['Exercice', 'Semaine']).apply(
+                        lambda g: pd.Series({'Poids': g['Poids'].max(), 'Reps': int(g.loc[g['Poids'].idxmax(), 'Reps']), 'Muscle': g['Muscle'].iloc[0]})
+                    ).reset_index()
+                    existing = prog.get('_archive', [])
+                    existing.extend(weekly_max.to_dict('records'))
+                    prog['_archive'] = existing[-2000:]
+            save_prog(prog)
+            save_hist(pd.DataFrame(columns=["Semaine","Séance","Exercice","Série","Reps","Poids","Remarque","Muscle","Date"]))
+            st.success("Réinitialisation effectuée. Reprends en semaine 1 !")
+            st.rerun()
 
-        with st.expander("🗑️ Vider l'archive"):
-            st.warning("Supprime toutes les données archivées (records historiques et volume cumulé).")
-            if st.button("🔴 Confirmer la suppression de l'archive", type="primary", key="clear_archive"):
-                prog.pop('_archive', None)
-                prog.pop('_legacy_volume', None)
-                save_prog(prog)
-                st.success("Archive vidée.")
-                st.rerun()
+    with st.expander(":material/delete_sweep: Vider l'archive"):
+        st.warning("Supprime toutes les données archivées (records historiques et volume cumulé).")
+        if st.button(":material/warning: Confirmer la suppression de l'archive", type="primary", key="clear_archive"):
+            prog.pop('_archive', None)
+            prog.pop('_legacy_volume', None)
+            save_prog(prog)
+            st.success("Archive vidée.")
+            st.rerun()
 
 # --- ONGLET MA SÉANCE ---
 with tab_s:
