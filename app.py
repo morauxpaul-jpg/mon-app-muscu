@@ -1501,6 +1501,20 @@ tab_home, tab_p, tab_s, tab_st, tab_cardio, tab_g = st.tabs([
 # ============================================================
 with tab_home:
 
+    # Intercepte un clic sur une fenêtre de jour (lien ?day_click=N)
+    _clicked = st.query_params.get("day_click")
+    if _clicked is not None:
+        try:
+            _idx_clicked = int(_clicked)
+            _tp_click = today_paris()
+            _mon_click = _tp_click - timedelta(days=_tp_click.weekday())
+            st.session_state.seance_target_date = (_mon_click + timedelta(days=_idx_clicked)).strftime("%Y-%m-%d")
+            st.session_state.view = 'choix_seance'
+        except (ValueError, TypeError):
+            pass
+        st.query_params.clear()
+        st.rerun()
+
     s_act = int(df_h["Semaine"].max() if not df_h.empty else 1)
 
     # Helpers date
@@ -1683,12 +1697,7 @@ with tab_home:
 
         # Helper : calcule le statut d'une journée à partir des données réelles
         def _day_status(day_date):
-            """Renvoie {status, label} en se basant sur les perfs réelles du jour.
-            - done  : au moins un exo avec perf réelle → label = nom de la séance
-            - missed: jour passé sans aucune perf
-            - today : aujourd'hui sans perf → "Séance à faire"
-            - upcoming: jour futur → "Séance à faire"
-            """
+            """Renvoie {status, title, badge, color} basé sur les perfs réelles."""
             d_str = day_date.strftime("%Y-%m-%d")
             day_rows = df_h[df_h["Date"] == d_str]
             real = day_rows[
@@ -1697,23 +1706,19 @@ with tab_home:
                  day_rows["Remarque"].fillna("").str.contains("SKIP", na=False))
             ]
             if not real.empty:
-                # Plusieurs séances possibles sur un même jour : on prend celle avec le plus d'exos
                 top = real.groupby("Séance")["Exercice"].nunique().sort_values(ascending=False)
-                return {"status": "done", "label": str(top.index[0]), "color": "#00FF7F"}
+                return {"status": "done", "title": str(top.index[0]),
+                        "badge": "FAIT", "color": "#00FF7F"}
             if day_date < _today_p:
-                return {"status": "missed", "label": "Manquée", "color": "#FF453A"}
+                return {"status": "missed", "title": "Manquée",
+                        "badge": "MANQUÉE", "color": "#FF453A"}
             if day_date == _today_p:
-                return {"status": "today", "label": "Séance à faire", "color": "#58CCFF"}
-            return {"status": "upcoming", "label": "Séance à faire", "color": "#5a7a9a"}
+                return {"status": "today", "title": "Séance à faire",
+                        "badge": "AUJOURD'HUI", "color": "#58CCFF"}
+            return {"status": "upcoming", "title": "Séance à faire",
+                    "badge": "À VENIR", "color": "#5a7a9a"}
 
         st.markdown("### :material/calendar_view_week: Cette semaine")
-
-        _STATUS_EMOJI = {
-            "today":    "▶️",
-            "upcoming": "⏳",
-            "missed":   "🚩",
-            "done":     "✅",
-        }
 
         for _i, _d in enumerate(_week_dates):
             _day_label = _DAYS_FR[_i]
@@ -1721,15 +1726,27 @@ with tab_home:
             _date_short = f"{_d.day:02d}/{_d.month:02d}"
             _is_today = (_d == _today_p)
 
-            _emoji = _STATUS_EMOJI.get(_stinfo["status"], "·")
-            _btn_lbl = f"{_emoji}  {_day_label.upper()} {_date_short}  ·  {_stinfo['label']}"
-            _btn_type = "primary" if _is_today else "secondary"
+            _border = "2px" if _is_today else "1px"
+            _bg_card = f"rgba({','.join(['88','204','255'])},0.08)" if _is_today else "rgba(255,255,255,0.03)"
 
-            # La fenêtre elle-même est le bouton cliquable
-            if st.button(_btn_lbl, key=f"day_btn_{_i}", use_container_width=True, type=_btn_type):
-                st.session_state.seance_target_date = _d.strftime("%Y-%m-%d")
-                st.session_state.view = 'choix_seance'
-                st.rerun()
+            # Carte entière cliquable via <a href="?day_click=N">
+            st.markdown(
+                f"""<a href="?day_click={_i}" target="_self" style="text-decoration:none; display:block;">
+                 <div style='background:{_bg_card}; border:{_border} solid {_stinfo['color']}66;
+                     border-radius:12px; padding:10px 14px; margin-bottom:6px;
+                     display:flex; align-items:center; justify-content:space-between;
+                     cursor:pointer;'>
+                     <div>
+                       <div style='font-size:11px; color:#5a7a9a; letter-spacing:2px;'>{_day_label.upper()} · {_date_short}</div>
+                       <div style='font-size:1rem; color:#fff; font-weight:700; margin-top:2px;'>{_stinfo['title']}</div>
+                     </div>
+                     <div style='font-size:11px; color:{_stinfo['color']}; font-weight:800; letter-spacing:1px;'>
+                       {_stinfo['badge']}
+                     </div>
+                 </div>
+                </a>""",
+                unsafe_allow_html=True
+            )
 
         st.divider()
 
