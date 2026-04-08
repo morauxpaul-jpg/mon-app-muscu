@@ -303,6 +303,20 @@ st.markdown(f"""
         user-drag: none !important;
         -webkit-user-drag: none !important;
     }}
+
+    /* Empêche la sélection de texte sur les cartes cliquables (fix
+       double-tap mobile qui ouvrait le menu « Rechercher sur Google »). */
+    .stApp a[href*="day_click"],
+    .stApp a[href*="day_click"] *,
+    .stApp [style*="cursor:pointer"],
+    .stApp [style*="cursor: pointer"] {{
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1427,7 +1441,7 @@ def get_prog():
     except:
         return {}
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=600)
 def get_hist():
     try:
         data = ws_h.get_all_records()
@@ -2558,19 +2572,11 @@ with tab_s:
                 # Clé du compteur d'extra-séries (persistant via session_state)
                 _ek_extra = f"extra_sets_{exo_final}_{s_act}"
 
-                if not curr.empty and not is_reset and exo_final not in st.session_state.editing_exo:
+                # Tableau toujours visible pendant la séance (bug #2) :
+                # on ne cache plus l'éditeur derrière un bouton « Modifier ».
+                if not curr.empty and not is_reset:
                     st.markdown("##### ✅ Validé")
-                    render_table(curr[["Série", "Reps", "Poids", "Remarque"]].reset_index(drop=True), hist_prev=hist_prev_df)
-                    _cm1, _cm2 = st.columns(2)
-                    if _cm1.button(":material/edit: Modifier", key=f"m_{exo_final}_{i}", use_container_width=True):
-                        st.session_state.editing_exo.add(exo_final)
-                        st.rerun()
-                    if _cm2.button(":material/add: +1 série", key=f"add_set_v_{exo_final}_{i}", use_container_width=True):
-                        # Passe en mode édition ET ajoute une ligne d'un coup
-                        st.session_state.editing_exo.add(exo_final)
-                        st.session_state[_ek_extra] = int(st.session_state.get(_ek_extra, 0)) + 1
-                        st.rerun()
-                else:
+                if True:
                     extra_n = int(st.session_state.get(_ek_extra, 0))
                     if st.button(":material/add: +1 série", key=f"add_set_{exo_final}_{i}", use_container_width=True):
                         st.session_state[_ek_extra] = extra_n + 1
