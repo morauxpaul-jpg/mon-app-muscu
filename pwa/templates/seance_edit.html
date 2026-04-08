@@ -265,7 +265,9 @@
     // du programme (p_sets), donc le tableau montre directement les lignes
     // attendues. Le bouton +1 série en ajoute si besoin.
     return {
-      open: true,
+      // Ouvert tant que l'exo n'est pas complété ; après Enregistrer,
+      // Python renvoie completed=true → la carte se replie automatiquement.
+      open: !data.completed,
       variant: data.variant,
       sets: (data.sets || []).map(function (s) {
         return {
