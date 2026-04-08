@@ -60,7 +60,7 @@
   {# ── Exercices ──────────────────────────────────────────────── #}
   {% for exo in exos %}
     <div class="exo-card {% if exo.completed %}done{% endif %}"
-         x-data="exoBlock({{ loop.index0 }}, {{ exo|tojson }})">
+         x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
       <div class="exo-head" @click="open = !open">
         <div>
           <div class="exo-title">🔹 {{ exo.base|upper }}</div>
