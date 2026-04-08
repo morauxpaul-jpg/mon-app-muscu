@@ -252,30 +252,28 @@
 
   <script>
   function exoBlock(index, data) {
-    // Bug #2 : le tableau de saisie doit rester visible pendant toute la
-    // séance, même après avoir cliqué sur Enregistrer. On persiste l'état
-    // d'ouverture dans sessionStorage (clé par séance+exo), effacé quand
-    // on quitte l'onglet ou qu'on change de séance.
-    const storageKey = `exoOpen:${data.exo_final || data.base}:${index}`;
-    const stored = sessionStorage.getItem(storageKey);
-    const initialOpen = stored === null ? true : stored === "1";
+    // Bug #2 : tableau de saisie toujours visible pendant la séance.
+    // Les `sets` sont pré-remplies côté Python avec le nombre de séries
+    // du programme (p_sets), donc le tableau montre directement les lignes
+    // attendues. Le bouton +1 série en ajoute si besoin.
     return {
-      open: initialOpen,
+      open: true,
       variant: data.variant,
-      sets: data.sets.map(s => ({ reps: s.reps, poids: s.poids, remarque: s.remarque })),
-      addSet() {
+      sets: (data.sets || []).map(function (s) {
+        return {
+          reps: s.reps || 0,
+          poids: s.poids || 0,
+          remarque: s.remarque || ""
+        };
+      }),
+      addSet: function () {
         this.sets.push({ reps: 0, poids: 0, remarque: "" });
       },
-      removeSet(i) {
+      removeSet: function (i) {
         if (this.sets.length > 1) this.sets.splice(i, 1);
       },
-      prepareSave(e) {
+      prepareSave: function (e) {
         // sets_json est déjà bindé via x-bind; rien à faire, juste laisser submit
-      },
-      init() {
-        // Persiste l'état d'ouverture : le tableau reste visible au reload
-        // post-save tant qu'on ne quitte pas la page de la séance.
-        this.$watch('open', v => sessionStorage.setItem(storageKey, v ? "1" : "0"));
       }
     };
   }
