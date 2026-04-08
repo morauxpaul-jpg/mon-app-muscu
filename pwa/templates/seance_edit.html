@@ -60,6 +60,7 @@
   {# ── Exercices ──────────────────────────────────────────────── #}
   {% for exo in exos %}
     <div class="exo-card {% if exo.completed %}done{% endif %}"
+         id="exo-anchor-{{ loop.index0 }}"
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
       <div class="exo-head" @click="open = !open">
         <div>
@@ -139,7 +140,8 @@
         <button type="button" class="btn" style="width:100%; margin-top:6px;" @click="addSet()">➕ +1 série</button>
 
         <div class="exo-actions">
-          <form method="post" action="/seance/save-exo" @submit="prepareSave($event)">
+          <form method="post" action="/seance/save-exo"
+                @submit="prepareSave($event); sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
@@ -152,7 +154,8 @@
             <input type="hidden" name="sets_json" :value="JSON.stringify(sets)">
             <button type="submit" class="btn primary" style="width:100%;">💾 Enregistrer</button>
           </form>
-          <form method="post" action="/seance/skip-exo">
+          <form method="post" action="/seance/skip-exo"
+                @submit="sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
@@ -191,9 +194,13 @@
     </div>
   {% endfor %}
 
-  {# ── Ajouter un exercice ─────────────────────────── #}
-  <div class="card" x-data="{ tab: 'prog', muscle: 'Tous' }">
-    <h3>➕ Ajouter un exercice</h3>
+  {# ── Ajouter un exercice (fermé par défaut) ─────────────────────────── #}
+  <div class="card" x-data="{ open: false, tab: 'prog', muscle: 'Tous' }">
+    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <span>➕ Ajouter un exercice</span>
+      <span x-text="open ? '−' : '+'"></span>
+    </h3>
+    <div x-show="open" x-transition>
     <div style="display:flex; gap:6px; margin-bottom:10px;">
       <button type="button" class="btn" :class="{ primary: tab==='prog' }" @click="tab='prog'">Depuis mes programmes</button>
       <button type="button" class="btn" :class="{ primary: tab==='new' }" @click="tab='new'">Nouvel exercice</button>
@@ -241,6 +248,7 @@
       <input type="number" name="sets_count" min="1" max="10" value="3" class="field">
       <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">➕ Ajouter cet exercice</button>
     </form>
+    </div>
   </div>
 
   <form method="post" action="/seance/finish">
@@ -277,5 +285,22 @@
       }
     };
   }
+
+  // Après un Save/Skip, le POST redirige et recharge la page. On replace
+  // alors le scroll sur la carte d'exo qui vient d'être sauvegardée pour
+  // qu'elle reste visible au lieu de revenir en haut de page.
+  window.addEventListener('DOMContentLoaded', function () {
+    var idx = sessionStorage.getItem('lastExoAnchor');
+    if (idx !== null) {
+      sessionStorage.removeItem('lastExoAnchor');
+      var el = document.getElementById('exo-anchor-' + idx);
+      if (el) {
+        // Petit délai pour laisser Alpine rendre le contenu avant de scroller
+        setTimeout(function () {
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }, 50);
+      }
+    }
+  });
   </script>
 {% endblock %}
