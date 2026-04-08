@@ -1,10 +1,28 @@
 """Connexion Google Sheets — même Sheet 'Muscu_App' que le Streamlit d'origine."""
 import os
 import json
+import time
 import gspread
 
 _SHEET_NAME = "Muscu_App"
 _cache = {"gc": None, "ws_h": None, "ws_p": None}
+
+# Cache mémoire process-wide pour les données (hist / prog).
+# TTL 10 min : chaque écriture invalide le cache correspondant, donc la
+# staleness se limite aux modifications faites hors de l'app (Sheet édité
+# à la main) — acceptable.
+_data_cache = {"hist": None, "hist_ts": 0.0, "prog": None, "prog_ts": 0.0}
+_TTL = 600.0
+
+
+def _invalidate_hist():
+    _data_cache["hist"] = None
+    _data_cache["hist_ts"] = 0.0
+
+
+def _invalidate_prog():
+    _data_cache["prog"] = None
+    _data_cache["prog_ts"] = 0.0
 
 
 def _load_credentials():
@@ -54,22 +72,34 @@ def get_worksheets():
 
 
 def get_prog():
-    """Programme (dict) depuis la cellule A1 de l'onglet Programme."""
+    """Programme (dict) depuis la cellule A1 de l'onglet Programme. TTL cache."""
+    now = time.time()
+    if _data_cache["prog"] is not None and (now - _data_cache["prog_ts"]) < _TTL:
+        # Deep copy léger : les routes mutent parfois le dict retourné
+        return json.loads(json.dumps(_data_cache["prog"]))
     try:
         _, ws_p = get_worksheets()
         raw = ws_p.acell("A1").value or "{}"
-        return json.loads(raw)
+        data = json.loads(raw)
     except Exception:
-        return {}
+        data = {}
+    _data_cache["prog"] = data
+    _data_cache["prog_ts"] = now
+    return json.loads(json.dumps(data))
 
 
 def save_prog(prog_dict):
     _, ws_p = get_worksheets()
     ws_p.update_acell("A1", json.dumps(prog_dict))
+    _invalidate_prog()
 
 
 def get_hist():
-    """Historique des séries sous forme de liste de dicts (équivalent df_h en Streamlit)."""
+    """Historique des séries sous forme de liste de dicts. TTL cache process-wide."""
+    now = time.time()
+    if _data_cache["hist"] is not None and (now - _data_cache["hist_ts"]) < _TTL:
+        # Copie superficielle pour que les mutations de route n'impactent pas le cache
+        return [dict(r) for r in _data_cache["hist"]]
     try:
         ws_h, _ = get_worksheets()
         rows = ws_h.get_all_records()
@@ -101,7 +131,9 @@ def get_hist():
             "Muscle": str(r.get("Muscle", "")),
             "Date": str(r.get("Date", "")),
         })
-    return cleaned
+    _data_cache["hist"] = cleaned
+    _data_cache["hist_ts"] = now
+    return [dict(r) for r in cleaned]
 
 
 HEADERS = ["Semaine", "Séance", "Exercice", "Série", "Reps", "Poids", "Remarque", "Muscle", "Date"]
@@ -115,6 +147,7 @@ def save_hist(rows):
         data.append([r.get(h, "") if r.get(h, "") is not None else "" for h in HEADERS])
     ws_h.clear()
     ws_h.update(data, value_input_option="USER_ENTERED")
+    _invalidate_hist()
 
 
 # ── Opérations ciblées sur l'historique (réplique de la logique app.py) ──
