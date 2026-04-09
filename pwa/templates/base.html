@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="/static/icon.png">
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/tutorial.css">
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -29,16 +30,20 @@
     {% block content %}{% endblock %}
   </main>
 
-  <nav class="bottom-nav">
-    <a href="/"          class="{% if active == 'accueil'   %}active{% endif %}"><span class="icon">🏠</span>Accueil</a>
-    <a href="/seance"    class="{% if active == 'seance'    %}active{% endif %}"><span class="icon">💪</span>Séance</a>
-    <a href="/programme" class="{% if active == 'programme' %}active{% endif %}"><span class="icon">⚙️</span>Prog.</a>
-    <a href="/progres"   class="{% if active == 'progres'   %}active{% endif %}"><span class="icon">📈</span>Progrès</a>
-    <a href="/gestion"   class="{% if active == 'gestion'   %}active{% endif %}"><span class="icon">🛠️</span>Gestion</a>
-    <a href="/arcade"    class="{% if active == 'arcade'    %}active{% endif %}"><span class="icon">🎮</span>Arcade</a>
+  <nav class="bottom-nav" data-tuto="welcome">
+    <a href="/"          data-tuto="dashboard"  class="{% if active == 'accueil'   %}active{% endif %}"><span class="icon">🏠</span>Accueil</a>
+    <a href="/seance"    data-tuto="seance"     class="{% if active == 'seance'    %}active{% endif %}"><span class="icon">💪</span>Séance</a>
+    <a href="/programme" data-tuto="programme"  class="{% if active == 'programme' %}active{% endif %}"><span class="icon">⚙️</span>Prog.</a>
+    <a href="/progres"   data-tuto="progres"    class="{% if active == 'progres'   %}active{% endif %}"><span class="icon">📈</span>Progrès</a>
+    <a href="/gestion"   data-tuto="gestion"    class="{% if active == 'gestion'   %}active{% endif %}"><span class="icon">🛠️</span>Gestion</a>
+    <a href="/arcade"    data-tuto="arcade"     class="{% if active == 'arcade'    %}active{% endif %}"><span class="icon">🎮</span>Arcade</a>
   </nav>
 
   <script src="/static/js/sw-register.js"></script>
+  <script src="/static/js/tutorial.js"></script>
+  {% if is_authenticated %}
+  <script>initTutorial();</script>
+  {% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>
