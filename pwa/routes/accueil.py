@@ -5,7 +5,9 @@ Logique portée depuis app.py (lignes 1499-1865).
 from datetime import timedelta
 from flask import Blueprint, render_template
 
-from core.data import get_hist, get_prog, get_profile
+from datetime import date as _date, datetime as _datetime
+
+from core.data import get_hist, get_prog, get_profile, get_onboarding
 from core.dates import now_paris, today_paris, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 
@@ -37,7 +39,7 @@ def _is_real_perf(row):
     return False
 
 
-def _day_status(day_date, hist_rows, planning_map, today):
+def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
     """Statut d'une journée — porté de _day_status() app.py 1751-1784."""
     d_str = day_date.strftime("%Y-%m-%d")
     day_rows = [r for r in hist_rows if r["Date"] == d_str]
@@ -61,6 +63,10 @@ def _day_status(day_date, hist_rows, planning_map, today):
         if r["Exercice"] == "SESSION" and "MANQUÉE" in (r.get("Remarque") or ""):
             return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#FF453A"}
 
+    # Pour un nouveau compte : ne jamais afficher "manquée" sur des jours
+    # antérieurs à l'inscription (l'user n'avait pas encore l'app).
+    if joined_date and day_date < joined_date:
+        return {"status": "upcoming", "title": "Repos", "badge": "—", "color": "#5a7a9a"}
     if day_date < today:
         return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#FF453A"}
     if day_date == today:
@@ -74,9 +80,20 @@ def index():
         hist = get_hist()
         prog = get_prog()
         profile = get_profile() or {}
+        onboarding = get_onboarding() or {}
     except Exception as e:
         return render_template("accueil.html", active="accueil", error=str(e))
     prenom = (profile.get("prenom") or "").strip()
+
+    # Date d'inscription : utilisée pour ne pas marquer "manquées" les
+    # journées antérieures à la création du compte.
+    joined_date = None
+    completed_at = onboarding.get("completed_at")
+    if completed_at:
+        try:
+            joined_date = _datetime.fromisoformat(str(completed_at).replace("Z", "+00:00")).date()
+        except ValueError:
+            joined_date = None
 
     hist, prog_seances = _normalize_hist(hist, prog)
     planning_map = prog.get("_planning", {})
@@ -94,7 +111,7 @@ def index():
     week = []
     for i in range(7):
         d = monday + timedelta(days=i)
-        info = _day_status(d, hist, planning_map, today)
+        info = _day_status(d, hist, planning_map, today, joined_date)
         week.append({
             "index": i,
             "day_label": DAYS_FR[i],
