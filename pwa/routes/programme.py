@@ -1,7 +1,7 @@
 """Blueprint programme — planning hebdo + édition des séances/exos."""
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from core.sheets import get_prog, save_prog
+from core.data import get_prog, save_prog
 from core.dates import DAYS_FR
 from core.muscu import auto_muscles
 

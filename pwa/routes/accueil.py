@@ -5,7 +5,7 @@ Logique portée depuis app.py (lignes 1499-1865).
 from datetime import timedelta
 from flask import Blueprint, render_template
 
-from core.sheets import get_hist, get_prog
+from core.data import get_hist, get_prog
 from core.dates import now_paris, today_paris, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 

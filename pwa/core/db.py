@@ -1,13 +1,14 @@
-"""Couche d'accès Supabase — remplacera core/sheets.py en Phase 3.
+"""Couche d'accès Supabase — remplace core/sheets.py en Phase 3.
 
-Expose les mêmes primitives que sheets.py (`get_hist`, `save_hist`, `get_prog`,
-`save_prog`) mais prend un `user_id` en paramètre et cible les tables
-`history` / `programs` / `profiles`. Le RLS Supabase garantit que chaque user
-ne voit que ses lignes quand on utilise un JWT utilisateur via `set_session`.
+Phase 3 choix d'archi : le backend Flask utilise la clé `service_role` (bypass
+RLS) et filtre manuellement **chaque** requête par `user_id`. L'authentification
+de l'utilisateur se fait via Supabase Google OAuth côté client puis un "bridge"
+qui valide le JWT et pose `user_id` dans la session Flask. Toutes les fonctions
+de ce module exigent explicitement un `user_id`.
 
 Config : deux variables d'env requises
   - SUPABASE_URL
-  - SUPABASE_ANON_KEY
+  - SUPABASE_SERVICE_ROLE_KEY   (jamais exposée au client)
 """
 import os
 import json
@@ -17,30 +18,22 @@ from typing import Optional
 from supabase import create_client, Client
 
 _SUPABASE_URL = os.getenv("SUPABASE_URL")
-_SUPABASE_ANON = os.getenv("SUPABASE_ANON_KEY")
+_SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 _client: Optional[Client] = None
 
 
 def get_client() -> Client:
-    """Client Supabase process-wide. Utilise la clé anon ; le RLS est activé
-    par `set_session` après login, ou bypassé en prod uniquement côté script
-    de migration via la clé service_role (jamais ici)."""
+    """Client Supabase process-wide avec clé service_role.
+    ⚠️ bypass RLS : tous les appels DOIVENT filtrer explicitement par user_id."""
     global _client
     if _client is None:
-        if not _SUPABASE_URL or not _SUPABASE_ANON:
+        if not _SUPABASE_URL or not _SUPABASE_SERVICE_KEY:
             raise RuntimeError(
-                "SUPABASE_URL / SUPABASE_ANON_KEY manquants dans l'environnement."
+                "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants dans l'environnement."
             )
-        _client = create_client(_SUPABASE_URL, _SUPABASE_ANON)
+        _client = create_client(_SUPABASE_URL, _SUPABASE_SERVICE_KEY)
     return _client
-
-
-def set_session(access_token: str, refresh_token: str):
-    """Attache un JWT utilisateur au client Supabase pour que le RLS filtre
-    automatiquement les lignes. Appelé après login OAuth en Phase 3."""
-    client = get_client()
-    client.auth.set_session(access_token, refresh_token)
 
 
 # ── Cache mémoire process-wide (TTL 10 min), clé par user_id ──

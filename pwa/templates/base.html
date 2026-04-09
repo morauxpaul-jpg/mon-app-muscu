@@ -16,6 +16,15 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+  {% if is_authenticated %}
+  <div class="topbar">
+    <span class="topbar-user">👤 {{ current_user_email }}</span>
+    <form method="post" action="/logout" style="margin:0;">
+      <button type="submit" class="btn topbar-logout" title="Déconnexion">⎋ Déconnexion</button>
+    </form>
+  </div>
+  {% endif %}
+
   <main class="app">
     {% block content %}{% endblock %}
   </main>

@@ -4,7 +4,7 @@ Logique portée depuis app.py body_map_section (863-1299) et tab_st (2681-2713).
 """
 from flask import Blueprint, render_template, request
 
-from core.sheets import get_hist, get_prog
+from core.data import get_hist, get_prog
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations
 
 bp = Blueprint("progres", __name__)

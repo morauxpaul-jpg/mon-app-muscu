@@ -6,7 +6,7 @@ reset soft, reset total, vider l'archive.
 """
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from core.sheets import get_hist, get_prog, save_prog, save_hist
+from core.data import get_hist, get_prog, save_prog, save_hist
 from core.muscu import auto_muscles
 
 bp = Blueprint("gestion", __name__)

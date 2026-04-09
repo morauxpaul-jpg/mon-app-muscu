@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050A18">
+  <title>Connexion · Muscu PRO</title>
+  <link rel="icon" type="image/png" href="/static/icon.png">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <style>
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .login-logo { width: 96px; height: 96px; border-radius: 24px; margin-bottom: 16px; }
+    .login-title { font-size: 1.6rem; margin: 0 0 6px 0; }
+    .login-sub { color: var(--text-dim); margin-bottom: 28px; font-size: 0.95rem; }
+    .google-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 22px; font-size: 1rem; font-weight: 600;
+      border-radius: 14px; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border: 1px solid var(--accent); color: #fff;
+    }
+    .err { color: var(--danger); margin-top: 14px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <img src="/static/icon.png" alt="Muscu PRO" class="login-logo">
+    <h1 class="login-title">Muscu Tracker PRO</h1>
+    <div class="login-sub">Connecte-toi pour retrouver ton programme et ton historique.</div>
+    <button id="google" class="google-btn">🔐 Continuer avec Google</button>
+    <div id="err" class="err"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const SUPABASE_URL = {{ supabase_url|tojson }};
+    const SUPABASE_ANON = {{ supabase_anon|tojson }};
+    const errEl = document.getElementById('err');
+
+    if (!SUPABASE_URL || !SUPABASE_ANON) {
+      errEl.textContent = "Config Supabase manquante côté serveur.";
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true }
+    });
+
+    document.getElementById('google').addEventListener('click', async () => {
+      errEl.textContent = "";
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + '/auth/bridge' }
+      });
+      if (error) errEl.textContent = error.message;
+    });
+  </script>
+</body>
+</html>

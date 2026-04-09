@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, abort
 
-from core.sheets import (
+from core.data import (
     get_hist, get_prog,
     replace_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
 )
@@ -478,7 +478,7 @@ def add_extra():
         _update_libre_draft(prog, key, lambda lst: lst.append(item))
     else:
         _update_extras(prog, key, lambda lst: lst.append(item))
-    from core.sheets import save_prog
+    from core.data import save_prog
     save_prog(prog)
     return _back_to_editor(f)
 
@@ -501,7 +501,7 @@ def remove_extra():
         _update_libre_draft(prog, key, _remove)
     else:
         _update_extras(prog, key, _remove)
-    from core.sheets import save_prog
+    from core.data import save_prog
     save_prog(prog)
     return _back_to_editor(f)
 
@@ -523,6 +523,6 @@ def finish():
         prog["_extras"].pop(key, None)
         changed = True
     if changed:
-        from core.sheets import save_prog
+        from core.data import save_prog
         save_prog(prog)
     return redirect(url_for("accueil.index"))

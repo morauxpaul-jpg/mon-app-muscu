@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050A18">
+  <title>Connexion… · Muscu PRO</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <style>
+    .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 24px; text-align: center; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 18px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .err { color: var(--danger); margin-top: 14px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="spinner"></div>
+    <div id="msg">Connexion en cours…</div>
+    <div id="err" class="err"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const SUPABASE_URL = {{ supabase_url|tojson }};
+    const SUPABASE_ANON = {{ supabase_anon|tojson }};
+    const errEl = document.getElementById('err');
+    const msgEl = document.getElementById('msg');
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true }
+    });
+
+    async function run() {
+      // detectSessionInUrl:true lit automatiquement le ?code=... et échange
+      // contre une session. On attend juste qu'elle soit prête.
+      for (let i = 0; i < 20; i++) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) return data.session;
+        await new Promise(r => setTimeout(r, 150));
+      }
+      return null;
+    }
+
+    run().then(async (sess) => {
+      if (!sess) {
+        errEl.textContent = "Impossible de récupérer la session Supabase.";
+        return;
+      }
+      msgEl.textContent = "Finalisation…";
+      const res = await fetch('/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ access_token: sess.access_token })
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        errEl.textContent = "Erreur : " + (j.error || res.status);
+        return;
+      }
+      window.location.replace('/');
+    }).catch(e => { errEl.textContent = e.message; });
+  </script>
+</body>
+</html>
