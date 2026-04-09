@@ -51,24 +51,53 @@ def bridge():
     return render_template("bridge.html", **_public_config())
 
 
+_jwks_client_cache = {}
+
+
+def _get_jwks_client(supabase_url: str):
+    """Cache un PyJWKClient par URL Supabase pour éviter de retélécharger le JWKS."""
+    if supabase_url not in _jwks_client_cache:
+        jwks_url = supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
+        _jwks_client_cache[supabase_url] = jwt.PyJWKClient(jwks_url)
+    return _jwks_client_cache[supabase_url]
+
+
+def _verify_supabase_jwt(token: str):
+    """Vérifie un JWT Supabase en supportant HS256 (legacy) et ES256/RS256 (JWKS).
+    Retourne le payload décodé ou lève jwt.InvalidTokenError."""
+    header = jwt.get_unverified_header(token)
+    alg = (header or {}).get("alg", "")
+    common = {"audience": "authenticated"}
+
+    if alg == "HS256":
+        secret = _env("SUPABASE_JWT_SECRET")
+        if not secret:
+            raise jwt.InvalidTokenError("SUPABASE_JWT_SECRET absent côté serveur")
+        return jwt.decode(token, secret, algorithms=["HS256"], **common)
+
+    if alg in ("ES256", "RS256"):
+        url = _env("SUPABASE_URL")
+        if not url:
+            raise jwt.InvalidTokenError("SUPABASE_URL absent pour JWKS")
+        client = _get_jwks_client(url)
+        signing_key = client.get_signing_key_from_jwt(token).key
+        return jwt.decode(token, signing_key, algorithms=[alg], **common)
+
+    raise jwt.InvalidTokenError(f"algorithme non supporté : {alg}")
+
+
 @bp.route("/auth/session", methods=["POST"])
 def set_session():
     data = request.get_json(silent=True) or {}
     access_token = data.get("access_token")
     if not access_token:
         return jsonify({"error": "missing access_token"}), 400
-    jwt_secret = _env("SUPABASE_JWT_SECRET")
-    if not jwt_secret:
-        return jsonify({"error": "server misconfigured: SUPABASE_JWT_SECRET absent"}), 500
     try:
-        payload = jwt.decode(
-            access_token,
-            jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
+        payload = _verify_supabase_jwt(access_token)
     except jwt.InvalidTokenError as e:
         return jsonify({"error": f"invalid token: {e}"}), 401
+    except Exception as e:
+        return jsonify({"error": f"jwt verification failed: {e}"}), 500
 
     user_id = payload.get("sub")
     email = payload.get("email")
