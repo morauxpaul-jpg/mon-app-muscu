@@ -197,6 +197,23 @@ CATALOG = {
 CATALOG_ORDER = ["fb_deb_3j", "upper_lower_4j", "ppl_6j", "fb_maison_3j"]
 
 
+def unique_muscles_for(prog_id: str) -> list[str]:
+    """Liste dédoublonnée des muscles ciblés par un programme du catalogue,
+    calculée dynamiquement depuis les exos. Sert à afficher les muscles sur
+    les cartes catalogue dans /programme."""
+    p = CATALOG.get(prog_id)
+    if not p:
+        return []
+    seen: list[str] = []
+    for exos in p["seances"].values():
+        for ex in exos:
+            for m in (ex.get("muscle") or "").split(","):
+                m = m.strip()
+                if m and m not in seen:
+                    seen.append(m)
+    return seen
+
+
 def list_programs() -> list[dict]:
     """Liste publique des programmes (métadonnées seulement, sans séances)."""
     out = []
@@ -209,6 +226,8 @@ def list_programs() -> list[dict]:
             "freq": p["freq"],
             "description": p["description"],
             "tags": p["tags"],
+            "muscles": unique_muscles_for(pid),
+            "nb_seances": len(p["seances"]),
         })
     return out
 

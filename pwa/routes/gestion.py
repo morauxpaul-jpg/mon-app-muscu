@@ -8,7 +8,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from core.data import get_hist, get_prog, save_prog, save_hist
 from core.muscu import auto_muscles
-from core import catalog
 
 bp = Blueprint("gestion", __name__)
 
@@ -37,15 +36,6 @@ def gestion():
     nb_hist = len(hist)
     nb_archive = len(prog.get("_archive", []))
 
-    current_origin = prog.get("_origin")
-    current_program_meta = None
-    if current_origin:
-        p = catalog.get_program(current_origin)
-        if p:
-            current_program_meta = {
-                "id": p["id"], "title": p["title"], "subtitle": p["subtitle"],
-            }
-
     return render_template(
         "gestion.html",
         active="gestion",
@@ -54,41 +44,7 @@ def gestion():
         nb_exos=nb_exos,
         nb_hist=nb_hist,
         nb_archive=nb_archive,
-        catalog_programs=catalog.list_programs(),
-        current_program_meta=current_program_meta,
     )
-
-
-@bp.route("/gestion/change-program", methods=["POST"])
-def change_program():
-    """Remplace le programme courant par un autre du catalogue (ou laisse
-    vide si custom). N'efface PAS l'historique — l'user garde ses perfs."""
-    prog_id = (request.form.get("programme_id") or "").strip()
-    if not request.form.get("confirm") == "yes":
-        return redirect(url_for("gestion.gestion"))
-
-    if prog_id == "custom":
-        # On vide juste les séances mais on garde _settings / _archive
-        prog = get_prog()
-        for k in list(prog.keys()):
-            if not k.startswith("_"):
-                prog.pop(k)
-        prog.pop("_origin", None)
-        save_prog(prog)
-        return redirect(url_for("programme.programme"))
-
-    src = catalog.get_program(prog_id)
-    if not src:
-        return redirect(url_for("gestion.gestion"))
-
-    old = get_prog()
-    new_prog = catalog.build_program(prog_id, src["freq"])
-    # Préserve settings + archive + legacy_volume
-    for key in ("_settings", "_archive", "_legacy_volume", "_extras"):
-        if key in old:
-            new_prog[key] = old[key]
-    save_prog(new_prog)
-    return redirect(url_for("gestion.gestion") + "?program_changed=1")
 
 
 @bp.route("/gestion/redo-onboarding", methods=["POST"])

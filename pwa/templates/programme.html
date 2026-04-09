@@ -4,6 +4,15 @@
 {% block content %}
   <h1>Programme</h1>
 
+  {% if request.args.get('program_changed') %}
+    <div class="card" style="border-color: var(--success);">✅ Nouveau programme chargé.</div>
+  {% endif %}
+  {% if request.args.get('import_err') == 'parse' %}
+    <div class="card" style="border-color: var(--danger);">❌ Fichier illisible (JSON invalide).</div>
+  {% elif request.args.get('import_err') == 'format' %}
+    <div class="card" style="border-color: var(--danger);">❌ Format non reconnu — ce fichier n'a pas été exporté depuis Muscu Tracker.</div>
+  {% endif %}
+
   {# ── Planning hebdomadaire ───────────────────────────── #}
   <div class="card" id="planning">
     <h3>📅 Planning hebdomadaire</h3>
@@ -52,6 +61,14 @@
             <input type="hidden" name="name" value="{{ sname }}">
             <button type="submit" class="btn">🗑️ Supprimer</button>
           </form>
+          <a href="/programme/seance/export/{{ sname }}" class="btn">📤 Exporter</a>
+          {% if sname in origin_seance_names %}
+            <form method="post" action="/programme/seance/reset"
+                  onsubmit="return confirm('Réinitialiser {{ sname }} à sa version d\'origine ? Tes modifications sur cette séance seront perdues.');">
+              <input type="hidden" name="name" value="{{ sname }}">
+              <button type="submit" class="btn">♻️ Réinitialiser</button>
+            </form>
+          {% endif %}
         </div>
 
         {% for ex in exos %}
@@ -130,6 +147,91 @@
       <input type="text" name="name" class="field" placeholder="Nom de la séance (ex: Push)" required>
       <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">➕ Créer</button>
     </form>
+  </div>
+
+  {# ── Importer une séance ─────────────────────────── #}
+  <div class="card" x-data="{ filename: '', suggested: '' }">
+    <h3>📥 Importer une séance</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker (le tien ou celui d'un ami).</p>
+    <form method="post" action="/programme/seance/import" enctype="multipart/form-data">
+      <input type="file" name="file" accept="application/json,.json" class="field" required
+             @change="
+               filename = $event.target.files[0]?.name || '';
+               const f = $event.target.files[0];
+               if (f) {
+                 const reader = new FileReader();
+                 reader.onload = (e) => {
+                   try {
+                     const data = JSON.parse(e.target.result);
+                     if (data && data._format === 'muscutracker_seance_v1') {
+                       suggested = data.name || '';
+                       $refs.nameInput.value = suggested;
+                     }
+                   } catch(_) {}
+                 };
+                 reader.readAsText(f);
+               }
+             ">
+      <label class="field-label">Nom de la séance (modifiable)</label>
+      <input type="text" name="name" x-ref="nameInput" class="field" placeholder="Sera rempli automatiquement">
+      <label class="field-label">Si une séance du même nom existe déjà</label>
+      <select name="mode" class="field">
+        <option value="rename">↪️ Renommer (ajoute un suffixe)</option>
+        <option value="overwrite">⚠️ Écraser l'existante</option>
+      </select>
+      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">📥 Importer</button>
+    </form>
+  </div>
+
+  {# ── Changer de programme (catalogue) ────────────── #}
+  <div class="card" x-data="{ open: false }">
+    <h3>🔄 Changer de programme</h3>
+    {% if current_program_meta %}
+      <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
+    {% else %}
+      <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">personnalisé</strong>.</p>
+    {% endif %}
+    <p style="font-size:0.8rem; color:var(--text-dim);">L'historique et les records sont conservés. Seules les séances actuelles sont remplacées.</p>
+
+    <button type="button" class="btn primary" style="width:100%;" @click="open = !open"
+            x-text="open ? 'Fermer' : '🔄 Changer de programme'"></button>
+
+    <div x-show="open" x-transition style="margin-top:14px;">
+      {% for p in catalog_programs %}
+        <div class="card" style="margin:10px 0; border-color: rgba(88,204,255,0.25);">
+          <div style="display:flex; justify-content:space-between; align-items:start; gap:8px;">
+            <div>
+              <div style="font-weight:700; color:#58CCFF;">{{ p.title }}</div>
+              <div style="font-size:0.78rem; color:var(--text-dim);">{{ p.subtitle }}</div>
+            </div>
+            {% if current_program_meta and current_program_meta.id == p.id %}
+              <span style="font-size:10px; padding:2px 8px; border-radius:10px; background:rgba(0,255,127,0.15); color:#00FF7F;">ACTUEL</span>
+            {% endif %}
+          </div>
+          <p style="font-size:0.82rem; margin:8px 0;">{{ p.description }}</p>
+          <div style="font-size:0.75rem; color:var(--text-dim);">💪 {{ p.muscles|join(' · ') }}</div>
+          <div style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">📦 {{ p.nb_seances }} séances</div>
+          <form method="post" action="/programme/change-program"
+                onsubmit="return confirm('Êtes-vous sûr ? Votre programme actuel sera remplacé par {{ p.title }}.');"
+                style="margin-top:10px;">
+            <input type="hidden" name="programme_id" value="{{ p.id }}">
+            <input type="hidden" name="confirm" value="yes">
+            <button type="submit" class="btn" style="width:100%;">📜 Choisir ce programme</button>
+          </form>
+        </div>
+      {% endfor %}
+
+      <div class="card" style="margin:10px 0; border-color: rgba(255,159,10,0.4);">
+        <div style="font-weight:700; color:#FF9F0A;">🛠️ Créer mon propre programme</div>
+        <p style="font-size:0.82rem; margin:8px 0;">Vide les séances actuelles et te laisse construire ton programme à zéro depuis cet onglet.</p>
+        <form method="post" action="/programme/change-program"
+              onsubmit="return confirm('Êtes-vous sûr ? Toutes vos séances actuelles seront supprimées.');">
+          <input type="hidden" name="programme_id" value="custom">
+          <input type="hidden" name="confirm" value="yes">
+          <button type="submit" class="btn" style="width:100%;">🛠️ Repartir de zéro</button>
+        </form>
+      </div>
+    </div>
   </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
