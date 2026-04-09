@@ -68,3 +68,12 @@ def get_profile():
 
 def save_profile(fields):
     return db.save_profile(_uid(), fields)
+
+
+# ── Onboarding (Phase 4) ────────────────────────────────────────────────
+def get_onboarding():
+    return db.get_onboarding(_uid())
+
+
+def save_onboarding(fields):
+    return db.save_onboarding(_uid(), fields)

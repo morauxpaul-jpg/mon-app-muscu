@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Bienvenue · Muscu PRO{% endblock %}
+
+{% block head_extra %}
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  .onboard-wrap { max-width: 560px; margin: 0 auto; padding-bottom: 90px; }
+  .onboard-progress { display:flex; gap:6px; margin: 14px 0 20px; }
+  .onboard-progress .seg {
+    flex:1; height:6px; border-radius:3px;
+    background: rgba(255,255,255,0.08); transition: background .25s;
+  }
+  .onboard-progress .seg.on { background: linear-gradient(90deg,#58CCFF,#7C5CFF); box-shadow: 0 0 8px rgba(88,204,255,0.6); }
+  .onboard-step-title { font-size: 1.35rem; font-weight:700; margin: 0 0 4px; }
+  .onboard-step-sub { color: var(--text-dim); font-size: .9rem; margin-bottom: 18px; }
+  .opt-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .opt-grid.three { grid-template-columns: repeat(3, 1fr); }
+  .opt {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 12px 8px; text-align:center; cursor:pointer;
+    font-size: .9rem; color: var(--text); transition: all .18s;
+  }
+  .opt:hover { border-color: rgba(88,204,255,0.45); }
+  .opt.sel { border-color: #58CCFF; background: rgba(88,204,255,0.10); box-shadow: 0 0 12px rgba(88,204,255,0.25); }
+  .opt .emoji { display:block; font-size:1.6rem; margin-bottom:4px; }
+  .field-label { display:block; font-size:.8rem; color: var(--text-dim); margin: 10px 0 4px; text-transform:uppercase; letter-spacing:.05em; }
+  .field {
+    width:100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+    border-radius:10px; padding: 11px 12px; color: var(--text); font-size:1rem;
+  }
+  .field:focus { outline:none; border-color:#58CCFF; }
+  .onboard-actions { display:flex; gap:10px; margin-top: 22px; }
+  .btn-ghost {
+    flex:1; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12);
+    color: var(--text); padding:12px; border-radius:10px; cursor:pointer; font-size:.95rem;
+  }
+  .btn-next {
+    flex:2; background: linear-gradient(90deg,#58CCFF,#7C5CFF); border:none;
+    color:#0a0a1a; font-weight:700; padding:12px; border-radius:10px; cursor:pointer; font-size:1rem;
+    box-shadow: 0 0 16px rgba(124,92,255,0.4);
+  }
+  .btn-next:disabled { opacity:.4; cursor: not-allowed; box-shadow:none; }
+  .prog-card {
+    position:relative; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12);
+    border-radius:14px; padding:16px; margin-bottom:12px; cursor:pointer; transition: all .2s;
+  }
+  .prog-card:hover { border-color: rgba(88,204,255,0.5); }
+  .prog-card.sel { border-color:#58CCFF; background: rgba(88,204,255,0.08); box-shadow: 0 0 18px rgba(88,204,255,0.3); }
+  .prog-card.custom {
+    border-style: dashed; background: rgba(255,255,255,0.015);
+  }
+  .prog-card.custom.sel { border-style: solid; border-color:#FFD86B; background: rgba(255,216,107,0.08); box-shadow: 0 0 18px rgba(255,216,107,0.3); }
+  .prog-title { font-size:1.05rem; font-weight:700; margin:0 0 2px; display:flex; align-items:center; gap:8px; }
+  .prog-sub { color: var(--text-dim); font-size:.82rem; margin-bottom:8px; }
+  .prog-desc { font-size:.85rem; line-height:1.45; color: rgba(255,255,255,0.8); }
+  .badge-reco {
+    position:absolute; top:-8px; right:12px;
+    background: linear-gradient(90deg,#58CCFF,#7C5CFF); color:#0a0a1a;
+    padding:3px 10px; border-radius:12px; font-size:.68rem; font-weight:800;
+    letter-spacing:.05em; text-transform:uppercase;
+    box-shadow: 0 0 10px rgba(124,92,255,0.6);
+  }
+  .welcome-hero { text-align:center; padding: 10px 0 4px; }
+  .welcome-hero h1 { font-size:1.6rem; margin: 0 0 4px; background: linear-gradient(90deg,#58CCFF,#7C5CFF); -webkit-background-clip: text; background-clip: text; color:transparent; }
+  .welcome-hero p { color: var(--text-dim); font-size:.9rem; margin:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="onboard-wrap" x-data="onboardingFlow()" x-init="init()">
+
+  <div class="welcome-hero">
+    <h1>⚡ Bienvenue, guerrier</h1>
+    <p>Construisons ton plan d'entraînement en 1 minute.</p>
+  </div>
+
+  <div class="onboard-progress">
+    <div class="seg" :class="{ on: step >= 1 }"></div>
+    <div class="seg" :class="{ on: step >= 2 }"></div>
+    <div class="seg" :class="{ on: step >= 3 }"></div>
+    <div class="seg" :class="{ on: step >= 4 }"></div>
+  </div>
+
+  <!-- Étape 1 : identité -->
+  <div class="card" x-show="step === 1" x-cloak>
+    <h2 class="onboard-step-title">👋 Qui es-tu ?</h2>
+    <p class="onboard-step-sub">Étape 1 sur 4</p>
+
+    <label class="field-label">Prénom</label>
+    <input class="field" type="text" x-model="form.prenom" placeholder="Ton prénom" maxlength="40">
+
+    <label class="field-label">Âge</label>
+    <input class="field" type="number" x-model.number="form.age" min="10" max="99" placeholder="25">
+
+    <label class="field-label">Sexe</label>
+    <div class="opt-grid three">
+      <div class="opt" :class="{ sel: form.sexe === 'homme' }" @click="form.sexe = 'homme'"><span class="emoji">♂️</span>Homme</div>
+      <div class="opt" :class="{ sel: form.sexe === 'femme' }" @click="form.sexe = 'femme'"><span class="emoji">♀️</span>Femme</div>
+      <div class="opt" :class="{ sel: form.sexe === 'autre' }" @click="form.sexe = 'autre'"><span class="emoji">⚧️</span>Autre</div>
+    </div>
+
+    <div class="onboard-actions">
+      <button class="btn-next" :disabled="!canNext1()" @click="step = 2">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- Étape 2 : niveau + fréquence -->
+  <div class="card" x-show="step === 2" x-cloak>
+    <h2 class="onboard-step-title">💪 Ton niveau</h2>
+    <p class="onboard-step-sub">Étape 2 sur 4</p>
+
+    <label class="field-label">Expérience</label>
+    <div class="opt-grid three">
+      <div class="opt" :class="{ sel: form.niveau === 'débutant' }" @click="form.niveau = 'débutant'"><span class="emoji">🌱</span>Débutant</div>
+      <div class="opt" :class="{ sel: form.niveau === 'intermédiaire' }" @click="form.niveau = 'intermédiaire'"><span class="emoji">🔥</span>Intermédiaire</div>
+      <div class="opt" :class="{ sel: form.niveau === 'avancé' }" @click="form.niveau = 'avancé'"><span class="emoji">⚡</span>Avancé</div>
+    </div>
+
+    <label class="field-label">Fréquence (séances / semaine)</label>
+    <div class="opt-grid" style="grid-template-columns: repeat(5, 1fr);">
+      <template x-for="n in [2,3,4,5,6]" :key="n">
+        <div class="opt" :class="{ sel: form.frequence === n }" @click="form.frequence = n">
+          <span class="emoji" x-text="n"></span>j
+        </div>
+      </template>
+    </div>
+
+    <div class="onboard-actions">
+      <button class="btn-ghost" @click="step = 1">← Retour</button>
+      <button class="btn-next" :disabled="!canNext2()" @click="step = 3">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- Étape 3 : objectif + équipement -->
+  <div class="card" x-show="step === 3" x-cloak>
+    <h2 class="onboard-step-title">🎯 Ton objectif</h2>
+    <p class="onboard-step-sub">Étape 3 sur 4</p>
+
+    <label class="field-label">Objectif principal</label>
+    <div class="opt-grid">
+      <div class="opt" :class="{ sel: form.objectif === 'prise de masse' }" @click="form.objectif = 'prise de masse'"><span class="emoji">📈</span>Prise de masse</div>
+      <div class="opt" :class="{ sel: form.objectif === 'force' }" @click="form.objectif = 'force'"><span class="emoji">🏋️</span>Force</div>
+      <div class="opt" :class="{ sel: form.objectif === 'sèche' }" @click="form.objectif = 'sèche'"><span class="emoji">🔪</span>Sèche</div>
+      <div class="opt" :class="{ sel: form.objectif === 'forme' }" @click="form.objectif = 'forme'"><span class="emoji">💫</span>Forme générale</div>
+    </div>
+
+    <label class="field-label">Équipement disponible</label>
+    <div class="opt-grid">
+      <div class="opt" :class="{ sel: form.equipement === 'salle' }" @click="form.equipement = 'salle'"><span class="emoji">🏟️</span>Salle complète</div>
+      <div class="opt" :class="{ sel: form.equipement === 'home gym' }" @click="form.equipement = 'home gym'"><span class="emoji">🏠</span>Home gym</div>
+      <div class="opt" :class="{ sel: form.equipement === 'maison' }" @click="form.equipement = 'maison'"><span class="emoji">🛋️</span>Peu d'équipement</div>
+      <div class="opt" :class="{ sel: form.equipement === 'aucun' }" @click="form.equipement = 'aucun'"><span class="emoji">✊</span>Poids du corps</div>
+    </div>
+
+    <div class="onboard-actions">
+      <button class="btn-ghost" @click="step = 2">← Retour</button>
+      <button class="btn-next" :disabled="!canNext3()" @click="goStep4()">Suivant →</button>
+    </div>
+  </div>
+
+  <!-- Étape 4 : choix du programme -->
+  <div x-show="step === 4" x-cloak>
+    <div class="card">
+      <h2 class="onboard-step-title">📜 Ton programme</h2>
+      <p class="onboard-step-sub">Étape 4 sur 4 · Voici ce qu'on te recommande</p>
+    </div>
+
+    <template x-for="p in orderedPrograms" :key="p.id">
+      <div class="prog-card"
+           :class="{ sel: form.programme_id === p.id }"
+           @click="form.programme_id = p.id">
+        <span class="badge-reco" x-show="recommended[0] === p.id">⭐ Recommandé</span>
+        <h3 class="prog-title" x-text="p.title"></h3>
+        <div class="prog-sub" x-text="p.subtitle"></div>
+        <div class="prog-desc" x-text="p.description"></div>
+      </div>
+    </template>
+
+    <div class="prog-card custom"
+         :class="{ sel: form.programme_id === 'custom' }"
+         @click="form.programme_id = 'custom'">
+      <h3 class="prog-title">🛠️ Créer mon propre programme</h3>
+      <div class="prog-sub">Je sais ce que je veux faire</div>
+      <div class="prog-desc">Tu seras amené directement dans l'éditeur de programme après l'onboarding.</div>
+    </div>
+
+    <form method="post" action="{{ url_for('onboarding.submit') }}">
+      <input type="hidden" name="prenom"      :value="form.prenom">
+      <input type="hidden" name="age"         :value="form.age">
+      <input type="hidden" name="sexe"        :value="form.sexe">
+      <input type="hidden" name="niveau"      :value="form.niveau">
+      <input type="hidden" name="frequence"   :value="form.frequence">
+      <input type="hidden" name="objectif"    :value="form.objectif">
+      <input type="hidden" name="equipement"  :value="form.equipement">
+      <input type="hidden" name="programme_id" :value="form.programme_id">
+      <div class="onboard-actions">
+        <button type="button" class="btn-ghost" @click="step = 3">← Retour</button>
+        <button type="submit" class="btn-next" :disabled="!form.programme_id">C'est parti ⚡</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+const CATALOG_PROGRAMS = {{ catalog_programs | tojson }};
+const EXISTING = {{ existing | tojson }};
+
+function onboardingFlow() {
+  return {
+    step: 1,
+    form: {
+      prenom: EXISTING.prenom || "",
+      age: EXISTING.age || null,
+      sexe: EXISTING.sexe || "",
+      niveau: EXISTING.niveau || "",
+      frequence: EXISTING.frequence || 3,
+      objectif: EXISTING.objectif || "",
+      equipement: EXISTING.equipement || "",
+      programme_id: "",
+    },
+    recommended: [],
+    orderedPrograms: CATALOG_PROGRAMS,
+
+    init() {},
+    canNext1() { return this.form.prenom.trim().length >= 2 && this.form.age >= 10 && this.form.sexe; },
+    canNext2() { return this.form.niveau && this.form.frequence >= 2; },
+    canNext3() { return this.form.objectif && this.form.equipement; },
+
+    async goStep4() {
+      try {
+        const resp = await fetch("{{ url_for('onboarding.recommend') }}", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            niveau: this.form.niveau,
+            frequence: this.form.frequence,
+            equipement: this.form.equipement,
+          }),
+        });
+        const data = await resp.json();
+        this.recommended = data.recommended || [];
+        // Réordonne : recommandé en premier
+        const ids = new Set(this.recommended);
+        const reco = CATALOG_PROGRAMS.filter(p => ids.has(p.id))
+          .sort((a, b) => this.recommended.indexOf(a.id) - this.recommended.indexOf(b.id));
+        const rest = CATALOG_PROGRAMS.filter(p => !ids.has(p.id));
+        this.orderedPrograms = [...reco, ...rest];
+        // Pré-sélection = premier reco
+        if (!this.form.programme_id && this.recommended[0]) {
+          this.form.programme_id = this.recommended[0];
+        }
+      } catch (e) {
+        console.warn("recommend failed", e);
+      }
+      this.step = 4;
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -5,7 +5,7 @@ Logique portée depuis app.py (lignes 1499-1865).
 from datetime import timedelta
 from flask import Blueprint, render_template
 
-from core.data import get_hist, get_prog
+from core.data import get_hist, get_prog, get_profile
 from core.dates import now_paris, today_paris, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 
@@ -73,8 +73,10 @@ def index():
     try:
         hist = get_hist()
         prog = get_prog()
+        profile = get_profile() or {}
     except Exception as e:
         return render_template("accueil.html", active="accueil", error=str(e))
+    prenom = (profile.get("prenom") or "").strip()
 
     hist, prog_seances = _normalize_hist(hist, prog)
     planning_map = prog.get("_planning", {})
@@ -138,4 +140,5 @@ def index():
         exos_count=exos_count,
         sets_count=sets_count,
         reps_count=reps_count,
+        prenom=prenom,
     )

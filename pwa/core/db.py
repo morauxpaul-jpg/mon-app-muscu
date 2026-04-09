@@ -219,5 +219,34 @@ def get_profile(user_id: str) -> dict:
 
 
 def save_profile(user_id: str, fields: dict):
+    """Upsert sur public.profiles (id = user_id). Phase 4 : doit pouvoir
+    créer la row si elle n'existe pas encore (nouveau user qui passe
+    l'onboarding pour la première fois)."""
     client = get_client()
-    client.table("profiles").update(fields).eq("id", user_id).execute()
+    payload = {"id": user_id, **fields}
+    client.table("profiles").upsert(payload).execute()
+
+
+# ────────────────────────────────────────────────────────────
+# Onboarding (Phase 4)
+# ────────────────────────────────────────────────────────────
+
+def get_onboarding(user_id: str) -> dict:
+    """Retourne la row onboarding de l'user, ou {} si jamais complétée."""
+    client = get_client()
+    resp = (
+        client.table("onboarding")
+        .select("*")
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    return (resp.data if resp else None) or {}
+
+
+def save_onboarding(user_id: str, fields: dict):
+    """Upsert sur public.onboarding. Les champs attendus :
+    prenom, age, sexe, niveau, frequence, objectif, equipement."""
+    client = get_client()
+    payload = {"user_id": user_id, **fields}
+    client.table("onboarding").upsert(payload).execute()

@@ -15,6 +15,9 @@
   {% if request.args.get('reset') == 'total' %}
     <div class="card" style="border-color: var(--success);">✅ Tout a été remis à zéro.</div>
   {% endif %}
+  {% if request.args.get('program_changed') %}
+    <div class="card" style="border-color: var(--success);">✅ Nouveau programme chargé. Rendez-vous dans l'onglet Séance !</div>
+  {% endif %}
 
   <div class="card">
     <h3>📊 État</h3>
@@ -46,6 +49,40 @@
       <label class="field-label">Nombre de semaines précédentes affichées en séance</label>
       <input type="number" name="show_previous_weeks" min="0" max="10" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">💾 Sauvegarder</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>📜 Changer de programme</h3>
+    {% if current_program_meta %}
+      <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
+    {% else %}
+      <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : personnalisé.</p>
+    {% endif %}
+    <p style="font-size:0.8rem; color:var(--text-dim);">Changer de programme remplace les séances mais conserve ton historique et tes records.</p>
+
+    <form method="post" action="/gestion/change-program" onsubmit="return confirm('Remplacer ton programme actuel par celui-ci ?');">
+      <label class="field-label">Choisir un nouveau programme</label>
+      <select name="programme_id" class="field" required>
+        <option value="">— Sélectionner —</option>
+        {% for p in catalog_programs %}
+          <option value="{{ p.id }}">{{ p.title }} — {{ p.subtitle }}</option>
+        {% endfor %}
+        <option value="custom">🛠️ Vider et créer le mien</option>
+      </select>
+      <label class="muscle-check" style="display:flex; margin:10px 0;">
+        <input type="checkbox" name="confirm" value="yes" required>
+        <span>Je confirme remplacer mon programme actuel</span>
+      </label>
+      <button type="submit" class="btn primary" style="width:100%;">📜 Appliquer le nouveau programme</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>🔄 Refaire l'onboarding</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil et, si tu veux, changer de programme.</p>
+    <form method="post" action="/gestion/redo-onboarding">
+      <button type="submit" class="btn" style="width:100%;">🔄 Refaire l'onboarding</button>
     </form>
   </div>
 

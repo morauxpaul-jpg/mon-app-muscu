@@ -17,6 +17,9 @@ from routes.programme import bp as programme_bp
 from routes.progres import bp as progres_bp
 from routes.gestion import bp as gestion_bp
 from routes.auth import bp as auth_bp
+from routes.onboarding import bp as onboarding_bp
+
+from core import db as core_db
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -36,6 +39,7 @@ app.register_blueprint(seance_bp)
 app.register_blueprint(programme_bp)
 app.register_blueprint(progres_bp)
 app.register_blueprint(gestion_bp)
+app.register_blueprint(onboarding_bp)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -56,6 +60,20 @@ def _require_login():
         return redirect(url_for("auth.login"))
     g.user_id = user_id
     g.email = session.get("email", "")
+
+    # Phase 4 : gate onboarding. Les routes /onboarding/* et /logout sont
+    # exemptées pour éviter la boucle de redirection.
+    if path.startswith("/onboarding") or path == "/logout":
+        return None
+    # Cache le flag en session pour éviter un hit DB à chaque requête
+    if not session.get("onboarded"):
+        try:
+            onboarding = core_db.get_onboarding(user_id)
+        except Exception:
+            onboarding = {}
+        if not onboarding:
+            return redirect(url_for("onboarding.index"))
+        session["onboarded"] = True
     return None
 
 
