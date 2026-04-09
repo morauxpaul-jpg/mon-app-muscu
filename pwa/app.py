@@ -72,6 +72,22 @@ def _require_login():
         except Exception:
             onboarding = {}
         if not onboarding:
+            # Fix bug Phase 4 : un user pré-Phase 4 (qui a déjà un programme
+            # ou de l'historique) ne doit JAMAIS voir l'onboarding — sinon
+            # il risque d'écraser ses données. On crée une row minimale et
+            # on le laisse passer.
+            try:
+                has_prog = bool(core_db.get_prog(user_id))
+                has_hist = bool(core_db.get_hist(user_id))
+            except Exception:
+                has_prog = has_hist = False
+            if has_prog or has_hist:
+                try:
+                    core_db.save_onboarding(user_id, {"prenom": ""})
+                except Exception:
+                    pass
+                session["onboarded"] = True
+                return None
             return redirect(url_for("onboarding.index"))
         session["onboarded"] = True
     return None

@@ -16,7 +16,7 @@ exemptées de cette gate pour éviter la boucle de redirection.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, g, session
 
-from core.data import save_onboarding, save_profile, save_prog, get_onboarding
+from core.data import save_onboarding, save_profile, save_prog, get_onboarding, get_prog
 from core import catalog
 
 bp = Blueprint("onboarding", __name__, url_prefix="/onboarding")
@@ -82,9 +82,15 @@ def submit():
     # 2. Si l'user a choisi un programme du catalogue, on le clone.
     #    S'il a choisi "custom" (créer mon propre) → on ne touche pas à programs,
     #    il ira sur /programme pour construire le sien.
+    # Fix bug Phase 4 : ne JAMAIS écraser un programme existant. Si l'user
+    # avait déjà un programme avant Phase 4 (gate déclenchée a posteriori),
+    # on garde son programme actuel intact.
     if programme_id and programme_id != "custom" and catalog.get_program(programme_id):
-        prog = catalog.build_program(programme_id, frequence)
-        save_prog(prog)
+        existing = get_prog() or {}
+        has_existing = any(k for k in existing if not k.startswith("_"))
+        if not has_existing:
+            prog = catalog.build_program(programme_id, frequence)
+            save_prog(prog)
 
     session["onboarded"] = True
     return redirect(url_for("accueil.index"))
