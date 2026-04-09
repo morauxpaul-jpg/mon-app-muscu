@@ -61,7 +61,6 @@
             <input type="hidden" name="name" value="{{ sname }}">
             <button type="submit" class="btn">🗑️ Supprimer</button>
           </form>
-          <a href="/programme/seance/export/{{ sname }}" class="btn">📤 Exporter</a>
           {% if sname in origin_seance_names %}
             <form method="post" action="/programme/seance/reset"
                   onsubmit="return confirm('Réinitialiser {{ sname }} à sa version d\'origine ? Tes modifications sur cette séance seront perdues.');">
@@ -149,37 +148,40 @@
     </form>
   </div>
 
-  {# ── Importer une séance ─────────────────────────── #}
-  <div class="card" x-data="{ filename: '', suggested: '' }">
-    <h3>📥 Importer une séance</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker (le tien ou celui d'un ami).</p>
-    <form method="post" action="/programme/seance/import" enctype="multipart/form-data">
+  {# ── Exporter / Importer mon programme ──────────── #}
+  <div class="card">
+    <h3>📤 Exporter mon programme</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Télécharge l'intégralité de ton programme (toutes les séances + planning) dans un fichier <code>.json</code>. Tu peux le partager à un ami pour qu'il importe exactement le tien.</p>
+    <a href="/programme/export" class="btn primary" style="width:100%; display:block; text-align:center;">📤 Exporter mon programme</a>
+  </div>
+
+  <div class="card" x-data="{ detected: '' }">
+    <h3>📥 Importer un programme</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. ⚠️ Cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
+    <form method="post" action="/programme/import" enctype="multipart/form-data"
+          onsubmit="return confirm('Êtes-vous sûr ? Votre programme actuel sera remplacé par celui du fichier.');">
       <input type="file" name="file" accept="application/json,.json" class="field" required
              @change="
-               filename = $event.target.files[0]?.name || '';
                const f = $event.target.files[0];
                if (f) {
                  const reader = new FileReader();
                  reader.onload = (e) => {
                    try {
                      const data = JSON.parse(e.target.result);
-                     if (data && data._format === 'muscutracker_seance_v1') {
-                       suggested = data.name || '';
-                       $refs.nameInput.value = suggested;
+                     if (data && data._format === 'muscutracker_program_v1') {
+                       const nb = Object.keys(data.seances || {}).length;
+                       detected = '✅ Programme « ' + (data.name || '?') + ' » — ' + nb + ' séance(s) détectée(s).';
+                     } else {
+                       detected = '❌ Format non reconnu.';
                      }
-                   } catch(_) {}
+                   } catch(_) { detected = '❌ Fichier illisible.'; }
                  };
                  reader.readAsText(f);
                }
              ">
-      <label class="field-label">Nom de la séance (modifiable)</label>
-      <input type="text" name="name" x-ref="nameInput" class="field" placeholder="Sera rempli automatiquement">
-      <label class="field-label">Si une séance du même nom existe déjà</label>
-      <select name="mode" class="field">
-        <option value="rename">↪️ Renommer (ajoute un suffixe)</option>
-        <option value="overwrite">⚠️ Écraser l'existante</option>
-      </select>
-      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">📥 Importer</button>
+      <div x-show="detected" x-text="detected" style="font-size:0.82rem; margin:6px 0; color:#58CCFF;"></div>
+      <input type="hidden" name="confirm" value="yes">
+      <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">📥 Importer et remplacer</button>
     </form>
   </div>
 

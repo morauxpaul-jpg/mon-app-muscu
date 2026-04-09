@@ -21,7 +21,7 @@ bp = Blueprint("programme", __name__)
 MUSCLE_LIST = ["Pecs", "Dos", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
                "Quadriceps", "Ischio-jambiers", "Fessiers", "Mollets", "Autre"]
 
-EXPORT_FORMAT = "muscutracker_seance_v1"
+EXPORT_FORMAT = "muscutracker_program_v1"
 
 
 def _ensure_planning(prog):
@@ -49,17 +49,22 @@ def _origin_seance_names(prog):
 
 
 def _safe_filename(name: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_\-]+", "_", name).strip("_") or "Seance"
+    cleaned = re.sub(r"[^A-Za-z0-9_\-]+", "_", name).strip("_") or "MonProgramme"
     return f"{cleaned}_MuscuTracker.json"
 
 
-def _unique_seance_name(prog, base: str) -> str:
-    if base not in prog:
-        return base
-    i = 2
-    while f"{base} ({i})" in prog:
-        i += 1
-    return f"{base} ({i})"
+def _program_display_name(prog) -> str:
+    """Nom du programme pour l'export. Prend _name si défini, sinon le titre
+    du catalogue d'origine, sinon 'MonProgramme'."""
+    name = (prog.get("_name") or "").strip()
+    if name:
+        return name
+    origin = prog.get("_origin")
+    if origin:
+        src = catalog.get_program(origin)
+        if src:
+            return src["title"]
+    return "MonProgramme"
 
 
 @bp.route("/programme")
@@ -165,32 +170,36 @@ def reset_seance():
     return redirect(url_for("programme.programme") + f"#s-{name}")
 
 
-# ── Export / Import de séances ────────────────────────────────────
-@bp.route("/programme/seance/export/<name>", methods=["GET"])
-def export_seance(name):
+# ── Export / Import du PROGRAMME entier ───────────────────────────
+@bp.route("/programme/export", methods=["GET"])
+def export_program():
     prog = get_prog()
-    if name not in prog or name.startswith("_"):
-        return redirect(url_for("programme.programme"))
-    payload = {
-        "_format": EXPORT_FORMAT,
-        "name": name,
-        "exos": [
+    seances = {}
+    for sname, exos in _seance_items(prog):
+        seances[sname] = [
             {"name": e.get("name", ""), "sets": int(e.get("sets") or 3),
              "muscle": e.get("muscle") or "Autre"}
-            for e in prog[name]
-        ],
+            for e in exos
+        ]
+    payload = {
+        "_format": EXPORT_FORMAT,
+        "name": _program_display_name(prog),
+        "seances": seances,
+        "_planning": prog.get("_planning", {}),
     }
     buf = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
     return send_file(
         buf,
         mimetype="application/json",
         as_attachment=True,
-        download_name=_safe_filename(name),
+        download_name=_safe_filename(payload["name"]),
     )
 
 
-@bp.route("/programme/seance/import", methods=["POST"])
-def import_seance():
+@bp.route("/programme/import", methods=["POST"])
+def import_program():
+    if request.form.get("confirm") != "yes":
+        return redirect(url_for("programme.programme"))
     file = request.files.get("file")
     if not file or not file.filename:
         return redirect(url_for("programme.programme"))
@@ -202,44 +211,52 @@ def import_seance():
     if not isinstance(data, dict) or data.get("_format") != EXPORT_FORMAT:
         return redirect(url_for("programme.programme") + "?import_err=format")
 
-    raw_exos = data.get("exos") or []
-    if not isinstance(raw_exos, list):
+    raw_seances = data.get("seances") or {}
+    if not isinstance(raw_seances, dict):
         return redirect(url_for("programme.programme") + "?import_err=format")
 
-    # Nom : champ form prioritaire (modifiable côté UI), sinon nom du fichier
-    name = (request.form.get("name") or data.get("name") or "Séance importée").strip()
-    if not name:
-        name = "Séance importée"
-
-    mode = (request.form.get("mode") or "").strip()  # "overwrite" | "rename" | ""
-    prog = get_prog()
-
-    if name in prog and not name.startswith("_"):
-        if mode == "overwrite":
-            pass
-        elif mode == "rename":
-            name = _unique_seance_name(prog, name)
-        else:
-            # Conflit non résolu — on rename par défaut + flag URL pour info
-            name = _unique_seance_name(prog, name)
-
-    cleaned = []
-    for e in raw_exos:
-        if not isinstance(e, dict):
+    # Construction du nouveau programme : remplace toutes les séances mais
+    # préserve _settings / _archive / _legacy_volume / _extras (données de
+    # l'user qui n'appartiennent pas au programme partagé).
+    old = get_prog()
+    new_prog: dict = {}
+    for sname, exos in raw_seances.items():
+        if not isinstance(sname, str) or sname.startswith("_") or not isinstance(exos, list):
             continue
-        ex_name = (e.get("name") or "").strip()
-        if not ex_name:
-            continue
-        try:
-            sets = int(e.get("sets") or 3)
-        except (TypeError, ValueError):
-            sets = 3
-        muscle = (e.get("muscle") or "Autre").strip() or "Autre"
-        cleaned.append({"name": ex_name, "sets": sets, "muscle": muscle})
+        cleaned = []
+        for e in exos:
+            if not isinstance(e, dict):
+                continue
+            ex_name = (e.get("name") or "").strip()
+            if not ex_name:
+                continue
+            try:
+                sets = int(e.get("sets") or 3)
+            except (TypeError, ValueError):
+                sets = 3
+            muscle = (e.get("muscle") or "Autre").strip() or "Autre"
+            cleaned.append({"name": ex_name, "sets": sets, "muscle": muscle})
+        new_prog[sname] = cleaned
 
-    prog[name] = cleaned
-    save_prog(prog)
-    return redirect(url_for("programme.programme") + f"#s-{name}")
+    # Planning : depuis le fichier si présent, sinon vide
+    raw_planning = data.get("_planning") or {}
+    new_prog["_planning"] = {
+        d: (raw_planning.get(d, "") if isinstance(raw_planning, dict) else "")
+        for d in DAYS_FR
+    }
+    # Nom du programme importé (ne casse rien : _name est libre)
+    if data.get("name"):
+        new_prog["_name"] = str(data["name"])[:80]
+    # Programme importé = plus aucune origine catalogue valide
+    new_prog.pop("_origin", None)
+
+    # Préserve les données utilisateur indépendantes du programme
+    for key in ("_settings", "_archive", "_legacy_volume", "_extras"):
+        if key in old:
+            new_prog[key] = old[key]
+
+    save_prog(new_prog)
+    return redirect(url_for("programme.programme") + "?program_changed=1")
 
 
 # ── Changer de programme (catalogue) ──────────────────────────────
