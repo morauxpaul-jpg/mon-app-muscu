@@ -17,8 +17,13 @@ from typing import Optional
 
 from supabase import create_client, Client
 
-_SUPABASE_URL = os.getenv("SUPABASE_URL")
-_SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+def _env(name: str) -> str:
+    v = os.getenv(name, "") or ""
+    return v.strip().strip('"').strip("'").lstrip("=").strip()
+
+
+_SUPABASE_URL = _env("SUPABASE_URL")
+_SUPABASE_SERVICE_KEY = _env("SUPABASE_SERVICE_ROLE_KEY")
 
 _client: Optional[Client] = None
 
