@@ -41,7 +41,7 @@ app.register_blueprint(gestion_bp)
 # ────────────────────────────────────────────────────────────────
 # Auth gate — toutes les routes sauf celles listées nécessitent user_id
 # ────────────────────────────────────────────────────────────────
-_PUBLIC_PATHS = {"/login", "/auth/bridge", "/auth/session", "/manifest.json", "/service-worker.js"}
+_PUBLIC_PATHS = {"/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js"}
 
 
 @app.before_request
