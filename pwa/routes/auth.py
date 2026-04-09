@@ -28,7 +28,7 @@ def _env(name: str) -> str:
     """Lit une env var et nettoie espaces + quotes parasites (Railway copie
     parfois des valeurs entourées de guillemets)."""
     v = os.getenv(name, "") or ""
-    v = v.strip().strip('"').strip("'")
+    v = v.strip().strip('"').strip("'").lstrip("=").strip()
     return v
 
 
