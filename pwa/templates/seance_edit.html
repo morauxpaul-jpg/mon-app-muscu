@@ -16,14 +16,28 @@
     <div class="seance-title">{{ seance_name }}</div>
   </div>
 
-  <form method="post" action="/seance/mark-missed" style="margin-bottom: 8px;">
+  {# ── Barre de progression (Feature 5) ─────────────────────── #}
+  {% if exos %}
+  <div class="seance-progress" id="seance-progress">
+    <div class="seance-progress-top">
+      <span class="seance-progress-label">EXERCICE <b id="prog-done">{{ exos_done|default(0) }}</b> / {{ exos_total|default(exos|length) }}</span>
+      <span class="seance-progress-vol" id="prog-vol">⚡ {{ vol_curr }} kg</span>
+    </div>
+    <div class="xp-bar-bg">
+      <div class="xp-bar-fill" id="prog-bar" style="width: {{ ((exos_done|default(0)) / (exos_total|default(exos|length)) * 100) if exos else 0 }}%;"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/seance/mark-missed" style="margin-bottom: 8px;"
+        onsubmit="return showModal(event, 'Marquer comme manquée ?', 'Ta séance sera marquée comme manquée pour cette date.', false);">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <button type="submit" class="btn">🚩 Séance Manquée</button>
   </form>
 
   <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;"
-        onsubmit="return confirm('Effacer toute la séance {{ seance_name }} semaine {{ s_act }} ?');">
+        onsubmit="return showModal(event, 'Recommencer la séance ?', 'Toutes les données saisies pour {{ seance_name }} semaine {{ s_act }} seront perdues. Continuer ?', true);">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="semaine" value="{{ s_act }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
@@ -70,11 +84,17 @@
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
             {% if exo.completed %} · <span style="color: var(--success);">✅</span>{% endif %}
           </div>
+          {# ── Historique inline (Feature 2) ── #}
+          {% if exo.last_summary %}
+            <div class="exo-last-session">📋 Dernière fois : {{ exo.last_summary }}</div>
+          {% elif not exo.completed %}
+            <div class="exo-last-session">✨ Première fois !</div>
+          {% endif %}
         </div>
         <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
       </div>
 
-      <div class="exo-body" x-show="open" x-transition>
+      <div class="exo-body" x-show="open" x-transition.duration.200ms>
 
         {% if exo.record %}
           <div class="record-line">
@@ -125,7 +145,7 @@
             <template x-for="(s, i) in sets" :key="i">
               <tr>
                 <td x-text="i + 1"></td>
-                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input"></td>
+                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" @change="onSetChange(i)"></td>
                 {% if not exo.is_bw %}
                 <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input"></td>
                 {% endif %}
@@ -138,7 +158,10 @@
           </tbody>
         </table>
 
-        <button type="button" class="btn" style="width:100%; margin-top:6px;" @click="addSet()">➕ +1 série</button>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button type="button" class="btn" style="flex:1;" @click="addSet()">➕ +1 série</button>
+          <button type="button" class="btn" style="flex:0 0 auto; font-size:0.8rem;" @click="clearWeights()" title="Effacer les poids pré-remplis">🗑️ Poids</button>
+        </div>
 
         <div class="exo-actions">
           <form method="post" action="/seance/save-exo"
@@ -170,7 +193,7 @@
         </div>
 
         <form method="post" action="/seance/reset-exo" style="margin-top:6px;"
-              onsubmit="return confirm('Effacer les données de {{ exo.base }} ?');">
+              onsubmit="return showModal(event, 'Recommencer cet exercice ?', 'Les données de {{ exo.base }} seront effacées.', true);">
           <input type="hidden" name="mode" value="{{ mode }}">
           <input type="hidden" name="name" value="{{ seance_name }}">
           <input type="hidden" name="date" value="{{ date_iso }}">
@@ -201,7 +224,7 @@
       <span>➕ Ajouter un exercice</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
-    <div x-show="open" x-transition>
+    <div x-show="open" x-transition.duration.200ms>
     <div style="display:flex; gap:6px; margin-bottom:10px;">
       <button type="button" class="btn" :class="{ primary: tab==='prog' }" @click="tab='prog'">Depuis mes programmes</button>
       <button type="button" class="btn" :class="{ primary: tab==='new' }" @click="tab='new'">Nouvel exercice</button>
@@ -252,6 +275,38 @@
     </div>
   </div>
 
+  {# ── Écran de félicitations si tous complétés (Feature 5) ── #}
+  {% set all_done = exos and exos|selectattr('completed')|list|length == exos|length %}
+  {% if all_done %}
+    <div class="card finish-celebration">
+      <div class="check-icon">✅</div>
+      <div class="finish-title">Séance terminée !</div>
+      <div class="finish-stats">
+        <div class="finish-stat">
+          <div class="finish-stat-value">{{ exos|length }}</div>
+          <div class="finish-stat-label">EXERCICES</div>
+        </div>
+        <div class="finish-stat">
+          <div class="finish-stat-value">{{ vol_curr }}</div>
+          <div class="finish-stat-label">KG VOLUME</div>
+        </div>
+        {% if vol_prev > 0 %}
+        <div class="finish-stat">
+          {% set vol_diff_pct = ((vol_curr - vol_prev) / vol_prev * 100)|round(0)|int %}
+          <div class="finish-stat-value {% if vol_diff_pct >= 0 %}vol-diff-pos{% else %}vol-diff-neg{% endif %}">
+            {% if vol_diff_pct >= 0 %}+{% endif %}{{ vol_diff_pct }}%
+          </div>
+          <div class="finish-stat-label">VS SEMAINE PRÉC.</div>
+        </div>
+        {% endif %}
+        <div class="finish-stat">
+          <div class="finish-stat-value">{{ s_act }}</div>
+          <div class="finish-stat-label">SEMAINE</div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
   <form method="post" action="/seance/finish">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
@@ -259,8 +314,151 @@
     <button type="submit" class="btn primary" style="width:100%;">✅ Terminer la séance</button>
   </form>
 
+  {# ── Chrono de repos (Feature 1) ─────────────────────────── #}
+  <div id="rest-timer" class="rest-timer-overlay" style="display:none;">
+    <div class="rest-timer-label">REPOS</div>
+    <div class="rest-timer-circle">
+      <svg viewBox="0 0 180 180">
+        <circle class="track" cx="90" cy="90" r="82"></circle>
+        <circle class="progress" id="timer-progress" cx="90" cy="90" r="82"
+                stroke-dasharray="515.22" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="rest-timer-time" id="timer-display">1:30</div>
+    </div>
+    <div id="timer-done-msg" class="rest-timer-done" style="display:none;">C'est reparti !</div>
+    <div class="rest-timer-presets">
+      <button class="btn" onclick="setTimerDuration(60)">1:00</button>
+      <button class="btn" onclick="setTimerDuration(90)">1:30</button>
+      <button class="btn" onclick="setTimerDuration(120)">2:00</button>
+      <button class="btn" onclick="setTimerDuration(180)">3:00</button>
+    </div>
+    <button class="btn primary" onclick="skipTimer()" style="margin-top:8px;">⏭️ Passer</button>
+  </div>
+
+  {# ── Modal de confirmation (Feature 4) ──────────────────── #}
+  <div id="confirm-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" id="modal-box">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
+        <button class="btn primary" id="modal-confirm" onclick="confirmModal()">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-  // Loading state: disable buttons on form submit to prevent double-click
+  // ── Modal system (Feature 4) ──────────────────────────────────
+  var _pendingForm = null;
+  function showModal(event, title, body, isDanger) {
+    event.preventDefault();
+    _pendingForm = event.target;
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').textContent = body;
+    var box = document.getElementById('modal-box');
+    var btn = document.getElementById('modal-confirm');
+    if (isDanger) {
+      box.classList.add('danger');
+      btn.className = 'btn btn-danger';
+      btn.textContent = 'Confirmer';
+    } else {
+      box.classList.remove('danger');
+      btn.className = 'btn primary';
+      btn.textContent = 'Confirmer';
+    }
+    document.getElementById('confirm-modal').style.display = 'flex';
+    return false;
+  }
+  function closeModal() {
+    document.getElementById('confirm-modal').style.display = 'none';
+    _pendingForm = null;
+  }
+  function confirmModal() {
+    document.getElementById('confirm-modal').style.display = 'none';
+    if (_pendingForm) {
+      _pendingForm.onsubmit = null;
+      _pendingForm.submit();
+    }
+  }
+
+  // ── Rest Timer (Feature 1) ────────────────────────────────────
+  var _timerInterval = null;
+  var _timerRemaining = 0;
+  var _timerTotal = 90;
+  var CIRCUM = 2 * Math.PI * 82; // ~515.22
+
+  function startTimer(seconds) {
+    _timerTotal = seconds || _timerTotal;
+    _timerRemaining = _timerTotal;
+    updateTimerDisplay();
+    document.getElementById('rest-timer').style.display = 'flex';
+    document.getElementById('timer-done-msg').style.display = 'none';
+    highlightPreset(_timerTotal);
+    clearInterval(_timerInterval);
+    _timerInterval = setInterval(function() {
+      _timerRemaining--;
+      updateTimerDisplay();
+      if (_timerRemaining <= 0) {
+        clearInterval(_timerInterval);
+        timerFinished();
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    var m = Math.floor(Math.max(0, _timerRemaining) / 60);
+    var s = Math.max(0, _timerRemaining) % 60;
+    document.getElementById('timer-display').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    var offset = CIRCUM * (1 - _timerRemaining / _timerTotal);
+    document.getElementById('timer-progress').style.strokeDashoffset = offset;
+  }
+
+  function timerFinished() {
+    document.getElementById('timer-done-msg').style.display = 'block';
+    // Vibration si disponible
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    // Auto-ferme après 3s
+    setTimeout(function() {
+      if (document.getElementById('rest-timer').style.display !== 'none') {
+        skipTimer();
+      }
+    }, 3000);
+  }
+
+  function skipTimer() {
+    clearInterval(_timerInterval);
+    document.getElementById('rest-timer').style.display = 'none';
+  }
+
+  function setTimerDuration(sec) {
+    localStorage.setItem('restTimerDefault', sec);
+    _timerTotal = sec;
+    _timerRemaining = sec;
+    updateTimerDisplay();
+    highlightPreset(sec);
+    clearInterval(_timerInterval);
+    _timerInterval = setInterval(function() {
+      _timerRemaining--;
+      updateTimerDisplay();
+      if (_timerRemaining <= 0) {
+        clearInterval(_timerInterval);
+        timerFinished();
+      }
+    }, 1000);
+  }
+
+  function highlightPreset(sec) {
+    var btns = document.querySelectorAll('.rest-timer-presets button');
+    btns.forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.textContent.split(':')[0]) * 60 + parseInt(b.textContent.split(':')[1]) === sec);
+    });
+  }
+
+  // Restore last used timer duration from localStorage
+  var savedTimer = parseInt(localStorage.getItem('restTimerDefault'));
+  if (savedTimer) _timerTotal = savedTimer;
+
+  // ── Loading state: disable buttons on form submit ─────────────
   document.addEventListener('submit', function(e) {
     var form = e.target;
     var btn = form.querySelector('button[type="submit"]');
@@ -271,16 +469,12 @@
     }
   });
 
+  // ── Exercise block (Alpine component) ─────────────────────────
   function exoBlock(index, data) {
-    // Bug #2 : tableau de saisie toujours visible pendant la séance.
-    // Les `sets` sont pré-remplies côté Python avec le nombre de séries
-    // du programme (p_sets), donc le tableau montre directement les lignes
-    // attendues. Le bouton +1 série en ajoute si besoin.
     return {
-      // Ouvert tant que l'exo n'est pas complété ; après Enregistrer,
-      // Python renvoie completed=true → la carte se replie automatiquement.
       open: !data.completed,
       variant: data.variant,
+      restSeconds: data.rest_seconds || 90,
       sets: (data.sets || []).map(function (s) {
         return {
           reps: s.reps || 0,
@@ -294,22 +488,30 @@
       removeSet: function (i) {
         if (this.sets.length > 1) this.sets.splice(i, 1);
       },
+      clearWeights: function () {
+        this.sets.forEach(function(s) { s.poids = 0; });
+      },
+      onSetChange: function (i) {
+        // Quand l'utilisateur remplit les reps d'une série et qu'il y a une suivante, lance le chrono
+        if (this.sets[i].reps > 0 && i < this.sets.length - 1) {
+          var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
+          startTimer(dur);
+        }
+      },
       prepareSave: function (e) {
-        // sets_json est déjà bindé via x-bind; rien à faire, juste laisser submit
+        // sets_json est déjà bindé via x-bind
       }
     };
   }
 
   // Après un Save/Skip, le POST redirige et recharge la page. On replace
-  // alors le scroll sur la carte d'exo qui vient d'être sauvegardée pour
-  // qu'elle reste visible au lieu de revenir en haut de page.
+  // alors le scroll sur la carte d'exo qui vient d'être sauvegardée.
   window.addEventListener('DOMContentLoaded', function () {
     var idx = sessionStorage.getItem('lastExoAnchor');
     if (idx !== null) {
       sessionStorage.removeItem('lastExoAnchor');
       var el = document.getElementById('exo-anchor-' + idx);
       if (el) {
-        // Petit délai pour laisser Alpine rendre le contenu avant de scroller
         setTimeout(function () {
           el.scrollIntoView({ behavior: 'auto', block: 'start' });
         }, 50);

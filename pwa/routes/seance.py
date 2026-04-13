@@ -160,11 +160,32 @@ def _recup_status(hist, s_act):
     return out
 
 
+def _last_session_sets(hist, exo_final, seance, s_act):
+    """Retourne les séries de la dernière semaine où cet exo a été réalisé,
+    sous forme de liste de dicts {reps, poids}. Utilisé pour le pré-remplissage
+    des poids et l'affichage inline 'Dernière fois'."""
+    matches = [r for r in hist
+               if r["Exercice"] == exo_final and r["Séance"] == seance
+               and r["Semaine"] < s_act and r["Poids"] > 0]
+    if not matches:
+        # Chercher dans toutes les séances si pas trouvé dans la même séance
+        matches = [r for r in hist
+                   if r["Exercice"] == exo_final
+                   and r["Semaine"] < s_act and r["Poids"] > 0]
+    if not matches:
+        return []
+    last_week = max(r["Semaine"] for r in matches)
+    last = [r for r in matches if r["Semaine"] == last_week]
+    last.sort(key=lambda r: int(r["Série"] or 0))
+    return [{"reps": int(r["Reps"]), "poids": float(r["Poids"])} for r in last]
+
+
 def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
     """Construit le dict passé au template pour un exercice."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
     muscle = exo_obj.get("muscle", "Autre")
+    rest_seconds = int(exo_obj.get("rest_seconds", 90))
 
     var = _last_variant(hist, seance, base)
     exo_final = f"{base} ({var})" if var != "Standard" else base
@@ -176,23 +197,40 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
     record = _best_record(hist, exo_final, is_bw)
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
 
+    # Dernière séance pour pré-remplissage poids + affichage inline
+    last_sets = _last_session_sets(hist, exo_final, seance, s_act)
+
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
     n_rows = max(p_sets, len(curr)) if curr else p_sets
     sets = []
     existing_by_idx = {int(r["Série"] or 0): r for r in curr}
     for i in range(1, n_rows + 1):
         r = existing_by_idx.get(i, {})
+        reps_val = int(r.get("Reps") or 0)
+        poids_val = float(r.get("Poids") or 0)
+        # Pré-remplir le poids depuis la dernière séance si pas encore saisi
+        if poids_val == 0 and reps_val == 0 and not completed and i <= len(last_sets):
+            poids_val = last_sets[i - 1]["poids"]
         sets.append({
             "serie": i,
-            "reps": int(r.get("Reps") or 0),
-            "poids": float(r.get("Poids") or 0),
+            "reps": reps_val,
+            "poids": poids_val,
             "remarque": r.get("Remarque") or "",
         })
+
+    # Résumé inline : "80kg × 8, 85kg × 6"
+    if last_sets:
+        last_summary = ", ".join(
+            f"{s['poids']:g}kg × {s['reps']}" for s in last_sets
+        )
+    else:
+        last_summary = ""
 
     return {
         "base": base,
         "muscle": muscle,
         "p_sets": p_sets,
+        "rest_seconds": rest_seconds,
         "is_extra": is_extra,
         "variant": var,
         "exo_final": exo_final,
@@ -201,6 +239,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
         "record": record,
         "prev_weeks": prev_weeks,
         "sets": sets,
+        "last_summary": last_summary,
     }
 
 
@@ -279,6 +318,10 @@ def seance():
                        if r["Séance"] == name and r["Semaine"] == s_act - 1)
         vol_ratio = min((vol_curr / vol_prev) if vol_prev > 0 else 0, 1.2)
 
+        # Progression : exercices complétés / total
+        exos_done = sum(1 for e in exos_ctx if e["completed"])
+        exos_total = len(exos_ctx)
+
         # Exos dispo pour ajout (tous les exos de tous les programmes)
         all_prog_exos = {}
         for _sn, _exos in prog_seances.items():
@@ -295,6 +338,8 @@ def seance():
             is_rattrapage=(date_iso != today_paris_str()),
             s_act=s_act,
             exos=exos_ctx,
+            exos_done=exos_done,
+            exos_total=exos_total,
             recup=_recup_status(hist, s_act),
             vol_curr=int(vol_curr),
             vol_prev=int(vol_prev),
@@ -312,6 +357,9 @@ def seance():
         exos_ctx = [_build_exo_context(hist, e, libre_name, s_act, is_extra=False)
                     for e in libre_exos]
 
+        exos_done = sum(1 for e in exos_ctx if e["completed"])
+        exos_total = len(exos_ctx)
+
         all_prog_exos = {}
         for _sn, _exos in prog_seances.items():
             for _e in _exos:
@@ -327,6 +375,8 @@ def seance():
             is_rattrapage=(date_iso != today_paris_str()),
             s_act=s_act,
             exos=exos_ctx,
+            exos_done=exos_done,
+            exos_total=exos_total,
             recup=_recup_status(hist, s_act),
             vol_curr=0, vol_prev=0, vol_ratio=0, vol_overload=False,
             all_prog_exos=list(all_prog_exos.values()),

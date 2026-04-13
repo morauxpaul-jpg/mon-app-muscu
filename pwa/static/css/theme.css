@@ -173,3 +173,230 @@ button.primary, .btn.primary {
   font-size: 0.85rem;
 }
 [x-cloak] { display: none !important; }
+
+/* ── Chrono de repos ── */
+.rest-timer-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(5,10,24,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  animation: fadeIn 0.2s ease-out;
+  pointer-events: auto;
+}
+.rest-timer-circle {
+  position: relative;
+  width: 180px; height: 180px;
+}
+.rest-timer-circle svg {
+  transform: rotate(-90deg);
+  width: 180px; height: 180px;
+}
+.rest-timer-circle .track {
+  fill: none;
+  stroke: rgba(88,204,255,0.1);
+  stroke-width: 6;
+}
+.rest-timer-circle .progress {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(88,204,255,0.6));
+  transition: stroke-dashoffset 1s linear;
+}
+.rest-timer-time {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 20px rgba(88,204,255,0.6);
+}
+.rest-timer-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.rest-timer-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rest-timer-presets button {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  border-radius: 20px;
+}
+.rest-timer-presets button.active {
+  border-color: var(--accent);
+  background: rgba(88,204,255,0.15);
+  color: var(--accent);
+}
+.rest-timer-done {
+  color: var(--success);
+  font-size: 1.1rem;
+  font-weight: 700;
+  animation: pulse 1s infinite;
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(5,10,24,0.8);
+  backdrop-filter: blur(6px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+.modal-box {
+  background: #0d1528;
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  animation: modalSlide 0.25s ease-out;
+}
+.modal-box.danger { border-color: rgba(255,69,58,0.5); }
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.modal-body {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+.modal-actions button { flex: 1; }
+.modal-actions .btn-cancel {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+  color: var(--text-dim);
+}
+.modal-actions .btn-danger {
+  background: rgba(255,69,58,0.2);
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalSlide { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: none; } }
+
+/* ── Progression bar (séance) ── */
+.seance-progress {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(88,204,255,0.15);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.seance-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+.seance-progress-label {
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.seance-progress-vol {
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+/* ── Inline history ── */
+.exo-last-session {
+  font-size: 0.78rem;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+
+/* ── Animations: expand/collapse & transitions ── */
+.exo-card {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.exo-body[x-show] {
+  transition: all 0.2s ease-out;
+}
+
+/* ── Finish celebration ── */
+.finish-celebration {
+  text-align: center;
+  padding: 2rem 1rem;
+  animation: fadeIn 0.4s ease-out;
+}
+.finish-celebration .check-icon {
+  font-size: 4rem;
+  animation: pulse 1.5s infinite;
+}
+.finish-celebration .finish-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--success);
+  margin: 12px 0 6px;
+  letter-spacing: 2px;
+}
+.finish-celebration .finish-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+.finish-celebration .finish-stat {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(88,204,255,0.15);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+}
+.finish-celebration .finish-stat-value {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+}
+.finish-celebration .finish-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.finish-celebration .vol-diff-pos { color: var(--success); }
+.finish-celebration .vol-diff-neg { color: var(--danger); }
+
+/* ── Respect prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
