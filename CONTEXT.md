@@ -157,4 +157,4 @@ pwa/
 - Branche : `pwa-migration`
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- CACHE_VERSION : v19 (incrémenter à chaque déploiement)
+- CACHE_VERSION : v20 (incrémenter à chaque déploiement)

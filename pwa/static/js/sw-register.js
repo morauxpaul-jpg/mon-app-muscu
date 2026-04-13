@@ -28,6 +28,8 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (refreshing) return;
       refreshing = true;
+      // Flag pour que le modal patch notes s'affiche APRÈS le reload
+      try { localStorage.setItem("pending_changelog", "1"); } catch(e) {}
       window.location.reload();
     });
   });
