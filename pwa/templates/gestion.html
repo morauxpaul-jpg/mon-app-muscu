@@ -33,6 +33,24 @@
     </form>
   </div>
 
+  {# ── Section : Tutoriels ─────────────────── #}
+  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">📖 TUTORIELS</h2>
+
+  <div class="card">
+    <h3>📖 Tutoriels interactifs</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Relance les tutoriels pour revoir les explications pas à pas.</p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <button type="button" class="btn" style="width:100%;"
+              onclick="try{localStorage.removeItem('tutoSeen')}catch(e){} this.textContent='✅ Se lancera à la prochaine page'; this.disabled=true;">
+        🔄 Revoir le tutoriel principal
+      </button>
+      <button type="button" class="btn" style="width:100%;"
+              onclick="try{localStorage.removeItem('tutoSeanceSeen')}catch(e){} this.textContent='✅ Se lancera à ta prochaine séance'; this.disabled=true;">
+        🔄 Revoir le tuto séance
+      </button>
+    </div>
+  </div>
+
   {# ── Section : Programme ─────────────────── #}
   <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">⚙️ PROGRAMME</h2>
 

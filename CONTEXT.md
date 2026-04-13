@@ -55,7 +55,8 @@ pwa/
 │   │   ├── sw-register.js    # Enregistrement SW + auto-update
 │   │   ├── offline.js        # Détection hors-ligne, queue localStorage, sync
 │   │   ├── notifications.js  # Rappels quotidiens (API Notification)
-│   │   └── tutorial.js       # Tutoriel spotlight interactif (6 étapes)
+│   │   ├── tutorial.js       # Tutoriel spotlight interactif (6 étapes)
+│   │   └── tuto-seance.js    # Tutoriel saisie de séance (6 étapes, 1ère ouverture)
 │   ├── changelog.json        # Notes de version (patch notes modal)
 │   ├── service-worker.js     # SW : Network First, cache v16, notifications
 │   ├── manifest.json         # PWA manifest
@@ -155,4 +156,4 @@ pwa/
 - Branche : `pwa-migration`
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- CACHE_VERSION : v17 (incrémenter à chaque déploiement)
+- CACHE_VERSION : v18 (incrémenter à chaque déploiement)

@@ -139,6 +139,7 @@
 
   {# ── Bouton chrono manuel ─────────────────────────────────── #}
   <button type="button" class="btn" style="font-size:0.78rem; padding:6px 12px; margin-bottom:10px;"
+          data-tuto-seance="chrono"
           onclick="startTimer(parseInt(localStorage.getItem('restTimerDefault')) || 90)"
           title="Lancer le chrono de repos manuellement">⏱️ Chrono</button>
 
@@ -443,7 +444,7 @@
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="date" value="{{ date_iso }}">
-    <button type="submit" class="btn primary" style="width:100%;">✅ Terminer la séance</button>
+    <button type="submit" class="btn primary" style="width:100%;" data-tuto-seance="finish">✅ Terminer la séance</button>
   </form>
 
   {# ── Chrono de repos (non-bloquant, bandeau fixe) ──────── #}
@@ -713,5 +714,9 @@
       }
     }
   });
+
+  // ── Tuto séance (première ouverture) ───────────────────────────
   </script>
+  <script src="/static/js/tuto-seance.js"></script>
+  <script>initTutoSeance();</script>
 {% endblock %}
