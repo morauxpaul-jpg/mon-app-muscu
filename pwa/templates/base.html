@@ -41,6 +41,20 @@
 
   <script src="/static/js/sw-register.js"></script>
   <script src="/static/js/tutorial.js"></script>
+  <script>
+    // Alpine.js fallback: if Alpine not loaded after 3s, show fallback message
+    (function() {
+      var fallbacks = document.querySelectorAll('.alpine-fallback');
+      if (!fallbacks.length) return;
+      var timer = setTimeout(function() {
+        fallbacks.forEach(function(el) { el.style.display = 'flex'; });
+      }, 3000);
+      document.addEventListener('alpine:init', function() {
+        clearTimeout(timer);
+        fallbacks.forEach(function(el) { el.style.display = 'none'; });
+      });
+    })();
+  </script>
   {% if is_authenticated %}
   <script>initTutorial();</script>
   {% endif %}

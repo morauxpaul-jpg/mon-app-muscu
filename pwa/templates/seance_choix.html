@@ -2,6 +2,11 @@
 {% block title %}Séance · Muscu PRO{% endblock %}
 
 {% block content %}
+  <div class="loading-overlay" id="page-loader">
+    <div class="spinner"></div>
+    <span>Chargement...</span>
+  </div>
+
   <a href="/" class="btn" style="display:inline-block; margin-bottom: 12px;">← Retour</a>
 
   <div class="choix-hero">
@@ -63,4 +68,16 @@
       <button type="submit" class="btn" style="width: 100%;">🚩 Marquer comme manquée</button>
     </form>
   </div>
+
+  <script>
+    document.getElementById('page-loader').style.display = 'none';
+    document.addEventListener('submit', function(e) {
+      var btn = e.target.querySelector('button[type="submit"]');
+      if (btn && !btn.classList.contains('loading')) {
+        btn.classList.add('loading');
+        btn.dataset.origText = btn.textContent;
+        btn.textContent = '⏳ En cours...';
+      }
+    });
+  </script>
 {% endblock %}

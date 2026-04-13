@@ -2,6 +2,11 @@
 {% block title %}Accueil · Muscu PRO{% endblock %}
 
 {% block content %}
+  <div class="loading-overlay" id="page-loader">
+    <div class="spinner"></div>
+    <span>Chargement...</span>
+  </div>
+
   {% if error %}
     <div class="card" style="border-color: var(--danger);">
       <strong style="color: var(--danger);">Erreur de connexion Google Sheets</strong>
@@ -68,4 +73,8 @@
   </div>
 
   {% endif %}
+
+  <script>
+    document.getElementById('page-loader').style.display = 'none';
+  </script>
 {% endblock %}

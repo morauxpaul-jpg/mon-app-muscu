@@ -49,6 +49,18 @@
   </div>
 
   <div class="card">
+    <h3>🔄 Mise à jour</h3>
+    <div class="detail-row" style="grid-template-columns: 1fr; margin-bottom: 10px;">
+      <div class="detail-metric">
+        <div class="detail-label">VERSION ACTUELLE</div>
+        <div class="detail-value" style="font-size:1.1rem;" id="sw-version">—</div>
+      </div>
+    </div>
+    <button type="button" class="btn primary" style="width:100%;" id="btn-check-update" onclick="checkForUpdate()">🔄 Vérifier les mises à jour</button>
+    <p style="font-size:0.75rem; color:var(--text-dim); margin-top:6px; text-align:center;" id="update-status"></p>
+  </div>
+
+  <div class="card">
     <h3>🎓 Revoir le tutoriel</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Relance le tutoriel interactif qui présente les fonctions clés de l'app.</p>
     <button type="button" class="btn" style="width:100%;" onclick="replayTutorial()">🎓 Revoir le tutoriel</button>
@@ -89,4 +101,64 @@
       <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);">💥 TOUT REMETTRE À ZÉRO</button>
     </form>
   </div>
+
+  <script>
+    // Show current SW cache version
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      fetch('/service-worker.js')
+        .then(function(r) { return r.text(); })
+        .then(function(text) {
+          var m = text.match(/CACHE_VERSION\s*=\s*"([^"]+)"/);
+          if (m) document.getElementById('sw-version').textContent = m[1];
+        })
+        .catch(function() {});
+    } else {
+      document.getElementById('sw-version').textContent = 'non installé';
+    }
+
+    // Show toast if just updated
+    if (sessionStorage.getItem('app-updated')) {
+      sessionStorage.removeItem('app-updated');
+      var toast = document.createElement('div');
+      toast.textContent = '✅ App mise à jour !';
+      toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,255,127,0.15);border:1px solid rgba(0,255,127,0.4);color:#00FF7F;padding:10px 20px;border-radius:12px;font-size:0.9rem;z-index:9999;animation:slideIn 0.3s ease-out;';
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.remove(); }, 4000);
+    }
+
+    function checkForUpdate() {
+      var btn = document.getElementById('btn-check-update');
+      var status = document.getElementById('update-status');
+      btn.classList.add('loading');
+      btn.textContent = '⏳ En cours...';
+      status.textContent = 'Suppression du cache et mise à jour...';
+
+      sessionStorage.setItem('app-updated', '1');
+
+      Promise.all([
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          return Promise.all(regs.map(function(r) { return r.unregister(); }));
+        }),
+        caches.keys().then(function(keys) {
+          return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+        })
+      ]).then(function() {
+        window.location.reload();
+      }).catch(function(err) {
+        status.textContent = 'Erreur : ' + err.message;
+        btn.classList.remove('loading');
+        btn.textContent = '🔄 Vérifier les mises à jour';
+      });
+    }
+
+    // Loading states on form submits
+    document.addEventListener('submit', function(e) {
+      var btn = e.target.querySelector('button[type="submit"]');
+      if (btn && !btn.classList.contains('loading')) {
+        btn.classList.add('loading');
+        btn.dataset.origText = btn.textContent;
+        btn.textContent = '⏳ En cours...';
+      }
+    });
+  </script>
 {% endblock %}

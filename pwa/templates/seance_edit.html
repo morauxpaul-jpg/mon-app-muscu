@@ -2,7 +2,7 @@
 {% block title %}{{ seance_name }} · Muscu PRO{% endblock %}
 
 {% block head_extra %}
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script defer src="/static/js/alpine.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -56,6 +56,11 @@
       </div>
     </div>
   {% endif %}
+
+  <div class="alpine-fallback" style="display:none;">
+    <div class="spinner"></div>
+    <span>Chargement en cours...</span>
+  </div>
 
   {# ── Exercices ──────────────────────────────────────────────── #}
   {% for exo in exos %}
@@ -259,6 +264,17 @@
   </form>
 
   <script>
+  // Loading state: disable buttons on form submit to prevent double-click
+  document.addEventListener('submit', function(e) {
+    var form = e.target;
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn && !btn.classList.contains('loading')) {
+      btn.classList.add('loading');
+      btn.dataset.origText = btn.textContent;
+      btn.textContent = '⏳ En cours...';
+    }
+  });
+
   function exoBlock(index, data) {
     // Bug #2 : tableau de saisie toujours visible pendant la séance.
     // Les `sets` sont pré-remplies côté Python avec le nombre de séries

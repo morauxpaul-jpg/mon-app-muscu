@@ -46,6 +46,11 @@
 {% endblock %}
 
 {% block content %}
+  <div class="loading-overlay" id="page-loader">
+    <div class="spinner"></div>
+    <span>Chargement...</span>
+  </div>
+
   <h1>Progrès</h1>
 
   {% if not has_data %}
@@ -235,4 +240,6 @@
   </script>
 
   {% endif %}
+
+  <script>document.getElementById('page-loader').style.display = 'none';</script>
 {% endblock %}

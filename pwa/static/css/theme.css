@@ -110,3 +110,66 @@ button.primary, .btn.primary {
 @keyframes glow   { 0%,100% {box-shadow:0 0 5px var(--accent);} 50% {box-shadow:0 0 20px var(--accent),0 0 30px var(--accent);} }
 @keyframes slideIn { from {transform:translate3d(-20px,0,0);opacity:0;} to {transform:translate3d(0,0,0);opacity:1;} }
 @keyframes float  { 0%,100% {transform:translateY(0);} 50% {transform:translateY(-10px);} }
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── Spinner / Loading states ── */
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid rgba(88,204,255,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.spinner-sm { width: 18px; height: 18px; border-width: 2px; }
+
+.loading-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 2.5rem 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(88,204,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+.skeleton-card {
+  height: 72px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(88,204,255,0.1);
+}
+.skeleton-stat {
+  height: 90px;
+  border: 1px solid rgba(88,204,255,0.1);
+}
+
+.btn.loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+.btn.loading .spinner-sm {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* Alpine fallback: shown until Alpine initializes */
+.alpine-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 3rem 1rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+[x-cloak] { display: none !important; }

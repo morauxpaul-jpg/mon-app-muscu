@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v8-2026-04-08";
+const CACHE_VERSION = "v9-2026-04-13";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -8,6 +8,7 @@ const APP_SHELL = [
   "/static/css/theme.css",
   "/static/css/components.css",
   "/static/js/sw-register.js",
+  "/static/js/alpine.min.js",
   "/static/icon.png",
   "/manifest.json",
 ];
@@ -44,7 +45,7 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-  // Ignore les requêtes cross-origin (Plotly CDN, Alpine CDN, etc.)
+  // Ignore les requêtes cross-origin (Plotly CDN, etc.)
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(

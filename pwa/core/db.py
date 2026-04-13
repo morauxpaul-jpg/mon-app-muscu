@@ -99,13 +99,42 @@ def get_hist(user_id: str) -> list[dict]:
 
 def save_hist(user_id: str, rows: list[dict]):
     """Réécrit tout l'historique de l'user (équivalent du write-all
-    clear+update du Sheet). Simple et cohérent avec l'usage existant."""
+    clear+update du Sheet). Garde une copie de secours en mémoire :
+    si l'insert échoue après le delete, on tente de restaurer l'ancien
+    historique pour éviter une perte de données."""
     client = get_client()
-    client.table("history").delete().eq("user_id", user_id).execute()
-    if rows:
-        payload = [_row_to_supabase(user_id, r) for r in rows]
-        for i in range(0, len(payload), 500):
-            client.table("history").insert(payload[i:i + 500]).execute()
+
+    # 1. Sauvegarde des anciennes données avant suppression
+    backup_resp = (
+        client.table("history")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("id")
+        .execute()
+    )
+    backup_rows = backup_resp.data or []
+
+    # 2. Delete + re-insert avec rollback en cas d'échec
+    try:
+        client.table("history").delete().eq("user_id", user_id).execute()
+        if rows:
+            payload = [_row_to_supabase(user_id, r) for r in rows]
+            for i in range(0, len(payload), 500):
+                client.table("history").insert(payload[i:i + 500]).execute()
+    except Exception as e:
+        print(f"[save_hist] ERREUR pour user {user_id}: {e}")
+        # Tentative de rollback : réinsérer les anciennes données
+        try:
+            if backup_rows:
+                for i in range(0, len(backup_rows), 500):
+                    client.table("history").insert(backup_rows[i:i + 500]).execute()
+                print(f"[save_hist] Rollback réussi ({len(backup_rows)} lignes restaurées)")
+            else:
+                print("[save_hist] Rollback : aucune donnée à restaurer (historique était vide)")
+        except Exception as e2:
+            print(f"[save_hist] ÉCHEC du rollback : {e2}")
+        raise
+
     _cache_invalidate(f"hist:{user_id}")
 
 

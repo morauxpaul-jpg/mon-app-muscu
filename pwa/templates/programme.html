@@ -32,6 +32,11 @@
   </div>
 
   {# ── Séances & exercices ─────────────────────────────── #}
+  <div class="alpine-fallback" style="display:none;">
+    <div class="spinner"></div>
+    <span>Chargement en cours...</span>
+  </div>
+
   <h3>📦 Séances</h3>
 
   {% for sname, exos in seances %}
@@ -236,5 +241,15 @@
     </div>
   </div>
 
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script defer src="/static/js/alpine.min.js"></script>
+  <script>
+    document.addEventListener('submit', function(e) {
+      var btn = e.target.querySelector('button[type="submit"]');
+      if (btn && !btn.classList.contains('loading')) {
+        btn.classList.add('loading');
+        btn.dataset.origText = btn.textContent;
+        btn.textContent = '⏳ En cours...';
+      }
+    });
+  </script>
 {% endblock %}
