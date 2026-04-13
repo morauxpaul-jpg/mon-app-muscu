@@ -207,7 +207,7 @@
       <div class="exo-head">
         <div>
           <div class="exo-title">🔹 {{ exo.base|upper }}
-              <button type="button" class="exo-info-btn" @click.stop="showExoInfo({{ exo.info|tojson }})" title="Info exercice">?</button>
+              <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)" title="Info exercice">?</button>
           </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
@@ -672,6 +672,7 @@
     var draftKey = DRAFT_PREFIX + data.base;
     return {
       open: !data.completed,
+      exoInfo: data.info || {},
       variant: data.variant,
       isBw: data.is_bw || false,
       restSeconds: data.rest_seconds || 90,
