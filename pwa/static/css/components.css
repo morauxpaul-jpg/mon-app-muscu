@@ -174,6 +174,9 @@
 .stat-gold  { background: rgba(255,215,0,0.07); border: 1px solid rgba(255,215,0,0.25); }
 .stat-gold  .stat-label { color: #8a7a2a; }
 .stat-gold  .stat-value { font-size: 1.6rem; color: var(--gold); }
+.stat-orange { background: rgba(255,159,10,0.1); border: 1px solid rgba(255,159,10,0.35); }
+.stat-orange .stat-label { color: #8a6a1a; }
+.stat-orange .stat-value { font-size: 1.6rem; color: #FF9F0A; }
 
 .detail-row {
   display: grid;

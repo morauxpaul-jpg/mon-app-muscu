@@ -39,6 +39,8 @@
   </nav>
 
   <script src="/static/js/sw-register.js"></script>
+  <script src="/static/js/offline.js"></script>
+  <script src="/static/js/notifications.js"></script>
   <script src="/static/js/tutorial.js"></script>
   <script>
     // Alpine.js fallback: if Alpine not loaded after 3s, show fallback message
@@ -56,6 +58,20 @@
   </script>
   {% if is_authenticated %}
   <script>initTutorial();</script>
+  <script>
+    // Demande de permission notifications (une seule fois)
+    (function() {
+      if (!('Notification' in window)) return;
+      if (Notification.permission !== 'default') return;
+      try { if (localStorage.getItem('notif_asked')) return; } catch(e) {}
+      // Attendre 5s après le chargement pour ne pas gêner
+      setTimeout(function() {
+        Notification.requestPermission().then(function() {
+          try { localStorage.setItem('notif_asked', '1'); } catch(e) {}
+        });
+      }, 5000);
+    })();
+  </script>
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>

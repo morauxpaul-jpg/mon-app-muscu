@@ -4,9 +4,12 @@ Le planning et le CRUD du programme sont déjà gérés dans /programme.
 Cette page regroupe : paramètres d'affichage, auto-assignation des muscles,
 reset soft, reset total, vider l'archive.
 """
-from flask import Blueprint, render_template, request, redirect, url_for, session
+import json
+from datetime import date
 
-from core.data import get_hist, get_prog, save_prog, save_hist
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response
+
+from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
 from core.muscu import auto_muscles
 
 bp = Blueprint("gestion", __name__)
@@ -17,6 +20,7 @@ DEFAULT_SETTINGS = {
     "theme_animations": True,
     "auto_rest_timer": True,
     "show_previous_weeks": 2,
+    "notifications": False,
 }
 
 
@@ -63,6 +67,7 @@ def update_settings():
     s["show_1rm"] = request.form.get("show_1rm") == "on"
     s["theme_animations"] = request.form.get("theme_animations") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
+    s["notifications"] = request.form.get("notifications") == "on"
     try:
         s["show_previous_weeks"] = max(0, min(10, int(request.form.get("show_previous_weeks", 2))))
     except (ValueError, TypeError):
@@ -144,5 +149,64 @@ def reset_total():
     save_prog(prog)
     save_hist([])
     return redirect(url_for("gestion.gestion") + "?reset=total")
+
+
+@bp.route("/gestion/export")
+def export_data():
+    """Exporte toutes les données utilisateur en JSON."""
+    prog = get_prog()
+    hist = get_hist()
+    profile = get_profile() or {}
+    onboarding = get_onboarding() or {}
+    payload = {
+        "version": 1,
+        "exported_at": date.today().isoformat(),
+        "programme": prog,
+        "historique": hist,
+        "profil": {k: v for k, v in profile.items() if k != "id"},
+        "onboarding": {k: v for k, v in onboarding.items() if k not in ("user_id", "id")},
+    }
+    filename = f"muscu-tracker-backup-{date.today().isoformat()}.json"
+    return Response(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@bp.route("/gestion/export-programme")
+def export_programme():
+    """Exporte uniquement le programme en JSON."""
+    prog = get_prog()
+    payload = {
+        "version": 1,
+        "exported_at": date.today().isoformat(),
+        "programme": prog,
+    }
+    filename = f"muscu-programme-{date.today().isoformat()}.json"
+    return Response(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@bp.route("/gestion/import", methods=["POST"])
+def import_data():
+    """Importe des données depuis un fichier JSON."""
+    f = request.files.get("file")
+    if not f:
+        return redirect(url_for("gestion.gestion") + "?import=error")
+    try:
+        data = json.loads(f.read().decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return redirect(url_for("gestion.gestion") + "?import=error")
+
+    if "programme" in data:
+        save_prog(data["programme"])
+    if "historique" in data:
+        save_hist(data["historique"])
+
+    return redirect(url_for("gestion.gestion") + "?import=ok")
 
 

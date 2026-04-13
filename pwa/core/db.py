@@ -43,7 +43,7 @@ def get_client() -> Client:
 
 # ── Cache mémoire process-wide (TTL 10 min), clé par user_id ──
 _data_cache: dict = {}
-_TTL = 600.0
+_TTL = 60.0
 
 
 def _cache_get(key: str):

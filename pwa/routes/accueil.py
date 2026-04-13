@@ -138,6 +138,45 @@ def index():
         else:
             break
 
+    # Record de streak (stocké dans prog._streak_record)
+    streak_record = int(prog.get("_streak_record", 0) or 0)
+    if streak > streak_record:
+        streak_record = streak
+        prog["_streak_record"] = streak_record
+        from core.data import save_prog as _save_prog
+        _save_prog(prog)
+
+    # Streak en danger ? (aujourd'hui est un jour de séance et pas fait)
+    today_day_name = DAYS_FR[today.weekday()]
+    today_seance = planning_map.get(today_day_name, "")
+    today_done = any(
+        r for r in hist
+        if r["Date"] == today.strftime("%Y-%m-%d") and r["Poids"] > 0
+    )
+    streak_danger = bool(today_seance and not today_done and today.weekday() < 5)
+
+    # Palier streak
+    if streak >= 24:
+        streak_tier = "diamond"
+        streak_tier_icon = "💎"
+        streak_tier_label = "Diamant"
+    elif streak >= 12:
+        streak_tier = "gold"
+        streak_tier_icon = "🥇"
+        streak_tier_label = "Or"
+    elif streak >= 8:
+        streak_tier = "silver"
+        streak_tier_icon = "🥈"
+        streak_tier_label = "Argent"
+    elif streak >= 4:
+        streak_tier = "bronze"
+        streak_tier_icon = "🥉"
+        streak_tier_label = "Bronze"
+    else:
+        streak_tier = "none"
+        streak_tier_icon = ""
+        streak_tier_label = ""
+
     # Détail
     exos_count = len({r["Exercice"] for r in cur_week_real})
     sets_count = len(cur_week_real)
@@ -154,6 +193,14 @@ def index():
         total_sessions=total_sessions,
         vol_week=vol_week_fmt,
         streak=streak,
+        streak_record=streak_record,
+        streak_danger=streak_danger,
+        streak_tier=streak_tier,
+        streak_tier_icon=streak_tier_icon,
+        streak_tier_label=streak_tier_label,
+        today_seance=today_seance,
+        today_done=today_done,
+        notif_enabled=bool(prog.get("_settings", {}).get("notifications", False)),
         exos_count=exos_count,
         sets_count=sets_count,
         reps_count=reps_count,

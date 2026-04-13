@@ -42,6 +42,26 @@
     .ltable { width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:8px; }
     .ltable th, .ltable td { padding:5px 4px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; }
     .ltable th { color: var(--accent); font-weight:600; }
+
+    /* ── Calendrier ── */
+    .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .cal-header h3 { margin:0; }
+    .cal-nav { background:none; border:1px solid var(--card-border); color:var(--text); border-radius:8px; padding:4px 10px; cursor:pointer; font-size:.85rem; }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; }
+    .cal-day-hdr { font-size:.65rem; color:var(--text-dim); padding:4px 0; font-weight:700; }
+    .cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px; font-size:.75rem; font-weight:600; }
+    .cal-cell.empty { background:none; }
+    .cal-cell.done { background:rgba(0,255,127,0.15); color:#00FF7F; border:1px solid rgba(0,255,127,0.3); }
+    .cal-cell.missed { background:rgba(255,69,58,0.12); color:#FF453A; border:1px solid rgba(255,69,58,0.25); }
+    .cal-cell.upcoming { background:rgba(88,204,255,0.08); color:#58CCFF; border:1px solid rgba(88,204,255,0.15); }
+    .cal-cell.rest { background:rgba(255,255,255,0.02); color:var(--text-dim); }
+    .cal-cell.is-today { box-shadow:0 0 0 2px #58CCFF; }
+    .cal-rate { text-align:center; font-size:.85rem; margin-top:8px; }
+    .cal-rate b { color:var(--accent); }
+
+    /* ── Volume chart SVG ── */
+    .vol-chart { width:100%; }
+    .vol-bar { transition: height .3s ease-out; }
   </style>
 {% endblock %}
 
@@ -52,6 +72,51 @@
   </div>
 
   <h1>Progrès</h1>
+
+  {# ── Calendrier mensuel ────────────────────────────── #}
+  <div class="card">
+    <div class="cal-header">
+      <a href="/progres?cy={{ prev_y }}&cm={{ prev_m }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}" class="cal-nav">←</a>
+      <h3>📅 {{ cal_month_name }} {{ cal_year }}</h3>
+      <a href="/progres?cy={{ next_y }}&cm={{ next_m }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}" class="cal-nav">→</a>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-day-hdr">L</div><div class="cal-day-hdr">M</div><div class="cal-day-hdr">M</div>
+      <div class="cal-day-hdr">J</div><div class="cal-day-hdr">V</div><div class="cal-day-hdr">S</div><div class="cal-day-hdr">D</div>
+      {% for week in cal_weeks %}
+        {% for cell in week %}
+          {% if cell %}
+            <div class="cal-cell {{ cell.status }}{% if cell.is_today %} is-today{% endif %}">{{ cell.day }}</div>
+          {% else %}
+            <div class="cal-cell empty"></div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="cal-rate">Assiduité : <b>{{ cal_rate }}%</b> des séances prévues</div>
+  </div>
+
+  {# ── Volume par semaine ────────────────────────────── #}
+  {% if vol_values %}
+  <div class="card">
+    <h3>📊 Volume par semaine</h3>
+    <svg class="vol-chart" viewBox="0 0 {{ vol_values|length * 50 }} 160" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#58CCFF" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#58CCFF" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      {% for v in vol_values %}
+        {% set bar_h = (v / vol_max * 110) if vol_max > 0 else 0 %}
+        {% set x = loop.index0 * 50 + 8 %}
+        <rect class="vol-bar" x="{{ x }}" y="{{ 130 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="url(#volGrad)"/>
+        <text x="{{ x + 17 }}" y="{{ 125 - bar_h }}" text-anchor="middle" fill="#58CCFF" font-size="9" font-weight="700">{{ (v / 1000)|round(1) }}k</text>
+        <text x="{{ x + 17 }}" y="148" text-anchor="middle" fill="#5a7a9a" font-size="9">{{ vol_labels[loop.index0] }}</text>
+      {% endfor %}
+    </svg>
+  </div>
+  {% endif %}
 
   {% if not has_data %}
     <div class="card stub"><p>Aucune donnée. Enregistre une séance pour voir tes progrès.</p></div>

@@ -1,14 +1,18 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v14-2026-04-13";
+const CACHE_VERSION = "v15-2026-04-13";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
   "/accueil",
+  "/seance",
   "/static/css/theme.css",
   "/static/css/components.css",
+  "/static/css/tutorial.css",
   "/static/js/sw-register.js",
+  "/static/js/offline.js",
   "/static/js/alpine.min.js",
+  "/static/js/tutorial.js",
   "/static/icon.png",
   "/manifest.json",
 ];
@@ -34,9 +38,30 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// ── Message : permet au client de forcer skipWaiting ──────────────
+// ── Message : permet au client de forcer skipWaiting + notifications ─
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
+  if (event.data && event.data.type === "SHOW_NOTIFICATION") {
+    self.registration.showNotification(event.data.title, {
+      body: event.data.body,
+      icon: "/static/icon.png",
+      tag: event.data.tag || "muscu-reminder",
+      badge: "/static/icon.png",
+    });
+  }
+});
+
+// ── Notification click : ouvre l'app ─────────────────────────────
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window" }).then((clients) => {
+      if (clients.length > 0) {
+        return clients[0].focus();
+      }
+      return self.clients.openWindow("/accueil");
+    })
+  );
 });
 
 // ── Fetch : Network First avec fallback cache ─────────────────────

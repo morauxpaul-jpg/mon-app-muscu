@@ -1,10 +1,14 @@
-"""Blueprint progrès — carte du corps + hall of fame + zoom mouvement.
+"""Blueprint progrès — carte du corps + hall of fame + zoom mouvement + calendrier + volume.
 
 Logique portée depuis app.py body_map_section (863-1299) et tab_st (2681-2713).
 """
+import calendar
+from datetime import date, timedelta
+
 from flask import Blueprint, render_template, request
 
 from core.data import get_hist, get_prog
+from core.dates import today_paris, DAYS_FR
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations
 
 bp = Blueprint("progres", __name__)
@@ -207,6 +211,94 @@ def progres():
                 "table": table,
             }
 
+    # ── Calendrier mensuel ──────────────────────────────────
+    today = today_paris()
+    try:
+        cal_year = int(request.args.get("cy", today.year))
+        cal_month = int(request.args.get("cm", today.month))
+    except (ValueError, TypeError):
+        cal_year, cal_month = today.year, today.month
+    # Clamp
+    if cal_month < 1:
+        cal_month, cal_year = 12, cal_year - 1
+    elif cal_month > 12:
+        cal_month, cal_year = 1, cal_year + 1
+
+    planning_map = get_prog().get("_planning", {})
+    hist_dates_done = set()
+    hist_dates_missed = set()
+    for r in hist:
+        d = r.get("Date", "")
+        if not d:
+            continue
+        if r["Exercice"] == "SESSION" and "MANQUÉE" in (r.get("Remarque") or ""):
+            hist_dates_missed.add(d)
+        elif r["Poids"] > 0 or r["Reps"] > 0:
+            hist_dates_done.add(d)
+
+    cal_weeks = []
+    first_day, days_in_month = calendar.monthrange(cal_year, cal_month)
+    # first_day: 0=Monday. We want Mon-Sun grid.
+    cal_days = []
+    planned_count = 0
+    done_count = 0
+    for day_num in range(1, days_in_month + 1):
+        d = date(cal_year, cal_month, day_num)
+        d_str = d.isoformat()
+        day_name_fr = DAYS_FR[d.weekday()]
+        is_training_day = bool(planning_map.get(day_name_fr, ""))
+
+        if d_str in hist_dates_done:
+            status = "done"
+            if is_training_day:
+                done_count += 1
+        elif d_str in hist_dates_missed:
+            status = "missed"
+        elif d > today:
+            status = "upcoming" if is_training_day else "rest"
+        elif is_training_day:
+            status = "missed"
+        else:
+            status = "rest"
+
+        if is_training_day:
+            planned_count += 1
+
+        cal_days.append({
+            "day": day_num,
+            "weekday": d.weekday(),
+            "status": status,
+            "is_today": d == today,
+        })
+
+    # Build weeks (Mon=0 to Sun=6)
+    week_row = [None] * 7
+    for cd in cal_days:
+        wd = cd["weekday"]
+        week_row[wd] = cd
+        if wd == 6:
+            cal_weeks.append(week_row)
+            week_row = [None] * 7
+    if any(c is not None for c in week_row):
+        cal_weeks.append(week_row)
+
+    cal_rate = round(done_count / planned_count * 100) if planned_count > 0 else 0
+    MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                 "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+    prev_m, prev_y = (cal_month - 1, cal_year) if cal_month > 1 else (12, cal_year - 1)
+    next_m, next_y = (cal_month + 1, cal_year) if cal_month < 12 else (1, cal_year + 1)
+
+    # ── Volume par semaine (8 dernières) ─────────────────────
+    vol_by_week = {}
+    for r in hist:
+        if r["Poids"] > 0 and r["Reps"] > 0:
+            w = int(r["Semaine"])
+            vol_by_week[w] = vol_by_week.get(w, 0) + int(r["Poids"] * r["Reps"])
+    vol_weeks_sorted = sorted(vol_by_week.keys())[-8:]
+    vol_labels = [f"S{w}" for w in vol_weeks_sorted]
+    vol_values = [vol_by_week[w] for w in vol_weeks_sorted]
+    vol_max = max(vol_values) if vol_values else 1
+
     return render_template(
         "progres.html",
         active="progres",
@@ -220,4 +312,14 @@ def progres():
         sel_exo=sel_exo,
         zoom=zoom,
         has_data=bool(df_p),
+        cal_weeks=cal_weeks,
+        cal_month_name=MONTHS_FR[cal_month - 1],
+        cal_year=cal_year,
+        cal_month=cal_month,
+        cal_rate=cal_rate,
+        prev_m=prev_m, prev_y=prev_y,
+        next_m=next_m, next_y=next_y,
+        vol_labels=vol_labels,
+        vol_values=vol_values,
+        vol_max=vol_max,
     )

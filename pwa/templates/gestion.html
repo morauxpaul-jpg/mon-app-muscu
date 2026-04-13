@@ -15,6 +15,12 @@
   {% if request.args.get('reset') == 'total' %}
     <div class="card" style="border-color: var(--success);">✅ Tout a été remis à zéro.</div>
   {% endif %}
+  {% if request.args.get('import') == 'ok' %}
+    <div class="card" style="border-color: var(--success);">✅ Données importées avec succès.</div>
+  {% endif %}
+  {% if request.args.get('import') == 'error' %}
+    <div class="card" style="border-color: var(--danger);">❌ Erreur : fichier JSON invalide ou manquant.</div>
+  {% endif %}
 
   {# ── Section : Profil ────────────────────── #}
   <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">👤 PROFIL</h2>
@@ -57,6 +63,10 @@
         <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
         <span>Chrono de repos automatique entre les séries</span>
       </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this)">
+        <span>Notifications de rappel (jours d'entraînement)</span>
+      </label>
       <label class="field-label">Nombre de semaines précédentes affichées en séance</label>
       <input type="number" name="show_previous_weeks" min="0" max="10" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">💾 Sauvegarder</button>
@@ -90,6 +100,20 @@
     <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
       Archive : {{ nb_archive }} record(s)
     </div>
+  </div>
+
+  <div class="card">
+    <h3>💾 Sauvegardes</h3>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <a href="/gestion/export" class="btn primary" style="flex:1; text-align:center; text-decoration:none;">📥 Exporter tout</a>
+      <a href="/gestion/export-programme" class="btn" style="flex:1; text-align:center; text-decoration:none;">📥 Programme seul</a>
+    </div>
+    <form method="post" action="/gestion/import" enctype="multipart/form-data"
+          onsubmit="return showModal(event, 'Importer des données ?', 'Les données actuelles seront remplacées par le contenu du fichier. Cette action est irréversible.', true);">
+      <label class="field-label">Importer un fichier JSON</label>
+      <input type="file" name="file" accept=".json" required class="field" style="padding:8px;">
+      <button type="submit" class="btn" style="width:100%; margin-top:8px;">📤 Importer et remplacer</button>
+    </form>
   </div>
 
   <div class="card" style="border-color: rgba(255,159,10,0.4);">
@@ -221,5 +245,24 @@
         btn.textContent = '⏳ En cours...';
       }
     });
+
+    // Notification toggle
+    function handleNotifToggle(cb) {
+      if (!cb.checked) return; // unchecking = just save
+      if (!('Notification' in window)) {
+        alert('Ton navigateur ne supporte pas les notifications.');
+        cb.checked = false;
+        return;
+      }
+      if (Notification.permission === 'granted') return;
+      if (Notification.permission === 'denied') {
+        alert('Les notifications sont bloquées. Active-les dans les paramètres de ton navigateur.');
+        cb.checked = false;
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (perm !== 'granted') cb.checked = false;
+      });
+    }
   </script>
 {% endblock %}

@@ -51,9 +51,20 @@
     </div>
   </div>
 
-  <div class="stat-card stat-gold" style="margin-bottom: 1rem;">
-    <div class="stat-label">🔥 STREAK</div>
-    <div class="stat-value">{{ streak }} SEMAINE{% if streak > 1 %}S{% endif %}</div>
+  <div class="stat-card {% if streak_danger %}stat-orange{% else %}stat-gold{% endif %}" style="margin-bottom: 1rem; position:relative; overflow:visible;">
+    <div class="stat-label">🔥 STREAK {% if streak_tier_icon %}{{ streak_tier_icon }}{% endif %}</div>
+    <div class="stat-value" style="font-size:1.8rem;">
+      {{ streak }} SEMAINE{% if streak > 1 %}S{% endif %}
+    </div>
+    {% if streak_danger %}
+      <div style="color:#FF9F0A; font-size:0.8rem; font-weight:700; margin-top:4px; animation: pulse 1.5s ease-in-out infinite;">⚠️ En danger — fais ta séance !</div>
+    {% endif %}
+    {% if streak_tier_label %}
+      <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">Palier {{ streak_tier_label }}</div>
+    {% endif %}
+    {% if streak_record > 0 %}
+      <div style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">Record : {{ streak_record }} semaine{% if streak_record > 1 %}s{% endif %}</div>
+    {% endif %}
   </div>
 
   <h3>📊 Détail</h3>
@@ -76,5 +87,13 @@
 
   <script>
     document.getElementById('page-loader').style.display = 'none';
+    if (typeof checkDailyNotifications === 'function') {
+      checkDailyNotifications({
+        todaySeance: {{ today_seance|tojson }},
+        todayDone: {{ today_done|tojson }},
+        streak: {{ streak }},
+        notifEnabled: {{ notif_enabled|tojson }}
+      });
+    }
   </script>
 {% endblock %}
