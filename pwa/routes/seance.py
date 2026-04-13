@@ -320,6 +320,10 @@ def seance():
             return redirect(url_for("seance.seance", date=date_iso))
 
         exos_prog = list(prog_seances[name])
+        # Debug : log l'ordre des exercices pour vérifier (Bug 3)
+        import logging
+        logging.info("[seance] Ordre exercices pour %s: %s",
+                     name, [e.get("name") for e in exos_prog])
         # Extras : stockés dans prog sous "_extras" par (seance, date) pour partage entre sessions
         extras_key = f"{name}|{date_iso}"
         extras = prog.get("_extras", {}).get(extras_key, [])

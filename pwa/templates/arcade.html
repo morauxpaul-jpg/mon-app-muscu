@@ -107,75 +107,90 @@ function neonBox(ctx, x, y, w, h, color) {
 }
 
 /* ════════════════════════════════════════
-   1. FLAPPY DUMBBELL
+   1. FLAPPY DUMBBELL (delta-time physics)
    ════════════════════════════════════════ */
 (function() {
   const c = document.getElementById('cFlappy');
   const ctx = c.getContext('2d');
   const W = c.width, H = c.height;
 
-  let bell, bars, frame, score, over, started, baseSpeed;
+  // Constantes physiques FIXES (normalisées pour 60fps)
+  const GRAVITY = isMobile ? 0.25 : 0.35;
+  const LIFT = isMobile ? -5.8 : -6.8;
+  const GAP = isMobile ? 190 : 170;
+  const BASE_SPEED = isMobile ? 2.0 : 2.6;
+  const SPAWN_INTERVAL = isMobile ? 110 : 95;
+  const MAX_DT = 33; // cap delta-time à 33ms (≈30fps min)
+
+  let bell, bars, frame, score, over, started;
+  let flapRequested = false;
+  let lastTime = 0;
   let record = parseInt(localStorage.getItem('flappyDumbbellRecord') || 0);
 
   function reset() {
-    bell = { x: 80, y: H/2, vy: 0, r: 18,
-             gravity: isMobile ? 0.25 : 0.35,
-             lift: isMobile ? -5.8 : -6.8 };
+    bell = { x: 80, y: H/2, vy: 0, r: 18 };
     bars = []; frame = 0; score = 0;
     over = false; started = false;
-    baseSpeed = isMobile ? 2.0 : 2.6;
+    flapRequested = false;
+    lastTime = 0;
   }
   reset();
 
   function drawDumbbell(x, y) {
-    // Disque gauche
     ctx.shadowColor = CYBER.accent;
     ctx.shadowBlur = 14;
     ctx.fillStyle = CYBER.accent;
     ctx.fillRect(x - 22, y - 12, 8, 24);
     ctx.fillRect(x + 14, y - 12, 8, 24);
-    // Barre
     ctx.fillStyle = CYBER.success;
     ctx.fillRect(x - 14, y - 3, 28, 6);
     ctx.shadowBlur = 0;
   }
 
   function spawn() {
-    const gap = isMobile ? 190 : 170;
     const minTop = 60;
-    const maxTop = H - gap - 60;
+    const maxTop = H - GAP - 60;
     const topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
-    bars.push({ x: W, topH, gap, passed: false });
+    bars.push({ x: W, topH, gap: GAP, passed: false });
   }
 
-  function step() {
+  function step(now) {
+    // Delta-time : cappé à MAX_DT pour éviter les sauts
+    if (!lastTime) lastTime = now;
+    const rawDt = now - lastTime;
+    lastTime = now;
+    const dt = Math.min(rawDt, MAX_DT) / 16.667; // normalize to 60fps (1 = 16.67ms)
+
     ctx.fillStyle = CYBER.bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid(ctx, W, H);
 
     if (started && !over) {
-      bell.vy += bell.gravity;
-      bell.y += bell.vy;
+      // Consommer le flap UNE SEULE FOIS
+      if (flapRequested) {
+        bell.vy = LIFT; // valeur fixe, pas d'accumulation
+        flapRequested = false;
+      }
 
-      const speed = baseSpeed + Math.floor(score / 5) * 0.15;
-      const interval = isMobile ? 110 : 95;
-      if (frame % interval === 0) spawn();
+      // Physique : gravité constante × dt
+      bell.vy += GRAVITY * dt;
+      bell.y += bell.vy * dt;
+
+      const speed = (BASE_SPEED + Math.floor(score / 5) * 0.15) * dt;
+      if (frame % SPAWN_INTERVAL === 0) spawn();
 
       for (let i = bars.length - 1; i >= 0; i--) {
         const b = bars[i];
         b.x -= speed;
 
-        // Pilier haut + bas (= "barres de muscu" empilées)
         neonBox(ctx, b.x, 0, 60, b.topH, CYBER.danger);
         neonBox(ctx, b.x, b.topH + b.gap, 60, H - b.topH - b.gap, CYBER.danger);
-        // Bandes "poids" déco
         ctx.fillStyle = '#1a0010';
         for (let yy = 10; yy < b.topH; yy += 22)
           ctx.fillRect(b.x + 6, yy, 48, 4);
         for (let yy = b.topH + b.gap + 10; yy < H; yy += 22)
           ctx.fillRect(b.x + 6, yy, 48, 4);
 
-        // Collision (cercle vs rect)
         const cx = bell.x, cy = bell.y, rr = bell.r;
         if (cx + rr > b.x && cx - rr < b.x + 60) {
           if (cy - rr < b.topH || cy + rr > b.topH + b.gap) over = true;
@@ -209,20 +224,22 @@ function neonBox(ctx, x, y, w, h, color) {
     requestAnimationFrame(step);
   }
 
+  // Flap = UNE impulsion unique, ignoré si déjà en attente
   function flap(e) {
     if (e) e.preventDefault();
-    if (over) reset();
-    else if (!started) { started = true; bell.vy = bell.lift; }
-    else bell.vy = bell.lift;
+    if (over) { reset(); return; }
+    if (!started) { started = true; lastTime = performance.now(); }
+    flapRequested = true; // consommé UNE SEULE FOIS dans step()
   }
   c.addEventListener('mousedown', flap);
   c.addEventListener('touchstart', flap, {passive:false});
+  // Ignorer touchend/mouseup — aucune logique liée à la durée d'appui
   document.addEventListener('keydown', e => {
     if (document.getElementById('game-flappy').classList.contains('on') &&
         (e.code === 'Space' || e.code === 'ArrowUp')) flap(e);
   });
 
-  step();
+  requestAnimationFrame(step);
 })();
 
 /* ════════════════════════════════════════

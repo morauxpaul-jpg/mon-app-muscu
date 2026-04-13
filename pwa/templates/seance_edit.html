@@ -203,11 +203,11 @@
     <div class="exo-card {% if exo.completed %}done{% endif %}"
          id="exo-anchor-{{ loop.index0 }}"
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
-      <div class="exo-head" @click="open = !open">
+      <div class="exo-head">
         <div>
           <div class="exo-title">🔹 {{ exo.base|upper }}
             {% if exo.info %}
-              <button type="button" class="exo-info-btn" onclick="event.stopPropagation(); showExoInfo({{ exo.info|tojson }})" title="Info exercice">?</button>
+              <button type="button" class="exo-info-btn" @click.stop="showExoInfo({{ exo.info|tojson }})" title="Info exercice">?</button>
             {% endif %}
           </div>
           <div class="exo-meta">
@@ -221,7 +221,7 @@
             <div class="exo-last-session">✨ Première fois !</div>
           {% endif %}
         </div>
-        <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
+        <div class="exo-toggle" @click="open = !open" style="cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;" x-text="open ? '−' : '+'"></div>
       </div>
 
       <div class="exo-body" x-show="open" x-transition.duration.200ms>
