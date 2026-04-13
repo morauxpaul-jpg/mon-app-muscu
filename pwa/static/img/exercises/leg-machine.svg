@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Seat -->
+  <rect x="18" y="42" width="30" height="5" rx="2" fill="#1a3a5c" stroke="#2a5a8c" stroke-width="1.5"/>
+  <!-- Backrest -->
+  <rect x="18" y="20" width="5" height="24" rx="2" fill="#1a3a5c" stroke="#2a5a8c" stroke-width="1.5"/>
+  <!-- Head -->
+  <circle cx="28" cy="24" r="5" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso seated -->
+  <line x1="28" y1="29" x2="30" y2="42" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Upper leg on seat -->
+  <line x1="30" y1="42" x2="48" y2="44" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Lower leg extending -->
+  <line x1="48" y1="44" x2="72" y2="38" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Foot -->
+  <line x1="72" y1="36" x2="76" y2="40" stroke="#58CCFF" stroke-width="2"/>
+  <!-- Pad/resistance -->
+  <rect x="68" y="34" width="4" height="8" rx="1" fill="#58CCFF" opacity="0.2" stroke="#58CCFF" stroke-width="1"/>
+  <!-- Machine frame -->
+  <line x1="18" y1="47" x2="18" y2="82" stroke="#2a5a8c" stroke-width="2"/>
+  <!-- Arrow showing extension -->
+  <path d="M60 56 L70 44 M66 47 L70 44 L68 50" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+</svg>

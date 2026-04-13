@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Bench -->
+  <rect x="14" y="44" width="28" height="6" rx="2" fill="#1a3a5c" stroke="#2a5a8c" stroke-width="1.5"/>
+  <line x1="16" y1="50" x2="16" y2="82" stroke="#2a5a8c" stroke-width="2"/>
+  <line x1="40" y1="50" x2="40" y2="82" stroke="#2a5a8c" stroke-width="2"/>
+  <!-- Head on bench -->
+  <circle cx="22" cy="40" r="5" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Upper back on bench -->
+  <line x1="27" y1="42" x2="38" y2="44" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso (hips thrust up) -->
+  <line x1="38" y1="44" x2="58" y2="38" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Upper legs -->
+  <line x1="58" y1="38" x2="68" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Lower legs -->
+  <line x1="68" y1="56" x2="66" y2="72" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Feet on ground -->
+  <line x1="62" y1="72" x2="70" y2="72" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Ground -->
+  <line x1="10" y1="82" x2="90" y2="82" stroke="#2a5a8c" stroke-width="1" opacity="0.4"/>
+  <!-- Arrow showing hip thrust direction -->
+  <path d="M50 50 L50 36 M47 39 L50 36 L53 39" stroke="#58CCFF" stroke-width="1.5" opacity="0.5"/>
+</svg>

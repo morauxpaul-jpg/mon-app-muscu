@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <circle cx="50" cy="16" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso -->
+  <line x1="50" y1="22" x2="50" y2="48" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arms at sides -->
+  <line x1="47" y1="28" x2="40" y2="44" stroke="#58CCFF" stroke-width="2"/>
+  <line x1="53" y1="28" x2="60" y2="44" stroke="#58CCFF" stroke-width="2"/>
+  <!-- Legs (straight, on toes) -->
+  <line x1="50" y1="48" x2="44" y2="70" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="50" y1="48" x2="56" y2="70" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Feet on toes (elevated) -->
+  <line x1="42" y1="70" x2="42" y2="74" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="54" y1="70" x2="54" y2="74" stroke="#58CCFF" stroke-width="2.5"/>
+  <circle cx="42" cy="76" r="2" fill="#58CCFF" opacity="0.4"/>
+  <circle cx="54" cy="76" r="2" fill="#58CCFF" opacity="0.4"/>
+  <!-- Step/platform -->
+  <rect x="32" y="78" width="36" height="4" rx="1" fill="#1a3a5c" stroke="#2a5a8c" stroke-width="1.5"/>
+  <!-- Arrow showing raise -->
+  <path d="M66 50 L66 30 M63 33 L66 30 L69 33" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+</svg>

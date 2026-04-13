@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Bench -->
+  <rect x="15" y="58" width="55" height="6" rx="2" fill="#1a3a5c" stroke="#2a5a8c" stroke-width="1.5"/>
+  <line x1="18" y1="64" x2="18" y2="80" stroke="#2a5a8c" stroke-width="2"/>
+  <line x1="67" y1="64" x2="67" y2="80" stroke="#2a5a8c" stroke-width="2"/>
+  <!-- Person lying -->
+  <circle cx="72" cy="52" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="65" y1="54" x2="30" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Legs -->
+  <line x1="30" y1="56" x2="22" y2="70" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="22" y1="70" x2="22" y2="80" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arms pushing up -->
+  <line x1="55" y1="54" x2="55" y2="32" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="42" y1="55" x2="42" y2="32" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Barbell -->
+  <line x1="35" y1="30" x2="62" y2="30" stroke="#58CCFF" stroke-width="3"/>
+  <rect x="32" y="26" width="6" height="8" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1"/>
+  <rect x="59" y="26" width="6" height="8" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1"/>
+</svg>

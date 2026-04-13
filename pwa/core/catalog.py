@@ -318,21 +318,43 @@ def recommend(niveau: str, frequence: int, equipement: str) -> list[str]:
 
 
 # ── Construction d'un programme (clone dans programs.data) ───────────
-def build_program(prog_id: str, frequence: int) -> dict:
+def build_program(prog_id: str, frequence: int, equipment: list[str] | None = None) -> dict:
     """Construit un dict programme complet (séances + _planning) à partir
     du catalogue. Retourne un clone profond prêt à être sauvegardé via
-    core.data.save_prog()."""
+    core.data.save_prog().
+
+    Si ``equipment`` est fourni (liste des IDs matériel de l'utilisateur),
+    les exercices nécessitant du matériel absent sont remplacés par des
+    alternatives compatibles.
+    """
+    from core.exercises_data import (
+        EQUIPMENT_FOR_EXERCISE, EXERCISE_SUBSTITUTIONS, check_equipment
+    )
+
     src = CATALOG.get(prog_id)
     if not src:
         raise ValueError(f"Programme inconnu : {prog_id}")
 
+    # banc_inclinable implique aussi banc_plat
+    effective_equipment = set(equipment or [])
+    if "banc_inclinable" in effective_equipment:
+        effective_equipment.add("banc_plat")
+
     prog: dict = {}
     # Copie des séances (retire le _reps_hint qui reste côté catalogue)
     for seance_name, exos in src["seances"].items():
-        prog[seance_name] = [
-            {"name": e["name"], "sets": int(e["sets"]), "muscle": e["muscle"]}
-            for e in exos
-        ]
+        built_exos = []
+        for e in exos:
+            name = e["name"]
+            muscle = e["muscle"]
+            sets = int(e["sets"])
+            # Substitution si matériel manquant
+            if equipment is not None and not check_equipment(name, effective_equipment):
+                alt = EXERCISE_SUBSTITUTIONS.get(name)
+                if alt:
+                    name = alt
+            built_exos.append({"name": name, "sets": sets, "muscle": muscle})
+        prog[seance_name] = built_exos
 
     seance_names = list(src["seances"].keys())
     freq_eff = int(frequence or src["freq"])

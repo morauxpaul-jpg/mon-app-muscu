@@ -239,6 +239,24 @@
       <div class="opt" :class="{ sel: form.equipement === 'aucun' }" @click="form.equipement = 'aucun'"><span class="emoji">✊</span>Poids du corps</div>
     </div>
 
+    <!-- Sous-question équipement maison -->
+    <template x-if="form.equipement && form.equipement !== 'salle'">
+      <div style="margin-top:16px;">
+        <label class="field-label">Quel matériel as-tu ? (sélection multiple)</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+          <template x-for="eq in equipmentOptions" :key="eq.id">
+            <label class="opt" style="display:flex; align-items:center; gap:8px; text-align:left; padding:10px 12px; cursor:pointer;"
+                   :class="{ sel: form.equipment_details.includes(eq.id) }"
+                   @click.prevent="toggleEquipment(eq.id)">
+              <input type="checkbox" :checked="form.equipment_details.includes(eq.id)" style="display:none;">
+              <span style="font-size:1.2rem;" x-text="eq.icon"></span>
+              <span style="font-size:0.82rem;" x-text="eq.label"></span>
+            </label>
+          </template>
+        </div>
+      </div>
+    </template>
+
     <div class="onboard-actions">
       <button class="btn-ghost" @click="step = 2">← Retour</button>
       <button class="btn-next" :disabled="!canNext3()" @click="goStep4()">Suivant →</button>
@@ -302,6 +320,7 @@
       <input type="hidden" name="frequence"   :value="form.frequence">
       <input type="hidden" name="objectif"    :value="form.objectif">
       <input type="hidden" name="equipement"  :value="form.equipement">
+      <input type="hidden" name="equipment_details" :value="JSON.stringify(form.equipment_details)">
       <input type="hidden" name="programme_id" :value="form.programme_id">
       <div class="onboard-actions">
         <button type="button" class="btn-ghost" @click="step = 3">← Retour</button>
@@ -359,8 +378,21 @@ function onboardingFlow() {
       frequence: EXISTING.frequence || 3,
       objectif: EXISTING.objectif || "",
       equipement: EXISTING.equipement || "",
+      equipment_details: EXISTING.equipment_details || [],
       programme_id: "",
     },
+    equipmentOptions: [
+      { id: "halteres", label: "Haltères réglables", icon: "🏋️" },
+      { id: "barre", label: "Barre droite + disques", icon: "🔩" },
+      { id: "barre_ez", label: "Barre EZ", icon: "〰️" },
+      { id: "banc_plat", label: "Banc plat", icon: "🪑" },
+      { id: "banc_inclinable", label: "Banc inclinable", icon: "📐" },
+      { id: "barre_traction", label: "Barre de traction", icon: "🔝" },
+      { id: "elastiques", label: "Élastiques / bandes", icon: "🔗" },
+      { id: "kettlebell", label: "Kettlebell", icon: "🔔" },
+      { id: "trx", label: "TRX / sangles", icon: "⛓️" },
+      { id: "rien", label: "Rien (poids du corps)", icon: "✊" },
+    ],
     recommended: [],
     orderedPrograms: CATALOG_PROGRAMS,
     previewProg: null,
@@ -369,6 +401,21 @@ function onboardingFlow() {
     canNext1() { return this.form.prenom.trim().length >= 2 && this.form.age >= 10 && this.form.sexe; },
     canNext2() { return this.form.niveau && this.form.frequence >= 2; },
     canNext3() { return this.form.objectif && this.form.equipement; },
+
+    toggleEquipment(id) {
+      var idx = this.form.equipment_details.indexOf(id);
+      if (idx >= 0) {
+        this.form.equipment_details.splice(idx, 1);
+      } else {
+        // If "rien" is selected, clear others; if selecting something else, remove "rien"
+        if (id === "rien") {
+          this.form.equipment_details = ["rien"];
+        } else {
+          this.form.equipment_details = this.form.equipment_details.filter(function(e) { return e !== "rien"; });
+          this.form.equipment_details.push(id);
+        }
+      }
+    },
 
     openPreview(prog) {
       this.previewProg = prog;

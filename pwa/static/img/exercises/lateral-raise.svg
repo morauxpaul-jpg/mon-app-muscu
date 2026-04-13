@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <circle cx="50" cy="20" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso -->
+  <line x1="50" y1="26" x2="50" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Legs -->
+  <line x1="50" y1="56" x2="42" y2="82" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="50" y1="56" x2="58" y2="82" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arms raised to sides (T-pose) -->
+  <line x1="47" y1="32" x2="22" y2="36" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="53" y1="32" x2="78" y2="36" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Dumbbells -->
+  <rect x="17" y="33" width="6" height="6" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1.5"/>
+  <rect x="77" y="33" width="6" height="6" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1.5"/>
+  <!-- Arrow showing raise direction -->
+  <path d="M28 50 L24 38 M21 41 L24 38 L27 40" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+  <path d="M72 50 L76 38 M73 40 L76 38 L79 41" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+</svg>

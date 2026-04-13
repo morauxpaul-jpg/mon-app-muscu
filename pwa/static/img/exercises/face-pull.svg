@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <circle cx="50" cy="22" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso -->
+  <line x1="50" y1="28" x2="50" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Legs -->
+  <line x1="50" y1="56" x2="42" y2="80" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="50" y1="56" x2="58" y2="80" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arms pulling to face (elbows high and wide) -->
+  <line x1="47" y1="32" x2="30" y2="28" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="30" y1="28" x2="28" y2="18" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="53" y1="32" x2="70" y2="28" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="70" y1="28" x2="72" y2="18" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Cable/rope -->
+  <line x1="28" y1="18" x2="50" y2="10" stroke="#2a5a8c" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <line x1="72" y1="18" x2="50" y2="10" stroke="#2a5a8c" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <!-- Pulley point -->
+  <circle cx="50" cy="10" r="3" fill="#2a5a8c" stroke="#2a5a8c" stroke-width="1"/>
+</svg>

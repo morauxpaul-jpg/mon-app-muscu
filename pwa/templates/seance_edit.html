@@ -207,9 +207,7 @@
       <div class="exo-head">
         <div>
           <div class="exo-title">🔹 {{ exo.base|upper }}
-            {% if exo.info %}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo({{ exo.info|tojson }})" title="Info exercice">?</button>
-            {% endif %}
           </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
@@ -467,19 +465,20 @@
   <div id="exo-info-modal" class="exo-info-modal" style="display:none;" onclick="this.style.display='none'">
     <div class="exo-info-box" onclick="event.stopPropagation()">
       <h4 id="exo-info-title"></h4>
+      <div id="exo-info-image" style="text-align:center; margin-bottom:12px;"></div>
       <div class="info-section">
         <div class="info-label">MUSCLES</div>
-        <div class="info-text" id="exo-info-muscles"></div>
+        <div id="exo-info-muscles" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
       </div>
       <div class="info-section">
         <div class="info-label">EXÉCUTION</div>
         <div class="info-text" id="exo-info-desc"></div>
       </div>
-      <div class="info-section">
+      <div class="info-section" id="exo-info-tips-section">
         <div class="info-label">CONSEILS</div>
-        <div class="info-text" id="exo-info-tips"></div>
+        <ul id="exo-info-tips" style="padding-left:18px; margin:4px 0 0; font-size:0.88rem; line-height:1.5;"></ul>
       </div>
-      <button type="button" class="btn primary" style="width:100%; margin-top:10px;" onclick="document.getElementById('exo-info-modal').style.display='none'">Compris</button>
+      <button type="button" class="btn primary" style="width:100%; margin-top:10px;" onclick="document.getElementById('exo-info-modal').style.display='none'">Fermer</button>
     </div>
   </div>
 
@@ -498,9 +497,37 @@
   <script>
   // ── Exercise info modal (Feature 8) ────────────────────────────
   function showExoInfo(info) {
-    document.getElementById('exo-info-muscles').textContent = info.muscles || '';
+    document.getElementById('exo-info-title').textContent = info.name || '';
+    // Image
+    var imgEl = document.getElementById('exo-info-image');
+    if (info.image) {
+      imgEl.innerHTML = '<img src="/static/img/exercises/' + info.image + '" alt="" style="width:80px; height:80px; opacity:0.85;">';
+    } else {
+      imgEl.innerHTML = '';
+    }
+    // Muscles as colored tags
+    var musclesEl = document.getElementById('exo-info-muscles');
+    if (Array.isArray(info.muscles)) {
+      musclesEl.innerHTML = info.muscles.map(function(m) {
+        return '<span style="font-size:0.75rem; padding:2px 8px; border-radius:8px; background:rgba(88,204,255,0.12); border:1px solid rgba(88,204,255,0.3); color:#58CCFF;">' + m + '</span>';
+      }).join('');
+    } else {
+      musclesEl.innerHTML = '<span style="font-size:0.85rem; color:var(--text);">' + (info.muscles || '') + '</span>';
+    }
+    // Description
     document.getElementById('exo-info-desc').textContent = info.description || '';
-    document.getElementById('exo-info-tips').textContent = info.tips || '';
+    // Tips as list
+    var tipsEl = document.getElementById('exo-info-tips');
+    var tipsSection = document.getElementById('exo-info-tips-section');
+    if (Array.isArray(info.tips) && info.tips.length) {
+      tipsEl.innerHTML = info.tips.map(function(t) { return '<li>' + t + '</li>'; }).join('');
+      tipsSection.style.display = '';
+    } else if (info.tips && typeof info.tips === 'string') {
+      tipsEl.innerHTML = '<li>' + info.tips + '</li>';
+      tipsSection.style.display = '';
+    } else {
+      tipsSection.style.display = 'none';
+    }
     document.getElementById('exo-info-modal').style.display = 'flex';
   }
 

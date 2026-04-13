@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <circle cx="50" cy="20" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso -->
+  <line x1="50" y1="26" x2="50" y2="54" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Legs -->
+  <line x1="50" y1="54" x2="42" y2="80" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="50" y1="54" x2="58" y2="80" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Right arm curling (upper arm down, forearm curled up) -->
+  <line x1="53" y1="32" x2="60" y2="48" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="60" y1="48" x2="58" y2="34" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Dumbbell in right hand -->
+  <rect x="55" y="30" width="8" height="4" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1.5"/>
+  <!-- Left arm extended down -->
+  <line x1="47" y1="32" x2="40" y2="48" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="40" y1="48" x2="38" y2="58" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Dumbbell in left hand -->
+  <rect x="34" y="56" width="8" height="4" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1.5"/>
+  <!-- Arrow showing curl direction -->
+  <path d="M68 46 C68 36 66 32 62 30" stroke="#58CCFF" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <path d="M64 33 L62 30 L66 30" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+</svg>

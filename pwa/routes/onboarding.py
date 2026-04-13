@@ -27,6 +27,10 @@ def index():
     # Si l'user a déjà fait l'onboarding et revient ici (via "refaire"),
     # on affiche quand même le formulaire vide.
     existing = get_onboarding() or {}
+    # Ajouter equipment_details depuis le programme si disponible
+    if "equipment_details" not in existing:
+        prog = get_prog() or {}
+        existing["equipment_details"] = prog.get("_equipment_details", [])
     return render_template(
         "onboarding.html",
         active=None,
@@ -67,6 +71,15 @@ def submit():
     equipement = (f.get("equipement") or "").strip()[:30]
     programme_id = (f.get("programme_id") or "").strip()
 
+    # Équipement détaillé (JSON array depuis le formulaire)
+    import json
+    try:
+        equipment_details = json.loads(f.get("equipment_details") or "[]")
+        if not isinstance(equipment_details, list):
+            equipment_details = []
+    except (json.JSONDecodeError, TypeError):
+        equipment_details = []
+
     # 1. Sauvegarde onboarding + prenom côté profile
     save_onboarding({
         "prenom": prenom,
@@ -88,8 +101,12 @@ def submit():
         existing = get_prog() or {}
         # Conserver les métadonnées privées (_settings, _planning, etc.)
         meta = {k: v for k, v in existing.items() if k.startswith("_")}
-        prog = catalog.build_program(programme_id, frequence)
+        # Passer l'équipement pour adapter le programme (substitutions)
+        equipment_arg = equipment_details if equipement != "salle" else None
+        prog = catalog.build_program(programme_id, frequence, equipment=equipment_arg)
         prog.update(meta)
+        # Stocker l'équipement dans le programme pour le re-onboarding
+        prog["_equipment_details"] = equipment_details
         save_prog(prog)
 
     session["onboarded"] = True

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <circle cx="50" cy="18" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Shoulders raised (trapezoids highlighted) -->
+  <line x1="44" y1="22" x2="36" y2="24" stroke="#58CCFF" stroke-width="3"/>
+  <line x1="56" y1="22" x2="64" y2="24" stroke="#58CCFF" stroke-width="3"/>
+  <!-- Trapeze highlight -->
+  <path d="M38 22 Q50 16 62 22" stroke="#58CCFF" stroke-width="2" opacity="0.3" fill="#58CCFF" fill-opacity="0.1"/>
+  <!-- Torso -->
+  <line x1="50" y1="28" x2="50" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arms hanging with dumbbells -->
+  <line x1="36" y1="26" x2="34" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="64" y1="26" x2="66" y2="56" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Dumbbells -->
+  <rect x="30" y="54" width="8" height="6" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1.5"/>
+  <rect x="62" y="54" width="8" height="6" rx="1" fill="#58CCFF" opacity="0.3" stroke="#58CCFF" stroke-width="1.5"/>
+  <!-- Legs -->
+  <line x1="50" y1="56" x2="42" y2="82" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="50" y1="56" x2="58" y2="82" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arrows showing shrug direction -->
+  <path d="M32 20 L32 14 M29 17 L32 14 L35 17" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+  <path d="M68 20 L68 14 M65 17 L68 14 L71 17" stroke="#58CCFF" stroke-width="1.5" opacity="0.4"/>
+</svg>

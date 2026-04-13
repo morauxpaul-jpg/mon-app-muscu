@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Parallel bars -->
+  <line x1="25" y1="36" x2="25" y2="85" stroke="#2a5a8c" stroke-width="2.5"/>
+  <line x1="75" y1="36" x2="75" y2="85" stroke="#2a5a8c" stroke-width="2.5"/>
+  <line x1="20" y1="36" x2="30" y2="36" stroke="#2a5a8c" stroke-width="3"/>
+  <line x1="70" y1="36" x2="80" y2="36" stroke="#2a5a8c" stroke-width="3"/>
+  <!-- Head -->
+  <circle cx="50" cy="22" r="6" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Torso (slightly forward lean) -->
+  <line x1="50" y1="28" x2="50" y2="54" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Arms on bars (bent ~90°) -->
+  <line x1="47" y1="32" x2="30" y2="32" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="30" y1="32" x2="27" y2="36" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="53" y1="32" x2="70" y2="32" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="70" y1="32" x2="73" y2="36" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Legs (hanging, slightly forward) -->
+  <line x1="50" y1="54" x2="44" y2="74" stroke="#58CCFF" stroke-width="2.5"/>
+  <line x1="50" y1="54" x2="48" y2="74" stroke="#58CCFF" stroke-width="2.5"/>
+  <!-- Feet -->
+  <line x1="42" y1="74" x2="46" y2="78" stroke="#58CCFF" stroke-width="2"/>
+  <line x1="46" y1="74" x2="50" y2="78" stroke="#58CCFF" stroke-width="2"/>
+</svg>

@@ -20,7 +20,7 @@ pwa/
 │   ├── dates.py              # Helpers dates (timezone Paris)
 │   ├── muscu.py              # Logique muscu (1RM, muscles, base_name)
 │   ├── catalog.py            # Catalogue programmes prédéfinis (onboarding)
-│   └── exercises_data.py     # Fiches info exercices (muscles, exécution, conseils)
+│   └── exercises_data.py     # Fiches exercices complètes + matériel requis + substitutions
 ├── routes/
 │   ├── auth.py               # Login, bridge JWT, logout
 │   ├── accueil.py            # Dashboard (/accueil), planning hebdo, streak
@@ -60,6 +60,7 @@ pwa/
 │   ├── changelog.json        # Notes de version (patch notes modal)
 │   ├── service-worker.js     # SW : Network First, cache v16, notifications
 │   ├── manifest.json         # PWA manifest
+│   ├── img/exercises/         # SVG illustrations exercices (18 fichiers)
 │   └── icon.png              # Icône app
 ```
 
@@ -156,4 +157,4 @@ pwa/
 - Branche : `pwa-migration`
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- CACHE_VERSION : v18 (incrémenter à chaque déploiement)
+- CACHE_VERSION : v19 (incrémenter à chaque déploiement)

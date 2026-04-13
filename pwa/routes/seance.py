@@ -238,6 +238,15 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         last_summary = ""
 
     info = get_exercise_info(base)
+    if not info:
+        # Fallback: generate basic info from program data
+        info = {
+            "name": base,
+            "muscles": [m.strip() for m in (muscle or "Autre").split(",")],
+            "description": f"Exercice ciblant : {muscle}.",
+            "tips": [],
+            "image": None,
+        }
 
     return {
         "base": base,
