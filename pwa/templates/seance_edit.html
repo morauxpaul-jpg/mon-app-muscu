@@ -1,10 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ seance_name }} · Muscu PRO{% endblock %}
 
-{% block head_extra %}
-  <script defer src="/static/js/alpine.min.js"></script>
-{% endblock %}
-
 {% block content %}
   <a href="/seance?date={{ date_iso }}" class="btn" style="display:inline-block; margin-bottom: 10px;">← Changer de séance</a>
 
