@@ -18,7 +18,7 @@
     {
       target: '[data-tuto="seance"]',
       title: "Logger une séance",
-      text: "Enregistre tes séries, charges et reps. Chrono de repos intégré et pré-remplissage automatique.",
+      text: "Choisis ta séance du jour, puis remplis chaque exercice : reps, poids, remarques. Le chrono de repos se lance entre les séries.",
     },
     {
       target: '[data-tuto="progres"]',

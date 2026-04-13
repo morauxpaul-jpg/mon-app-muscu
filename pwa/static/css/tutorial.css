@@ -61,16 +61,23 @@
 
 #tuto-skip {
   position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #889;
-  font-size: 0.78rem;
+  top: 6px;
+  right: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #aab;
+  font-size: 0.82rem;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 6px 10px;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
 }
-#tuto-skip:hover { color: #fff; }
+#tuto-skip:hover, #tuto-skip:active { color: #fff; background: rgba(255,255,255,0.15); }
 
 .tuto-actions {
   display: flex;

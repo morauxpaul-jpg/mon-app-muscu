@@ -1,6 +1,127 @@
 {% extends "base.html" %}
 {% block title %}{{ seance_name }} · Muscu PRO{% endblock %}
 
+{% block head_extra %}
+<style>
+/* ── Rest Timer Bar (non-blocking, fixed bottom) ── */
+.rest-timer-bar {
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  background: rgba(5, 10, 24, 0.96);
+  border-top: 2px solid var(--accent, #58CCFF);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.rest-timer-bar-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(88, 204, 255, 0.08);
+  transition: width 1s linear;
+}
+.rest-timer-bar-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  flex-wrap: nowrap;
+}
+.rest-timer-bar-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent, #58CCFF);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.rest-timer-bar-time {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+}
+.rest-timer-bar-presets {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+.rest-timer-bar-presets button {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 0.68rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.rest-timer-bar-presets button.active {
+  background: var(--accent, #58CCFF);
+  color: #000;
+  border-color: var(--accent, #58CCFF);
+}
+.rest-timer-bar-skip {
+  background: none;
+  border: none;
+  color: var(--text-dim, #8899aa);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+.rest-timer-bar.timer-done { border-top-color: var(--success, #00FF7F); }
+.rest-timer-bar.timer-done .rest-timer-bar-label { color: var(--success, #00FF7F); }
+.rest-timer-bar.timer-done .rest-timer-bar-time { color: var(--success, #00FF7F); }
+
+/* ── Exercise info button ── */
+.exo-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--accent, #58CCFF);
+  background: rgba(88, 204, 255, 0.1);
+  color: var(--accent, #58CCFF);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 0;
+  line-height: 1;
+}
+.exo-info-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+}
+.exo-info-box {
+  background: #0B1428;
+  border: 2px solid var(--accent, #58CCFF);
+  border-radius: 14px;
+  padding: 18px;
+  max-width: 340px;
+  width: calc(100vw - 32px);
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.exo-info-box h4 { color: var(--accent, #58CCFF); margin: 0 0 8px; font-size: 1rem; }
+.exo-info-box .info-section { margin-bottom: 8px; }
+.exo-info-box .info-label { font-size: 0.7rem; color: var(--text-dim, #8899aa); letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; }
+.exo-info-box .info-text { font-size: 0.88rem; line-height: 1.4; }
+</style>
+{% endblock %}
+
 {% block content %}
   <a href="/seance?date={{ date_iso }}" class="btn" style="display:inline-block; margin-bottom: 10px;">← Changer de séance</a>
 
@@ -84,7 +205,11 @@
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
       <div class="exo-head" @click="open = !open">
         <div>
-          <div class="exo-title">🔹 {{ exo.base|upper }}</div>
+          <div class="exo-title">🔹 {{ exo.base|upper }}
+            {% if exo.info %}
+              <button type="button" class="exo-info-btn" onclick="event.stopPropagation(); showExoInfo({{ exo.info|tojson }})" title="Info exercice">?</button>
+            {% endif %}
+          </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
             {% if exo.completed %} · <span style="color: var(--success);">✅</span>{% endif %}
@@ -150,9 +275,9 @@
             <template x-for="(s, i) in sets" :key="i">
               <tr>
                 <td x-text="i + 1"></td>
-                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" @focus="onRowFocus(i)"></td>
+                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @focus="onRowFocus(i)"></td>
                 {% if not exo.is_bw %}
-                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" @focus="onRowFocus(i)"></td>
+                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @focus="onRowFocus(i)"></td>
                 {% endif %}
                 <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                 <td>
@@ -186,7 +311,7 @@
             <button type="submit" class="btn primary" style="width:100%;">💾 Enregistrer</button>
           </form>
           <form method="post" action="/seance/skip-exo"
-                @submit="sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
+                @submit="try{localStorage.removeItem(DRAFT_PREFIX + '{{ exo.base }}')}catch(e){} sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
@@ -314,32 +439,47 @@
     </div>
   {% endif %}
 
-  <form method="post" action="/seance/finish">
+  <form method="post" action="/seance/finish" onsubmit="clearAllDrafts()">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <button type="submit" class="btn primary" style="width:100%;">✅ Terminer la séance</button>
   </form>
 
-  {# ── Chrono de repos (Feature 1) ─────────────────────────── #}
-  <div id="rest-timer" class="rest-timer-overlay" style="display:none;">
-    <div class="rest-timer-label">REPOS</div>
-    <div class="rest-timer-circle">
-      <svg viewBox="0 0 180 180">
-        <circle class="track" cx="90" cy="90" r="82"></circle>
-        <circle class="progress" id="timer-progress" cx="90" cy="90" r="82"
-                stroke-dasharray="515.22" stroke-dashoffset="0"></circle>
-      </svg>
-      <div class="rest-timer-time" id="timer-display">1:30</div>
+  {# ── Chrono de repos (non-bloquant, bandeau fixe) ──────── #}
+  <div id="rest-timer" class="rest-timer-bar" style="display:none;">
+    <div class="rest-timer-bar-progress" id="timer-progress-bar"></div>
+    <div class="rest-timer-bar-content">
+      <span class="rest-timer-bar-label" id="timer-label">⏱️ REPOS</span>
+      <span class="rest-timer-bar-time" id="timer-display">1:30</span>
+      <div class="rest-timer-bar-presets">
+        <button type="button" onclick="setTimerDuration(60)">1:00</button>
+        <button type="button" onclick="setTimerDuration(90)">1:30</button>
+        <button type="button" onclick="setTimerDuration(120)">2:00</button>
+        <button type="button" onclick="setTimerDuration(180)">3:00</button>
+      </div>
+      <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()">✕</button>
     </div>
-    <div id="timer-done-msg" class="rest-timer-done" style="display:none;">C'est reparti !</div>
-    <div class="rest-timer-presets">
-      <button class="btn" onclick="setTimerDuration(60)">1:00</button>
-      <button class="btn" onclick="setTimerDuration(90)">1:30</button>
-      <button class="btn" onclick="setTimerDuration(120)">2:00</button>
-      <button class="btn" onclick="setTimerDuration(180)">3:00</button>
+  </div>
+
+  {# ── Modal info exercice (Feature 8) ────────────────────── #}
+  <div id="exo-info-modal" class="exo-info-modal" style="display:none;" onclick="this.style.display='none'">
+    <div class="exo-info-box" onclick="event.stopPropagation()">
+      <h4 id="exo-info-title"></h4>
+      <div class="info-section">
+        <div class="info-label">MUSCLES</div>
+        <div class="info-text" id="exo-info-muscles"></div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">EXÉCUTION</div>
+        <div class="info-text" id="exo-info-desc"></div>
+      </div>
+      <div class="info-section">
+        <div class="info-label">CONSEILS</div>
+        <div class="info-text" id="exo-info-tips"></div>
+      </div>
+      <button type="button" class="btn primary" style="width:100%; margin-top:10px;" onclick="document.getElementById('exo-info-modal').style.display='none'">Compris</button>
     </div>
-    <button class="btn primary" onclick="skipTimer()" style="margin-top:8px;">⏭️ Passer</button>
   </div>
 
   {# ── Modal de confirmation (Feature 4) ──────────────────── #}
@@ -355,6 +495,14 @@
   </div>
 
   <script>
+  // ── Exercise info modal (Feature 8) ────────────────────────────
+  function showExoInfo(info) {
+    document.getElementById('exo-info-muscles').textContent = info.muscles || '';
+    document.getElementById('exo-info-desc').textContent = info.description || '';
+    document.getElementById('exo-info-tips').textContent = info.tips || '';
+    document.getElementById('exo-info-modal').style.display = 'flex';
+  }
+
   // ── Modal system (Feature 4) ──────────────────────────────────
   var _pendingForm = null;
   function showModal(event, title, body, isDanger) {
@@ -388,18 +536,19 @@
     }
   }
 
-  // ── Rest Timer (Feature 1) ────────────────────────────────────
+  // ── Rest Timer (non-bloquant) ──────────────────────────────────
   var _timerInterval = null;
   var _timerRemaining = 0;
   var _timerTotal = 90;
-  var CIRCUM = 2 * Math.PI * 82; // ~515.22
 
   function startTimer(seconds) {
     _timerTotal = seconds || _timerTotal;
     _timerRemaining = _timerTotal;
+    var bar = document.getElementById('rest-timer');
+    bar.classList.remove('timer-done');
+    bar.style.display = 'block';
+    document.getElementById('timer-label').textContent = '⏱️ REPOS';
     updateTimerDisplay();
-    document.getElementById('rest-timer').style.display = 'flex';
-    document.getElementById('timer-done-msg').style.display = 'none';
     highlightPreset(_timerTotal);
     clearInterval(_timerInterval);
     _timerInterval = setInterval(function() {
@@ -416,19 +565,17 @@
     var m = Math.floor(Math.max(0, _timerRemaining) / 60);
     var s = Math.max(0, _timerRemaining) % 60;
     document.getElementById('timer-display').textContent = m + ':' + (s < 10 ? '0' : '') + s;
-    var offset = CIRCUM * (1 - _timerRemaining / _timerTotal);
-    document.getElementById('timer-progress').style.strokeDashoffset = offset;
+    var pct = (_timerRemaining / _timerTotal) * 100;
+    document.getElementById('timer-progress-bar').style.width = pct + '%';
   }
 
   function timerFinished() {
-    document.getElementById('timer-done-msg').style.display = 'block';
-    // Vibration si disponible
+    var bar = document.getElementById('rest-timer');
+    bar.classList.add('timer-done');
+    document.getElementById('timer-label').textContent = '✅ C\'est reparti !';
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    // Auto-ferme après 3s
     setTimeout(function() {
-      if (document.getElementById('rest-timer').style.display !== 'none') {
-        skipTimer();
-      }
+      if (bar.style.display !== 'none') skipTimer();
     }, 3000);
   }
 
@@ -455,13 +602,12 @@
   }
 
   function highlightPreset(sec) {
-    var btns = document.querySelectorAll('.rest-timer-presets button');
-    btns.forEach(function(b) {
-      b.classList.toggle('active', parseInt(b.textContent.split(':')[0]) * 60 + parseInt(b.textContent.split(':')[1]) === sec);
+    document.querySelectorAll('.rest-timer-bar-presets button').forEach(function(b) {
+      var parts = b.textContent.split(':');
+      b.classList.toggle('active', parseInt(parts[0]) * 60 + parseInt(parts[1]) === sec);
     });
   }
 
-  // Restore last used timer duration from localStorage
   var savedTimer = parseInt(localStorage.getItem('restTimerDefault'));
   if (savedTimer) _timerTotal = savedTimer;
 
@@ -479,8 +625,23 @@
     }
   });
 
+  // ── Draft auto-save ────────────────────────────────────────────
+  var DRAFT_PREFIX = 'draft_' + {{ seance_name|tojson }} + '_' + {{ date_iso|tojson }} + '_';
+
+  function clearAllDrafts() {
+    try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
+      }
+      keys.forEach(function(k) { localStorage.removeItem(k); });
+    } catch(e) {}
+  }
+
   // ── Exercise block (Alpine component) ─────────────────────────
   function exoBlock(index, data) {
+    var draftKey = DRAFT_PREFIX + data.base;
     return {
       open: !data.completed,
       variant: data.variant,
@@ -488,35 +649,52 @@
       restSeconds: data.rest_seconds || 90,
       sets: (data.sets || []).map(function (s) {
         return {
-          reps: s.reps || 0,
-          poids: s.poids || 0,
+          reps: (s.reps != null && s.reps !== '') ? s.reps : '',
+          poids: (s.poids != null && s.poids !== '') ? s.poids : '',
           remarque: s.remarque || ""
         };
       }),
+      init: function() {
+        // Restore draft if page was left without saving
+        try {
+          var saved = localStorage.getItem(draftKey);
+          if (saved) {
+            var d = JSON.parse(saved);
+            if (d.sets && d.sets.length) this.sets = d.sets;
+            if (d.variant) this.variant = d.variant;
+          }
+        } catch(e) {}
+        // Auto-save on changes via $watch
+        var self = this;
+        this.$watch('sets', function() { self._saveDraft(); });
+        this.$watch('variant', function() { self._saveDraft(); });
+      },
+      _saveDraft: function() {
+        try {
+          localStorage.setItem(draftKey, JSON.stringify({ sets: this.sets, variant: this.variant }));
+        } catch(e) {}
+      },
       addSet: function () {
-        this.sets.push({ reps: 0, poids: 0, remarque: "" });
+        this.sets.push({ reps: '', poids: '', remarque: "" });
       },
       removeSet: function (i) {
         if (this.sets.length > 1) this.sets.splice(i, 1);
       },
       clearWeights: function () {
-        this.sets.forEach(function(s) { s.poids = 0; });
+        this.sets.forEach(function(s) { s.poids = ''; });
       },
       onRowFocus: function (i) {
-        // Lance le chrono quand l'utilisateur passe à une série suivante,
-        // SEULEMENT si la série précédente a reps > 0 ET poids > 0 (ou is_bw)
         if (!AUTO_REST_TIMER || i === 0) return;
         var prev = this.sets[i - 1];
-        if (!prev || prev.reps <= 0) return;
-        // Pour les exos au poids du corps, pas besoin de vérifier le poids
-        if (!this.isBw && prev.poids <= 0) return;
-        // Ne pas relancer si le chrono tourne déjà
+        if (!prev || !prev.reps || prev.reps <= 0) return;
+        if (!this.isBw && (!prev.poids || prev.poids <= 0)) return;
         if (document.getElementById('rest-timer').style.display !== 'none') return;
         var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
         startTimer(dur);
       },
       prepareSave: function (e) {
-        // sets_json est déjà bindé via x-bind
+        // Clear draft on save
+        try { localStorage.removeItem(draftKey); } catch(e) {}
       }
     };
   }

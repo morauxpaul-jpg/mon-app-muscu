@@ -12,6 +12,7 @@ from core.data import (
 )
 from core.dates import today_paris, today_paris_str, now_paris, DAYS_FR, MONTHS_FR
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
+from core.exercises_data import get_exercise_info
 
 bp = Blueprint("seance", __name__)
 
@@ -180,7 +181,7 @@ def _last_session_sets(hist, exo_final, seance, s_act):
     return [{"reps": int(r["Reps"]), "poids": float(r["Poids"])} for r in last]
 
 
-def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
+def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_weight=True):
     """Construit le dict passé au template pour un exercice."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
@@ -205,18 +206,28 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
     sets = []
     existing_by_idx = {int(r["Série"] or 0): r for r in curr}
     for i in range(1, n_rows + 1):
-        r = existing_by_idx.get(i, {})
-        reps_val = int(r.get("Reps") or 0)
-        poids_val = float(r.get("Poids") or 0)
-        # Pré-remplir le poids depuis la dernière séance si pas encore saisi
-        if poids_val == 0 and reps_val == 0 and not completed and i <= len(last_sets):
-            poids_val = last_sets[i - 1]["poids"]
-        sets.append({
-            "serie": i,
-            "reps": reps_val,
-            "poids": poids_val,
-            "remarque": r.get("Remarque") or "",
-        })
+        r = existing_by_idx.get(i)
+        if r:
+            # Données déjà saisies — afficher les valeurs réelles
+            reps_val = int(r.get("Reps") or 0)
+            poids_val = float(r.get("Poids") or 0)
+            sets.append({
+                "serie": i,
+                "reps": reps_val,
+                "poids": poids_val,
+                "remarque": r.get("Remarque") or "",
+            })
+        else:
+            # Cellule vide — pré-remplir poids uniquement (si activé)
+            poids_val = None
+            if prefill_weight and not completed and i <= len(last_sets):
+                poids_val = last_sets[i - 1]["poids"]
+            sets.append({
+                "serie": i,
+                "reps": None,
+                "poids": poids_val,
+                "remarque": "",
+            })
 
     # Résumé inline : "80kg × 8, 85kg × 6"
     if last_sets:
@@ -225,6 +236,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
         )
     else:
         last_summary = ""
+
+    info = get_exercise_info(base)
 
     return {
         "base": base,
@@ -240,6 +253,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False):
         "prev_weeks": prev_weeks,
         "sets": sets,
         "last_summary": last_summary,
+        "info": info,
     }
 
 
@@ -253,6 +267,7 @@ def seance():
     hist, prog_seances = _normalize_hist(hist, prog)
     _settings = prog.get("_settings", {})
     auto_rest_timer = _settings.get("auto_rest_timer", True)
+    auto_prefill_weight = _settings.get("auto_prefill_weight", True)
 
     date_iso = request.args.get("date") or today_paris_str()
     target_date = _parse_date(date_iso) or today_paris()
@@ -310,7 +325,8 @@ def seance():
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
-        exos_ctx = [_build_exo_context(hist, e, name, s_act, is_extra=is_extra)
+        exos_ctx = [_build_exo_context(hist, e, name, s_act, is_extra=is_extra,
+                                       prefill_weight=auto_prefill_weight)
                     for e, is_extra in all_exos]
 
         # Volume
@@ -357,7 +373,8 @@ def seance():
     if mode == "libre":
         libre_name = name or "Séance Libre"
         libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
-        exos_ctx = [_build_exo_context(hist, e, libre_name, s_act, is_extra=False)
+        exos_ctx = [_build_exo_context(hist, e, libre_name, s_act, is_extra=False,
+                                       prefill_weight=auto_prefill_weight)
                     for e in libre_exos]
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])

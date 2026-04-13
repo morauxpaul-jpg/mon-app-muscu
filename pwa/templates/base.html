@@ -59,6 +59,29 @@
   {% if is_authenticated %}
   <script>initTutorial();</script>
   <script>
+    // Patch notes modal — affiche les nouveautés une seule fois par version
+    (function() {
+      fetch('/static/changelog.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var key = 'changelog_seen_' + data.version;
+          try { if (localStorage.getItem(key)) return; } catch(e) { return; }
+          var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);" id="patchnotes-modal" onclick="this.remove()">' +
+            '<div style="background:#0B1428;border:2px solid var(--accent,#58CCFF);border-radius:14px;padding:18px;max-width:340px;width:calc(100vw - 32px);color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">' +
+            '<h3 style="color:var(--accent,#58CCFF);margin:0 0 4px;">🎉 ' + data.title + '</h3>' +
+            '<div style="font-size:0.75rem;color:var(--text-dim,#8899aa);margin-bottom:12px;">' + data.date + '</div>' +
+            '<ul style="padding-left:18px;margin:0 0 14px;font-size:0.88rem;line-height:1.6;">' +
+            data.changes.map(function(c) { return '<li>' + c + '</li>'; }).join('') +
+            '</ul>' +
+            '<button onclick="document.getElementById(\'patchnotes-modal\').remove()" style="width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent,#58CCFF),#0077AA);color:#001;font-weight:700;font-size:0.9rem;cursor:pointer;">OK, compris !</button>' +
+            '</div></div>';
+          document.body.insertAdjacentHTML('beforeend', html);
+          try { localStorage.setItem(key, '1'); } catch(e) {}
+        })
+        .catch(function() {});
+    })();
+  </script>
+  <script>
     // Demande de permission notifications (une seule fois)
     (function() {
       if (!('Notification' in window)) return;

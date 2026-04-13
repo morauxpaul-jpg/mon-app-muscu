@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v15-2026-04-13";
+const CACHE_VERSION = "v16-2026-04-13";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -14,6 +14,7 @@ const APP_SHELL = [
   "/static/js/alpine.min.js",
   "/static/js/tutorial.js",
   "/static/icon.png",
+  "/static/changelog.json",
   "/manifest.json",
 ];
 

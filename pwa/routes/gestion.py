@@ -19,6 +19,7 @@ DEFAULT_SETTINGS = {
     "show_1rm": True,
     "theme_animations": True,
     "auto_rest_timer": True,
+    "auto_prefill_weight": True,
     "show_previous_weeks": 2,
     "notifications": False,
 }
@@ -67,6 +68,7 @@ def update_settings():
     s["show_1rm"] = request.form.get("show_1rm") == "on"
     s["theme_animations"] = request.form.get("theme_animations") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
+    s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
     s["notifications"] = request.form.get("notifications") == "on"
     try:
         s["show_previous_weeks"] = max(0, min(10, int(request.form.get("show_previous_weeks", 2))))

@@ -64,6 +64,10 @@
         <span>Chrono de repos automatique entre les séries</span>
       </label>
       <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
+        <span>Pré-remplir les poids de la dernière séance</span>
+      </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this)">
         <span>Notifications de rappel (jours d'entraînement)</span>
       </label>

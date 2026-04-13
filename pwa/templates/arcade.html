@@ -119,8 +119,8 @@ function neonBox(ctx, x, y, w, h, color) {
 
   function reset() {
     bell = { x: 80, y: H/2, vy: 0, r: 18,
-             gravity: isMobile ? 0.32 : 0.45,
-             lift: isMobile ? -6.2 : -7.5 };
+             gravity: isMobile ? 0.25 : 0.35,
+             lift: isMobile ? -5.8 : -6.8 };
     bars = []; frame = 0; score = 0;
     over = false; started = false;
     baseSpeed = isMobile ? 2.0 : 2.6;
@@ -141,7 +141,7 @@ function neonBox(ctx, x, y, w, h, color) {
   }
 
   function spawn() {
-    const gap = isMobile ? 180 : 160;
+    const gap = isMobile ? 190 : 170;
     const minTop = 60;
     const maxTop = H - gap - 60;
     const topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
@@ -417,9 +417,9 @@ function neonBox(ctx, x, y, w, h, color) {
     drawGrid(ctx, W, H);
 
     if (started && !over) {
-      const speed = baseSpeed + score / 30;
-      const interval = Math.max(28, 65 - Math.floor(score / 4));
-      if (frame % interval === 0) spawnDrop();
+      const speed = baseSpeed + score / 40;
+      const interval = Math.max(35, 65 - Math.floor(score / 5));
+      if (frame % interval === 0 && drops.length < 20) spawnDrop();
 
       for (let i = drops.length - 1; i >= 0; i--) {
         const d = drops[i];

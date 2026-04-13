@@ -82,15 +82,15 @@ def submit():
     # 2. Si l'user a choisi un programme du catalogue, on le clone.
     #    S'il a choisi "custom" (créer mon propre) → on ne touche pas à programs,
     #    il ira sur /programme pour construire le sien.
-    # Fix bug Phase 4 : ne JAMAIS écraser un programme existant. Si l'user
-    # avait déjà un programme avant Phase 4 (gate déclenchée a posteriori),
-    # on garde son programme actuel intact.
+    #    Pour un re-onboarding volontaire (refaire depuis Gestion), on écrase
+    #    le programme existant. Pour un premier onboarding, on le clone normalement.
     if programme_id and programme_id != "custom" and catalog.get_program(programme_id):
         existing = get_prog() or {}
-        has_existing = any(k for k in existing if not k.startswith("_"))
-        if not has_existing:
-            prog = catalog.build_program(programme_id, frequence)
-            save_prog(prog)
+        # Conserver les métadonnées privées (_settings, _planning, etc.)
+        meta = {k: v for k, v in existing.items() if k.startswith("_")}
+        prog = catalog.build_program(programme_id, frequence)
+        prog.update(meta)
+        save_prog(prog)
 
     session["onboarded"] = True
     return redirect(url_for("accueil.index"))

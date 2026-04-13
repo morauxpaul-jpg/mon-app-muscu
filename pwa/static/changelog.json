@@ -1,0 +1,15 @@
+{
+  "version": "v16",
+  "date": "2026-04-13",
+  "title": "Mise à jour v16",
+  "changes": [
+    "Chrono de repos non-bloquant : continue à saisir pendant le décompte",
+    "Cellules vides par défaut (plus de zéros), placeholders clairs",
+    "Brouillon auto-sauvegardé : tes données survivent à un changement d'onglet",
+    "Fiches info exercices : bouton ? sur chaque exercice",
+    "Pré-remplissage poids configurable dans les paramètres",
+    "Re-onboarding : change de programme depuis Gestion",
+    "Arcade : physique Flappy et Iron Rain améliorée",
+    "Bouton X du tutoriel plus visible"
+  ]
+}

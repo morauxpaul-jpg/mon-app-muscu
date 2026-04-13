@@ -19,7 +19,8 @@ pwa/
 │   ├── data.py               # Façade Flask (lit user_id depuis flask.g)
 │   ├── dates.py              # Helpers dates (timezone Paris)
 │   ├── muscu.py              # Logique muscu (1RM, muscles, base_name)
-│   └── catalog.py            # Catalogue programmes prédéfinis (onboarding)
+│   ├── catalog.py            # Catalogue programmes prédéfinis (onboarding)
+│   └── exercises_data.py     # Fiches info exercices (muscles, exécution, conseils)
 ├── routes/
 │   ├── auth.py               # Login, bridge JWT, logout
 │   ├── accueil.py            # Dashboard (/accueil), planning hebdo, streak
@@ -55,7 +56,8 @@ pwa/
 │   │   ├── offline.js        # Détection hors-ligne, queue localStorage, sync
 │   │   ├── notifications.js  # Rappels quotidiens (API Notification)
 │   │   └── tutorial.js       # Tutoriel spotlight interactif (6 étapes)
-│   ├── service-worker.js     # SW : Network First, cache v15, notifications
+│   ├── changelog.json        # Notes de version (patch notes modal)
+│   ├── service-worker.js     # SW : Network First, cache v16, notifications
 │   ├── manifest.json         # PWA manifest
 │   └── icon.png              # Icône app
 ```
@@ -153,4 +155,4 @@ pwa/
 - Branche : `pwa-migration`
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- CACHE_VERSION : v15 (incrémenter à chaque déploiement)
+- CACHE_VERSION : v16 (incrémenter à chaque déploiement)
