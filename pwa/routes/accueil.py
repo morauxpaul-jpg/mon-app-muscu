@@ -74,7 +74,7 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
     return {"status": "upcoming", "title": "Séance à faire", "badge": "À VENIR", "color": "#5a7a9a"}
 
 
-@bp.route("/")
+@bp.route("/accueil")
 def index():
     try:
         hist = get_hist()

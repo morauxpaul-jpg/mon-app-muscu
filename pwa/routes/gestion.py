@@ -39,7 +39,7 @@ def gestion():
 
     return render_template(
         "gestion.html",
-        active="gestion",
+        active="plus",
         settings=settings,
         nb_seances=nb_seances,
         nb_exos=nb_exos,

@@ -84,7 +84,7 @@ def programme():
 
     return render_template(
         "programme.html",
-        active="programme",
+        active="plus",
         seances=seances,
         planning=prog["_planning"],
         days_fr=DAYS_FR,

@@ -2,7 +2,7 @@
 {% block title %}Gestion · Muscu PRO{% endblock %}
 
 {% block content %}
-  <h1>⚙️ Gestion</h1>
+  <h1>🛠️ Gestion</h1>
 
   {% if request.args.get('updated') %}
     <div class="card" style="border-color: var(--success);">
@@ -15,16 +15,27 @@
   {% if request.args.get('reset') == 'total' %}
     <div class="card" style="border-color: var(--success);">✅ Tout a été remis à zéro.</div>
   {% endif %}
+
+  {# ── Section : Profil ────────────────────── #}
+  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">👤 PROFIL</h2>
+
   <div class="card">
-    <h3>📊 État</h3>
-    <div class="detail-row">
-      <div class="detail-metric"><div class="detail-label">SÉANCES</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_seances }}</div></div>
-      <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_exos }}</div></div>
-      <div class="detail-metric"><div class="detail-label">LIGNES HIST.</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_hist }}</div></div>
-    </div>
-    <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
-      Archive : {{ nb_archive }} record(s)
-    </div>
+    <h3>🔄 Refaire l'onboarding</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil et, si tu veux, changer de programme.</p>
+    <form method="post" action="/gestion/redo-onboarding">
+      <button type="submit" class="btn" style="width:100%;">🔄 Refaire l'onboarding</button>
+    </form>
+  </div>
+
+  {# ── Section : Programme ─────────────────── #}
+  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">⚙️ PROGRAMME</h2>
+
+  <div class="card">
+    <h3>🪄 Auto-assigner les muscles</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Détecte automatiquement les muscles selon le nom de chaque exercice du programme.</p>
+    <form method="post" action="/gestion/auto-muscles">
+      <button type="submit" class="btn primary" style="width:100%;">🪄 Lancer l'auto-assignation</button>
+    </form>
   </div>
 
   <div class="card">
@@ -52,8 +63,10 @@
     </form>
   </div>
 
+  {# ── Section : Mise à jour ───────────────── #}
+  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">🔄 MISE À JOUR</h2>
+
   <div class="card">
-    <h3>🔄 Mise à jour</h3>
     <div class="detail-row" style="grid-template-columns: 1fr; margin-bottom: 10px;">
       <div class="detail-metric">
         <div class="detail-label">VERSION ACTUELLE</div>
@@ -64,26 +77,19 @@
     <p style="font-size:0.75rem; color:var(--text-dim); margin-top:6px; text-align:center;" id="update-status"></p>
   </div>
 
-  <div class="card">
-    <h3>🎓 Revoir le tutoriel</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le tutoriel interactif qui présente les fonctions clés de l'app.</p>
-    <button type="button" class="btn" style="width:100%;" onclick="replayTutorial()">🎓 Revoir le tutoriel</button>
-  </div>
+  {# ── Section : Données ───────────────────── #}
+  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">📊 DONNÉES</h2>
 
   <div class="card">
-    <h3>🔄 Refaire l'onboarding</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil et, si tu veux, changer de programme.</p>
-    <form method="post" action="/gestion/redo-onboarding">
-      <button type="submit" class="btn" style="width:100%;">🔄 Refaire l'onboarding</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <h3>🪄 Auto-assigner les muscles</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Détecte automatiquement les muscles selon le nom de chaque exercice du programme.</p>
-    <form method="post" action="/gestion/auto-muscles">
-      <button type="submit" class="btn primary" style="width:100%;">🪄 Lancer l'auto-assignation</button>
-    </form>
+    <h3>📊 État</h3>
+    <div class="detail-row">
+      <div class="detail-metric"><div class="detail-label">SÉANCES</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_seances }}</div></div>
+      <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_exos }}</div></div>
+      <div class="detail-metric"><div class="detail-label">LIGNES HIST.</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_hist }}</div></div>
+    </div>
+    <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+      Archive : {{ nb_archive }} record(s)
+    </div>
   </div>
 
   <div class="card" style="border-color: rgba(255,159,10,0.4);">
@@ -106,6 +112,14 @@
       </label>
       <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);">💥 TOUT REMETTRE À ZÉRO</button>
     </form>
+  </div>
+
+  {# ── Section : À propos ──────────────────── #}
+  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">ℹ️ À PROPOS</h2>
+
+  <div class="card" style="text-align:center;">
+    <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker PRO</strong></p>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin:0;">PWA de suivi musculation · Données privées · Gratuit</p>
   </div>
 
   {# ── Modal de confirmation ──────────────────── #}

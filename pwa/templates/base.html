@@ -32,12 +32,10 @@
   </main>
 
   <nav class="bottom-nav" data-tuto="welcome">
-    <a href="/"          data-tuto="dashboard"  class="{% if active == 'accueil'   %}active{% endif %}"><span class="icon">🏠</span>Accueil</a>
+    <a href="/accueil"   data-tuto="dashboard"  class="{% if active == 'accueil'   %}active{% endif %}"><span class="icon">🏠</span>Accueil</a>
     <a href="/seance"    data-tuto="seance"     class="{% if active == 'seance'    %}active{% endif %}"><span class="icon">💪</span>Séance</a>
-    <a href="/programme" data-tuto="programme"  class="{% if active == 'programme' %}active{% endif %}"><span class="icon">⚙️</span>Prog.</a>
     <a href="/progres"   data-tuto="progres"    class="{% if active == 'progres'   %}active{% endif %}"><span class="icon">📈</span>Progrès</a>
-    <a href="/gestion"   data-tuto="gestion"    class="{% if active == 'gestion'   %}active{% endif %}"><span class="icon">🛠️</span>Gestion</a>
-    <a href="/arcade"    data-tuto="arcade"     class="{% if active == 'arcade'    %}active{% endif %}"><span class="icon">🎮</span>Arcade</a>
+    <a href="/plus"      data-tuto="plus"       class="{% if active == 'plus'      %}active{% endif %}"><span class="icon">📋</span>Plus</a>
   </nav>
 
   <script src="/static/js/sw-register.js"></script>

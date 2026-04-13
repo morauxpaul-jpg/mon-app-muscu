@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Plus · Muscu PRO{% endblock %}
+
+{% block content %}
+  <h1>📋 Plus</h1>
+
+  <a href="/programme" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-size:2rem;">⚙️</span>
+      <div>
+        <h3 style="margin:0 0 2px;">Programme</h3>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Gère tes séances, exercices et planning hebdomadaire.</p>
+      </div>
+      <span style="margin-left:auto; color:var(--text-dim); font-size:1.2rem;">›</span>
+    </div>
+  </a>
+
+  <a href="/arcade" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-size:2rem;">🎮</span>
+      <div>
+        <h3 style="margin:0 0 2px;">Arcade</h3>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Mini-jeux fun entre deux séances.</p>
+      </div>
+      <span style="margin-left:auto; color:var(--text-dim); font-size:1.2rem;">›</span>
+    </div>
+  </a>
+
+  <a href="/gestion" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-size:2rem;">🛠️</span>
+      <div>
+        <h3 style="margin:0 0 2px;">Gestion</h3>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Paramètres, mises à jour, réinitialisation des données.</p>
+      </div>
+      <span style="margin-left:auto; color:var(--text-dim); font-size:1.2rem;">›</span>
+    </div>
+  </a>
+
+  <div class="card" style="margin-top:8px;">
+    <h3>🎓 Tutoriel</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Revoir le tutoriel interactif qui présente les fonctions clés.</p>
+    <button type="button" class="btn" style="width:100%;" onclick="replayTutorial()">🎓 Revoir le tutoriel</button>
+  </div>
+{% endblock %}

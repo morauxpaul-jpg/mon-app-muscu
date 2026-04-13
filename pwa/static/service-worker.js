@@ -1,10 +1,10 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v12-2026-04-13";
+const CACHE_VERSION = "v13-2026-04-13";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
-  "/",
+  "/accueil",
   "/static/css/theme.css",
   "/static/css/components.css",
   "/static/js/sw-register.js",
@@ -58,6 +58,6 @@ self.addEventListener("fetch", (event) => {
         }
         return resp;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match("/")))
+      .catch(() => caches.match(req).then((cached) => cached || caches.match("/accueil")))
   );
 });

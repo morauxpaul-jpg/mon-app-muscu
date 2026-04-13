@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050A18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Muscu Tracker PRO — Suivi musculation intelligent</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/static/icon.png">
+  <link rel="apple-touch-icon" href="/static/icon.png">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <style>
+    .landing { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:32px 20px 48px; }
+    .landing-hero { text-align:center; margin-bottom:36px; }
+    .landing-logo { width:88px; height:88px; border-radius:22px; margin-bottom:14px; }
+    .landing-title { font-size:1.8rem; margin:0 0 6px; }
+    .landing-sub { color:var(--text-dim); font-size:1rem; max-width:340px; margin:0 auto; line-height:1.5; }
+    .landing-features { width:100%; max-width:400px; margin-bottom:32px; }
+    .landing-feat {
+      display:flex; align-items:flex-start; gap:14px;
+      padding:14px 16px; margin-bottom:10px;
+      background:var(--card-bg); border:1px solid var(--card-border);
+      border-radius:14px;
+    }
+    .landing-feat-icon { font-size:1.6rem; flex-shrink:0; margin-top:2px; }
+    .landing-feat h3 { margin:0 0 2px; font-size:0.95rem; }
+    .landing-feat p { margin:0; font-size:0.82rem; color:var(--text-dim); line-height:1.4; }
+    .landing-cta {
+      display:inline-flex; align-items:center; gap:10px;
+      padding:14px 28px; font-size:1.05rem; font-weight:700;
+      border-radius:14px; cursor:pointer; text-decoration:none;
+      background:linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border:1px solid var(--accent); color:#fff;
+      box-shadow:0 0 20px rgba(88,204,255,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .landing-cta:active { transform:scale(0.97); }
+    .landing-footer { margin-top:24px; font-size:0.75rem; color:var(--text-dim); text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="landing">
+    <div class="landing-hero">
+      <img src="/static/icon.png" alt="Muscu PRO" class="landing-logo">
+      <h1 class="landing-title">Muscu Tracker PRO</h1>
+      <p class="landing-sub">Ton coach de musculation intelligent. Programme, suivi, progression — tout en une app.</p>
+    </div>
+
+    <div class="landing-features">
+      <div class="landing-feat">
+        <span class="landing-feat-icon">💪</span>
+        <div>
+          <h3>Séances guidées</h3>
+          <p>Enregistre tes séries, charges et reps. Chrono de repos intégré.</p>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <span class="landing-feat-icon">📈</span>
+        <div>
+          <h3>Progression visuelle</h3>
+          <p>Graphiques d'évolution par exercice, volume hebdo, records personnels.</p>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <span class="landing-feat-icon">📅</span>
+        <div>
+          <h3>Planning personnalisé</h3>
+          <p>Configure ton programme et ton planning pour chaque jour de la semaine.</p>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <span class="landing-feat-icon">🎮</span>
+        <div>
+          <h3>Arcade & fun</h3>
+          <p>Mini-jeux intégrés pour garder la motivation entre les séances !</p>
+        </div>
+      </div>
+    </div>
+
+    <a href="/login" class="landing-cta">🔐 Commencer — Connexion Google</a>
+
+    <div class="landing-footer">
+      Gratuit · Tes données restent privées · PWA installable
+    </div>
+  </div>
+</body>
+</html>

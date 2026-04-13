@@ -18,6 +18,7 @@ from routes.progres import bp as progres_bp
 from routes.gestion import bp as gestion_bp
 from routes.auth import bp as auth_bp
 from routes.onboarding import bp as onboarding_bp
+from routes.arcade import bp as arcade_bp
 
 from core import db as core_db
 
@@ -40,12 +41,13 @@ app.register_blueprint(programme_bp)
 app.register_blueprint(progres_bp)
 app.register_blueprint(gestion_bp)
 app.register_blueprint(onboarding_bp)
+app.register_blueprint(arcade_bp)
 
 
 # ────────────────────────────────────────────────────────────────
 # Auth gate — toutes les routes sauf celles listées nécessitent user_id
 # ────────────────────────────────────────────────────────────────
-_PUBLIC_PATHS = {"/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js"}
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js"}
 
 
 @app.before_request
@@ -57,7 +59,7 @@ def _require_login():
         return None
     user_id = session.get("user_id")
     if not user_id:
-        return redirect(url_for("auth.login"))
+        return redirect(url_for("landing"))
     g.user_id = user_id
     g.email = session.get("email", "")
 
@@ -102,13 +104,20 @@ def _inject_user():
 
 
 # ────────────────────────────────────────────────────────────────
-# Routes pages — les pages non encore migrées restent des stubs
+# Landing page publique + page "Plus"
 # ────────────────────────────────────────────────────────────────
 
 
-@app.route("/arcade")
-def arcade():
-    return render_template("arcade.html", active="arcade")
+@app.route("/")
+def landing():
+    if session.get("user_id"):
+        return redirect(url_for("accueil.index"))
+    return render_template("landing.html")
+
+
+@app.route("/plus")
+def plus():
+    return render_template("plus.html", active="plus")
 
 
 # ────────────────────────────────────────────────────────────────

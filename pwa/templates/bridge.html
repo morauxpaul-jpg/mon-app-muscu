@@ -59,7 +59,7 @@
         errEl.textContent = "Erreur : " + (j.error || res.status);
         return;
       }
-      window.location.replace('/');
+      window.location.replace('/accueil');
     }).catch(e => { errEl.textContent = e.message; });
   </script>
 </body>
