@@ -42,6 +42,10 @@
         <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %}>
         <span>Animations du thème (cartes, glow, pulse)</span>
       </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
+        <span>Chrono de repos automatique entre les séries</span>
+      </label>
       <label class="field-label">Nombre de semaines précédentes affichées en séance</label>
       <input type="number" name="show_previous_weeks" min="0" max="10" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">💾 Sauvegarder</button>

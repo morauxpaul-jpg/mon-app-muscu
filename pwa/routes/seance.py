@@ -251,6 +251,8 @@ def seance():
     hist = get_hist()
     prog = get_prog()
     hist, prog_seances = _normalize_hist(hist, prog)
+    _settings = prog.get("_settings", {})
+    auto_rest_timer = _settings.get("auto_rest_timer", True)
 
     date_iso = request.args.get("date") or today_paris_str()
     target_date = _parse_date(date_iso) or today_paris()
@@ -348,6 +350,7 @@ def seance():
             all_prog_exos=list(all_prog_exos.values()),
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
+            auto_rest_timer=auto_rest_timer,
         )
 
     # ── Vue édition : mode libre ──────────────────────────────────
@@ -382,6 +385,7 @@ def seance():
             all_prog_exos=list(all_prog_exos.values()),
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
+            auto_rest_timer=auto_rest_timer,
         )
 
     abort(404)

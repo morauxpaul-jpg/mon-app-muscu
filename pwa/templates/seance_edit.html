@@ -16,6 +16,11 @@
     <div class="seance-title">{{ seance_name }}</div>
   </div>
 
+  {# ── Bouton chrono manuel ─────────────────────────────────── #}
+  <button type="button" class="btn" style="font-size:0.78rem; padding:6px 12px; margin-bottom:10px;"
+          onclick="startTimer(parseInt(localStorage.getItem('restTimerDefault')) || 90)"
+          title="Lancer le chrono de repos manuellement">⏱️ Chrono</button>
+
   {# ── Barre de progression (Feature 5) ─────────────────────── #}
   {% if exos %}
   <div class="seance-progress" id="seance-progress">
@@ -145,9 +150,9 @@
             <template x-for="(s, i) in sets" :key="i">
               <tr>
                 <td x-text="i + 1"></td>
-                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" @change="onSetChange(i)"></td>
+                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" @focus="onRowFocus(i)"></td>
                 {% if not exo.is_bw %}
-                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input"></td>
+                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" @focus="onRowFocus(i)"></td>
                 {% endif %}
                 <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                 <td>
@@ -158,10 +163,12 @@
           </tbody>
         </table>
 
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button type="button" class="btn" style="flex:1;" @click="addSet()">➕ +1 série</button>
-          <button type="button" class="btn" style="flex:0 0 auto; font-size:0.8rem;" @click="clearWeights()" title="Effacer les poids pré-remplis">🗑️ Poids</button>
-        </div>
+        <button type="button" class="btn" style="width:100%; margin-top:6px;" @click="addSet()">➕ +1 série</button>
+        <button type="button" @click="clearWeights()"
+                title="Efface les poids pré-remplis de la dernière séance"
+                style="background:none; border:none; color:var(--text-mute); font-size:0.72rem; padding:4px 0; margin-top:2px; cursor:pointer; text-decoration:underline;">
+          Réinitialiser les poids
+        </button>
 
         <div class="exo-actions">
           <form method="post" action="/seance/save-exo"
@@ -458,6 +465,9 @@
   var savedTimer = parseInt(localStorage.getItem('restTimerDefault'));
   if (savedTimer) _timerTotal = savedTimer;
 
+  // Auto rest timer setting from server
+  var AUTO_REST_TIMER = {{ auto_rest_timer|tojson }};
+
   // ── Loading state: disable buttons on form submit ─────────────
   document.addEventListener('submit', function(e) {
     var form = e.target;
@@ -474,6 +484,7 @@
     return {
       open: !data.completed,
       variant: data.variant,
+      isBw: data.is_bw || false,
       restSeconds: data.rest_seconds || 90,
       sets: (data.sets || []).map(function (s) {
         return {
@@ -491,12 +502,18 @@
       clearWeights: function () {
         this.sets.forEach(function(s) { s.poids = 0; });
       },
-      onSetChange: function (i) {
-        // Quand l'utilisateur remplit les reps d'une série et qu'il y a une suivante, lance le chrono
-        if (this.sets[i].reps > 0 && i < this.sets.length - 1) {
-          var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
-          startTimer(dur);
-        }
+      onRowFocus: function (i) {
+        // Lance le chrono quand l'utilisateur passe à une série suivante,
+        // SEULEMENT si la série précédente a reps > 0 ET poids > 0 (ou is_bw)
+        if (!AUTO_REST_TIMER || i === 0) return;
+        var prev = this.sets[i - 1];
+        if (!prev || prev.reps <= 0) return;
+        // Pour les exos au poids du corps, pas besoin de vérifier le poids
+        if (!this.isBw && prev.poids <= 0) return;
+        // Ne pas relancer si le chrono tourne déjà
+        if (document.getElementById('rest-timer').style.display !== 'none') return;
+        var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
+        startTimer(dur);
       },
       prepareSave: function (e) {
         // sets_json est déjà bindé via x-bind
