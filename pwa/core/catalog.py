@@ -49,6 +49,10 @@ CATALOG = {
         "level": "débutant",
         "tags": ["débutant", "salle", "maison léger"],
         "description": "Le meilleur choix pour démarrer : 3 séances identiques qui travaillent tout le corps. Progression rapide sur les bases.",
+        "explanation": "Tout le corps à chaque séance — idéal pour commencer et progresser vite",
+        "difficulty": 1,
+        "duration": "~60 min",
+        "icon": "🏋️",
         "seances": {
             "Full Body A": [
                 _ex("Squat", 4, "Quadriceps,Fessiers", "8-10"),
@@ -85,6 +89,10 @@ CATALOG = {
         "level": "intermédiaire,avancé",
         "tags": ["intermédiaire", "avancé", "salle"],
         "description": "Le grand classique PPL : 2 cycles push/pull/legs par semaine. Volume élevé, idéal pour progresser quand les bases sont solides.",
+        "explanation": "Push (pousser) / Pull (tirer) / Legs (jambes) — chaque séance cible un type de mouvement",
+        "difficulty": 3,
+        "duration": "~75 min",
+        "icon": "🔄",
         "seances": {
             "Push": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "6-8"),
@@ -121,6 +129,10 @@ CATALOG = {
         "level": "intermédiaire",
         "tags": ["intermédiaire", "salle"],
         "description": "2 haut + 2 bas du corps par semaine. Excellent compromis volume / récupération pour progresser sans y passer sa vie.",
+        "explanation": "Alternance haut du corps / bas du corps — équilibre et récupération optimale",
+        "difficulty": 2,
+        "duration": "~65 min",
+        "icon": "↕️",
         "seances": {
             "Upper A": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "6-8"),
@@ -165,6 +177,10 @@ CATALOG = {
         "level": "débutant,intermédiaire",
         "tags": ["maison", "débutant", "intermédiaire", "peu d'équipement"],
         "description": "Fait avec très peu : poids du corps, haltères ou élastiques suffisent. Parfait pour s'entraîner chez soi sans sacrifier la progression.",
+        "explanation": "Tout le corps avec peu d'équipement — s'entraîner partout, progresser quand même",
+        "difficulty": 1,
+        "duration": "~45 min",
+        "icon": "🏠",
         "seances": {
             "Maison A": [
                 _ex("Pompes", 4, "Pecs,Triceps", "max-1"),
@@ -215,19 +231,34 @@ def unique_muscles_for(prog_id: str) -> list[str]:
 
 
 def list_programs() -> list[dict]:
-    """Liste publique des programmes (métadonnées seulement, sans séances)."""
+    """Liste publique des programmes (métadonnées + preview séances)."""
     out = []
     for pid in CATALOG_ORDER:
         p = CATALOG[pid]
+        # Preview des séances : nom + liste d'exos avec séries
+        seances_preview = []
+        for sname, exos in p["seances"].items():
+            seances_preview.append({
+                "name": sname,
+                "exercises": [
+                    {"name": e["name"], "sets": e["sets"], "muscle": e["muscle"]}
+                    for e in exos
+                ],
+            })
         out.append({
             "id": p["id"],
             "title": p["title"],
             "subtitle": p["subtitle"],
             "freq": p["freq"],
             "description": p["description"],
+            "explanation": p.get("explanation", ""),
+            "difficulty": p.get("difficulty", 1),
+            "duration": p.get("duration", "~60 min"),
+            "icon": p.get("icon", "🏋️"),
             "tags": p["tags"],
             "muscles": unique_muscles_for(pid),
             "nb_seances": len(p["seances"]),
+            "seances_preview": seances_preview,
         })
     return out
 
