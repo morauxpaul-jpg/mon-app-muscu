@@ -45,7 +45,7 @@
       <!-- Historique -->
       <template x-for="(m, i) in messages" :key="i">
         <div :class="'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-bot')">
-          <div class="msg-bubble" x-text="m.content"></div>
+          <div class="msg-bubble" x-html="renderMd(m.content)"></div>
         </div>
       </template>
 
@@ -62,23 +62,24 @@
       </div>
     </div>
 
-    <form class="coach-input" @submit.prevent="send(draft)">
-      <input
-        type="text"
-        class="field"
-        placeholder="Pose ta question…"
-        x-model="draft"
-        :disabled="typing || quotaLeft <= 0"
-        maxlength="1500"
-        autocomplete="off"
-      >
-      <button type="submit" class="btn primary" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>
-      </button>
-    </form>
-
-    <div class="coach-quota">
-      <span x-text="quotaLimit - quotaLeft"></span>/<span x-text="quotaLimit"></span> messages aujourd'hui
+    <div class="coach-footer">
+      <form class="coach-input" @submit.prevent="send(draft)">
+        <input
+          type="text"
+          class="field"
+          placeholder="Pose ta question…"
+          x-model="draft"
+          :disabled="typing || quotaLeft <= 0"
+          maxlength="1500"
+          autocomplete="off"
+        >
+        <button type="submit" class="btn primary" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>
+        </button>
+      </form>
+      <div class="coach-quota">
+        <span x-text="quotaLimit - quotaLeft"></span>/<span x-text="quotaLimit"></span> messages aujourd'hui
+      </div>
     </div>
   </div>
 
@@ -99,6 +100,25 @@
         },
         persist() {
           try { sessionStorage.setItem('coach_history', JSON.stringify(this.messages)); } catch (e) {}
+        },
+        renderMd(text) {
+          // Escape HTML puis applique un markdown minimal : **bold**, *italic*,
+          // `code`, tirets et retours ligne.
+          if (!text) return '';
+          var esc = String(text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          // Code inline avec backticks
+          esc = esc.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+          // Bold **…**
+          esc = esc.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+          // Italic *…* (après bold pour ne pas entrer en conflit)
+          esc = esc.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+          // Listes à puce : lignes commençant par - ou *
+          esc = esc.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
+          esc = esc.replace(/(<li>.*<\/li>(?:\n|$))+/g, function(m) { return '<ul>' + m.replace(/\n/g, '') + '</ul>'; });
+          // Retours à la ligne
+          esc = esc.replace(/\n/g, '<br>');
+          return esc;
         },
         scrollDown() {
           const el = this.$refs.scroll;
@@ -158,8 +178,9 @@
       flex-direction: column;
       gap: 8px;
       position: relative;
-      /* réserve la place pour la bottom-nav (64px) + l'input + le compteur */
-      padding-bottom: 8px;
+      /* Laisse de la place pour coach-footer qui est fixed en bas de
+         l'écran (hauteur estimée 72px). */
+      padding-bottom: 72px;
     }
     .coach-messages {
       flex: 1;
@@ -167,8 +188,6 @@
       flex-direction: column;
       gap: 10px;
       padding: 4px;
-      /* Plus de hauteur fixe — on laisse le flux de la page scroller et
-         on rend l'input sticky en bas de l'écran. */
       scroll-behavior: smooth;
     }
     .msg { display: flex; }
@@ -235,19 +254,28 @@
     .coach-suggestion:hover {
       background: rgba(88,204,255,0.15);
     }
+    /* Footer groupé (input + compteur) posé en fixed juste au-dessus de
+       la bottom-nav. Plus simple et plus fiable que deux sticky
+       indépendants qui se croisaient. */
+    .coach-footer {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: var(--nav-h, 64px);
+      background: rgba(5, 10, 24, 0.96);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 16px 6px;
+      z-index: 20;
+    }
+    .coach-footer > * {
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
     .coach-input {
       display: flex;
       gap: 6px;
       align-items: stretch;
-      padding: 8px 4px;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      /* Sticky : reste collé au-dessus de la bottom-nav (64px) + 18px
-         pour laisser la place au compteur de quota en dessous. */
-      position: sticky;
-      bottom: calc(var(--nav-h, 64px) + 18px);
-      background: var(--bg, #050A18);
-      z-index: 5;
-      margin: 0 -4px;
     }
     .coach-input .field {
       flex: 1;
@@ -258,13 +286,26 @@
     }
     .coach-quota {
       text-align: center;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       color: var(--text-dim, #8899aa);
-      padding: 3px 0;
-      position: sticky;
-      bottom: var(--nav-h, 64px);
-      background: var(--bg, #050A18);
-      z-index: 5;
+      padding: 3px 0 0;
+    }
+    /* Markdown rendu dans les bulles */
+    .msg-bubble strong { color: #fff; font-weight: 700; }
+    .msg-bubble em { font-style: italic; color: #d4e4f5; }
+    .msg-bubble code {
+      background: rgba(88,204,255,0.12);
+      color: var(--accent, #58CCFF);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+    .msg-bubble ul {
+      margin: 6px 0;
+      padding-left: 20px;
+    }
+    .msg-bubble ul li {
+      margin-bottom: 2px;
     }
   </style>
 {% endblock %}
