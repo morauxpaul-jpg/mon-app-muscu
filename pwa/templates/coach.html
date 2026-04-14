@@ -11,9 +11,18 @@
     <span>Cet assistant est un outil d'aide — il ne remplace pas un coach certifié ni un avis médical.</span>
   </div>
 
+  <script>
+    window.__coachInit = {
+      quotaRemaining: {{ quota_remaining }},
+      quotaLimit: {{ quota_limit }},
+      suggestions: {{ suggestions | tojson }},
+      prenom: {{ prenom | tojson }}
+    };
+  </script>
+
   <div
     class="coach-chat"
-    x-data="coachChat({{ quota_remaining }}, {{ quota_limit }}, {{ suggestions | tojson }}, {{ prenom | tojson }})"
+    x-data="coachChat()"
     x-init="init()"
   >
     <div class="coach-messages" x-ref="scroll">
@@ -69,21 +78,22 @@
     </form>
 
     <div class="coach-quota">
-      <span x-text="(quotaLimit - quotaLeft) + '/' + quotaLimit + ' messages aujourd\\'hui'"></span>
+      <span x-text="quotaLimit - quotaLeft"></span>/<span x-text="quotaLimit"></span> messages aujourd'hui
     </div>
   </div>
 
   <script>
-    function coachChat(quotaRemaining, quotaLimit, suggestions, prenom) {
+    function coachChat() {
+      var cfg = window.__coachInit || {};
       return {
         messages: JSON.parse(sessionStorage.getItem('coach_history') || '[]'),
         draft: '',
         typing: false,
         errorMsg: '',
-        quotaLeft: quotaRemaining,
-        quotaLimit: quotaLimit,
-        suggestions: suggestions,
-        prenom: prenom,
+        quotaLeft: cfg.quotaRemaining || 0,
+        quotaLimit: cfg.quotaLimit || 20,
+        suggestions: cfg.suggestions || [],
+        prenom: cfg.prenom || 'athlète',
         init() {
           this.$nextTick(() => this.scrollDown());
         },
