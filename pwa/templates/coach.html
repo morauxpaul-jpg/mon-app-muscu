@@ -156,8 +156,10 @@
     .coach-chat {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      min-height: 60vh;
+      gap: 8px;
+      position: relative;
+      /* réserve la place pour la bottom-nav (64px) + l'input + le compteur */
+      padding-bottom: 8px;
     }
     .coach-messages {
       flex: 1;
@@ -165,8 +167,8 @@
       flex-direction: column;
       gap: 10px;
       padding: 4px;
-      max-height: 58vh;
-      overflow-y: auto;
+      /* Plus de hauteur fixe — on laisse le flux de la page scroller et
+         on rend l'input sticky en bas de l'écran. */
       scroll-behavior: smooth;
     }
     .msg { display: flex; }
@@ -237,8 +239,15 @@
       display: flex;
       gap: 6px;
       align-items: stretch;
-      padding-top: 4px;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 8px 4px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      /* Sticky : reste collé au-dessus de la bottom-nav (64px) + 18px
+         pour laisser la place au compteur de quota en dessous. */
+      position: sticky;
+      bottom: calc(var(--nav-h, 64px) + 18px);
+      background: var(--bg, #050A18);
+      z-index: 5;
+      margin: 0 -4px;
     }
     .coach-input .field {
       flex: 1;
@@ -251,7 +260,11 @@
       text-align: center;
       font-size: 0.72rem;
       color: var(--text-dim, #8899aa);
-      padding: 2px 0;
+      padding: 3px 0;
+      position: sticky;
+      bottom: var(--nav-h, 64px);
+      background: var(--bg, #050A18);
+      z-index: 5;
     }
   </style>
 {% endblock %}
