@@ -312,3 +312,49 @@ def save_onboarding(user_id: str, fields: dict):
     client = get_client()
     payload = {"user_id": user_id, **fields}
     client.table("onboarding").upsert(payload).execute()
+
+
+# ────────────────────────────────────────────────────────────
+# Nutrition (Prompt C)
+# ────────────────────────────────────────────────────────────
+
+def list_nutrition(user_id: str, date_str: str) -> list[dict]:
+    """Tous les repas loggés à une date donnée (ordre id)."""
+    client = get_client()
+    resp = (
+        client.table("nutrition")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("date", date_str)
+        .order("id")
+        .execute()
+    )
+    return resp.data or []
+
+
+def insert_nutrition(user_id: str, row: dict) -> None:
+    """Ajoute un repas (date, meal_type, calories, protein, carbs, fat, note)."""
+    client = get_client()
+    payload = {"user_id": user_id, **row}
+    client.table("nutrition").insert(payload).execute()
+
+
+def delete_nutrition(user_id: str, entry_id: int) -> None:
+    client = get_client()
+    (
+        client.table("nutrition").delete()
+        .eq("user_id", user_id)
+        .eq("id", int(entry_id))
+        .execute()
+    )
+
+
+def sum_nutrition_day(user_id: str, date_str: str) -> dict:
+    rows = list_nutrition(user_id, date_str)
+    out = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+    for r in rows:
+        out["calories"] += int(r.get("calories") or 0)
+        out["protein"] += int(r.get("protein") or 0)
+        out["carbs"] += int(r.get("carbs") or 0)
+        out["fat"] += int(r.get("fat") or 0)
+    return out

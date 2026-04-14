@@ -7,8 +7,8 @@ from flask import Blueprint, render_template
 
 from datetime import date as _date, datetime as _datetime
 
-from core.data import get_hist, get_prog, get_profile, get_onboarding
-from core.dates import now_paris, today_paris, monday_of, DAYS_FR, MONTHS_FR
+from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
+from core.dates import now_paris, today_paris, today_paris_str, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 
 bp = Blueprint("accueil", __name__)
@@ -39,6 +39,10 @@ def _is_real_perf(row):
     return False
 
 
+def _is_cardio_row(row):
+    return str(row.get("Exercice") or "").startswith("CARDIO:")
+
+
 def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
     """Statut d'une journée — porté de _day_status() app.py 1751-1784."""
     d_str = day_date.strftime("%Y-%m-%d")
@@ -48,9 +52,18 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
 
     real = [r for r in day_rows if _is_real_perf(r)]
     if real:
-        # Séance majoritaire = celle avec le plus d'exos distincts
+        # Si la journée ne contient que du cardio : titre dédié + couleur orange
+        cardio_rows = [r for r in real if _is_cardio_row(r)]
+        non_cardio = [r for r in real if not _is_cardio_row(r)]
+        if cardio_rows and not non_cardio:
+            types = {r["Exercice"].split(":", 1)[1] for r in cardio_rows}
+            label = ", ".join(sorted(types))
+            return {"status": "done", "title": f"Cardio · {label}", "badge": "CARDIO",
+                    "color": "#FF7A00", "cardio": True}
+        # Séance majoritaire = celle avec le plus d'exos distincts (hors cardio)
+        rows_for_top = non_cardio or real
         counts = {}
-        for r in real:
+        for r in rows_for_top:
             counts.setdefault(r["Séance"], set()).add(r["Exercice"])
         top = max(counts.items(), key=lambda kv: len(kv[1]))[0]
         return {"status": "done", "title": str(top), "badge": "FAIT", "color": "#00FF7F"}
@@ -123,14 +136,20 @@ def index():
 
     # Stats semaine
     cur_week = [r for r in hist if r["Semaine"] == s_act]
-    cur_week_real = [r for r in cur_week if r["Poids"] > 0]
-    vol_week = int(sum(r["Poids"] * r["Reps"] for r in cur_week))
+    # Les lignes cardio (Exercice "CARDIO:*") ne doivent pas compter dans le
+    # volume muscu (km × min ≠ kg × reps). Elles sont agrégées à part.
+    cur_week_muscu = [r for r in cur_week if not _is_cardio_row(r)]
+    cur_week_real = [r for r in cur_week_muscu if r["Poids"] > 0]
+    vol_week = int(sum(r["Poids"] * r["Reps"] for r in cur_week_muscu))
     vol_week_fmt = f"{vol_week:,}".replace(",", " ")
     sessions_done = len({r["Séance"] for r in cur_week_real})
     total_sessions = len(prog_seances)
 
-    # Streak : semaines consécutives avec au moins une perf
-    weeks_with_data = sorted({r["Semaine"] for r in hist if r["Poids"] > 0}, reverse=True)
+    # Streak : semaines consécutives avec au moins une perf (muscu avec poids OU cardio avec durée)
+    weeks_with_data = sorted({
+        r["Semaine"] for r in hist
+        if (r["Poids"] > 0) or (_is_cardio_row(r) and r["Reps"] > 0)
+    }, reverse=True)
     streak = 0
     for i, w in enumerate(weeks_with_data):
         if i == 0 or w == weeks_with_data[i - 1] - 1:
@@ -149,9 +168,12 @@ def index():
     # Streak en danger ? (aujourd'hui est un jour de séance et pas fait)
     today_day_name = DAYS_FR[today.weekday()]
     today_seance = planning_map.get(today_day_name, "")
+    today_iso = today.strftime("%Y-%m-%d")
     today_done = any(
         r for r in hist
-        if r["Date"] == today.strftime("%Y-%m-%d") and r["Poids"] > 0
+        if r["Date"] == today_iso and (
+            r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0)
+        )
     )
     streak_danger = bool(today_seance and not today_done and today.weekday() < 5)
 
@@ -182,10 +204,24 @@ def index():
         streak_tier_color = ""
         streak_tier_label = ""
 
-    # Détail
+    # Détail (muscu uniquement — le cardio est compté séparément plus bas)
     exos_count = len({r["Exercice"] for r in cur_week_real})
     sets_count = len(cur_week_real)
-    reps_count = sum(r["Reps"] for r in cur_week)
+    reps_count = sum(r["Reps"] for r in cur_week_muscu)
+
+    # Cardio semaine : total minutes + km sur la semaine active
+    cardio_rows = [r for r in cur_week if _is_cardio_row(r)]
+    cardio_minutes = sum(int(r.get("Reps") or 0) for r in cardio_rows)
+    cardio_km = round(sum(float(r.get("Poids") or 0) for r in cardio_rows), 1)
+
+    # Widget calories — objectif depuis profile, consommé depuis table nutrition
+    cal_cible = int(profile.get("calories_cible") or 0)
+    try:
+        nutr = sum_nutrition_day(today_paris_str()) if cal_cible > 0 else None
+    except Exception as e:
+        nutr = None
+    cal_today = int((nutr or {}).get("calories") or 0)
+    cal_pct = int(min(100, round((cal_today / cal_cible) * 100))) if cal_cible > 0 else 0
 
     return render_template(
         "accueil.html",
@@ -211,4 +247,9 @@ def index():
         sets_count=sets_count,
         reps_count=reps_count,
         prenom=prenom,
+        cardio_minutes=cardio_minutes,
+        cardio_km=cardio_km,
+        cal_today=cal_today,
+        cal_cible=cal_cible,
+        cal_pct=cal_pct,
     )

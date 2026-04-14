@@ -61,6 +61,16 @@
     </a>
   </div>
 
+  <div class="card" style="border-color: rgba(255,122,0,0.35);">
+    <div class="label-icon" style="color: #FF7A00; font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm" style="color:#FF7A00;"><use href="/static/img/icons.svg#heart"/></svg>SÉANCE CARDIO</div>
+    <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 12px;">
+      Course, vélo, rameur, HIIT... Chrono intégré, calcul calorique automatique.
+    </div>
+    <a href="/cardio?date={{ date_iso }}" class="btn label-icon" style="width:100%; justify-content:center; background: rgba(255,122,0,0.1); border-color: rgba(255,122,0,0.4); color: #FF7A00;">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#activity"/></svg>Lancer une séance cardio
+    </a>
+  </div>
+
   <div class="card" style="border-color: rgba(255,69,58,0.25);">
     <div class="label-icon" style="color: var(--danger); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>PASSER UNE SÉANCE</div>
     <form method="post" action="/seance/mark-missed">

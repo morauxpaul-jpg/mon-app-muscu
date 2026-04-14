@@ -77,3 +77,20 @@ def get_onboarding():
 
 def save_onboarding(fields):
     return db.save_onboarding(_uid(), fields)
+
+
+# ── Nutrition (Prompt C) ────────────────────────────────────────────────
+def list_nutrition(date_str):
+    return db.list_nutrition(_uid(), date_str)
+
+
+def insert_nutrition(row):
+    return db.insert_nutrition(_uid(), row)
+
+
+def delete_nutrition(entry_id):
+    return db.delete_nutrition(_uid(), entry_id)
+
+
+def sum_nutrition_day(date_str):
+    return db.sum_nutrition_day(_uid(), date_str)

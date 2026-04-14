@@ -86,6 +86,39 @@
     </div>
   </div>
 
+  {% if cardio_minutes > 0 %}
+  <div class="detail-row" style="margin-top: 8px;">
+    <div class="detail-metric" style="grid-column: span 2; background: rgba(255,122,0,0.06); border-color: rgba(255,122,0,0.28);">
+      <div class="detail-label label-icon" style="color:#FF7A00;"><svg class="icon icon-sm" style="color:#FF7A00;"><use href="/static/img/icons.svg#heart"/></svg>Cardio semaine</div>
+      <div class="detail-value" style="font-size: 1.5rem; color: #FF7A00;">{{ cardio_minutes }} <span style="font-size:0.85rem;">min</span></div>
+    </div>
+    <div class="detail-metric" style="background: rgba(255,122,0,0.06); border-color: rgba(255,122,0,0.28);">
+      <div class="detail-label label-icon" style="color:#FF7A00;"><svg class="icon icon-sm" style="color:#FF7A00;"><use href="/static/img/icons.svg#footprints"/></svg>Distance</div>
+      <div class="detail-value" style="font-size: 1.5rem; color: #FF7A00;">{{ cardio_km }} <span style="font-size:0.85rem;">km</span></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if cal_cible > 0 %}
+    <a href="/nutrition" class="card calories-widget" style="display:block; text-decoration:none; color:inherit; margin-top: 14px; border-color: rgba(88,204,255,0.35);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>CALORIES DU JOUR</div>
+        <div style="font-size:0.78rem; color: var(--text-dim);">{{ cal_pct }}%</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+        <div style="font-family: 'Courier New', monospace; font-size: 1.3rem; color: #fff; font-weight: 800;">{{ cal_today }} <span style="color: var(--text-dim); font-size: 0.85rem;">/ {{ cal_cible }} kcal</span></div>
+        <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+      </div>
+      <div class="xp-bar-bg" style="height: 8px;">
+        <div class="xp-bar-fill" style="width: {{ cal_pct }}%;"></div>
+      </div>
+    </a>
+  {% else %}
+    <a href="/nutrition" class="card calories-widget" style="display:block; text-decoration:none; color:inherit; margin-top: 14px; border-color: rgba(88,204,255,0.25); text-align:center;">
+      <div class="label-icon" style="color: var(--accent); font-size: 0.8rem; justify-content:center;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Configurer mes objectifs calories</div>
+    </a>
+  {% endif %}
+
   {% endif %}
 
   <script>

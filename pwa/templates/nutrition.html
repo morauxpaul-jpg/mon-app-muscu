@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block title %}Nutrition · Muscu PRO{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom: 12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Nutrition</h1>
+
+  {# ══════════════════════ Section 1 — Profil nutritionnel ══════════════════════ #}
+  <div class="card" x-data="{ open: {{ 'false' if targets else 'true' }} }">
+    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="display:inline-flex; align-items:center; gap:6px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>MON PROFIL NUTRITIONNEL</span>
+      <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.75rem;" @click="open = !open">
+        <span x-text="open ? 'Replier' : 'Modifier'"></span>
+      </button>
+    </div>
+
+    {% if targets %}
+      <div style="margin-top: 10px;" x-show="!open">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+          <div class="detail-metric">
+            <div class="detail-label">BMR</div>
+            <div class="detail-value" style="font-size:1.3rem;">{{ targets.bmr }}</div>
+          </div>
+          <div class="detail-metric">
+            <div class="detail-label">TDEE</div>
+            <div class="detail-value" style="font-size:1.3rem;">{{ targets.tdee }}</div>
+          </div>
+        </div>
+        <div class="detail-metric" style="background: rgba(0,255,127,0.06); border-color: rgba(0,255,127,0.25);">
+          <div class="detail-label" style="color: var(--success);">Objectif quotidien</div>
+          <div class="detail-value" style="font-size: 1.8rem; color: var(--success);">{{ targets.calories_cible }} <span style="font-size:0.9rem;">kcal</span></div>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 8px; text-align:center;">
+          Prot {{ targets.macros_g.protein }}g · Gluc {{ targets.macros_g.carbs }}g · Lip {{ targets.macros_g.fat }}g
+        </div>
+      </div>
+    {% endif %}
+
+    <form method="post" action="/nutrition/profile" style="margin-top: 12px;" x-show="open" x-cloak>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div>
+          <label class="field-label">Poids (kg)</label>
+          <input type="number" step="0.1" name="poids_kg" class="field" value="{{ profile.poids_kg or '' }}" required>
+        </div>
+        <div>
+          <label class="field-label">Taille (cm)</label>
+          <input type="number" step="0.1" name="taille_cm" class="field" value="{{ profile.taille_cm or '' }}" required>
+        </div>
+        <div>
+          <label class="field-label">Âge</label>
+          <input type="number" name="age" class="field" value="{{ profile.age or '' }}" required>
+        </div>
+        <div>
+          <label class="field-label">Sexe</label>
+          <select name="sexe" class="field" required>
+            <option value="H" {% if profile.sexe == 'H' %}selected{% endif %}>Homme</option>
+            <option value="F" {% if profile.sexe == 'F' %}selected{% endif %}>Femme</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="field-label" style="margin-top: 10px;">Niveau d'activité</label>
+      <select name="activite" class="field" required>
+        {% for val, label, desc in activite_labels %}
+          <option value="{{ val }}" {% if profile.activite == val %}selected{% endif %}>{{ label }} — {{ desc }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="field-label" style="margin-top: 10px;">Objectif</label>
+      <div class="rpe-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+        {% for val, label, sub in objectifs %}
+          <label class="obj-btn" style="padding: 10px 4px; text-align:center; background: rgba(255,255,255,0.03); border: 1px solid rgba(88,204,255,0.18); border-radius: 10px; cursor: pointer; font-size: 0.8rem; color: var(--text-dim); display:block;">
+            <input type="radio" name="objectif_nutrition" value="{{ val }}" {% if (profile.objectif_nutrition or 'maintien') == val %}checked{% endif %} style="display:none;" onchange="this.parentElement.parentElement.querySelectorAll('label').forEach(l=>l.classList.remove('selected'));this.parentElement.classList.add('selected');">
+            <div style="font-weight: 700;">{{ label }}</div>
+            <div style="font-size: 0.7rem; margin-top: 2px;">{{ sub }}</div>
+          </label>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Calculer et enregistrer
+      </button>
+    </form>
+  </div>
+
+  {# ══════════════════════ Section 2 — Objectif du jour ══════════════════════ #}
+  {% if targets %}
+  <div class="card">
+    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 14px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#target"/></svg>OBJECTIF DU JOUR</div>
+
+    <div class="kcal-donut-wrap">
+      {% set radius = 70 %}
+      {% set circ = (2 * 3.14159 * radius) | round(1) %}
+      {% set offset = (circ * (100 - cal_pct) / 100) | round(1) %}
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="rgba(88,204,255,0.15)" stroke-width="14"/>
+        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="url(#kcalGrad)" stroke-width="14"
+                stroke-linecap="round" stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}"
+                transform="rotate(-90 90 90)" style="filter: drop-shadow(0 0 10px rgba(88,204,255,0.5)); transition: stroke-dashoffset 1s ease-out;"/>
+        <defs>
+          <linearGradient id="kcalGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#58CCFF"/>
+            <stop offset="100%" stop-color="#00FF7F"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="kcal-donut-center">
+        <div class="kcal-big">{{ totals.calories }}</div>
+        <div class="kcal-sub">/ {{ targets.calories_cible }} kcal</div>
+        <div class="kcal-pct">{{ cal_pct }}%</div>
+      </div>
+    </div>
+
+    <div class="macro-bars">
+      {% for key, label, color in [('protein', 'Protéines', '#58CCFF'), ('carbs', 'Glucides', '#FFD700'), ('fat', 'Lipides', '#FF9F0A')] %}
+        {% set mp = macros_progress[key] %}
+        <div class="macro-bar">
+          <div class="macro-label">
+            <span style="color:{{ color }}; font-weight:700;">{{ label }}</span>
+            <span style="color: var(--text-dim); font-size: 0.78rem;">{{ mp.val }}/{{ mp.goal }} g</span>
+          </div>
+          <div class="macro-track">
+            <div class="macro-fill" style="width: {{ mp.pct }}%; background: {{ color }}; box-shadow: 0 0 8px {{ color }}55;"></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+    <div class="card" style="text-align: center; color: var(--text-dim);">
+      Renseigne ton profil ci-dessus pour débloquer ton objectif calorique quotidien.
+    </div>
+  {% endif %}
+
+  {# ══════════════════════ Section 3 — Suivi rapide ══════════════════════ #}
+  <div class="card" x-data="{ open_meal: '' }">
+    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>AJOUTER UN REPAS</div>
+
+    <div class="meal-grid">
+      {% for mt_val, mt_label in meal_types %}
+        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'">
+          <div class="meal-count">{{ meals_by_type.get(mt_val, []) | length }}</div>
+          <div>{{ mt_label }}</div>
+        </button>
+      {% endfor %}
+    </div>
+
+    <template x-for="mt in ['petit_dej', 'dejeuner', 'diner', 'collation']">
+      <div x-show="open_meal === mt" x-cloak style="margin-top: 12px;">
+        <form method="post" action="/nutrition/add-meal">
+          <input type="hidden" name="date" value="{{ date_iso }}">
+          <input type="hidden" name="meal_type" :value="mt">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div>
+              <label class="field-label">Calories</label>
+              <input type="number" inputmode="numeric" name="calories" class="field" min="0" required>
+            </div>
+            <div>
+              <label class="field-label">Protéines (g)</label>
+              <input type="number" inputmode="numeric" name="protein" class="field" min="0" value="0">
+            </div>
+            <div>
+              <label class="field-label">Glucides (g)</label>
+              <input type="number" inputmode="numeric" name="carbs" class="field" min="0" value="0">
+            </div>
+            <div>
+              <label class="field-label">Lipides (g)</label>
+              <input type="number" inputmode="numeric" name="fat" class="field" min="0" value="0">
+            </div>
+          </div>
+          <label class="field-label">Note (ex. Poulet riz brocoli)</label>
+          <input type="text" name="note" class="field" maxlength="200" placeholder="Contenu du repas">
+          <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center; margin-top: 8px;">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter
+          </button>
+        </form>
+      </div>
+    </template>
+  </div>
+
+  {# Liste des repas du jour #}
+  {% for mt_val, mt_label in meal_types %}
+    {% set items = meals_by_type.get(mt_val, []) %}
+    {% if items %}
+      <div class="card" style="padding: 10px 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:6px;">
+          <span>{{ mt_label }}</span>
+          <span style="color:var(--accent);">{{ items | sum(attribute='calories') }} kcal</span>
+        </div>
+        {% for it in items %}
+          <div class="meal-item">
+            <div style="flex:1;">
+              <div style="font-size:0.85rem; color:#fff;">{{ it.note or '—' }}</div>
+              <div style="font-size:0.72rem; color:var(--text-dim); margin-top:2px;">
+                {{ it.calories }} kcal · P {{ it.protein or 0 }}g · G {{ it.carbs or 0 }}g · L {{ it.fat or 0 }}g
+              </div>
+            </div>
+            <form method="post" action="/nutrition/delete-meal" style="margin:0;">
+              <input type="hidden" name="id" value="{{ it.id }}">
+              <input type="hidden" name="date" value="{{ date_iso }}">
+              <button type="submit" class="mini-btn" title="Supprimer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg></button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endfor %}
+
+  <style>
+    .obj-btn.selected {
+      background: rgba(88,204,255,0.15) !important;
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+    }
+    .kcal-donut-wrap {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 18px;
+    }
+    .kcal-donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .kcal-big {
+      font-family: 'Courier New', monospace;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .kcal-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .kcal-pct {
+      font-size: 0.85rem;
+      color: var(--success);
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .macro-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .macro-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 0.82rem;
+    }
+    .macro-track {
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .macro-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.6s ease-out;
+    }
+    .meal-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .meal-btn {
+      padding: 10px 4px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(88,204,255,0.2);
+      border-radius: 10px;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+    .meal-btn.selected {
+      background: rgba(88,204,255,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .meal-count {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .meal-btn.selected .meal-count { color: var(--accent); }
+    .meal-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .meal-item:first-child { border-top: none; }
+  </style>
+{% endblock %}

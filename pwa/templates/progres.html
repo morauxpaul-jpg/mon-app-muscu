@@ -96,6 +96,63 @@
     <div class="cal-rate">Assiduité : <b>{{ cal_rate }}%</b> des séances prévues</div>
   </div>
 
+  {# ── Cardio ────────────────────────────────────────── #}
+  {% if cardio %}
+  <div class="card" style="border-color: rgba(255,122,0,0.28);">
+    <h3 class="label-icon" style="color:#FF7A00;"><svg class="icon icon-md" style="color:#FF7A00;"><use href="/static/img/icons.svg#heart"/></svg>Cardio</h3>
+
+    <div class="detail-row" style="margin-top: 10px;">
+      <div class="detail-metric" style="background: rgba(255,122,0,0.06); border-color: rgba(255,122,0,0.28);">
+        <div class="detail-label" style="color:#FF7A00;">Total min</div>
+        <div class="detail-value" style="color:#FF7A00; font-size: 1.5rem;">{{ cardio.total_min }}</div>
+      </div>
+      <div class="detail-metric" style="background: rgba(255,122,0,0.06); border-color: rgba(255,122,0,0.28);">
+        <div class="detail-label" style="color:#FF7A00;">Total km</div>
+        <div class="detail-value" style="color:#FF7A00; font-size: 1.5rem;">{{ cardio.total_km }}</div>
+      </div>
+      <div class="detail-metric" style="background: rgba(255,122,0,0.06); border-color: rgba(255,122,0,0.28);">
+        <div class="detail-label" style="color:#FF7A00;">Sessions</div>
+        <div class="detail-value" style="color:#FF7A00; font-size: 1.5rem;">{{ cardio.sessions }}</div>
+      </div>
+    </div>
+
+    {% if cardio.values %}
+      <div class="field-label" style="margin-top: 14px;">Minutes par semaine</div>
+      <svg class="vol-chart" viewBox="0 0 {{ cardio.values|length * 50 }} 140" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="cardioGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#FF7A00" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#FF7A00" stop-opacity="0.1"/>
+          </linearGradient>
+        </defs>
+        {% for v in cardio.values %}
+          {% set bar_h = (v / cardio.max_val * 90) if cardio.max_val > 0 else 0 %}
+          {% set x = loop.index0 * 50 + 8 %}
+          <rect x="{{ x }}" y="{{ 110 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="url(#cardioGrad)"/>
+          <text x="{{ x + 17 }}" y="{{ 105 - bar_h }}" text-anchor="middle" fill="#FF7A00" font-size="9" font-weight="700">{{ v }}</text>
+          <text x="{{ x + 17 }}" y="128" text-anchor="middle" fill="#5a7a9a" font-size="9">{{ cardio.labels[loop.index0] }}</text>
+        {% endfor %}
+      </svg>
+    {% endif %}
+
+    <div class="field-label" style="margin-top: 10px;">Records</div>
+    <div class="mrow"><span>Plus longue session</span><b>{{ cardio.longest_session_min }} min</b></div>
+    {% if cardio.longest_run_min > 0 %}
+      <div class="mrow"><span>Plus longue course</span><b>{{ cardio.longest_run_min }} min</b></div>
+    {% endif %}
+    {% if cardio.biggest_distance > 0 %}
+      <div class="mrow"><span>Plus grande distance</span><b>{{ cardio.biggest_distance }} km</b></div>
+    {% endif %}
+
+    {% if cardio.repartition %}
+      <div class="field-label" style="margin-top: 10px;">Répartition</div>
+      {% for name, mn in cardio.repartition %}
+        <div class="mrow"><span>{{ name }}</span><b>{{ mn }} min</b></div>
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# ── Volume par semaine ────────────────────────────── #}
   {% if vol_values %}
   <div class="card">

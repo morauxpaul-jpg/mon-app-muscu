@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Cardio · Muscu PRO{% endblock %}
+
+{% block content %}
+  <a href="/seance?date={{ date_iso }}" class="btn label-icon" style="display:inline-flex; margin-bottom: 12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <div class="choix-hero">
+    <div class="choix-date">{{ date_label|upper }}</div>
+    <div class="choix-titre">Séance cardio</div>
+  </div>
+
+  <form method="post" action="/cardio/save" x-data="cardioForm()" x-init="init()">
+    <input type="hidden" name="date" value="{{ date_iso }}">
+    <input type="hidden" name="poids_kg" value="{{ poids_kg }}">
+
+    <!-- Type d'activité -->
+    <div class="card">
+      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#heart"/></svg>TYPE D'ACTIVITÉ</div>
+      <div class="cardio-activites">
+        {% for name, icon, met in activites %}
+          <label class="cardio-activite" :class="activite === '{{ name }}' ? 'selected' : ''">
+            <input type="radio" name="activite" value="{{ name }}" x-model="activite" style="display:none;">
+            <svg class="icon icon-md"><use href="/static/img/icons.svg#{{ icon }}"/></svg>
+            <span>{{ name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Chrono -->
+    <div class="card">
+      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clock"/></svg>CHRONO</div>
+      <div class="cardio-chrono-display" x-text="formatTime(elapsed)">00:00</div>
+      <div class="cardio-chrono-btns">
+        <button type="button" class="btn" @click="start()" x-show="!running && elapsed === 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span style="margin-left:6px;">Démarrer</span></button>
+        <button type="button" class="btn primary" @click="pause()" x-show="running"><svg class="icon icon-sm"><use href="/static/img/icons.svg#pause"/></svg><span style="margin-left:6px;">Pause</span></button>
+        <button type="button" class="btn" @click="resume()" x-show="!running && elapsed > 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span style="margin-left:6px;">Reprendre</span></button>
+        <button type="button" class="btn" @click="stop()" x-show="elapsed > 0" style="background: rgba(255,69,58,0.1); border-color: rgba(255,69,58,0.35); color: var(--danger);"><svg class="icon icon-sm"><use href="/static/img/icons.svg#square"/></svg><span style="margin-left:6px;">Stop</span></button>
+      </div>
+      <div style="font-size: 0.78rem; color: var(--text-dim); text-align: center; margin-top: 8px;">ou saisie manuelle :</div>
+      <label class="field-label">Durée (minutes)</label>
+      <input type="number" inputmode="numeric" min="0" name="duree_min" class="field" x-model.number="dureeMin" placeholder="ex. 30">
+    </div>
+
+    <!-- Distance + FC + Intensité -->
+    <div class="card">
+      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#activity"/></svg>PERFORMANCE</div>
+
+      <label class="field-label">Distance (km, optionnel)</label>
+      <input type="text" inputmode="decimal" name="distance_km" class="field" x-model="distanceKm" placeholder="ex. 5.2">
+
+      <label class="field-label">Fréquence cardiaque moyenne (bpm, optionnel)</label>
+      <input type="number" inputmode="numeric" name="fc_moy" class="field" x-model.number="fcMoy" placeholder="ex. 145">
+
+      <label class="field-label">Intensité perçue (RPE)</label>
+      <div class="rpe-row">
+        {% for rpe in rpe_labels %}
+          <label class="rpe-btn" :class="rpe === '{{ rpe }}' ? 'selected' : ''">
+            <input type="radio" name="rpe" value="{{ rpe }}" x-model="rpe" style="display:none;">
+            <span>{{ rpe }}</span>
+          </label>
+        {% endfor %}
+      </div>
+
+      <label class="field-label">Calories brûlées
+        <span style="color: var(--text-dim); font-weight: 400;">(vide = estimation auto)</span>
+      </label>
+      <input type="number" inputmode="numeric" name="calories" class="field" x-model.number="calories" :placeholder="'estimé : ' + estimatedCal() + ' kcal'">
+
+      <label class="field-label">Notes</label>
+      <textarea name="note" class="field" rows="2" x-model="note" placeholder="Sensations, météo, parcours..."></textarea>
+    </div>
+
+    <!-- Résumé -->
+    <div class="card" x-show="dureeMin > 0" x-cloak>
+      <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>RÉSUMÉ</div>
+      <div class="cardio-summary">
+        <div class="summary-item">
+          <div class="summary-label">Durée</div>
+          <div class="summary-value" x-text="dureeMin + ' min'"></div>
+        </div>
+        <div class="summary-item" x-show="distanceKm">
+          <div class="summary-label">Distance</div>
+          <div class="summary-value" x-text="distanceKm + ' km'"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Calories</div>
+          <div class="summary-value" x-text="(calories || estimatedCal()) + ' kcal'"></div>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center; margin-top: 6px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer la séance cardio</button>
+  </form>
+
+  <style>
+    .cardio-activites {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .cardio-activite {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 6px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(88,204,255,0.18);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+    .cardio-activite:hover { border-color: var(--accent); }
+    .cardio-activite.selected {
+      background: rgba(88,204,255,0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .cardio-chrono-display {
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--accent);
+      text-shadow: 0 0 18px rgba(88,204,255,0.4);
+      margin: 4px 0 12px;
+      letter-spacing: 2px;
+    }
+    .cardio-chrono-btns {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .cardio-chrono-btns .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 16px;
+    }
+    .rpe-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .rpe-btn {
+      padding: 10px 6px;
+      text-align: center;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(88,204,255,0.18);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      transition: all 0.15s ease;
+    }
+    .rpe-btn.selected {
+      background: rgba(88,204,255,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .cardio-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+      gap: 8px;
+    }
+    .summary-item {
+      text-align: center;
+      padding: 10px 6px;
+      background: rgba(0,255,127,0.06);
+      border: 1px solid rgba(0,255,127,0.2);
+      border-radius: 10px;
+    }
+    .summary-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .summary-value {
+      font-family: 'Courier New', monospace;
+      font-size: 1.15rem;
+      color: var(--success);
+      font-weight: 800;
+      margin-top: 2px;
+    }
+  </style>
+
+  <script>
+    // MET par activité (synchro avec routes/cardio.py)
+    const MET = {
+      "Course": 10.0, "Vélo": 7.5, "Rameur": 7.0, "Natation": 8.0,
+      "Corde": 11.0, "HIIT": 9.0, "Marche": 3.5, "Elliptique": 6.5, "Autre": 6.0
+    };
+    const POIDS_KG = parseFloat({{ poids_kg|tojson }}) || 70;
+
+    function cardioForm() {
+      return {
+        activite: "Course",
+        dureeMin: 0,
+        distanceKm: "",
+        fcMoy: "",
+        rpe: "",
+        calories: "",
+        note: "",
+        running: false,
+        elapsed: 0,  // secondes
+        startedAt: 0,
+        baseAccum: 0,
+        tickTimer: null,
+        storageKey: "cardio_chrono_{{ date_iso }}",
+
+        init() {
+          // Restaure chrono en cours (écran qui se ferme)
+          try {
+            const raw = localStorage.getItem(this.storageKey);
+            if (raw) {
+              const s = JSON.parse(raw);
+              this.baseAccum = s.baseAccum || 0;
+              if (s.running && s.startedAt) {
+                this.startedAt = s.startedAt;
+                this.running = true;
+                this._startTick();
+              } else {
+                this.elapsed = this.baseAccum;
+              }
+            }
+          } catch (e) {}
+        },
+        _persist() {
+          try {
+            localStorage.setItem(this.storageKey, JSON.stringify({
+              running: this.running,
+              startedAt: this.startedAt,
+              baseAccum: this.baseAccum,
+            }));
+          } catch (e) {}
+        },
+        _startTick() {
+          if (this.tickTimer) return;
+          this.tickTimer = setInterval(() => {
+            const now = Date.now();
+            this.elapsed = this.baseAccum + Math.floor((now - this.startedAt) / 1000);
+            this.dureeMin = Math.floor(this.elapsed / 60);
+          }, 500);
+        },
+        _stopTick() {
+          if (this.tickTimer) { clearInterval(this.tickTimer); this.tickTimer = null; }
+        },
+        start() {
+          this.running = true;
+          this.startedAt = Date.now();
+          this.baseAccum = 0;
+          this.elapsed = 0;
+          this._startTick();
+          this._persist();
+        },
+        pause() {
+          if (!this.running) return;
+          this.baseAccum += Math.floor((Date.now() - this.startedAt) / 1000);
+          this.running = false;
+          this._stopTick();
+          this.elapsed = this.baseAccum;
+          this.dureeMin = Math.floor(this.elapsed / 60);
+          this._persist();
+        },
+        resume() {
+          this.running = true;
+          this.startedAt = Date.now();
+          this._startTick();
+          this._persist();
+        },
+        stop() {
+          if (this.running) {
+            this.baseAccum += Math.floor((Date.now() - this.startedAt) / 1000);
+            this.running = false;
+            this._stopTick();
+          }
+          this.elapsed = this.baseAccum;
+          this.dureeMin = Math.floor(this.elapsed / 60);
+          try { localStorage.removeItem(this.storageKey); } catch (e) {}
+        },
+        formatTime(sec) {
+          const h = Math.floor(sec / 3600);
+          const m = Math.floor((sec % 3600) / 60);
+          const s = sec % 60;
+          const pad = n => String(n).padStart(2, "0");
+          if (h > 0) return pad(h) + ":" + pad(m) + ":" + pad(s);
+          return pad(m) + ":" + pad(s);
+        },
+        estimatedCal() {
+          const met = MET[this.activite] || 6.0;
+          const mn = parseInt(this.dureeMin) || 0;
+          if (mn <= 0) return 0;
+          return Math.round(met * POIDS_KG * (mn / 60));
+        },
+      };
+    }
+  </script>
+{% endblock %}

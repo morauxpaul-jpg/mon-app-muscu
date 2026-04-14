@@ -142,6 +142,57 @@ def _build_muscle_data(df_p):
     return out
 
 
+def _build_cardio_stats(cardio_rows):
+    """Stats cardio : totaux, records, volume par semaine, répartition par type."""
+    if not cardio_rows:
+        return None
+
+    total_min = sum(int(r.get("Reps") or 0) for r in cardio_rows)
+    total_km = round(sum(float(r.get("Poids") or 0) for r in cardio_rows), 1)
+    sessions = len(cardio_rows)
+
+    # Minutes par semaine (8 dernières)
+    by_week = {}
+    for r in cardio_rows:
+        w = int(r.get("Semaine") or 0)
+        by_week[w] = by_week.get(w, 0) + int(r.get("Reps") or 0)
+    weeks_sorted = sorted(by_week.keys())[-8:]
+    labels = [f"S{w}" for w in weeks_sorted]
+    values = [by_week[w] for w in weeks_sorted]
+    max_val = max(values) if values else 1
+
+    # Records
+    def _activity(r):
+        exo = str(r.get("Exercice") or "")
+        return exo.split(":", 1)[1] if ":" in exo else "Autre"
+
+    # Plus longue course
+    course_rows = [r for r in cardio_rows if _activity(r) == "Course"]
+    longest_run_min = max((int(r.get("Reps") or 0) for r in course_rows), default=0)
+    biggest_distance = max((float(r.get("Poids") or 0) for r in cardio_rows), default=0.0)
+    longest_session_min = max((int(r.get("Reps") or 0) for r in cardio_rows), default=0)
+
+    # Répartition par type (minutes)
+    by_type = {}
+    for r in cardio_rows:
+        a = _activity(r)
+        by_type[a] = by_type.get(a, 0) + int(r.get("Reps") or 0)
+    repartition = sorted(by_type.items(), key=lambda kv: -kv[1])
+
+    return {
+        "total_min": total_min,
+        "total_km": total_km,
+        "sessions": sessions,
+        "labels": labels,
+        "values": values,
+        "max_val": max_val,
+        "longest_run_min": longest_run_min,
+        "biggest_distance": round(biggest_distance, 1),
+        "longest_session_min": longest_session_min,
+        "repartition": repartition,
+    }
+
+
 def _build_svg_context(muscle_data):
     """Prépare le dict {muscle: {fill_f, fill_b, opacity}} passé à la template SVG."""
     svg = {}
@@ -170,6 +221,13 @@ def progres():
             message="Impossible de charger ta progression. Vérifie ta connexion.",
         ), 503
     hist = _normalize(hist, prog)
+
+    # ── Cardio — statistiques dédiées avant filtrage ──
+    cardio_rows = [r for r in hist if str(r.get("Exercice") or "").startswith("CARDIO:")]
+    cardio = _build_cardio_stats(cardio_rows)
+
+    # Exclure le cardio des stats muscu (sinon il fausse les 1RM, le filtre muscle, etc.)
+    hist = [r for r in hist if not str(r.get("Exercice") or "").startswith("CARDIO:")]
 
     # df_p = perfs réelles (Reps > 0), avec 1RM calculé
     df_p = [r for r in hist if r["Reps"] > 0]
@@ -244,6 +302,12 @@ def progres():
         if r["Exercice"] == "SESSION" and "MANQUÉE" in (r.get("Remarque") or ""):
             hist_dates_missed.add(d)
         elif r["Poids"] > 0 or r["Reps"] > 0:
+            hist_dates_done.add(d)
+    # Les séances cardio (stockées hors de `hist` désormais) comptent aussi
+    # comme des jours "done" dans le calendrier.
+    for r in cardio_rows:
+        d = r.get("Date", "")
+        if d and int(r.get("Reps") or 0) > 0:
             hist_dates_done.add(d)
 
     cal_weeks = []
@@ -332,4 +396,5 @@ def progres():
         vol_labels=vol_labels,
         vol_values=vol_values,
         vol_max=vol_max,
+        cardio=cardio,
     )

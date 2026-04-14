@@ -172,5 +172,17 @@
   <symbol id="heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
   </symbol>
+  <symbol id="utensils" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+  </symbol>
+  <symbol id="pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+  </symbol>
+  <symbol id="square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="4" width="16" height="16" rx="2"/>
+  </symbol>
+  <symbol id="footprints" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 16v-2.38c0-.76.28-1.49.78-2.04l1.05-1.17c.5-.55.78-1.28.78-2.04V4.5A1.5 1.5 0 0 1 8.12 3h.76A1.5 1.5 0 0 1 10.38 4.5v3.87c0 .76.28 1.49.78 2.04l1.05 1.17c.5.55.78 1.28.78 2.04V16"/><path d="M13 22v-2.38c0-.76.28-1.49.78-2.04l1.05-1.17c.5-.55.78-1.28.78-2.04V10.5a1.5 1.5 0 0 1 1.5-1.5h.76a1.5 1.5 0 0 1 1.5 1.5v3.87c0 .76.28 1.49.78 2.04l1.05 1.17c.5.55.78 1.28.78 2.04V22"/>
+  </symbol>
 </defs>
 </svg>
