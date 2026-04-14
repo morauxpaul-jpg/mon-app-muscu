@@ -7,7 +7,7 @@
     <span>Chargement...</span>
   </div>
 
-  <a href="/accueil" class="btn" style="display:inline-block; margin-bottom: 12px;">← Retour</a>
+  <a href="/accueil" class="btn label-icon" style="display:inline-flex; margin-bottom: 12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <div class="choix-hero">
     <div class="choix-date">{{ date_label|upper }}</div>
@@ -19,24 +19,24 @@
 
   {% if done_name %}
     <div class="card" style="border-color: rgba(0,255,127,0.4); background: rgba(0,255,127,0.05);">
-      <div style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px;">✅ SÉANCE ENREGISTRÉE</div>
+      <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>SÉANCE ENREGISTRÉE</div>
       <div style="color: #8aaa9a; font-size: 0.85rem; margin-top: 6px;">Consulter ou modifier « {{ done_name }} ».</div>
       {% if done_name in seance_names %}
         <a href="/seance?mode=prefaite&name={{ done_name|urlencode }}&date={{ date_iso }}"
-           class="btn primary" style="display:block; text-align:center; margin-top: 12px;">
-          ✏️ Consulter / Modifier cette séance
+           class="btn primary label-icon" style="display:flex; justify-content:center; text-align:center; margin-top: 12px;">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Consulter / Modifier cette séance
         </a>
       {% else %}
         <a href="/seance?mode=libre&name={{ done_name|urlencode }}&date={{ date_iso }}"
-           class="btn primary" style="display:block; text-align:center; margin-top: 12px;">
-          ✏️ Consulter / Modifier cette séance
+           class="btn primary label-icon" style="display:flex; justify-content:center; text-align:center; margin-top: 12px;">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Consulter / Modifier cette séance
         </a>
       {% endif %}
     </div>
   {% endif %}
 
   <div class="card" style="border-color: rgba(88,204,255,0.3);">
-    <div style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;">📋 SÉANCE PRÉ-FAITE</div>
+    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>SÉANCE PRÉ-FAITE</div>
     {% for sname in seance_names %}
       <div class="seance-choice-row">
         <div>
@@ -46,26 +46,26 @@
             {% if jours_map.get(sname) %} · {{ jours_map[sname] }}{% endif %}
           </div>
         </div>
-        <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn">Choisir →</a>
+        <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn label-icon" style="display:inline-flex;">Choisir<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
       </div>
     {% endfor %}
   </div>
 
   <div class="card" style="border-color: rgba(0,255,127,0.3);">
-    <div style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;">✏️ SÉANCE PERSONNALISÉE</div>
+    <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#edit"/></svg>SÉANCE PERSONNALISÉE</div>
     <div style="font-size: 0.85rem; color: #5a8a6a; margin-bottom: 12px;">
       Construis ta séance exercice par exercice, en piochant dans ton programme ou en créant du nouveau.
     </div>
-    <a href="/seance?mode=libre&date={{ date_iso }}" class="btn primary" style="display:block; text-align:center;">
-      📝 Créer ma séance
+    <a href="/seance?mode=libre&date={{ date_iso }}" class="btn primary label-icon" style="display:flex; justify-content:center; text-align:center;">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Créer ma séance
     </a>
   </div>
 
   <div class="card" style="border-color: rgba(255,69,58,0.25);">
-    <div style="color: var(--danger); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;">🚩 PASSER UNE SÉANCE</div>
+    <div class="label-icon" style="color: var(--danger); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>PASSER UNE SÉANCE</div>
     <form method="post" action="/seance/mark-missed">
       <input type="hidden" name="date" value="{{ date_iso }}">
-      <button type="submit" class="btn" style="width: 100%;">🚩 Marquer comme manquée</button>
+      <button type="submit" class="btn label-icon" style="width: 100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#flag"/></svg>Marquer comme manquée</button>
     </form>
   </div>
 
@@ -75,8 +75,8 @@
       var btn = e.target.querySelector('button[type="submit"]');
       if (btn && !btn.classList.contains('loading')) {
         btn.classList.add('loading');
-        btn.dataset.origText = btn.textContent;
-        btn.textContent = '⏳ En cours...';
+        btn.dataset.origText = btn.innerHTML;
+        btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#hourglass"/></svg>En cours...';
       }
     });
   </script>

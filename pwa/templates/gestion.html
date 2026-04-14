@@ -2,68 +2,68 @@
 {% block title %}Gestion · Muscu PRO{% endblock %}
 
 {% block content %}
-  <h1>🛠️ Gestion</h1>
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Gestion</h1>
 
   {% if request.args.get('updated') %}
-    <div class="card" style="border-color: var(--success);">
-      ✅ {{ request.args.get('updated') }} exercice(s) mis à jour, {{ request.args.get('skipped') }} non reconnu(s).
+    <div class="card label-icon" style="border-color: var(--success);">
+      <svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>{{ request.args.get('updated') }} exercice(s) mis à jour, {{ request.args.get('skipped') }} non reconnu(s).
     </div>
   {% endif %}
   {% if request.args.get('reset') == 'soft' %}
-    <div class="card" style="border-color: var(--success);">✅ Historique réinitialisé. Les records sont archivés.</div>
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Historique réinitialisé. Les records sont archivés.</div>
   {% endif %}
   {% if request.args.get('reset') == 'total' %}
-    <div class="card" style="border-color: var(--success);">✅ Tout a été remis à zéro.</div>
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Tout a été remis à zéro.</div>
   {% endif %}
   {% if request.args.get('import') == 'ok' %}
-    <div class="card" style="border-color: var(--success);">✅ Données importées avec succès.</div>
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Données importées avec succès.</div>
   {% endif %}
   {% if request.args.get('import') == 'error' %}
-    <div class="card" style="border-color: var(--danger);">❌ Erreur : fichier JSON invalide ou manquant.</div>
+    <div class="card label-icon" style="border-color: var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Erreur : fichier JSON invalide ou manquant.</div>
   {% endif %}
 
   {# ── Section : Profil ────────────────────── #}
-  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">👤 PROFIL</h2>
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL</h2>
 
   <div class="card">
-    <h3>🔄 Refaire l'onboarding</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil et, si tu veux, changer de programme.</p>
     <form method="post" action="/gestion/redo-onboarding">
-      <button type="submit" class="btn" style="width:100%;">🔄 Refaire l'onboarding</button>
+      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</button>
     </form>
   </div>
 
   {# ── Section : Tutoriels ─────────────────── #}
-  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">📖 TUTORIELS</h2>
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>TUTORIELS</h2>
 
   <div class="card">
-    <h3>📖 Tutoriels interactifs</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>Tutoriels interactifs</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Relance les tutoriels pour revoir les explications pas à pas.</p>
     <div style="display:flex; flex-direction:column; gap:8px;">
-      <button type="button" class="btn" style="width:100%;"
-              onclick="try{localStorage.removeItem('tutoSeen')}catch(e){} this.textContent='✅ Se lancera à la prochaine page'; this.disabled=true;">
-        🔄 Revoir le tutoriel principal
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center;"
+              onclick="try{localStorage.removeItem('tutoSeen')}catch(e){} this.textContent='Se lancera à la prochaine page'; this.disabled=true;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Revoir le tutoriel principal
       </button>
-      <button type="button" class="btn" style="width:100%;"
-              onclick="try{localStorage.removeItem('tutoSeanceSeen')}catch(e){} this.textContent='✅ Se lancera à ta prochaine séance'; this.disabled=true;">
-        🔄 Revoir le tuto séance
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center;"
+              onclick="try{localStorage.removeItem('tutoSeanceSeen')}catch(e){} this.textContent='Se lancera à ta prochaine séance'; this.disabled=true;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Revoir le tuto séance
       </button>
     </div>
   </div>
 
   {# ── Section : Programme ─────────────────── #}
-  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">⚙️ PROGRAMME</h2>
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>PROGRAMME</h2>
 
   <div class="card">
-    <h3>🪄 Auto-assigner les muscles</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Auto-assigner les muscles</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Détecte automatiquement les muscles selon le nom de chaque exercice du programme.</p>
     <form method="post" action="/gestion/auto-muscles">
-      <button type="submit" class="btn primary" style="width:100%;">🪄 Lancer l'auto-assignation</button>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg>Lancer l'auto-assignation</button>
     </form>
   </div>
 
   <div class="card">
-    <h3>🎛️ Paramètres d'affichage</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sliders"/></svg>Paramètres d'affichage</h3>
     <form method="post" action="/gestion/settings">
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="auto_collapse" {% if settings.auto_collapse %}checked{% endif %}>
@@ -91,12 +91,12 @@
       </label>
       <label class="field-label">Nombre de semaines précédentes affichées en séance</label>
       <input type="number" name="show_previous_weeks" min="0" max="10" value="{{ settings.show_previous_weeks }}" class="field">
-      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">💾 Sauvegarder</button>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
     </form>
   </div>
 
   {# ── Section : Mise à jour ───────────────── #}
-  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">🔄 MISE À JOUR</h2>
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>MISE À JOUR</h2>
 
   <div class="card">
     <div class="detail-row" style="grid-template-columns: 1fr; margin-bottom: 10px;">
@@ -105,15 +105,15 @@
         <div class="detail-value" style="font-size:1.1rem;" id="sw-version">—</div>
       </div>
     </div>
-    <button type="button" class="btn primary" style="width:100%;" id="btn-check-update" onclick="checkForUpdate()">🔄 Vérifier les mises à jour</button>
+    <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center;" id="btn-check-update" onclick="checkForUpdate()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
     <p style="font-size:0.75rem; color:var(--text-dim); margin-top:6px; text-align:center;" id="update-status"></p>
   </div>
 
   {# ── Section : Données ───────────────────── #}
-  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">📊 DONNÉES</h2>
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bar-chart"/></svg>DONNÉES</h2>
 
   <div class="card">
-    <h3>📊 État</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#bar-chart"/></svg>État</h3>
     <div class="detail-row">
       <div class="detail-metric"><div class="detail-label">SÉANCES</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_seances }}</div></div>
       <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_exos }}</div></div>
@@ -125,43 +125,43 @@
   </div>
 
   <div class="card">
-    <h3>💾 Sauvegardes</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegardes</h3>
     <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <a href="/gestion/export" class="btn primary" style="flex:1; text-align:center; text-decoration:none;">📥 Exporter tout</a>
-      <a href="/gestion/export-programme" class="btn" style="flex:1; text-align:center; text-decoration:none;">📥 Programme seul</a>
+      <a href="/gestion/export" class="btn primary label-icon" style="flex:1; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
+      <a href="/gestion/export-programme" class="btn label-icon" style="flex:1; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Programme seul</a>
     </div>
     <form method="post" action="/gestion/import" enctype="multipart/form-data"
           onsubmit="return showModal(event, 'Importer des données ?', 'Les données actuelles seront remplacées par le contenu du fichier. Cette action est irréversible.', true);">
       <label class="field-label">Importer un fichier JSON</label>
       <input type="file" name="file" accept=".json" required class="field" style="padding:8px;">
-      <button type="submit" class="btn" style="width:100%; margin-top:8px;">📤 Importer et remplacer</button>
+      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
     </form>
   </div>
 
   <div class="card" style="border-color: rgba(255,159,10,0.4);">
-    <h3>♻️ Réinitialiser l'historique</h3>
+    <h3 class="label-icon" style="color:#FF9F0A;"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-soft"
           onsubmit="return showModal(event, 'Réinitialiser l\'historique ?', 'L\'historique sera vidé et les records archivés. Le programme est conservé.', true);">
-      <button type="submit" class="btn" style="width:100%; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;">♻️ Confirmer la réinitialisation</button>
+      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Confirmer la réinitialisation</button>
     </form>
   </div>
 
   <div class="card" style="border-color: rgba(255,69,58,0.5);">
-    <h3 style="color: var(--danger);">💥 Tout remettre à zéro</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">⚠️ Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
+    <h3 class="label-icon" style="color: var(--danger);"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>Tout remettre à zéro</h3>
+    <p class="label-icon" style="font-size:0.85rem; color:var(--text-dim);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-total"
           onsubmit="return showModal(event, 'TOUT REMETTRE À ZÉRO', 'TOUTES les données seront supprimées. Cette action est irréversible.', true);">
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="confirm" value="yes" required>
         <span>Je comprends, je veux tout effacer</span>
       </label>
-      <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);">💥 TOUT REMETTRE À ZÉRO</button>
+      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>TOUT REMETTRE À ZÉRO</button>
     </form>
   </div>
 
   {# ── Section : À propos ──────────────────── #}
-  <h2 style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;">ℹ️ À PROPOS</h2>
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>À PROPOS</h2>
 
   <div class="card" style="text-align:center;">
     <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker PRO</strong></p>
@@ -198,7 +198,7 @@
     if (sessionStorage.getItem('app-updated')) {
       sessionStorage.removeItem('app-updated');
       var toast = document.createElement('div');
-      toast.textContent = '✅ App mise à jour !';
+      toast.innerHTML = '<svg class="icon icon-sm icon-success" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#check-circle"/></svg>App mise à jour !';
       toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,255,127,0.15);border:1px solid rgba(0,255,127,0.4);color:#00FF7F;padding:10px 20px;border-radius:12px;font-size:0.9rem;z-index:9999;animation:slideIn 0.3s ease-out;';
       document.body.appendChild(toast);
       setTimeout(function() { toast.remove(); }, 4000);
@@ -208,7 +208,7 @@
       var btn = document.getElementById('btn-check-update');
       var status = document.getElementById('update-status');
       btn.classList.add('loading');
-      btn.textContent = '⏳ En cours...';
+      btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#hourglass"/></svg>En cours...';
       status.textContent = 'Suppression du cache et mise à jour...';
 
       sessionStorage.setItem('app-updated', '1');
@@ -225,7 +225,7 @@
       }).catch(function(err) {
         status.textContent = 'Erreur : ' + err.message;
         btn.classList.remove('loading');
-        btn.textContent = '🔄 Vérifier les mises à jour';
+        btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour';
       });
     }
 
@@ -263,8 +263,8 @@
       var btn = e.target.querySelector('button[type="submit"]');
       if (btn && !btn.classList.contains('loading')) {
         btn.classList.add('loading');
-        btn.dataset.origText = btn.textContent;
-        btn.textContent = '⏳ En cours...';
+        btn.dataset.origText = btn.innerHTML;
+        btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#hourglass"/></svg>En cours...';
       }
     });
 

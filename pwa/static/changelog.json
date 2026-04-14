@@ -1,13 +1,13 @@
 {
-  "version": "v21",
+  "version": "v22",
   "date": "2026-04-14",
-  "title": "Mise à jour v21",
+  "title": "Mise à jour v22 — Design 10/10",
   "changes": [
-    "Sauvegarde des séries : opérations DB ciblées (plus rapide, zéro delete-all)",
-    "Chrono de repos : ne se déclenche plus au simple focus — uniquement quand tu passes à la ligne suivante après avoir rempli reps + poids",
-    "Pages d'erreur propres (404/500/429) au thème cyber avec bouton retour",
-    "Icône PWA compressée : 2 Mo → 24 Ko (chargement plus rapide)",
-    "Rate limiting anti-spam sur les actions sensibles",
-    "Logs structurés côté serveur"
+    "Interface: tous les emojis remplacés par des icônes SVG cohérentes (sprite local, zéro CDN)",
+    "Micro-animations: fondu à l'ouverture des pages, flash vert à la validation d'une série, confettis à la fin de séance",
+    "Retour tactile (vibration) sur les boutons clés",
+    "Landing page refaite: dégradé animé, mockup SVG, CTA pulsé",
+    "Typographie et espacements unifiés (rayons 14/10/8, padding 14×16)",
+    "Icônes nav/onglets en SVG (rendu net en toutes tailles)"
   ]
 }

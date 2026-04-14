@@ -138,17 +138,17 @@
   </div>
 
   {# ── Bouton chrono manuel ─────────────────────────────────── #}
-  <button type="button" class="btn" style="font-size:0.78rem; padding:6px 12px; margin-bottom:10px;"
+  <button type="button" class="btn label-icon" style="font-size:0.78rem; padding:6px 12px; margin-bottom:10px;"
           data-tuto-seance="chrono"
           onclick="startTimer(parseInt(localStorage.getItem('restTimerDefault')) || 90)"
-          title="Lancer le chrono de repos manuellement">⏱️ Chrono</button>
+          title="Lancer le chrono de repos manuellement"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>Chrono</button>
 
   {# ── Barre de progression (Feature 5) ─────────────────────── #}
   {% if exos %}
   <div class="seance-progress" id="seance-progress">
     <div class="seance-progress-top">
       <span class="seance-progress-label">EXERCICE <b id="prog-done">{{ exos_done|default(0) }}</b> / {{ exos_total|default(exos|length) }}</span>
-      <span class="seance-progress-vol" id="prog-vol">⚡ {{ vol_curr }} kg</span>
+      <span class="seance-progress-vol label-icon" id="prog-vol"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>{{ vol_curr }} kg</span>
     </div>
     <div class="xp-bar-bg">
       <div class="xp-bar-fill" id="prog-bar" style="width: {{ ((exos_done|default(0)) / (exos_total|default(exos|length)) * 100) if exos else 0 }}%;"></div>
@@ -160,7 +160,7 @@
         onsubmit="return showModal(event, 'Marquer comme manquée ?', 'Ta séance sera marquée comme manquée pour cette date.', false);">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
-    <button type="submit" class="btn">🚩 Séance Manquée</button>
+    <button type="submit" class="btn label-icon"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>Séance manquée</button>
   </form>
 
   <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;"
@@ -170,10 +170,10 @@
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="name" value="{{ seance_name }}">
-    <button type="submit" class="btn">🔄 Recommencer cette séance</button>
+    <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cette séance</button>
   </form>
 
-  <h3>🔋 Récupération</h3>
+  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Récupération</h3>
   <div class="recup-container">
     {% for r in recup %}
       <div class="recup-card">
@@ -186,7 +186,7 @@
 
   {% if vol_prev > 0 %}
     <div class="vol-container">
-      <small>⚡ Volume : <b>{{ vol_curr }} / {{ vol_prev }} kg</b></small>
+      <small class="label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Volume : <b>{{ vol_curr }} / {{ vol_prev }} kg</b></small>
       <div class="xp-bar-bg">
         <div class="xp-bar-fill{% if vol_overload %} vol-overload{% endif %}"
              style="width: {{ (vol_ratio * 100)|round(0) }}%;"></div>
@@ -206,18 +206,18 @@
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
       <div class="exo-head">
         <div>
-          <div class="exo-title">🔹 {{ exo.base|upper }}
+          <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)" title="Info exercice">?</button>
           </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
-            {% if exo.completed %} · <span style="color: var(--success);">✅</span>{% endif %}
+            {% if exo.completed %} · <svg class="icon icon-sm icon-success" aria-label="complété"><use href="/static/img/icons.svg#check-circle"/></svg>{% endif %}
           </div>
           {# ── Historique inline (Feature 2) ── #}
           {% if exo.last_summary %}
-            <div class="exo-last-session">📋 Dernière fois : {{ exo.last_summary }}</div>
+            <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : {{ exo.last_summary }}</div>
           {% elif not exo.completed %}
-            <div class="exo-last-session">✨ Première fois !</div>
+            <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
           {% endif %}
         </div>
         <div class="exo-toggle" @click="open = !open" style="cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;" x-text="open ? '−' : '+'"></div>
@@ -226,12 +226,14 @@
       <div class="exo-body" x-show="open" x-transition.duration.200ms>
 
         {% if exo.record %}
-          <div class="record-line">
+          <div class="record-line label-icon">
+            <svg class="icon icon-sm icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>
             {% if exo.is_bw %}
-              🏆 Record : <b>{{ exo.record.reps }} reps</b>
+              Record : <b>{{ exo.record.reps }} reps</b>
             {% else %}
-              🏆 Record : <b>{{ '%g'|format(exo.record.weight) }}kg</b>
-              · ⚡ 1RM : <b>{{ exo.record.one_rm }}kg</b>
+              Record : <b>{{ '%g'|format(exo.record.weight) }}kg</b>
+              <svg class="icon icon-sm icon-accent" style="margin-left:4px;"><use href="/static/img/icons.svg#zap"/></svg>
+              1RM : <b>{{ exo.record.one_rm }}kg</b>
             {% endif %}
           </div>
         {% endif %}
@@ -244,9 +246,9 @@
         {% if exo.prev_weeks %}
           {% for pw in exo.prev_weeks %}
             {% if pw.missed %}
-              <div class="prev-week-line">📅 Semaine {{ pw.week }} — 🚩 SÉANCE MANQUÉE</div>
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week }} — <svg class="icon icon-sm icon-danger" style="margin-left:4px;"><use href="/static/img/icons.svg#flag"/></svg><span style="color:var(--danger);">SÉANCE MANQUÉE</span></div>
             {% else %}
-              <div class="prev-week-line">📅 Semaine {{ pw.week }}</div>
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week }}</div>
               <table class="prev-table">
                 <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
                 <tbody>
@@ -287,7 +289,7 @@
           </tbody>
         </table>
 
-        <button type="button" class="btn" style="width:100%; margin-top:6px;" @click="addSet()">➕ +1 série</button>
+        <button type="button" class="btn label-icon" style="width:100%; margin-top:6px; justify-content:center;" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
         <button type="button" @click="clearWeights()"
                 title="Efface les poids pré-remplis de la dernière séance"
                 style="background:none; border:none; color:var(--text-mute); font-size:0.72rem; padding:4px 0; margin-top:2px; cursor:pointer; text-decoration:underline;">
@@ -307,7 +309,7 @@
             <input type="hidden" name="is_bw" value="{{ '1' if exo.is_bw else '0' }}">
             <input type="hidden" name="variant" :value="variant">
             <input type="hidden" name="sets_json" :value="JSON.stringify(sets)">
-            <button type="submit" class="btn primary" style="width:100%;">💾 Enregistrer</button>
+            <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer</button>
           </form>
           <form method="post" action="/seance/skip-exo"
                 @submit="try{localStorage.removeItem(DRAFT_PREFIX + '{{ exo.base }}')}catch(e){} sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
@@ -319,7 +321,7 @@
             <input type="hidden" name="exo_base" value="{{ exo.base }}">
             <input type="hidden" name="muscle" value="{{ exo.muscle }}">
             <input type="hidden" name="variant" :value="variant">
-            <button type="submit" class="btn">⏭️ Skip</button>
+            <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#skip-forward"/></svg>Skip</button>
           </form>
         </div>
 
@@ -332,7 +334,7 @@
           <input type="hidden" name="seance_name" value="{{ seance_name }}">
           <input type="hidden" name="exo_base" value="{{ exo.base }}">
           <input type="hidden" name="variant" :value="variant">
-          <button type="submit" class="btn" style="width:100%;">🔄 Recommencer cet exercice</button>
+          <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
         </form>
 
         {% if exo.is_extra %}
@@ -342,7 +344,7 @@
             <input type="hidden" name="date" value="{{ date_iso }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
             <input type="hidden" name="index" value="{{ loop.index0 - (exos|length - (exos|selectattr('is_extra')|list|length)) }}">
-            <button type="submit" class="btn" style="width:100%;">🗑️ Retirer cet exercice</button>
+            <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>Retirer cet exercice</button>
           </form>
         {% endif %}
       </div>
@@ -352,7 +354,7 @@
   {# ── Ajouter un exercice (fermé par défaut) ─────────────────────────── #}
   <div class="card" x-data="{ open: false, tab: 'prog', muscle: 'Tous' }">
     <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
-      <span>➕ Ajouter un exercice</span>
+      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>Ajouter un exercice</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
@@ -401,7 +403,7 @@
       </select>
       <label class="field-label">Nombre de séries</label>
       <input type="number" name="sets_count" min="1" max="10" value="3" class="field">
-      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">➕ Ajouter cet exercice</button>
+      <button type="submit" class="btn primary label-icon" style="width:100%; margin-top:10px; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cet exercice</button>
     </form>
     </div>
   </div>
@@ -410,8 +412,8 @@
   {% set all_done = exos and exos|selectattr('completed')|list|length == exos|length %}
   {% if all_done %}
     <div class="card finish-celebration">
-      <div class="check-icon">✅</div>
-      <div class="finish-title">Séance terminée !</div>
+      <div class="check-icon"><svg class="icon icon-xl icon-success"><use href="/static/img/icons.svg#check-circle"/></svg></div>
+      <div class="finish-title">Séance terminée</div>
       <div class="finish-stats">
         <div class="finish-stat">
           <div class="finish-stat-value">{{ exos|length }}</div>
@@ -436,20 +438,30 @@
         </div>
       </div>
     </div>
+    <script>
+      (function () {
+        try {
+          var key = 'confetti_' + {{ date_iso|tojson }} + '_' + {{ seance_name|tojson }};
+          if (sessionStorage.getItem(key)) return;
+          sessionStorage.setItem(key, '1');
+          if (window.fireConfetti) setTimeout(window.fireConfetti, 120);
+        } catch (e) {}
+      })();
+    </script>
   {% endif %}
 
   <form method="post" action="/seance/finish" onsubmit="clearAllDrafts()">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="date" value="{{ date_iso }}">
-    <button type="submit" class="btn primary" style="width:100%;" data-tuto-seance="finish">✅ Terminer la séance</button>
+    <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
   </form>
 
   {# ── Chrono de repos (non-bloquant, bandeau fixe) ──────── #}
   <div id="rest-timer" class="rest-timer-bar" style="display:none;">
     <div class="rest-timer-bar-progress" id="timer-progress-bar"></div>
     <div class="rest-timer-bar-content">
-      <span class="rest-timer-bar-label" id="timer-label">⏱️ REPOS</span>
+      <span class="rest-timer-bar-label label-icon" id="timer-label"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS</span>
       <span class="rest-timer-bar-time" id="timer-display">1:30</span>
       <div class="rest-timer-bar-presets">
         <button type="button" onclick="setTimerDuration(60)">1:00</button>
@@ -457,7 +469,7 @@
         <button type="button" onclick="setTimerDuration(120)">2:00</button>
         <button type="button" onclick="setTimerDuration(180)">3:00</button>
       </div>
-      <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()">✕</button>
+      <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()" aria-label="Passer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
     </div>
   </div>
 
@@ -575,7 +587,7 @@
     var bar = document.getElementById('rest-timer');
     bar.classList.remove('timer-done');
     bar.style.display = 'block';
-    document.getElementById('timer-label').textContent = '⏱️ REPOS';
+    document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS';
     updateTimerDisplay();
     highlightPreset(_timerTotal);
     clearInterval(_timerInterval);
@@ -600,7 +612,7 @@
   function timerFinished() {
     var bar = document.getElementById('rest-timer');
     bar.classList.add('timer-done');
-    document.getElementById('timer-label').textContent = '✅ C\'est reparti !';
+    document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     setTimeout(function() {
       if (bar.style.display !== 'none') skipTimer();
@@ -745,6 +757,7 @@
       if (el) {
         setTimeout(function () {
           el.scrollIntoView({ behavior: 'auto', block: 'start' });
+          if (window.flashRow) window.flashRow(el);
         }, 50);
       }
     }

@@ -1,0 +1,64 @@
+/* Icônes SVG — usage :
+     <svg class="icon"><use href="/static/img/icons.svg#home"/></svg>
+   Les icônes héritent de currentColor, se dimensionnent avec width/height CSS
+   (défaut 1em). Les variantes .icon-sm/md/lg donnent des tailles fixes. */
+
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  fill: none;
+  stroke: currentColor;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.icon-sm { width: 16px; height: 16px; }
+.icon-md { width: 20px; height: 20px; }
+.icon-lg { width: 24px; height: 24px; }
+.icon-xl { width: 32px; height: 32px; }
+
+.icon-success { color: var(--success, #00FF7F); }
+.icon-danger  { color: var(--danger,  #FF453A); }
+.icon-accent  { color: var(--accent,  #58CCFF); }
+.icon-gold    { color: #FFD700; }
+.icon-silver  { color: #C0C7D1; }
+.icon-bronze  { color: #D68A4F; }
+.icon-mute    { color: var(--text-dim, #8899aa); }
+
+/* Bouton-icon : cercle tactile, 40px min pour a11y */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border, rgba(88,204,255,0.18));
+  background: var(--card-bg, rgba(10,20,40,0.5));
+  color: var(--text, #fff);
+  cursor: pointer;
+  transition: transform 90ms ease, border-color 150ms ease, background 150ms ease;
+}
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn:hover  { border-color: var(--accent, #58CCFF); }
+
+/* Puce verticale remplaçant les emojis devant les titres d'exercice */
+.exo-bullet {
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  background: var(--accent, #58CCFF);
+  border-radius: 2px;
+  vertical-align: -0.15em;
+  margin-right: 8px;
+  box-shadow: 0 0 6px rgba(88,204,255,0.35);
+}
+
+/* Badge-icon inline (petits pictos contextuels devant un label) */
+.label-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

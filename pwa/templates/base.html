@@ -14,35 +14,38 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/icons.css">
   <link rel="stylesheet" href="/static/css/tutorial.css">
   <script defer src="/static/js/alpine.min.js"></script>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+  {% include "_icons.html" ignore missing %}
   {% if is_authenticated %}
   <div class="topbar">
-    <span class="topbar-user">👤 {{ current_user_email }}</span>
+    <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg>{{ current_user_email }}</span>
     <form method="post" action="/logout" style="margin:0;">
-      <button type="submit" class="btn topbar-logout" title="Déconnexion">⎋ Déconnexion</button>
+      <button type="submit" class="btn topbar-logout label-icon" title="Déconnexion"><svg class="icon icon-sm"><use href="/static/img/icons.svg#log-out"/></svg>Déconnexion</button>
     </form>
   </div>
   {% endif %}
 
-  <main class="app">
+  <main class="app page-fade">
     {% block content %}{% endblock %}
   </main>
 
   <nav class="bottom-nav" data-tuto="welcome">
-    <a href="/accueil"   data-tuto="dashboard"  class="{% if active == 'accueil'   %}active{% endif %}"><span class="icon">🏠</span>Accueil</a>
-    <a href="/seance"    data-tuto="seance"     class="{% if active == 'seance'    %}active{% endif %}"><span class="icon">💪</span>Séance</a>
-    <a href="/progres"   data-tuto="progres"    class="{% if active == 'progres'   %}active{% endif %}"><span class="icon">📈</span>Progrès</a>
-    <a href="/plus"      data-tuto="plus"       class="{% if active == 'plus'      %}active{% endif %}"><span class="icon">📋</span>Plus</a>
+    <a href="/accueil" data-tuto="dashboard" class="{% if active == 'accueil' %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#home"/></svg>Accueil</a>
+    <a href="/seance"  data-tuto="seance"    class="{% if active == 'seance'  %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#dumbbell"/></svg>Séance</a>
+    <a href="/progres" data-tuto="progres"   class="{% if active == 'progres' %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#chart-line"/></svg>Progrès</a>
+    <a href="/plus"    data-tuto="plus"      class="{% if active == 'plus'    %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#grid"/></svg>Plus</a>
   </nav>
 
   <script src="/static/js/sw-register.js"></script>
   <script src="/static/js/offline.js"></script>
   <script src="/static/js/notifications.js"></script>
   <script src="/static/js/tutorial.js"></script>
+  <script src="/static/js/ui-fx.js"></script>
   <script>
     // Alpine.js fallback: if Alpine not loaded after 3s, show fallback message
     (function() {

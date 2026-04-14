@@ -5,17 +5,17 @@
   <h1>Programme</h1>
 
   {% if request.args.get('program_changed') %}
-    <div class="card" style="border-color: var(--success);">✅ Nouveau programme chargé.</div>
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Nouveau programme chargé.</div>
   {% endif %}
   {% if request.args.get('import_err') == 'parse' %}
-    <div class="card" style="border-color: var(--danger);">❌ Fichier illisible (JSON invalide).</div>
+    <div class="card label-icon" style="border-color: var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Fichier illisible (JSON invalide).</div>
   {% elif request.args.get('import_err') == 'format' %}
-    <div class="card" style="border-color: var(--danger);">❌ Format non reconnu — ce fichier n'a pas été exporté depuis Muscu Tracker.</div>
+    <div class="card label-icon" style="border-color: var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Format non reconnu — ce fichier n'a pas été exporté depuis Muscu Tracker.</div>
   {% endif %}
 
   {# ── Planning hebdomadaire ───────────────────────────── #}
   <div class="card" id="planning">
-    <h3>📅 Planning hebdomadaire</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning hebdomadaire</h3>
     <div class="field-label" style="margin-top:0;">Assigne une séance à chaque jour. Vide = repos.</div>
     <form method="post" action="/programme/planning">
       {% for day in days_fr %}
@@ -27,7 +27,7 @@
           {% endfor %}
         </select>
       {% endfor %}
-      <button type="submit" class="btn primary" style="width:100%; margin-top:12px;">💾 Sauvegarder le planning</button>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder le planning</button>
     </form>
   </div>
 
@@ -37,7 +37,7 @@
     <span>Chargement en cours...</span>
   </div>
 
-  <h3>📦 Séances</h3>
+  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#folder"/></svg>Séances</h3>
 
   {% for sname, exos in seances %}
     <div class="card" id="s-{{ sname }}" x-data="{ open: false }">
@@ -54,23 +54,23 @@
           <form method="post" action="/programme/seance/move">
             <input type="hidden" name="name" value="{{ sname }}">
             <input type="hidden" name="direction" value="up">
-            <button type="submit" class="btn">⬆️ Monter</button>
+            <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
           </form>
           <form method="post" action="/programme/seance/move">
             <input type="hidden" name="name" value="{{ sname }}">
             <input type="hidden" name="direction" value="down">
-            <button type="submit" class="btn">⬇️ Descendre</button>
+            <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
           </form>
           <form method="post" action="/programme/seance/delete"
                 onsubmit="return showModal(event, 'Supprimer cette séance ?', 'La séance {{ sname }} et ses exercices seront supprimés.', true);">
             <input type="hidden" name="name" value="{{ sname }}">
-            <button type="submit" class="btn">🗑️ Supprimer</button>
+            <button type="submit" class="btn label-icon"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
           </form>
           {% if sname in origin_seance_names %}
             <form method="post" action="/programme/seance/reset"
                   onsubmit="return showModal(event, 'Réinitialiser cette séance ?', 'Réinitialiser {{ sname }} à sa version d\'origine ? Tes modifications seront perdues.', true);">
               <input type="hidden" name="name" value="{{ sname }}">
-              <button type="submit" class="btn">♻️ Réinitialiser</button>
+              <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
             </form>
           {% endif %}
         </div>
@@ -95,7 +95,7 @@
                     </label>
                   {% endfor %}
                 </div>
-                <button type="submit" class="btn primary" style="width:100%; margin-top:6px;">💾 Mettre à jour</button>
+                <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:6px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Mettre à jour</button>
               </div>
             </form>
             <div class="prog-exo-actions">
@@ -103,19 +103,19 @@
                 <input type="hidden" name="seance" value="{{ sname }}">
                 <input type="hidden" name="index" value="{{ loop.index0 }}">
                 <input type="hidden" name="direction" value="up">
-                <button type="submit" class="btn mini">⬆️</button>
+                <button type="submit" class="btn mini" aria-label="Monter"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
               </form>
               <form method="post" action="/programme/exo/move">
                 <input type="hidden" name="seance" value="{{ sname }}">
                 <input type="hidden" name="index" value="{{ loop.index0 }}">
                 <input type="hidden" name="direction" value="down">
-                <button type="submit" class="btn mini">⬇️</button>
+                <button type="submit" class="btn mini" aria-label="Descendre"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
               </form>
               <form method="post" action="/programme/exo/delete"
                     onsubmit="return showModal(event, 'Supprimer cet exercice ?', '{{ ex.name }} sera retiré de la séance.', true);">
                 <input type="hidden" name="seance" value="{{ sname }}">
                 <input type="hidden" name="index" value="{{ loop.index0 }}">
-                <button type="submit" class="btn mini">🗑️</button>
+                <button type="submit" class="btn mini" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
               </form>
             </div>
           </div>
@@ -138,7 +138,7 @@
               </label>
             {% endfor %}
           </div>
-          <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">➕ Ajouter l'exercice</button>
+          <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice</button>
         </form>
       </div>
     </div>
@@ -146,23 +146,23 @@
 
   {# ── Nouvelle séance ─────────────────────────────── #}
   <div class="card">
-    <h3>🎯 Créer une séance</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#target"/></svg>Créer une séance</h3>
     <form method="post" action="/programme/seance/new">
       <input type="text" name="name" class="field" placeholder="Nom de la séance (ex: Push)" required>
-      <button type="submit" class="btn primary" style="width:100%; margin-top:10px;">➕ Créer</button>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer</button>
     </form>
   </div>
 
   {# ── Exporter / Importer mon programme ──────────── #}
   <div class="card">
-    <h3>📤 Exporter mon programme</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Télécharge l'intégralité de ton programme (toutes les séances + planning) dans un fichier <code>.json</code>. Tu peux le partager à un ami pour qu'il importe exactement le tien.</p>
-    <a href="/programme/export" class="btn primary" style="width:100%; display:block; text-align:center;">📤 Exporter mon programme</a>
+    <a href="/programme/export" class="btn primary label-icon" style="width:100%; justify-content:center; display:flex;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</a>
   </div>
 
   <div class="card" x-data="{ detected: '' }">
-    <h3>📥 Importer un programme</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. ⚠️ Cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. <strong>Attention :</strong> cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
     <form method="post" action="/programme/import" enctype="multipart/form-data"
           onsubmit="return showModal(event, 'Importer ce programme ?', 'Votre programme actuel sera remplacé par celui du fichier.', true);">
       <input type="file" name="file" accept="application/json,.json" class="field" required
@@ -175,24 +175,24 @@
                      const data = JSON.parse(e.target.result);
                      if (data && data._format === 'muscutracker_program_v1') {
                        const nb = Object.keys(data.seances || {}).length;
-                       detected = '✅ Programme « ' + (data.name || '?') + ' » — ' + nb + ' séance(s) détectée(s).';
+                       detected = 'Programme « ' + (data.name || '?') + ' » — ' + nb + ' séance(s) détectée(s).';
                      } else {
-                       detected = '❌ Format non reconnu.';
+                       detected = 'Format non reconnu.';
                      }
-                   } catch(_) { detected = '❌ Fichier illisible.'; }
+                   } catch(_) { detected = 'Fichier illisible.'; }
                  };
                  reader.readAsText(f);
                }
              ">
       <div x-show="detected" x-text="detected" style="font-size:0.82rem; margin:6px 0; color:#58CCFF;"></div>
       <input type="hidden" name="confirm" value="yes">
-      <button type="submit" class="btn primary" style="width:100%; margin-top:8px;">📥 Importer et remplacer</button>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
     </form>
   </div>
 
   {# ── Changer de programme (catalogue) ────────────── #}
   <div class="card" x-data="{ open: false }">
-    <h3>🔄 Changer de programme</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme</h3>
     {% if current_program_meta %}
       <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
     {% else %}
@@ -201,7 +201,7 @@
     <p style="font-size:0.8rem; color:var(--text-dim);">L'historique et les records sont conservés. Seules les séances actuelles sont remplacées.</p>
 
     <button type="button" class="btn primary" style="width:100%;" @click="open = !open"
-            x-text="open ? 'Fermer' : '🔄 Changer de programme'"></button>
+            x-text="open ? 'Fermer' : 'Changer de programme'"></button>
 
     <div x-show="open" x-transition style="margin-top:14px;">
       {% for p in catalog_programs %}
@@ -216,26 +216,26 @@
             {% endif %}
           </div>
           <p style="font-size:0.82rem; margin:8px 0;">{{ p.description }}</p>
-          <div style="font-size:0.75rem; color:var(--text-dim);">💪 {{ p.muscles|join(' · ') }}</div>
-          <div style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">📦 {{ p.nb_seances }} séances</div>
+          <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim);"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>{{ p.muscles|join(' · ') }}</div>
+          <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>{{ p.nb_seances }} séances</div>
           <form method="post" action="/programme/change-program"
                 onsubmit="return showModal(event, 'Changer de programme ?', 'Votre programme actuel sera remplacé par {{ p.title }}.', true);"
                 style="margin-top:10px;">
             <input type="hidden" name="programme_id" value="{{ p.id }}">
             <input type="hidden" name="confirm" value="yes">
-            <button type="submit" class="btn" style="width:100%;">📜 Choisir ce programme</button>
+            <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>Choisir ce programme</button>
           </form>
         </div>
       {% endfor %}
 
       <div class="card" style="margin:10px 0; border-color: rgba(255,159,10,0.4);">
-        <div style="font-weight:700; color:#FF9F0A;">🛠️ Créer mon propre programme</div>
+        <div class="label-icon" style="font-weight:700; color:#FF9F0A;"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</div>
         <p style="font-size:0.82rem; margin:8px 0;">Vide les séances actuelles et te laisse construire ton programme à zéro depuis cet onglet.</p>
         <form method="post" action="/programme/change-program"
               onsubmit="return showModal(event, 'Repartir de zéro ?', 'Toutes vos séances actuelles seront supprimées.', true);">
           <input type="hidden" name="programme_id" value="custom">
           <input type="hidden" name="confirm" value="yes">
-          <button type="submit" class="btn" style="width:100%;">🛠️ Repartir de zéro</button>
+          <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
         </form>
       </div>
     </div>
@@ -286,8 +286,8 @@
       var btn = e.target.querySelector('button[type="submit"]');
       if (btn && !btn.classList.contains('loading')) {
         btn.classList.add('loading');
-        btn.dataset.origText = btn.textContent;
-        btn.textContent = '⏳ En cours...';
+        btn.dataset.origText = btn.innerHTML;
+        btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#hourglass"/></svg>En cours...';
       }
     });
   </script>

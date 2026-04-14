@@ -256,7 +256,7 @@ def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: 
         "Série": 1,
         "Reps": 0,
         "Poids": 0.0,
-        "Remarque": "SÉANCE MANQUÉE 🚩",
+        "Remarque": "SÉANCE MANQUÉE",
         "Muscle": "Autre",
         "Date": date_str,
     }

@@ -10,6 +10,7 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/icons.css">
   <style>
     .err-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 20px; text-align:center; }
     .err-code {
@@ -39,7 +40,7 @@
     <h1 class="err-title">{% if code == 404 %}Page introuvable{% else %}Oups, quelque chose a cassé{% endif %}</h1>
     <p class="err-msg">{{ message }}</p>
     <div class="err-actions">
-      <a href="/accueil" class="btn-primary">🏠 Retour à l'accueil</a>
+      <a href="/accueil" class="btn-primary label-icon" style="justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#home"/></svg>Retour à l'accueil</a>
       <a href="https://github.com/anthropics/claude-code/issues" class="btn-report" target="_blank" rel="noopener">Signaler un problème</a>
     </div>
   </main>

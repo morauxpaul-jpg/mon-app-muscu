@@ -155,26 +155,31 @@ def index():
     )
     streak_danger = bool(today_seance and not today_done and today.weekday() < 5)
 
-    # Palier streak
+    # Palier streak — icon_id = symbole SVG dans icons.svg, color = classe icon-*
     if streak >= 24:
         streak_tier = "diamond"
-        streak_tier_icon = "💎"
+        streak_tier_icon = "gem"
+        streak_tier_color = "icon-accent"
         streak_tier_label = "Diamant"
     elif streak >= 12:
         streak_tier = "gold"
-        streak_tier_icon = "🥇"
+        streak_tier_icon = "medal-gold"
+        streak_tier_color = "icon-gold"
         streak_tier_label = "Or"
     elif streak >= 8:
         streak_tier = "silver"
-        streak_tier_icon = "🥈"
+        streak_tier_icon = "medal-silver"
+        streak_tier_color = "icon-silver"
         streak_tier_label = "Argent"
     elif streak >= 4:
         streak_tier = "bronze"
-        streak_tier_icon = "🥉"
+        streak_tier_icon = "medal-bronze"
+        streak_tier_color = "icon-bronze"
         streak_tier_label = "Bronze"
     else:
         streak_tier = "none"
         streak_tier_icon = ""
+        streak_tier_color = ""
         streak_tier_label = ""
 
     # Détail
@@ -197,6 +202,7 @@ def index():
         streak_danger=streak_danger,
         streak_tier=streak_tier,
         streak_tier_icon=streak_tier_icon,
+        streak_tier_color=streak_tier_color,
         streak_tier_label=streak_tier_label,
         today_seance=today_seance,
         today_done=today_done,

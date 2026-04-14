@@ -87,7 +87,7 @@ button, .btn {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 10px 16px;
   cursor: pointer;
   transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
@@ -391,6 +391,32 @@ button.primary, .btn.primary {
 }
 .finish-celebration .vol-diff-pos { color: var(--success); }
 .finish-celebration .vol-diff-neg { color: var(--danger); }
+
+/* ── Page transition (fade-in sur changement de route) ── */
+@keyframes pageFade { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+.page-fade { animation: pageFade 0.15s ease-out; }
+
+/* ── Success flash (validation d'une série) ── */
+@keyframes rowFlash {
+  0%   { background: rgba(0,255,127,0); box-shadow: none; }
+  30%  { background: rgba(0,255,127,0.18); box-shadow: 0 0 12px rgba(0,255,127,0.4); }
+  100% { background: rgba(0,255,127,0);   box-shadow: none; }
+}
+.row-flash { animation: rowFlash 0.3s ease-out; }
+
+/* ── Confetti (fin de séance, CSS-only) ── */
+.confetti-wrap {
+  position: fixed; inset: 0; pointer-events: none; z-index: 500; overflow: hidden;
+}
+.confetti-piece {
+  position: absolute; top: -14px;
+  width: 8px; height: 14px; opacity: 0.9;
+  animation: confettiFall 2.4s linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 60px), 110vh, 0) rotate(720deg); opacity: 0.6; }
+}
 
 /* ── Respect prefers-reduced-motion ── */
 @media (prefers-reduced-motion: reduce) {

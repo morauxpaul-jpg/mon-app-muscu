@@ -145,7 +145,7 @@
 <div class="onboard-wrap" x-data="onboardingFlow()" x-init="init()">
 
   <div class="welcome-hero">
-    <h1>⚡ Bienvenue, guerrier</h1>
+    <h1 class="label-icon" style="justify-content:center;"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Bienvenue, guerrier</h1>
     <p>Construisons ton plan d'entraînement en 1 minute.</p>
   </div>
 
@@ -158,7 +158,7 @@
 
   <!-- Étape 1 : identité -->
   <div class="card" x-show="step === 1" x-cloak>
-    <h2 class="onboard-step-title">👋 Qui es-tu ?</h2>
+    <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#user"/></svg>Qui es-tu ?</h2>
     <p class="onboard-step-sub">Étape 1 sur 4</p>
 
     <label class="field-label">Prénom</label>
@@ -175,13 +175,13 @@
     </div>
 
     <div class="onboard-actions">
-      <button class="btn-next" :disabled="!canNext1()" @click="step = 2">Suivant →</button>
+      <button class="btn-next label-icon" :disabled="!canNext1()" @click="step = 2" style="justify-content:center;">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
     </div>
   </div>
 
   <!-- Étape 2 : niveau + fréquence -->
   <div class="card" x-show="step === 2" x-cloak>
-    <h2 class="onboard-step-title">💪 Ton niveau</h2>
+    <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>Ton niveau</h2>
     <p class="onboard-step-sub">Étape 2 sur 4</p>
 
     <label class="field-label">Expérience</label>
@@ -213,14 +213,14 @@
     </div>
 
     <div class="onboard-actions">
-      <button class="btn-ghost" @click="step = 1">← Retour</button>
-      <button class="btn-next" :disabled="!canNext2()" @click="step = 3">Suivant →</button>
+      <button class="btn-ghost label-icon" @click="step = 1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
+      <button class="btn-next label-icon" :disabled="!canNext2()" @click="step = 3" style="justify-content:center;">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
     </div>
   </div>
 
   <!-- Étape 3 : objectif + équipement -->
   <div class="card" x-show="step === 3" x-cloak>
-    <h2 class="onboard-step-title">🎯 Ton objectif</h2>
+    <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#target"/></svg>Ton objectif</h2>
     <p class="onboard-step-sub">Étape 3 sur 4</p>
 
     <label class="field-label">Objectif principal</label>
@@ -258,15 +258,15 @@
     </template>
 
     <div class="onboard-actions">
-      <button class="btn-ghost" @click="step = 2">← Retour</button>
-      <button class="btn-next" :disabled="!canNext3()" @click="goStep4()">Suivant →</button>
+      <button class="btn-ghost label-icon" @click="step = 2"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
+      <button class="btn-next label-icon" :disabled="!canNext3()" @click="goStep4()" style="justify-content:center;">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
     </div>
   </div>
 
   <!-- Étape 4 : choix du programme -->
   <div x-show="step === 4" x-cloak>
     <div class="card">
-      <h2 class="onboard-step-title">📜 Ton programme</h2>
+      <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ton programme</h2>
       <p class="onboard-step-sub">Étape 4 sur 4 · Voici ce qu'on te recommande</p>
     </div>
 
@@ -274,7 +274,7 @@
       <div class="prog-card"
            :class="{ sel: form.programme_id === p.id, 'reco-card': recommended[0] === p.id }"
            @click="form.programme_id = p.id">
-        <span class="badge-reco" x-show="recommended[0] === p.id">⭐ Recommandé pour toi</span>
+        <span class="badge-reco label-icon" x-show="recommended[0] === p.id"><svg class="icon icon-sm icon-gold"><use href="/static/img/icons.svg#sparkle"/></svg>Recommandé pour toi</span>
 
         <h3 class="prog-title">
           <span x-text="p.icon"></span>
@@ -300,14 +300,14 @@
                 x-text="'+' + (p.muscles.length - 6)"></span>
         </div>
 
-        <span class="prog-preview-btn" @click.stop="openPreview(p)">Voir le détail des séances →</span>
+        <span class="prog-preview-btn label-icon" @click.stop="openPreview(p)">Voir le détail des séances<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></span>
       </div>
     </template>
 
     <div class="prog-card custom"
          :class="{ sel: form.programme_id === 'custom' }"
          @click="form.programme_id = 'custom'">
-      <h3 class="prog-title">🛠️ Créer mon propre programme</h3>
+      <h3 class="prog-title label-icon"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</h3>
       <div class="prog-sub">Je sais ce que je veux faire</div>
       <div class="prog-desc">Tu seras amené directement dans l'éditeur de programme après l'onboarding.</div>
     </div>
@@ -323,8 +323,8 @@
       <input type="hidden" name="equipment_details" :value="JSON.stringify(form.equipment_details)">
       <input type="hidden" name="programme_id" :value="form.programme_id">
       <div class="onboard-actions">
-        <button type="button" class="btn-ghost" @click="step = 3">← Retour</button>
-        <button type="submit" class="btn-next" :disabled="!form.programme_id">C'est parti ⚡</button>
+        <button type="button" class="btn-ghost label-icon" @click="step = 3"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
+        <button type="submit" class="btn-next label-icon" :disabled="!form.programme_id" style="justify-content:center;">C'est parti<svg class="icon icon-sm"><use href="/static/img/icons.svg#zap"/></svg></button>
       </div>
     </form>
   </div>
@@ -335,7 +335,7 @@
       <div class="preview-panel">
         <div class="preview-header">
           <h3 x-text="previewProg.icon + ' ' + previewProg.title"></h3>
-          <button class="preview-close" @click="previewProg = null">✕</button>
+          <button class="preview-close" @click="previewProg = null" aria-label="Fermer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
         </div>
         <div class="prog-meta" style="margin-bottom:14px;">
           <span class="prog-meta-item" x-text="previewProg.freq + 'x/sem'"></span>
@@ -354,8 +354,8 @@
             </template>
           </div>
         </template>
-        <button class="preview-choose" @click="form.programme_id = previewProg.id; previewProg = null">
-          Choisir ce programme ⚡
+        <button class="preview-choose label-icon" style="justify-content:center;" @click="form.programme_id = previewProg.id; previewProg = null">
+          Choisir ce programme<svg class="icon icon-sm"><use href="/static/img/icons.svg#zap"/></svg>
         </button>
       </div>
     </div>

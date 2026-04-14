@@ -524,7 +524,7 @@ def skip_exo():
     new_rows = [{
         "Semaine": semaine, "Séance": seance, "Exercice": exo_final,
         "Série": 1, "Reps": 0, "Poids": 0.0,
-        "Remarque": "SKIP 🚫", "Muscle": f.get("muscle", "Autre"),
+        "Remarque": "SKIP", "Muscle": f.get("muscle", "Autre"),
         "Date": f["date"],
     }]
     replace_exo_rows(semaine, seance, exo_final, new_rows)
