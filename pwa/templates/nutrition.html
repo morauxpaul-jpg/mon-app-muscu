@@ -6,6 +6,16 @@
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Nutrition</h1>
 
+  {% if not nutrition_ready %}
+    <div class="card" style="border-color: rgba(255,59,48,0.4); background: rgba(255,59,48,0.06);">
+      <div style="color: #FF453A; font-weight: 700; margin-bottom: 6px;">Table Supabase manquante</div>
+      <div style="color: var(--text-dim); font-size: 0.82rem; line-height: 1.5;">
+        La table <code>nutrition</code> n'existe pas encore dans ta base. Exécute le script
+        <code>pwa/supabase_schema_v23.sql</code> dans le SQL Editor de Supabase, puis recharge cette page.
+      </div>
+    </div>
+  {% endif %}
+
   {# ══════════════════════ Section 1 — Profil nutritionnel ══════════════════════ #}
   <div class="card" x-data="{ open: {{ 'false' if targets else 'true' }} }">
     <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; display:flex; justify-content:space-between; align-items:center;">

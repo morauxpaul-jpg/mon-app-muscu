@@ -107,12 +107,25 @@ def _compute_targets(profile):
 
 @bp.route("/nutrition")
 def index():
-    profile = get_profile() or {}
+    try:
+        profile = get_profile() or {}
+    except Exception as e:
+        logger.error("nutrition get_profile FAILED: %s", e)
+        profile = {}
     targets = _compute_targets(profile)
 
     date_iso = request.args.get("date") or today_paris_str()
 
-    meals = list_nutrition(date_iso)
+    # Si la table nutrition n'existe pas encore (SQL non exécuté), on dégrade
+    # gracieusement au lieu d'un 500 : l'utilisateur voit la page profil et un
+    # message pour qu'il sache que la table manque.
+    nutrition_ready = True
+    try:
+        meals = list_nutrition(date_iso)
+    except Exception as e:
+        logger.error("nutrition list_nutrition FAILED: %s", e)
+        meals = []
+        nutrition_ready = False
     # Agrégats du jour
     totals = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
     meals_by_type = {k: [] for k, _ in MEAL_TYPES}
@@ -154,6 +167,7 @@ def index():
         objectifs=OBJECTIFS,
         cal_pct=cal_pct,
         macros_progress=macros_progress,
+        nutrition_ready=nutrition_ready,
     )
 
 
