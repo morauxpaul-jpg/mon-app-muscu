@@ -12,10 +12,13 @@ Config : deux variables d'env requises
 """
 import os
 import json
+import logging
 import time
 from typing import Optional
 
 from supabase import create_client, Client
+
+logger = logging.getLogger(__name__)
 
 def _env(name: str) -> str:
     v = os.getenv(name, "") or ""
@@ -122,17 +125,16 @@ def save_hist(user_id: str, rows: list[dict]):
             for i in range(0, len(payload), 500):
                 client.table("history").insert(payload[i:i + 500]).execute()
     except Exception as e:
-        print(f"[save_hist] ERREUR pour user {user_id}: {e}")
-        # Tentative de rollback : réinsérer les anciennes données
+        logger.error("save_hist FAILED user=%s: %s", user_id, e)
         try:
             if backup_rows:
                 for i in range(0, len(backup_rows), 500):
                     client.table("history").insert(backup_rows[i:i + 500]).execute()
-                print(f"[save_hist] Rollback réussi ({len(backup_rows)} lignes restaurées)")
+                logger.info("save_hist rollback ok user=%s rows=%d", user_id, len(backup_rows))
             else:
-                print("[save_hist] Rollback : aucune donnée à restaurer (historique était vide)")
+                logger.info("save_hist rollback: backup empty user=%s", user_id)
         except Exception as e2:
-            print(f"[save_hist] ÉCHEC du rollback : {e2}")
+            logger.error("save_hist rollback FAILED user=%s: %s", user_id, e2)
         raise
 
     _cache_invalidate(f"hist:{user_id}")
@@ -191,33 +193,63 @@ def save_prog(user_id: str, prog_dict: dict):
 # ────────────────────────────────────────────────────────────
 
 def replace_exo_rows(user_id: str, semaine: int, seance: str, exercice: str, new_rows: list[dict]):
-    hist = get_hist(user_id)
-    kept = [r for r in hist
-            if not (r["Semaine"] == semaine and r["Séance"] == seance and r["Exercice"] == exercice)]
-    save_hist(user_id, kept + new_rows)
+    """Supprime les lignes d'un (semaine, séance, exercice) précis et réinsère
+    les nouvelles lignes en une seule requête. Pas de delete-all global."""
+    client = get_client()
+    (
+        client.table("history").delete()
+        .eq("user_id", user_id)
+        .eq("semaine", int(semaine))
+        .eq("seance", seance)
+        .eq("exercice", exercice)
+        .execute()
+    )
+    if new_rows:
+        payload = [_row_to_supabase(user_id, r) for r in new_rows]
+        client.table("history").insert(payload).execute()
+    _cache_invalidate(f"hist:{user_id}")
 
 
 def delete_exo_rows(user_id: str, semaine: int, seance: str, exercice: str):
-    hist = get_hist(user_id)
-    kept = [r for r in hist
-            if not (r["Semaine"] == semaine and r["Séance"] == seance and r["Exercice"] == exercice)]
-    save_hist(user_id, kept)
+    client = get_client()
+    (
+        client.table("history").delete()
+        .eq("user_id", user_id)
+        .eq("semaine", int(semaine))
+        .eq("seance", seance)
+        .eq("exercice", exercice)
+        .execute()
+    )
+    _cache_invalidate(f"hist:{user_id}")
 
 
 def delete_session_rows(user_id: str, semaine: int, seance: str):
-    hist = get_hist(user_id)
-    kept = [r for r in hist if not (r["Semaine"] == semaine and r["Séance"] == seance)]
-    save_hist(user_id, kept)
+    client = get_client()
+    (
+        client.table("history").delete()
+        .eq("user_id", user_id)
+        .eq("semaine", int(semaine))
+        .eq("seance", seance)
+        .execute()
+    )
+    _cache_invalidate(f"hist:{user_id}")
 
 
 def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: str):
-    hist = get_hist(user_id)
-    already = any(r for r in hist
-                  if r["Date"] == date_str and r["Exercice"] == "SESSION"
-                  and (r["Séance"] == seance_name or seance_name == "Séance manquée"))
-    if already:
+    """Insère une ligne SESSION "manquée" à la date donnée si aucune n'existe
+    déjà. Utilise une requête ciblée au lieu de relire tout l'historique."""
+    client = get_client()
+    resp = (
+        client.table("history").select("id")
+        .eq("user_id", user_id)
+        .eq("date", date_str)
+        .eq("exercice", "SESSION")
+        .limit(1)
+        .execute()
+    )
+    if resp.data:
         return
-    hist.append({
+    row = {
         "Semaine": semaine,
         "Séance": seance_name,
         "Exercice": "SESSION",
@@ -227,8 +259,9 @@ def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: 
         "Remarque": "SÉANCE MANQUÉE 🚩",
         "Muscle": "Autre",
         "Date": date_str,
-    })
-    save_hist(user_id, hist)
+    }
+    client.table("history").insert(_row_to_supabase(user_id, row)).execute()
+    _cache_invalidate(f"hist:{user_id}")
 
 
 # ────────────────────────────────────────────────────────────

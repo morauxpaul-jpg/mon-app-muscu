@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v20-2026-04-13";
+const CACHE_VERSION = "v21-2026-04-14";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -14,7 +14,8 @@ const APP_SHELL = [
   "/static/js/alpine.min.js",
   "/static/js/tutorial.js",
   "/static/js/tuto-seance.js",
-  "/static/icon.png",
+  "/static/icon-192.png",
+  "/static/icon-512.png",
   "/static/changelog.json",
   "/manifest.json",
 ];
@@ -46,9 +47,9 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SHOW_NOTIFICATION") {
     self.registration.showNotification(event.data.title, {
       body: event.data.body,
-      icon: "/static/icon.png",
+      icon: "/static/icon-192.png",
       tag: event.data.tag || "muscu-reminder",
-      badge: "/static/icon.png",
+      badge: "/static/icon-192.png",
     });
   }
 });

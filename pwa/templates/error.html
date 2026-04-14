@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050A18">
+  <title>Erreur {{ code }} — Muscu Tracker PRO</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <style>
+    .err-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 20px; text-align:center; }
+    .err-code {
+      font-size:4.2rem; font-weight:800; margin:0 0 4px;
+      color:var(--accent, #58CCFF);
+      text-shadow:0 0 22px rgba(88,204,255,0.45);
+      letter-spacing:2px;
+    }
+    .err-title { font-size:1.2rem; margin:0 0 14px; color:#fff; }
+    .err-msg { color:var(--text-dim,#8899aa); font-size:0.95rem; max-width:360px; line-height:1.5; margin:0 0 28px; }
+    .err-actions { display:flex; flex-direction:column; gap:10px; width:100%; max-width:280px; }
+    .err-actions a.btn-primary {
+      background:linear-gradient(135deg,var(--accent,#58CCFF),#0077AA);
+      color:#001; font-weight:700; padding:12px 18px; border-radius:12px;
+      text-decoration:none; font-size:0.95rem;
+      box-shadow:0 4px 18px rgba(88,204,255,0.25);
+    }
+    .err-actions a.btn-report {
+      color:var(--text-dim,#8899aa); font-size:0.82rem;
+      text-decoration:underline; padding:6px;
+    }
+  </style>
+</head>
+<body>
+  <main class="err-wrap">
+    <div class="err-code">{{ code }}</div>
+    <h1 class="err-title">{% if code == 404 %}Page introuvable{% else %}Oups, quelque chose a cassé{% endif %}</h1>
+    <p class="err-msg">{{ message }}</p>
+    <div class="err-actions">
+      <a href="/accueil" class="btn-primary">🏠 Retour à l'accueil</a>
+      <a href="https://github.com/anthropics/claude-code/issues" class="btn-report" target="_blank" rel="noopener">Signaler un problème</a>
+    </div>
+  </main>
+</body>
+</html>

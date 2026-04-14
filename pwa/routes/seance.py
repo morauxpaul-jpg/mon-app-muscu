@@ -3,14 +3,18 @@
 Logique portée depuis app.py lignes 1555-1722 (choix_seance) et 2048-2676 (ma séance).
 """
 import json
+import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, abort
+
+logger = logging.getLogger(__name__)
 
 from core.data import (
     get_hist, get_prog,
     replace_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
 )
 from core.dates import today_paris, today_paris_str, now_paris, DAYS_FR, MONTHS_FR
+from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
 from core.exercises_data import get_exercise_info
 
@@ -271,8 +275,15 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
 # ────────────────────────────────────────────────────────────────
 @bp.route("/seance")
 def seance():
-    hist = get_hist()
-    prog = get_prog()
+    try:
+        hist = get_hist()
+        prog = get_prog()
+    except Exception as e:
+        logger.error("seance() DB failed: %s", e)
+        return render_template(
+            "error.html", code=503,
+            message="Impossible de charger ta séance. Vérifie ta connexion et réessaie.",
+        ), 503
     hist, prog_seances = _normalize_hist(hist, prog)
     _settings = prog.get("_settings", {})
     auto_rest_timer = _settings.get("auto_rest_timer", True)
@@ -329,10 +340,8 @@ def seance():
             return redirect(url_for("seance.seance", date=date_iso))
 
         exos_prog = list(prog_seances[name])
-        # Debug : log l'ordre des exercices pour vérifier (Bug 3)
-        import logging
-        logging.info("[seance] Ordre exercices pour %s: %s",
-                     name, [e.get("name") for e in exos_prog])
+        logger.info("seance ordre exos seance=%s exos=%s",
+                    name, [e.get("name") for e in exos_prog])
         # Extras : stockés dans prog sous "_extras" par (seance, date) pour partage entre sessions
         extras_key = f"{name}|{date_iso}"
         extras = prog.get("_extras", {}).get(extras_key, [])
@@ -453,6 +462,7 @@ def _update_libre_draft(prog_dict, key, mutate_fn):
 
 
 @bp.route("/seance/save-exo", methods=["POST"])
+@limiter.limit("20 per minute")
 def save_exo():
     f = request.form
     semaine = int(f["semaine"])
@@ -492,7 +502,14 @@ def save_exo():
             "Date": date_str,
         })
 
-    replace_exo_rows(semaine, seance, exo_final, new_rows)
+    try:
+        replace_exo_rows(semaine, seance, exo_final, new_rows)
+    except Exception as e:
+        logger.error("save-exo FAILED seance=%s exo=%s: %s", seance, exo_final, e)
+        return render_template(
+            "error.html", code=503,
+            message="Impossible de sauvegarder la série. Tes données sont conservées — réessaie dans un instant.",
+        ), 503
     return _back_to_editor(f)
 
 
@@ -515,6 +532,7 @@ def skip_exo():
 
 
 @bp.route("/seance/reset-exo", methods=["POST"])
+@limiter.limit("10 per minute")
 def reset_exo():
     f = request.form
     semaine = int(f["semaine"])
@@ -527,6 +545,7 @@ def reset_exo():
 
 
 @bp.route("/seance/reset-session", methods=["POST"])
+@limiter.limit("10 per minute")
 def reset_session():
     f = request.form
     delete_session_rows(int(f["semaine"]), f["seance_name"])
@@ -534,6 +553,7 @@ def reset_session():
 
 
 @bp.route("/seance/mark-missed", methods=["POST"])
+@limiter.limit("10 per minute")
 def mark_missed():
     f = request.form
     date_str = f["date"]

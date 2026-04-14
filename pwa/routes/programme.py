@@ -5,6 +5,7 @@ réinitialisation d'une séance prédéfinie, et changement de programme
 (catalogue) — déplacé depuis Gestion."""
 import io
 import json
+import logging
 import re
 
 from flask import (
@@ -15,6 +16,8 @@ from core.data import get_prog, save_prog
 from core.dates import DAYS_FR
 from core.muscu import auto_muscles
 from core import catalog
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("programme", __name__)
 
@@ -69,7 +72,14 @@ def _program_display_name(prog) -> str:
 
 @bp.route("/programme")
 def programme():
-    prog = get_prog()
+    try:
+        prog = get_prog()
+    except Exception as e:
+        logger.error("programme() DB failed: %s", e)
+        return render_template(
+            "error.html", code=503,
+            message="Impossible de charger le programme. Vérifie ta connexion.",
+        ), 503
     _ensure_planning(prog)
     seances = _seance_items(prog)
 

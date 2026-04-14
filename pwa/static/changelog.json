@@ -1,15 +1,13 @@
 {
-  "version": "v20",
-  "date": "2026-04-13",
-  "title": "Mise à jour v20",
+  "version": "v21",
+  "date": "2026-04-14",
+  "title": "Mise à jour v21",
   "changes": [
-    "14 programmes prédéfinis : débutant, intermédiaire, avancé, perte de poids, force",
-    "Réorganisation des séances et exercices avec boutons ↑↓",
-    "Fiches info exercices : bouton ? sur chaque exercice",
-    "Tutoriel interactif de saisie de séance (6 étapes)",
-    "Questions équipement dans l'onboarding avec substitution automatique",
-    "Re-onboarding : change de programme depuis Gestion",
-    "Export/Import de programme complet",
-    "Corrections : patch notes, physique Flappy, ordre exercices"
+    "Sauvegarde des séries : opérations DB ciblées (plus rapide, zéro delete-all)",
+    "Chrono de repos : ne se déclenche plus au simple focus — uniquement quand tu passes à la ligne suivante après avoir rempli reps + poids",
+    "Pages d'erreur propres (404/500/429) au thème cyber avec bouton retour",
+    "Icône PWA compressée : 2 Mo → 24 Ko (chargement plus rapide)",
+    "Rate limiting anti-spam sur les actions sensibles",
+    "Logs structurés côté serveur"
   ]
 }

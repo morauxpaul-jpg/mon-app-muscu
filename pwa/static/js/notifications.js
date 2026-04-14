@@ -35,9 +35,9 @@
     try {
       new Notification(title, {
         body: body,
-        icon: "/static/icon.png",
+        icon: "/static/icon-192.png",
         tag: tag,
-        badge: "/static/icon.png",
+        badge: "/static/icon-192.png",
       });
     } catch (e) {
       // Mobile Safari doesn't support new Notification()
@@ -46,9 +46,9 @@
         navigator.serviceWorker.ready.then(function (reg) {
           reg.showNotification(title, {
             body: body,
-            icon: "/static/icon.png",
+            icon: "/static/icon-192.png",
             tag: tag,
-            badge: "/static/icon.png",
+            badge: "/static/icon-192.png",
           });
         });
       }

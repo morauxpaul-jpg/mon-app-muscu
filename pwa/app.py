@@ -6,10 +6,13 @@ bloque l'accès aux pages protégées tant que la session Flask n'a pas de
 `user_id`. Les routes lisent leurs données via `core.data` qui reprend
 ce `user_id` dans `flask.g`.
 """
+import logging
 import os
 from datetime import timedelta
 
 from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request
+
+from core.limiter import limiter
 
 from routes.accueil import bp as accueil_bp
 from routes.seance import bp as seance_bp
@@ -22,7 +25,19 @@ from routes.arcade import bp as arcade_bp
 
 from core import db as core_db
 
+# Logging structuré — remplace print() un peu partout dans le code.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
+
+# Rate limiter global — protège les routes POST contre les clics compulsifs.
+# default_limits s'applique à toutes les routes ; sur-limite ajoutée avec
+# @limiter.limit(...) pour les actions sensibles dans les blueprints.
+limiter.init_app(app)
 
 # Secret_key : obligatoire pour signer le cookie de session Flask. Doit être
 # défini en prod via la variable d'env FLASK_SECRET_KEY sur Railway.
@@ -133,6 +148,37 @@ def service_worker():
     response = send_from_directory("static", "service-worker.js", mimetype="application/javascript")
     response.headers["Service-Worker-Allowed"] = "/"
     return response
+
+
+# ────────────────────────────────────────────────────────────────
+# Error handlers globaux — jamais de trace Flask blanche pour l'user.
+# ────────────────────────────────────────────────────────────────
+@app.errorhandler(404)
+def handle_404(e):
+    return render_template(
+        "error.html",
+        code=404,
+        message="Page introuvable.",
+    ), 404
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    logger.error("500 on %s: %s", request.path, e)
+    return render_template(
+        "error.html",
+        code=500,
+        message="Erreur serveur. Réessaie dans quelques secondes.",
+    ), 500
+
+
+@app.errorhandler(429)
+def handle_429(e):
+    return render_template(
+        "error.html",
+        code=429,
+        message="Tu cliques un peu trop vite — attends quelques secondes et réessaie.",
+    ), 429
 
 
 if __name__ == "__main__":

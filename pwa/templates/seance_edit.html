@@ -274,9 +274,9 @@
             <template x-for="(s, i) in sets" :key="i">
               <tr>
                 <td x-text="i + 1"></td>
-                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @focus="onRowFocus(i)"></td>
+                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @click="onRowFocus(i)"></td>
                 {% if not exo.is_bw %}
-                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @focus="onRowFocus(i)"></td>
+                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @click="onRowFocus(i)"></td>
                 {% endif %}
                 <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                 <td>
@@ -717,13 +717,20 @@
         var prev = this.sets[i - 1];
         if (!prev || !prev.reps || prev.reps <= 0) return;
         if (!this.isBw && (!prev.poids || prev.poids <= 0)) return;
+        if (prev._timerFired) return;
+        prev._timerFired = true;
+        this.startRestTimer();
+      },
+      startRestTimer: function () {
+        if (!AUTO_REST_TIMER) return;
         if (document.getElementById('rest-timer').style.display !== 'none') return;
         var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
         startTimer(dur);
       },
       prepareSave: function (e) {
-        // Clear draft on save
+        // Clear draft on save + démarre le chrono (spec : Valider déclenche le repos)
         try { localStorage.removeItem(draftKey); } catch(e) {}
+        this.startRestTimer();
       }
     };
   }

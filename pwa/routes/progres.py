@@ -3,6 +3,7 @@
 Logique portée depuis app.py body_map_section (863-1299) et tab_st (2681-2713).
 """
 import calendar
+import logging
 from datetime import date, timedelta
 
 from flask import Blueprint, render_template, request
@@ -10,6 +11,8 @@ from flask import Blueprint, render_template, request
 from core.data import get_hist, get_prog
 from core.dates import today_paris, DAYS_FR
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("progres", __name__)
 
@@ -157,8 +160,15 @@ def _build_svg_context(muscle_data):
 
 @bp.route("/progres")
 def progres():
-    hist = get_hist()
-    prog = get_prog()
+    try:
+        hist = get_hist()
+        prog = get_prog()
+    except Exception as e:
+        logger.error("progres() DB failed: %s", e)
+        return render_template(
+            "error.html", code=503,
+            message="Impossible de charger ta progression. Vérifie ta connexion.",
+        ), 503
     hist = _normalize(hist, prog)
 
     # df_p = perfs réelles (Reps > 0), avec 1RM calculé

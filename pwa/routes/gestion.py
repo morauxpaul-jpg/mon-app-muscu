@@ -10,6 +10,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response
 
 from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
+from core.limiter import limiter
 from core.muscu import auto_muscles
 
 bp = Blueprint("gestion", __name__)
@@ -96,6 +97,7 @@ def auto_assign():
 
 
 @bp.route("/gestion/reset-soft", methods=["POST"])
+@limiter.limit("3 per minute")
 def reset_soft():
     prog = get_prog()
     hist = get_hist()
@@ -140,6 +142,7 @@ def reset_soft():
 
 
 @bp.route("/gestion/reset-total", methods=["POST"])
+@limiter.limit("3 per minute")
 def reset_total():
     if request.form.get("confirm") != "yes":
         return redirect(url_for("gestion.gestion"))
@@ -194,6 +197,7 @@ def export_programme():
 
 
 @bp.route("/gestion/import", methods=["POST"])
+@limiter.limit("5 per minute")
 def import_data():
     """Importe des données depuis un fichier JSON."""
     f = request.files.get("file")

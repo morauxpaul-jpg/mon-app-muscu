@@ -16,10 +16,13 @@ Le backend n'utilise jamais le JWT utilisateur pour appeler Supabase : il tape
 en service_role avec filtres manuels user_id (cf. core.db). Le JWT sert
 uniquement à prouver côté Flask que l'utilisateur est bien qui il dit être.
 """
+import logging
 import os
 
 import jwt
 from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("auth", __name__)
 
@@ -36,8 +39,11 @@ def _public_config() -> dict:
     url = _env("SUPABASE_URL")
     anon = _env("SUPABASE_ANON_KEY")
     if not url or not anon:
-        print(f"[auth] ⚠️ config manquante : SUPABASE_URL={'OK' if url else 'VIDE'} "
-              f"SUPABASE_ANON_KEY={'OK' if anon else 'VIDE'}", flush=True)
+        logger.warning(
+            "auth config manquante : SUPABASE_URL=%s SUPABASE_ANON_KEY=%s",
+            "OK" if url else "VIDE",
+            "OK" if anon else "VIDE",
+        )
     return {"supabase_url": url, "supabase_anon": anon}
 
 
