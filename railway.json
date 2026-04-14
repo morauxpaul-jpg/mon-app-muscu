@@ -4,6 +4,6 @@
     "buildCommand": "pip install -r requirements.txt"
   },
   "deploy": {
-    "startCommand": "cd pwa && gunicorn app:app"
+    "startCommand": "cd pwa && gunicorn --bind 0.0.0.0:$PORT app:app"
   }
 }
