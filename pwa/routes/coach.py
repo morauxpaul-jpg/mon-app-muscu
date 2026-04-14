@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("coach", __name__)
 
-DAILY_QUOTA = 20
+DAILY_QUOTA = 10
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 500
 
