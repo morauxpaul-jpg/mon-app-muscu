@@ -6,14 +6,7 @@ node_modules/
 .DS_Store
 .claude/
 
-# Legacy files (pre-PWA migration)
-/app.py
-/Procfile
-/manifest.json
-/gitignore
-/gitignore.txt
-/logo.png
-/migrate_sheet_to_supabase.py
+# Fichiers de dev locaux (non commités)
 pwa/README.md
 pwa/core/sheets.py
 pwa/generate_icons.py
