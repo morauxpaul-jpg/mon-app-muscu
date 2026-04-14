@@ -209,8 +209,22 @@ def ask():
                 reply_parts.append(text)
         reply = "\n".join(reply_parts).strip() or "Désolé, je n'ai pas pu répondre."
     except Exception as e:
-        logger.error("/coach/ask anthropic FAILED: %s", e)
-        return jsonify({"error": "L'assistant est indisponible. Réessaie dans un instant."}), 502
+        # On log le détail côté serveur et on renvoie un message parlant au
+        # client pour faciliter le debug (sans fuiter la clé API).
+        err_type = type(e).__name__
+        err_msg = str(e)[:300]
+        logger.error("/coach/ask anthropic FAILED (%s): %s", err_type, err_msg)
+        # Messages spécifiques pour les erreurs les plus fréquentes
+        lower = err_msg.lower()
+        if "authentication" in lower or "invalid" in lower and "api" in lower:
+            user_msg = "Clé API Anthropic invalide. Vérifie ANTHROPIC_API_KEY dans Railway."
+        elif "credit" in lower or "billing" in lower or "quota" in lower:
+            user_msg = "Crédit Anthropic épuisé. Ajoute du crédit sur console.anthropic.com."
+        elif "not_found" in lower or "model" in lower and "not" in lower:
+            user_msg = f"Modèle introuvable côté API. Détail : {err_msg}"
+        else:
+            user_msg = f"Erreur Anthropic ({err_type}) : {err_msg}"
+        return jsonify({"error": user_msg}), 502
 
     return jsonify({
         "reply": reply,
