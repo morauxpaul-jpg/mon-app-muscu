@@ -349,6 +349,53 @@ def delete_nutrition(user_id: str, entry_id: int) -> None:
     )
 
 
+def list_all_users_with_tier() -> list[dict]:
+    """Retourne la liste de tous les users (admin). Combine auth.users (email)
+    et public.profiles (tier). Réservé au backend admin — utilise service_role.
+    """
+    client = get_client()
+    # auth.users via Admin API
+    try:
+        users_resp = client.auth.admin.list_users()
+        # Le SDK peut retourner soit une liste directe soit un objet .users
+        auth_users = getattr(users_resp, "users", None) or users_resp or []
+    except Exception as e:
+        logger.error("list_all_users_with_tier auth FAILED: %s", e)
+        auth_users = []
+
+    # profiles
+    try:
+        prof_resp = client.table("profiles").select("id, tier, prenom").execute()
+        profiles = {p["id"]: p for p in (prof_resp.data or [])}
+    except Exception as e:
+        logger.error("list_all_users_with_tier profiles FAILED: %s", e)
+        profiles = {}
+
+    out = []
+    for u in auth_users:
+        uid = getattr(u, "id", None) or (u.get("id") if isinstance(u, dict) else None)
+        email = getattr(u, "email", None) or (u.get("email") if isinstance(u, dict) else "")
+        created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else "")
+        p = profiles.get(uid) or {}
+        out.append({
+            "id": uid,
+            "email": email or "",
+            "created_at": str(created or "")[:10],
+            "tier": (p.get("tier") or "free"),
+            "prenom": (p.get("prenom") or ""),
+        })
+    out.sort(key=lambda u: u["created_at"], reverse=True)
+    return out
+
+
+def set_user_tier(user_id: str, tier: str) -> None:
+    """Upsert profiles.tier pour un user. tier ∈ {'free', 'vip'}."""
+    if tier not in ("free", "vip"):
+        raise ValueError(f"tier invalide: {tier}")
+    client = get_client()
+    client.table("profiles").upsert({"id": user_id, "tier": tier}).execute()
+
+
 def sum_nutrition_day(user_id: str, date_str: str) -> dict:
     rows = list_nutrition(user_id, date_str)
     out = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}

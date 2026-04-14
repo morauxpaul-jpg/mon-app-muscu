@@ -4,6 +4,25 @@
 {% block content %}
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#grid"/></svg>Plus</h1>
 
+  {% if is_premium %}
+    <div class="card" style="border-color:rgba(255,215,0,0.4); background:linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,122,0,0.04)); display:flex; align-items:center; gap:12px;">
+      <svg class="icon icon-lg" style="color:#FFD700;"><use href="/static/img/icons.svg#gem"/></svg>
+      <div style="flex:1;">
+        <div style="font-weight:800; color:#FFD700; font-size:0.9rem;">Membre VIP</div>
+        <div style="font-size:0.75rem; color:var(--text-dim);">Merci de ton soutien — toutes les features sont débloquées.</div>
+      </div>
+    </div>
+  {% else %}
+    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(255,215,0,0.35); background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(255,122,0,0.02));">
+      <svg class="icon icon-lg" style="color:#FFD700;"><use href="/static/img/icons.svg#gem"/></svg>
+      <div style="flex:1;">
+        <div style="font-weight:800; color:#FFD700; font-size:0.9rem;">Passe en Premium</div>
+        <div style="font-size:0.75rem; color:var(--text-dim);">Coach IA illimité, export, programmes avancés…</div>
+      </div>
+      <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    </a>
+  {% endif %}
+
   <a href="/coach" class="card plus-link" style="text-decoration:none; color:inherit; display:block; border-color: rgba(88,204,255,0.35); background: linear-gradient(135deg, rgba(88,204,255,0.08), rgba(0,255,127,0.04));">
     <div style="display:flex; align-items:center; gap:14px;">
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
@@ -58,6 +77,17 @@
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
   </a>
+
+  {% if is_admin %}
+    <a href="/admin" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(0,255,127,0.3);">
+      <svg class="icon icon-lg" style="color:var(--success);"><use href="/static/img/icons.svg#shield-check"/></svg>
+      <div style="flex:1;">
+        <div style="font-weight:800; color:var(--success); font-size:0.9rem;">Admin</div>
+        <div style="font-size:0.75rem; color:var(--text-dim);">Gérer les utilisateurs et attribuer VIP.</div>
+      </div>
+      <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    </a>
+  {% endif %}
 
   <div class="card" style="margin-top:8px;">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>Tutoriel</h3>

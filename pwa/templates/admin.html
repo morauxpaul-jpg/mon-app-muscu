@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Admin · Muscu PRO{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Admin</h1>
+
+  <div class="card" style="margin-bottom:12px;">
+    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+      <span><strong style="color:#fff;">{{ total_count }}</strong> utilisateur{% if total_count != 1 %}s{% endif %}</span>
+      <span><strong style="color:var(--success);">{{ vip_count }}</strong> VIP</span>
+    </div>
+    <div style="font-size:0.72rem; color:var(--text-dim); margin-top:6px;">
+      Connecté en tant que <code>{{ current_email }}</code>
+    </div>
+  </div>
+
+  {% if not users %}
+    <div class="card" style="text-align:center; color:var(--text-dim);">Aucun utilisateur.</div>
+  {% endif %}
+
+  {% for u in users %}
+    <div class="admin-user">
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:0.88rem; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
+        <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">
+          {% if u.prenom %}{{ u.prenom }} · {% endif %}Inscrit le {{ u.created_at or '?' }}
+        </div>
+      </div>
+      <form method="post" action="/admin/set-tier" style="margin:0; display:flex; align-items:center; gap:6px;">
+        <input type="hidden" name="user_id" value="{{ u.id }}">
+        {% if u.tier == 'vip' %}
+          <span class="tier-pill tier-vip">VIP</span>
+          <input type="hidden" name="tier" value="free">
+          <button type="submit" class="mini-btn" title="Retirer VIP">×</button>
+        {% else %}
+          <span class="tier-pill tier-free">FREE</span>
+          <input type="hidden" name="tier" value="vip">
+          <button type="submit" class="btn" style="padding:4px 10px; font-size:0.72rem;" data-haptic="1">Passer VIP</button>
+        {% endif %}
+      </form>
+    </div>
+  {% endfor %}
+
+  <style>
+    .admin-user {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:10px;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.05);
+      margin-bottom:6px;
+    }
+    .tier-pill {
+      font-size:0.65rem;
+      font-weight:800;
+      letter-spacing:1px;
+      padding:3px 8px;
+      border-radius:6px;
+    }
+    .tier-free {
+      color:var(--text-dim);
+      background:rgba(255,255,255,0.05);
+    }
+    .tier-vip {
+      color:#FFD700;
+      background:rgba(255,215,0,0.12);
+      border:1px solid rgba(255,215,0,0.35);
+    }
+  </style>
+{% endblock %}

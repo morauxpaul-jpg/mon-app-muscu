@@ -25,6 +25,8 @@ from routes.arcade import bp as arcade_bp
 from routes.cardio import bp as cardio_bp
 from routes.nutrition import bp as nutrition_bp
 from routes.coach import bp as coach_bp
+from routes.premium import bp as premium_bp
+from routes.admin import bp as admin_bp
 
 from core import db as core_db
 
@@ -63,6 +65,8 @@ app.register_blueprint(arcade_bp)
 app.register_blueprint(cardio_bp)
 app.register_blueprint(nutrition_bp)
 app.register_blueprint(coach_bp)
+app.register_blueprint(premium_bp)
+app.register_blueprint(admin_bp)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -129,10 +133,13 @@ def _inject_user():
             premium = (profile.get("tier") or "free").strip().lower() == "vip"
         except Exception:
             premium = False
+    email = (session.get("email") or "").strip().lower()
+    admin_emails = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
     return {
         "current_user_email": session.get("email", ""),
         "is_authenticated": bool(uid),
         "is_premium": premium,
+        "is_admin": bool(email) and email in admin_emails,
     }
 
 

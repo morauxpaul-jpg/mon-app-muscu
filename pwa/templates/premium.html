@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Premium · Muscu PRO{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <div class="premium-hero">
+    <svg class="icon" style="width:52px; height:52px; color:#FFD700; margin-bottom:8px;"><use href="/static/img/icons.svg#gem"/></svg>
+    <h1 style="margin:0; font-size:1.8rem;">Muscu PRO Premium</h1>
+    <p style="margin:8px 0 0; color:var(--text-dim); font-size:0.9rem; max-width:320px;">
+      Débloque le Coach IA illimité, l'export de tes données et les programmes avancés.
+    </p>
+  </div>
+
+  {% if is_premium %}
+    <div class="card" style="text-align:center; border-color:rgba(255,215,0,0.4); background:linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,122,0,0.04));">
+      <svg class="icon icon-lg" style="color:#FFD700;"><use href="/static/img/icons.svg#shield-check"/></svg>
+      <h3 style="margin:8px 0 4px;">Tu es déjà VIP</h3>
+      <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Toutes les features premium sont débloquées. Merci de soutenir l'app.</p>
+    </div>
+  {% else %}
+
+  <div class="tier-grid">
+
+    <!-- FREE -->
+    <div class="tier-card">
+      <div class="tier-header">
+        <div class="tier-name">Gratuit</div>
+        <div class="tier-price"><span class="amount">0€</span><span class="period">/mois</span></div>
+      </div>
+      <ul class="tier-feats">
+        <li><span class="ok">✓</span>Tracker de séances illimité</li>
+        <li><span class="ok">✓</span>Programme personnalisé</li>
+        <li><span class="ok">✓</span>Cardio + chrono</li>
+        <li><span class="ok">✓</span>Calendrier + progrès</li>
+        <li><span class="ok">✓</span>Badges</li>
+        <li class="muted"><span class="ko">·</span>Coach IA : 10 msg/jour</li>
+      </ul>
+      <button class="btn tier-cta" disabled style="opacity:0.5;">Tu y es déjà</button>
+    </div>
+
+    <!-- PREMIUM MENSUEL -->
+    <div class="tier-card tier-highlight">
+      <div class="tier-ribbon">POPULAIRE</div>
+      <div class="tier-header">
+        <div class="tier-name">Premium</div>
+        <div class="tier-price"><span class="amount">4,99€</span><span class="period">/mois</span></div>
+        <div class="tier-sub">ou 39,99€/an <span class="tier-save">-33%</span></div>
+      </div>
+      <ul class="tier-feats">
+        <li><span class="ok">✓</span><strong>Tout du gratuit</strong></li>
+        <li><span class="ok">✓</span>Coach IA : 30 msg/jour</li>
+        <li><span class="ok">✓</span>Export CSV / JSON de tes données</li>
+        <li><span class="ok">✓</span>Programmes avancés (PPL, Upper/Lower…)</li>
+        <li><span class="ok">✓</span>Stats détaillées par muscle</li>
+        <li><span class="ok">✓</span>Pas de pub future</li>
+      </ul>
+      <button class="btn primary tier-cta" disabled data-haptic="1">
+        Bientôt disponible
+      </button>
+      <div class="tier-note">Lancement prévu avec la version Play Store</div>
+    </div>
+
+    <!-- LIFETIME -->
+    <div class="tier-card tier-lifetime">
+      <div class="tier-ribbon ribbon-gold">LIFETIME</div>
+      <div class="tier-header">
+        <div class="tier-name">À vie</div>
+        <div class="tier-price"><span class="amount">79,99€</span><span class="period">une fois</span></div>
+        <div class="tier-sub">≈ 16 mois d'abonnement</div>
+      </div>
+      <ul class="tier-feats">
+        <li><span class="ok">✓</span><strong>Toutes les features Premium</strong></li>
+        <li><span class="ok">✓</span>À vie, jamais de renouvellement</li>
+        <li><span class="ok">✓</span>Toutes les futures features incluses</li>
+        <li><span class="ok">✓</span>Soutien le créateur</li>
+        <li><span class="ok">✓</span>Badge VIP doré</li>
+      </ul>
+      <button class="btn tier-cta" disabled style="background:linear-gradient(135deg, #FFD700, #FF9F0A); color:#1a1a1a; font-weight:800;">
+        Bientôt disponible
+      </button>
+      <div class="tier-note">Pour les 100 premiers utilisateurs</div>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top:14px; font-size:0.78rem; color:var(--text-dim); line-height:1.5;">
+    <strong style="color:#fff;">FAQ rapide</strong><br><br>
+    <strong>Puis-je annuler ?</strong> Oui, à tout moment. L'accès reste actif jusqu'à la fin de la période payée.<br><br>
+    <strong>L'abonnement se renouvelle-t-il automatiquement ?</strong> Oui, via Google Play. Tu peux désactiver le renouvellement dans les paramètres Google Play à tout moment.<br><br>
+    <strong>Que se passe-t-il si j'annule ?</strong> Tu repasses en gratuit — tu gardes toutes tes données, seules les features premium sont désactivées.<br><br>
+    <strong>Et sur iOS ?</strong> Bientôt — on commence par Android.
+  </div>
+  {% endif %}
+
+  <style>
+    .premium-hero {
+      text-align:center;
+      padding:20px 10px 16px;
+      margin-bottom:14px;
+    }
+    .tier-grid {
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .tier-card {
+      position:relative;
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px;
+      padding:18px 16px;
+    }
+    .tier-highlight {
+      border-color:rgba(88,204,255,0.4);
+      background:linear-gradient(135deg, rgba(88,204,255,0.08), rgba(0,255,127,0.02));
+      box-shadow:0 0 20px rgba(88,204,255,0.1);
+    }
+    .tier-lifetime {
+      border-color:rgba(255,215,0,0.35);
+      background:linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,122,0,0.02));
+    }
+    .tier-ribbon {
+      position:absolute;
+      top:-10px;
+      right:14px;
+      background:var(--accent, #58CCFF);
+      color:#001018;
+      font-size:0.62rem;
+      font-weight:800;
+      letter-spacing:2px;
+      padding:4px 10px;
+      border-radius:8px;
+    }
+    .ribbon-gold {
+      background:linear-gradient(135deg, #FFD700, #FF9F0A);
+      color:#1a1a1a;
+    }
+    .tier-header { margin-bottom:12px; }
+    .tier-name {
+      font-size:0.72rem;
+      letter-spacing:3px;
+      color:var(--text-dim);
+      font-weight:700;
+      margin-bottom:4px;
+    }
+    .tier-price { display:flex; align-items:baseline; gap:4px; }
+    .tier-price .amount {
+      font-size:2rem;
+      font-weight:800;
+      color:#fff;
+      line-height:1;
+    }
+    .tier-price .period {
+      font-size:0.8rem;
+      color:var(--text-dim);
+    }
+    .tier-sub {
+      font-size:0.75rem;
+      color:var(--text-dim);
+      margin-top:4px;
+    }
+    .tier-save {
+      background:rgba(0,255,127,0.12);
+      color:var(--success);
+      padding:2px 6px;
+      border-radius:6px;
+      font-size:0.68rem;
+      font-weight:700;
+      margin-left:4px;
+    }
+    .tier-feats {
+      list-style:none;
+      padding:0;
+      margin:0 0 14px;
+    }
+    .tier-feats li {
+      display:flex;
+      gap:8px;
+      padding:5px 0;
+      font-size:0.82rem;
+      color:#e8f0fa;
+      line-height:1.35;
+    }
+    .tier-feats li.muted { color:var(--text-dim); }
+    .tier-feats .ok { color:var(--success); font-weight:700; flex-shrink:0; }
+    .tier-feats .ko { color:var(--text-dim); flex-shrink:0; }
+    .tier-cta {
+      width:100%;
+      justify-content:center;
+      padding:12px;
+      font-weight:700;
+    }
+    .tier-note {
+      text-align:center;
+      font-size:0.7rem;
+      color:var(--text-dim);
+      margin-top:8px;
+    }
+  </style>
+{% endblock %}
