@@ -70,6 +70,51 @@
     {% endif %}
   </div>
 
+  {% if badges %}
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#award"/></svg>Badges</h3>
+    <div class="badges-row">
+      {% for b in badges %}
+        <div class="badge-item {% if b.unlocked %}badge-on{% else %}badge-off{% endif %}" title="{{ b.label }} — {{ b.desc }}">
+          <svg class="icon icon-lg"><use href="/static/img/icons.svg#{{ b.icon }}"/></svg>
+          <div class="badge-name">{{ b.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <style>
+      .badges-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .badge-item {
+        text-align: center;
+        padding: 10px 4px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.02);
+        transition: all 0.2s ease;
+      }
+      .badge-on {
+        border-color: rgba(88,204,255,0.35);
+        background: linear-gradient(135deg, rgba(88,204,255,0.12), rgba(0,255,127,0.06));
+        color: var(--accent, #58CCFF);
+        box-shadow: 0 0 12px rgba(88,204,255,0.15);
+      }
+      .badge-off { opacity: 0.35; filter: grayscale(0.7); }
+      .badge-name {
+        font-size: 0.62rem;
+        margin-top: 4px;
+        line-height: 1.1;
+        color: inherit;
+      }
+      @media (max-width: 420px) {
+        .badges-row { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .badge-name { font-size: 0.58rem; }
+      }
+    </style>
+  {% endif %}
+
   <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Détail</h3>
   <div class="detail-row">
     <div class="detail-metric">

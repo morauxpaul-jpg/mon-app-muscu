@@ -94,3 +94,14 @@ def delete_nutrition(entry_id):
 
 def sum_nutrition_day(date_str):
     return db.sum_nutrition_day(_uid(), date_str)
+
+
+# ── Tier (Prompt D — paywall préparé, non activé) ───────────────────────
+def is_premium() -> bool:
+    """True si l'utilisateur courant est tier 'vip'. Pour l'instant tout le
+    monde est free — mais les templates peuvent déjà gater des features."""
+    try:
+        profile = db.get_profile(_uid()) or {}
+    except Exception:
+        return False
+    return (profile.get("tier") or "free").strip().lower() == "vip"

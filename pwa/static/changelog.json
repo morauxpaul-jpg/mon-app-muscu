@@ -1,14 +1,13 @@
 {
-  "version": "v23",
+  "version": "v24",
   "date": "2026-04-14",
-  "title": "Mise à jour v23 — Cardio + Nutrition",
+  "title": "Mise à jour v24 — Coach IA + Finitions",
   "changes": [
-    "Nouveau : séances cardio (course, vélo, rameur, HIIT, marche, corde...) avec chrono intégré",
-    "Chrono cardio qui continue même écran éteint (timer basé sur la date de départ)",
-    "Estimation automatique des calories brûlées (MET × poids × durée)",
-    "Nouvelle page Nutrition dans le menu Plus : BMR, TDEE et objectif calorique personnalisé",
-    "Suivi quotidien des calories et macros (protéines / glucides / lipides) avec donut de progression",
-    "Widget calories sur l'accueil + stats cardio hebdo (minutes + distance)",
-    "Section Cardio dans Progrès : total km, minutes/semaine, records"
+    "Nouveau : Coach IA — assistant musculation alimenté par Claude (20 msg/jour)",
+    "Calendrier mensuel dans Progrès avec navigation et taux d'assiduité",
+    "Graphique de volume hebdomadaire (8 dernières semaines)",
+    "Système de badges : Première séance, Centurion, Tonnage, Régulier, Costaud…",
+    "Préparation infra premium (tier profile) — tout reste gratuit pour l'instant",
+    "Lien mailto pour signaler un problème depuis la page d'erreur"
   ]
 }

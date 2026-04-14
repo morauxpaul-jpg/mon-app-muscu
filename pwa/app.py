@@ -24,6 +24,7 @@ from routes.onboarding import bp as onboarding_bp
 from routes.arcade import bp as arcade_bp
 from routes.cardio import bp as cardio_bp
 from routes.nutrition import bp as nutrition_bp
+from routes.coach import bp as coach_bp
 
 from core import db as core_db
 
@@ -61,6 +62,7 @@ app.register_blueprint(onboarding_bp)
 app.register_blueprint(arcade_bp)
 app.register_blueprint(cardio_bp)
 app.register_blueprint(nutrition_bp)
+app.register_blueprint(coach_bp)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -116,9 +118,21 @@ def _require_login():
 
 @app.context_processor
 def _inject_user():
+    # is_premium : exposé à tous les templates pour gater des features (Coach
+    # IA, export, stats avancées…). Pour l'instant tout le monde est free,
+    # donc is_premium = False — mais l'infra est prête.
+    premium = False
+    uid = session.get("user_id")
+    if uid:
+        try:
+            profile = core_db.get_profile(uid) or {}
+            premium = (profile.get("tier") or "free").strip().lower() == "vip"
+        except Exception:
+            premium = False
     return {
         "current_user_email": session.get("email", ""),
-        "is_authenticated": bool(session.get("user_id")),
+        "is_authenticated": bool(uid),
+        "is_premium": premium,
     }
 
 

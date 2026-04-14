@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Coach IA · Muscu PRO{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom: 10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA</h1>
+
+  <div class="coach-disclaimer">
+    <svg class="icon icon-sm" style="flex-shrink:0;"><use href="/static/img/icons.svg#info"/></svg>
+    <span>Cet assistant est un outil d'aide — il ne remplace pas un coach certifié ni un avis médical.</span>
+  </div>
+
+  <div
+    class="coach-chat"
+    x-data="coachChat({{ quota_remaining }}, {{ quota_limit }}, {{ suggestions | tojson }}, {{ prenom | tojson }})"
+    x-init="init()"
+  >
+    <div class="coach-messages" x-ref="scroll">
+      <!-- Message d'accueil -->
+      <div class="msg msg-bot">
+        <div class="msg-bubble">
+          Salut <strong x-text="prenom"></strong> ! Je suis ton coach IA. Pose-moi une question sur ton entraînement, ta nutrition, ou ta progression.
+        </div>
+      </div>
+
+      <!-- Suggestions (affichées seulement au premier message) -->
+      <template x-if="messages.length === 0">
+        <div class="coach-suggestions">
+          <template x-for="s in suggestions" :key="s">
+            <button type="button" class="coach-suggestion" @click="send(s)" x-text="s"></button>
+          </template>
+        </div>
+      </template>
+
+      <!-- Historique -->
+      <template x-for="(m, i) in messages" :key="i">
+        <div :class="'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-bot')">
+          <div class="msg-bubble" x-text="m.content"></div>
+        </div>
+      </template>
+
+      <!-- Typing indicator -->
+      <div class="msg msg-bot" x-show="typing" x-cloak>
+        <div class="msg-bubble typing">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <!-- Message d'erreur -->
+      <div class="msg msg-bot" x-show="errorMsg" x-cloak>
+        <div class="msg-bubble msg-error" x-text="errorMsg"></div>
+      </div>
+    </div>
+
+    <form class="coach-input" @submit.prevent="send(draft)">
+      <input
+        type="text"
+        class="field"
+        placeholder="Pose ta question…"
+        x-model="draft"
+        :disabled="typing || quotaLeft <= 0"
+        maxlength="1500"
+        autocomplete="off"
+      >
+      <button type="submit" class="btn primary" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>
+      </button>
+    </form>
+
+    <div class="coach-quota">
+      <span x-text="(quotaLimit - quotaLeft) + '/' + quotaLimit + ' messages aujourd\\'hui'"></span>
+    </div>
+  </div>
+
+  <script>
+    function coachChat(quotaRemaining, quotaLimit, suggestions, prenom) {
+      return {
+        messages: JSON.parse(sessionStorage.getItem('coach_history') || '[]'),
+        draft: '',
+        typing: false,
+        errorMsg: '',
+        quotaLeft: quotaRemaining,
+        quotaLimit: quotaLimit,
+        suggestions: suggestions,
+        prenom: prenom,
+        init() {
+          this.$nextTick(() => this.scrollDown());
+        },
+        persist() {
+          try { sessionStorage.setItem('coach_history', JSON.stringify(this.messages)); } catch (e) {}
+        },
+        scrollDown() {
+          const el = this.$refs.scroll;
+          if (el) el.scrollTop = el.scrollHeight;
+        },
+        async send(text) {
+          const msg = (text || '').trim();
+          if (!msg || this.typing || this.quotaLeft <= 0) return;
+          this.errorMsg = '';
+          this.messages.push({ role: 'user', content: msg });
+          this.draft = '';
+          this.persist();
+          this.typing = true;
+          this.$nextTick(() => this.scrollDown());
+          try {
+            const resp = await fetch('/coach/ask', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: msg }),
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+              this.errorMsg = data.error || 'Erreur lors de l\'envoi.';
+              if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
+            } else {
+              this.messages.push({ role: 'assistant', content: data.reply || '' });
+              if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
+              this.persist();
+            }
+          } catch (e) {
+            this.errorMsg = 'Réseau indisponible.';
+          } finally {
+            this.typing = false;
+            this.$nextTick(() => this.scrollDown());
+          }
+        },
+      };
+    }
+  </script>
+
+  <style>
+    .coach-disclaimer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(255,159,10,0.08);
+      border: 1px solid rgba(255,159,10,0.25);
+      border-radius: 10px;
+      font-size: 0.75rem;
+      color: #FFB347;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+    .coach-chat {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 60vh;
+    }
+    .coach-messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px;
+      max-height: 58vh;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .msg { display: flex; }
+    .msg-user { justify-content: flex-end; }
+    .msg-bot { justify-content: flex-start; }
+    .msg-bubble {
+      max-width: 82%;
+      padding: 10px 13px;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .msg-user .msg-bubble {
+      background: linear-gradient(135deg, rgba(88,204,255,0.24), rgba(88,204,255,0.12));
+      color: #fff;
+      border: 1px solid rgba(88,204,255,0.35);
+      border-bottom-right-radius: 4px;
+    }
+    .msg-bot .msg-bubble {
+      background: rgba(255,255,255,0.04);
+      color: #e8f0fa;
+      border: 1px solid rgba(88,204,255,0.14);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-error {
+      background: rgba(255,69,58,0.1) !important;
+      border-color: rgba(255,69,58,0.35) !important;
+      color: #FF8F85 !important;
+    }
+    .msg-bubble.typing {
+      display: inline-flex;
+      gap: 4px;
+      padding: 14px 13px;
+    }
+    .msg-bubble.typing span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent, #58CCFF);
+      animation: typing-dot 1.2s infinite ease-in-out;
+    }
+    .msg-bubble.typing span:nth-child(2) { animation-delay: 0.15s; }
+    .msg-bubble.typing span:nth-child(3) { animation-delay: 0.30s; }
+    @keyframes typing-dot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+    .coach-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .coach-suggestion {
+      background: rgba(88,204,255,0.08);
+      border: 1px solid rgba(88,204,255,0.22);
+      color: var(--accent, #58CCFF);
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .coach-suggestion:hover {
+      background: rgba(88,204,255,0.15);
+    }
+    .coach-input {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .coach-input .field {
+      flex: 1;
+      margin: 0;
+    }
+    .coach-input .btn {
+      padding: 0 14px;
+    }
+    .coach-quota {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-dim, #8899aa);
+      padding: 2px 0;
+    }
+  </style>
+{% endblock %}

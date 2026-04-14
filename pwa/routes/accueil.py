@@ -43,6 +43,100 @@ def _is_cardio_row(row):
     return str(row.get("Exercice") or "").startswith("CARDIO:")
 
 
+BADGE_DEFS = [
+    # (code, label, short description, icon_id)
+    ("first_session", "Première séance", "Fais ta toute première séance", "rocket"),
+    ("full_week",     "Semaine complète", "Toutes les séances planifiées faites sur la semaine", "check-circle"),
+    ("centurion",     "Centurion", "100 séances terminées", "trophy"),
+    ("tonnage_10k",   "Tonnage 10k", "10 000 kg soulevés cumulés", "dumbbell"),
+    ("tonnage_50k",   "Tonnage 50k", "50 000 kg soulevés cumulés", "dumbbell"),
+    ("tonnage_100k",  "Tonnage 100k", "100 000 kg soulevés cumulés", "dumbbell"),
+    ("regulier",      "Régulier", "4 semaines consécutives sans manquer une séance", "flame"),
+    ("costaud",       "Costaud", "1RM supérieur à ton propre poids sur un exo", "medal-gold"),
+]
+
+
+def _compute_badges(hist, prog, profile, planning_map, streak):
+    """Retourne (badges_unlocked:set, new_unlocked:list) et persiste _badges.
+
+    Recalcule les badges à chaque visite de l'accueil. Un badge déjà obtenu
+    reste obtenu (on ne peut pas le perdre — `_badges` dans prog en garde la
+    liste). Les "new" sont ceux débloqués depuis la dernière visite.
+    """
+    already = set(prog.get("_badges", []) or [])
+    unlocked = set()
+
+    muscu = [r for r in hist if not _is_cardio_row(r) and r.get("Exercice") != "SESSION"]
+    muscu_real = [r for r in muscu if r.get("Reps", 0) > 0 and r.get("Poids", 0) > 0]
+    cardio = [r for r in hist if _is_cardio_row(r) and int(r.get("Reps") or 0) > 0]
+
+    # Première séance : au moins une perf réelle (muscu OU cardio)
+    if muscu_real or cardio:
+        unlocked.add("first_session")
+
+    # Séances distinctes (date, Séance) — muscu + cardio
+    distinct_sessions = {(r.get("Date"), r.get("Séance")) for r in muscu_real if r.get("Date")}
+    for r in cardio:
+        if r.get("Date"):
+            distinct_sessions.add((r.get("Date"), r.get("Séance")))
+    total_sessions_done = len(distinct_sessions)
+    if total_sessions_done >= 100:
+        unlocked.add("centurion")
+
+    # Tonnage cumulé (muscu uniquement)
+    tonnage = int(sum(r["Poids"] * r["Reps"] for r in muscu_real))
+    if tonnage >= 10_000:  unlocked.add("tonnage_10k")
+    if tonnage >= 50_000:  unlocked.add("tonnage_50k")
+    if tonnage >= 100_000: unlocked.add("tonnage_100k")
+
+    # Régulier : 4 semaines consécutives sans manquer une séance planifiée.
+    # On approxime : streak >= 4 (streak = semaines consécutives avec au moins
+    # une perf), ce qui garantit qu'il n'y a pas eu de semaine sans données.
+    if streak >= 4:
+        unlocked.add("regulier")
+
+    # Semaine complète : toutes les séances planifiées de la semaine courante
+    # ont été faites (comptées dans streak_danger → on réutilise la logique).
+    planned = [s for s in planning_map.values() if s]
+    if planned:
+        # Nombre de séances distinctes faites cette semaine
+        try:
+            s_act = max(r["Semaine"] for r in muscu_real)
+        except ValueError:
+            s_act = 0
+        if s_act:
+            done_this_week = {r["Séance"] for r in muscu_real if r["Semaine"] == s_act}
+            planned_set = {p for p in planned if p}
+            if planned_set and planned_set.issubset(done_this_week):
+                unlocked.add("full_week")
+
+    # Costaud : 1RM > poids de corps sur au moins un exercice
+    poids_corps = 0.0
+    try:
+        poids_corps = float((profile or {}).get("poids_kg") or 0)
+    except (TypeError, ValueError):
+        poids_corps = 0.0
+    if poids_corps > 0 and muscu_real:
+        # 1RM Epley
+        max_1rm = max((r["Poids"] * (1 + r["Reps"] / 30)) for r in muscu_real)
+        if max_1rm > poids_corps:
+            unlocked.add("costaud")
+
+    # Union : un badge obtenu reste obtenu
+    final = already | unlocked
+    new_unlocked = [b for b in unlocked if b not in already]
+
+    if final != already:
+        prog["_badges"] = sorted(final)
+        try:
+            from core.data import save_prog as _save_prog
+            _save_prog(prog)
+        except Exception:
+            pass
+
+    return final, new_unlocked
+
+
 def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
     """Statut d'une journée — porté de _day_status() app.py 1751-1784."""
     d_str = day_date.strftime("%Y-%m-%d")
@@ -223,6 +317,22 @@ def index():
     cal_today = int((nutr or {}).get("calories") or 0)
     cal_pct = int(min(100, round((cal_today / cal_cible) * 100))) if cal_cible > 0 else 0
 
+    # Badges — recalculés à chaque visite, persistés dans prog._badges
+    try:
+        badges_unlocked, badges_new = _compute_badges(hist, prog, profile, planning_map, streak)
+    except Exception as e:
+        badges_unlocked, badges_new = set(), []
+    badges = [
+        {
+            "code": code,
+            "label": label,
+            "desc": desc,
+            "icon": icon,
+            "unlocked": code in badges_unlocked,
+        }
+        for (code, label, desc, icon) in BADGE_DEFS
+    ]
+
     return render_template(
         "accueil.html",
         active="accueil",
@@ -252,4 +362,6 @@ def index():
         cal_today=cal_today,
         cal_cible=cal_cible,
         cal_pct=cal_pct,
+        badges=badges,
+        badges_new=badges_new,
     )
