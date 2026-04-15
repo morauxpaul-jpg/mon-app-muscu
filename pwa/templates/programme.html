@@ -2,7 +2,31 @@
 {% block title %}Programme · Muscu PRO{% endblock %}
 
 {% block content %}
-  <h1>Programme</h1>
+<div x-data="programmeApp()" x-init="init()">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+    <h1 style="margin-bottom:0;">Programme</h1>
+    <span class="save-pill" x-show="saveState" x-text="saveState" x-transition
+          style="font-size:0.72rem; padding:4px 10px; border-radius:10px; background:rgba(88,204,255,0.15); color:#58CCFF;"></span>
+  </div>
+
+  {# ── Nom du programme (éditable) ─────────────── #}
+  <div class="card" style="margin-top:10px;">
+    <div class="label-icon" style="font-size:0.78rem; color:var(--text-mute); margin-bottom:6px;">
+      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard"/></svg>Nom du programme
+    </div>
+    <div x-show="!editingName" style="display:flex; align-items:center; gap:8px;">
+      <strong style="color:#58CCFF; font-size:1.05rem;" x-text="programName"></strong>
+      <button type="button" class="btn mini" @click="editingName = true; $nextTick(() => $refs.nameInput && $refs.nameInput.focus())" aria-label="Renommer">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>
+      </button>
+    </div>
+    <div x-show="editingName" x-transition style="display:flex; gap:6px;">
+      <input type="text" x-ref="nameInput" x-model="programName" class="field" maxlength="80"
+             style="flex:1;" @keydown.enter.prevent="editingName=false; scheduleSave()"
+             @keydown.escape="editingName=false">
+      <button type="button" class="btn primary" @click="editingName=false; scheduleSave()">OK</button>
+    </div>
+  </div>
 
   {% if request.args.get('program_changed') %}
     <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Nouveau programme chargé.</div>
@@ -17,140 +41,151 @@
   <div class="card" id="planning">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning hebdomadaire</h3>
     <div class="field-label" style="margin-top:0;">Assigne une séance à chaque jour. Vide = repos.</div>
-    <form method="post" action="/programme/planning">
-      {% for day in days_fr %}
-        <label class="field-label">{{ day }}</label>
-        <select name="plan_{{ day }}" class="field">
-          <option value="__rest__" {% if not planning[day] %}selected{% endif %}>— Repos —</option>
-          {% for s in seance_names %}
-            <option value="{{ s }}" {% if planning[day] == s %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-      {% endfor %}
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder le planning</button>
-    </form>
+    {% for day in days_fr %}
+      <label class="field-label">{{ day }}</label>
+      <select class="field" x-model="planning['{{ day }}']" @change="scheduleSave()">
+        <option value="">— Repos —</option>
+        <template x-for="sname in seanceOrder" :key="sname">
+          <option :value="sname" x-text="sname"></option>
+        </template>
+      </select>
+    {% endfor %}
   </div>
 
   {# ── Séances & exercices ─────────────────────────────── #}
-  <div class="alpine-fallback" style="display:none;">
-    <div class="spinner"></div>
-    <span>Chargement en cours...</span>
-  </div>
-
   <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#folder"/></svg>Séances</h3>
 
-  {% for sname, exos in seances %}
-    <div class="card" id="s-{{ sname }}" x-data="{ open: false }">
+  <template x-for="(sname, sidx) in seanceOrder" :key="sname">
+    <div class="card" x-data="{ open: false, renaming: false, newName: '' }">
       <div class="exo-head" @click="open = !open">
-        <div class="exo-title">{{ sname }}</div>
+        <div class="exo-title" x-text="sname"></div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:11px; color:#5a7a9a;">{{ exos|length }} exos</span>
+          <span style="font-size:11px; color:#5a7a9a;" x-text="(prog[sname] || []).length + ' exos'"></span>
           <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
         </div>
       </div>
 
       <div class="exo-body" x-show="open" x-transition>
-        <div style="display:flex; gap:6px; margin-bottom:10px;">
-          <form method="post" action="/programme/seance/move">
-            <input type="hidden" name="name" value="{{ sname }}">
-            <input type="hidden" name="direction" value="up">
-            <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
-          </form>
-          <form method="post" action="/programme/seance/move">
-            <input type="hidden" name="name" value="{{ sname }}">
-            <input type="hidden" name="direction" value="down">
-            <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
-          </form>
-          <form method="post" action="/programme/seance/delete"
-                onsubmit="return showModal(event, 'Supprimer cette séance ?', 'La séance {{ sname }} et ses exercices seront supprimés.', true);">
-            <input type="hidden" name="name" value="{{ sname }}">
-            <button type="submit" class="btn label-icon"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
-          </form>
-          {% if sname in origin_seance_names %}
+        <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+          <button type="button" class="btn label-icon" @click="moveSeance(sname, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
+          <button type="button" class="btn label-icon" @click="moveSeance(sname, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
+          <button type="button" class="btn label-icon" @click="renaming = true; newName = sname; $nextTick(() => { var el = $el.closest('.card').querySelector('.rn-input'); if (el) el.focus(); })">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
+          </button>
+          <button type="button" class="btn label-icon" @click="if(confirm('Supprimer la séance ' + sname + ' ?')) deleteSeance(sname)">
+            <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
+          </button>
+          <template x-if="originSeanceNames.includes(sname)">
             <form method="post" action="/programme/seance/reset"
-                  onsubmit="return showModal(event, 'Réinitialiser cette séance ?', 'Réinitialiser {{ sname }} à sa version d\'origine ? Tes modifications seront perdues.', true);">
-              <input type="hidden" name="name" value="{{ sname }}">
+                  onsubmit="return confirm('Réinitialiser cette séance à sa version d\'origine ?');" style="display:inline;">
+              <input type="hidden" name="name" :value="sname">
               <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
             </form>
-          {% endif %}
+          </template>
         </div>
 
-        {% for ex in exos %}
-          {% set current_muscles = (ex.muscle or 'Autre').split(',') %}
+        <div x-show="renaming" x-transition style="display:flex; gap:6px; margin-bottom:10px;">
+          <input type="text" class="rn-input field" x-model="newName" style="flex:1;" maxlength="60"
+                 @keydown.enter.prevent="renameSeance(sname, newName); renaming=false"
+                 @keydown.escape="renaming=false">
+          <button type="button" class="btn primary" @click="renameSeance(sname, newName); renaming=false">OK</button>
+        </div>
+
+        <template x-for="(ex, exIdx) in prog[sname]" :key="sname + '|' + exIdx + '|' + ex.name">
           <div class="prog-exo-row">
-            <form method="post" action="/programme/exo/update" class="prog-exo-form">
-              <input type="hidden" name="seance" value="{{ sname }}">
-              <input type="hidden" name="index" value="{{ loop.index0 }}">
-              <div class="prog-exo-name">{{ ex.name }}</div>
+            <div class="prog-exo-form">
+              <div class="prog-exo-name" x-text="ex.name"></div>
               <div class="prog-exo-fields">
                 <label class="field-label" style="margin-top:4px;">Séries</label>
-                <input type="number" name="sets" min="1" max="15" value="{{ ex.sets|default(3) }}" class="field">
+                <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()">
                 <label class="field-label">Muscle(s)</label>
                 <div class="muscle-checks">
                   {% for m in muscle_list %}
                     <label class="muscle-check">
-                      <input type="checkbox" name="muscles" value="{{ m }}"
-                             {% if m in current_muscles %}checked{% endif %}>
+                      <input type="checkbox" value="{{ m }}"
+                             :checked="(ex.muscle || '').split(',').map(s => s.trim()).includes('{{ m }}')"
+                             @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
                       <span>{{ m }}</span>
                     </label>
                   {% endfor %}
                 </div>
-                <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:6px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Mettre à jour</button>
               </div>
-            </form>
+            </div>
             <div class="prog-exo-actions">
-              <form method="post" action="/programme/exo/move">
-                <input type="hidden" name="seance" value="{{ sname }}">
-                <input type="hidden" name="index" value="{{ loop.index0 }}">
-                <input type="hidden" name="direction" value="up">
-                <button type="submit" class="btn mini" aria-label="Monter"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
-              </form>
-              <form method="post" action="/programme/exo/move">
-                <input type="hidden" name="seance" value="{{ sname }}">
-                <input type="hidden" name="index" value="{{ loop.index0 }}">
-                <input type="hidden" name="direction" value="down">
-                <button type="submit" class="btn mini" aria-label="Descendre"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
-              </form>
-              <form method="post" action="/programme/exo/delete"
-                    onsubmit="return showModal(event, 'Supprimer cet exercice ?', '{{ ex.name }} sera retiré de la séance.', true);">
-                <input type="hidden" name="seance" value="{{ sname }}">
-                <input type="hidden" name="index" value="{{ loop.index0 }}">
-                <button type="submit" class="btn mini" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
-              </form>
+              <button type="button" class="btn mini" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
+              <button type="button" class="btn mini" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
+              <button type="button" class="btn mini" aria-label="Supprimer" @click="if(confirm('Supprimer ' + ex.name + ' ?')) deleteExo(sname, exIdx)"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
             </div>
           </div>
-        {% endfor %}
+        </template>
 
         <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
 
-        <form method="post" action="/programme/exo/add">
-          <input type="hidden" name="seance" value="{{ sname }}">
+        <div x-data="{ newExo: { name: '', sets: 3, muscles: [] } }">
           <label class="field-label" style="margin-top:0;">Nouvel exercice</label>
-          <input type="text" name="name" class="field" required placeholder="Nom de l'exercice">
+          <input type="text" x-model="newExo.name" class="field" placeholder="Nom de l'exercice">
           <label class="field-label">Séries</label>
-          <input type="number" name="sets" class="field" min="1" max="15" value="3">
+          <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15">
           <label class="field-label">Muscle(s) — vide = auto-détection</label>
-          <div class="muscle-checks">
+          <div class="muscle-checks new-exo-muscles">
             {% for m in muscle_list %}
               <label class="muscle-check">
-                <input type="checkbox" name="muscles" value="{{ m }}">
+                <input type="checkbox" value="{{ m }}" @change="$event.target.checked ? newExo.muscles.push('{{ m }}') : newExo.muscles.splice(newExo.muscles.indexOf('{{ m }}'), 1)">
                 <span>{{ m }}</span>
               </label>
             {% endfor %}
           </div>
-          <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice</button>
-        </form>
+          <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"
+                  @click="addExo(sname, newExo); newExo = { name: '', sets: 3, muscles: [] }; $el.parentElement.querySelectorAll('.new-exo-muscles input[type=\'checkbox\']').forEach(c => c.checked = false)">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
+          </button>
+        </div>
       </div>
     </div>
-  {% endfor %}
+  </template>
 
-  {# ── Nouvelle séance ─────────────────────────────── #}
-  <div class="card">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#target"/></svg>Créer une séance</h3>
-    <form method="post" action="/programme/seance/new">
-      <input type="text" name="name" class="field" placeholder="Nom de la séance (ex: Push)" required>
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer</button>
-    </form>
+  {# ── Nouvelle séance (vide ou depuis catalogue) ─────────── #}
+  <div class="card" x-data="{ tab: 'new', newSname: '', catalogPick: '', catalogSeance: '' }">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une séance</h3>
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <button type="button" class="btn" :class="{ primary: tab==='new' }" @click="tab='new'">Vide</button>
+      <button type="button" class="btn" :class="{ primary: tab==='catalog' }" @click="tab='catalog'">Depuis le catalogue</button>
+    </div>
+
+    <div x-show="tab==='new'">
+      <input type="text" x-model="newSname" class="field" placeholder="Nom de la séance (ex: Push)"
+             @keydown.enter.prevent="if(newSname.trim()){ addSeance(newSname.trim()); newSname=''; }">
+      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+              @click="if(newSname.trim()){ addSeance(newSname.trim()); newSname=''; }">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer
+      </button>
+    </div>
+
+    <div x-show="tab==='catalog'">
+      <label class="field-label" style="margin-top:0;">Programme</label>
+      <select x-model="catalogPick" class="field" @change="catalogSeance=''">
+        <option value="">— Choisis un programme —</option>
+        {% for p in catalog_programs %}
+          <option value="{{ p.id }}">{{ p.title }}</option>
+        {% endfor %}
+      </select>
+      <template x-for="p in catalogPrograms" :key="p.id">
+        <div x-show="catalogPick === p.id">
+          <label class="field-label">Séance</label>
+          <select x-model="catalogSeance" class="field">
+            <option value="">— Choisis une séance —</option>
+            <template x-for="sp in p.seances_preview" :key="sp.name">
+              <option :value="sp.name" x-text="sp.name + ' (' + sp.exercises.length + ' exos)'"></option>
+            </template>
+          </select>
+        </div>
+      </template>
+      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+              :disabled="!catalogPick || !catalogSeance"
+              @click="addSeanceFromCatalog(catalogPick, catalogSeance); catalogSeance=''">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cette séance
+      </button>
+    </div>
   </div>
 
   {# ── Exporter / Importer mon programme ──────────── #}
@@ -164,7 +199,7 @@
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. <strong>Attention :</strong> cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
     <form method="post" action="/programme/import" enctype="multipart/form-data"
-          onsubmit="return showModal(event, 'Importer ce programme ?', 'Votre programme actuel sera remplacé par celui du fichier.', true);">
+          onsubmit="return confirm('Votre programme actuel sera remplacé par celui du fichier. Continuer ?');">
       <input type="file" name="file" accept="application/json,.json" class="field" required
              @change="
                const f = $event.target.files[0];
@@ -191,19 +226,31 @@
   </div>
 
   {# ── Changer de programme (catalogue) ────────────── #}
-  <div class="card" x-data="{ open: false }">
+  <div class="card" x-data="{ open: false, mode: 'replace' }">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme</h3>
     {% if current_program_meta %}
       <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
     {% else %}
       <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">personnalisé</strong>.</p>
     {% endif %}
-    <p style="font-size:0.8rem; color:var(--text-dim);">L'historique et les records sont conservés. Seules les séances actuelles sont remplacées.</p>
 
     <button type="button" class="btn primary" style="width:100%;" @click="open = !open"
             x-text="open ? 'Fermer' : 'Changer de programme'"></button>
 
     <div x-show="open" x-transition style="margin-top:14px;">
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <label class="btn" :class="{ primary: mode==='replace' }" style="flex:1; justify-content:center; cursor:pointer;">
+          <input type="radio" value="replace" x-model="mode" style="display:none;">Remplacer
+        </label>
+        <label class="btn" :class="{ primary: mode==='merge' }" style="flex:1; justify-content:center; cursor:pointer;">
+          <input type="radio" value="merge" x-model="mode" style="display:none;">Fusionner
+        </label>
+      </div>
+      <p style="font-size:0.78rem; color:var(--text-dim); margin-bottom:10px;">
+        <span x-show="mode==='replace'">⚠️ Les séances actuelles seront écrasées.</span>
+        <span x-show="mode==='merge'">✓ Les séances actuelles sont gardées ; seules les nouvelles séances sont ajoutées.</span>
+      </p>
+
       {% for p in catalog_programs %}
         <div class="card" style="margin:10px 0; border-color: rgba(88,204,255,0.25);">
           <div style="display:flex; justify-content:space-between; align-items:start; gap:8px;">
@@ -219,11 +266,14 @@
           <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim);"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>{{ p.muscles|join(' · ') }}</div>
           <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>{{ p.nb_seances }} séances</div>
           <form method="post" action="/programme/change-program"
-                onsubmit="return showModal(event, 'Changer de programme ?', 'Votre programme actuel sera remplacé par {{ p.title }}.', true);"
+                @submit="if (!confirm((mode==='merge' ? 'Fusionner' : 'Remplacer par') + ' {{ p.title }} ?')) $event.preventDefault()"
                 style="margin-top:10px;">
             <input type="hidden" name="programme_id" value="{{ p.id }}">
+            <input type="hidden" name="mode" :value="mode">
             <input type="hidden" name="confirm" value="yes">
-            <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>Choisir ce programme</button>
+            <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>
+              <span x-text="mode==='merge' ? 'Fusionner ce programme' : 'Choisir ce programme'"></span>
+            </button>
           </form>
         </div>
       {% endfor %}
@@ -232,8 +282,9 @@
         <div class="label-icon" style="font-weight:700; color:#FF9F0A;"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</div>
         <p style="font-size:0.82rem; margin:8px 0;">Vide les séances actuelles et te laisse construire ton programme à zéro depuis cet onglet.</p>
         <form method="post" action="/programme/change-program"
-              onsubmit="return showModal(event, 'Repartir de zéro ?', 'Toutes vos séances actuelles seront supprimées.', true);">
+              onsubmit="return confirm('Toutes vos séances actuelles seront supprimées. Continuer ?');">
           <input type="hidden" name="programme_id" value="custom">
+          <input type="hidden" name="mode" value="replace">
           <input type="hidden" name="confirm" value="yes">
           <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
         </form>
@@ -241,54 +292,161 @@
     </div>
   </div>
 
-  {# ── Modal de confirmation ──────────────────── #}
-  <div id="confirm-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" id="modal-box">
-      <div class="modal-title" id="modal-title"></div>
-      <div class="modal-body" id="modal-body"></div>
-      <div class="modal-actions">
-        <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
-        <button class="btn primary" id="modal-confirm" onclick="confirmModal()">Confirmer</button>
-      </div>
-    </div>
-  </div>
+</div>
 
-  <script>
-    var _pendingForm = null;
-    function showModal(event, title, body, isDanger) {
-      event.preventDefault();
-      _pendingForm = event.target;
-      document.getElementById('modal-title').textContent = title;
-      document.getElementById('modal-body').textContent = body;
-      var box = document.getElementById('modal-box');
-      var btn = document.getElementById('modal-confirm');
-      if (isDanger) {
-        box.classList.add('danger');
-        btn.className = 'btn btn-danger';
-      } else {
-        box.classList.remove('danger');
-        btn.className = 'btn primary';
-      }
-      btn.textContent = 'Confirmer';
-      document.getElementById('confirm-modal').style.display = 'flex';
-      return false;
-    }
-    function closeModal() {
-      document.getElementById('confirm-modal').style.display = 'none';
-      _pendingForm = null;
-    }
-    function confirmModal() {
-      document.getElementById('confirm-modal').style.display = 'none';
-      if (_pendingForm) { _pendingForm.onsubmit = null; _pendingForm.submit(); }
-    }
+<script id="prog-initial" type="application/json">{{ ui_state|tojson }}</script>
+<script id="catalog-data" type="application/json">{{ catalog_programs|tojson }}</script>
 
-    document.addEventListener('submit', function(e) {
-      var btn = e.target.querySelector('button[type="submit"]');
-      if (btn && !btn.classList.contains('loading')) {
-        btn.classList.add('loading');
-        btn.dataset.origText = btn.innerHTML;
-        btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#hourglass"/></svg>En cours...';
-      }
-    });
-  </script>
+<script>
+  function programmeApp() {
+    return {
+      prog: {},
+      planning: {},
+      programName: '',
+      seanceOrder: [],
+      originSeanceNames: [],
+      origin: null,
+      catalogPrograms: [],
+      editingName: false,
+      saveState: '',
+      _saveTimer: null,
+
+      init() {
+        var initial = JSON.parse(document.getElementById('prog-initial').textContent);
+        this.prog = initial.seances || {};
+        this.planning = initial.planning || {};
+        this.programName = initial.name || 'Mon programme';
+        this.seanceOrder = initial.seance_order || [];
+        this.originSeanceNames = initial.origin_seance_names || [];
+        this.origin = initial.origin || null;
+        this.catalogPrograms = JSON.parse(document.getElementById('catalog-data').textContent);
+      },
+
+      scheduleSave() {
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+        this.saveState = 'Modifié…';
+        var self = this;
+        this._saveTimer = setTimeout(function () { self.doSave(); }, 500);
+      },
+
+      async doSave() {
+        this.saveState = 'Sauvegarde…';
+        try {
+          var resp = await fetch('/programme/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: this.programName,
+              planning: this.planning,
+              seances: this.prog,
+              seance_order: this.seanceOrder,
+            }),
+          });
+          if (resp.ok) {
+            this.saveState = '✓ Sauvegardé';
+            var self = this;
+            setTimeout(function () { if (self.saveState === '✓ Sauvegardé') self.saveState = ''; }, 1500);
+          } else {
+            this.saveState = '⚠ Erreur';
+          }
+        } catch (e) {
+          this.saveState = '⚠ Hors ligne';
+        }
+      },
+
+      // ── Séances ──
+      addSeance(name) {
+        name = (name || '').trim();
+        if (!name || this.prog[name]) return;
+        this.prog[name] = [];
+        this.seanceOrder.push(name);
+        this.scheduleSave();
+      },
+      deleteSeance(name) {
+        delete this.prog[name];
+        this.seanceOrder = this.seanceOrder.filter(function (s) { return s !== name; });
+        for (var d in this.planning) {
+          if (this.planning[d] === name) this.planning[d] = '';
+        }
+        this.scheduleSave();
+      },
+      renameSeance(oldName, newName) {
+        newName = (newName || '').trim();
+        if (!newName || newName === oldName || this.prog[newName]) return;
+        // Reconstruit prog en gardant l'ordre
+        var newProg = {};
+        for (var i = 0; i < this.seanceOrder.length; i++) {
+          var k = this.seanceOrder[i];
+          if (k === oldName) newProg[newName] = this.prog[k];
+          else newProg[k] = this.prog[k];
+        }
+        this.prog = newProg;
+        this.seanceOrder = this.seanceOrder.map(function (s) { return s === oldName ? newName : s; });
+        for (var d in this.planning) {
+          if (this.planning[d] === oldName) this.planning[d] = newName;
+        }
+        this.scheduleSave();
+      },
+      moveSeance(name, dir) {
+        var i = this.seanceOrder.indexOf(name);
+        if (i < 0) return;
+        var j = dir === 'up' ? i - 1 : i + 1;
+        if (j < 0 || j >= this.seanceOrder.length) return;
+        var tmp = this.seanceOrder[i];
+        this.seanceOrder[i] = this.seanceOrder[j];
+        this.seanceOrder[j] = tmp;
+        this.scheduleSave();
+      },
+      addSeanceFromCatalog(progId, seanceName) {
+        var p = this.catalogPrograms.find(function (x) { return x.id === progId; });
+        if (!p) return;
+        var sp = p.seances_preview.find(function (x) { return x.name === seanceName; });
+        if (!sp) return;
+        // Nom unique : suffixe " (N)" si déjà pris
+        var finalName = seanceName;
+        var n = 2;
+        while (this.prog[finalName]) { finalName = seanceName + ' (' + (n++) + ')'; }
+        this.prog[finalName] = sp.exercises.map(function (e) {
+          return { name: e.name, sets: e.sets, muscle: e.muscle };
+        });
+        this.seanceOrder.push(finalName);
+        this.scheduleSave();
+      },
+
+      // ── Exercices ──
+      addExo(sname, exo) {
+        var name = (exo.name || '').trim();
+        if (!name || !this.prog[sname]) return;
+        var muscle = (exo.muscles || []).join(',') || 'Autre';
+        this.prog[sname].push({
+          name: name,
+          sets: parseInt(exo.sets) || 3,
+          muscle: muscle,
+        });
+        this.scheduleSave();
+      },
+      deleteExo(sname, idx) {
+        if (!this.prog[sname]) return;
+        this.prog[sname].splice(idx, 1);
+        this.scheduleSave();
+      },
+      moveExo(sname, idx, dir) {
+        var lst = this.prog[sname];
+        if (!lst) return;
+        var j = dir === 'up' ? idx - 1 : idx + 1;
+        if (j < 0 || j >= lst.length) return;
+        var tmp = lst[idx]; lst[idx] = lst[j]; lst[j] = tmp;
+        this.scheduleSave();
+      },
+      toggleMuscle(ex, muscle, checked) {
+        var parts = (ex.muscle || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        var has = parts.indexOf(muscle) >= 0;
+        if (checked && !has) parts.push(muscle);
+        else if (!checked && has) parts.splice(parts.indexOf(muscle), 1);
+        ex.muscle = parts.join(',') || 'Autre';
+        this.scheduleSave();
+      },
+    };
+  }
+</script>
 {% endblock %}

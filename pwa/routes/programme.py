@@ -9,7 +9,7 @@ import logging
 import re
 
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, send_file
+    Blueprint, render_template, request, redirect, url_for, send_file, jsonify
 )
 
 from core.data import get_prog, save_prog
@@ -92,6 +92,23 @@ def programme():
                 "id": p["id"], "title": p["title"], "subtitle": p["subtitle"],
             }
 
+    # Payload JSON pour l'app Alpine (édition sans refresh)
+    ui_state = {
+        "name": _program_display_name(prog),
+        "planning": dict(prog["_planning"]),
+        "seances": {
+            sname: [
+                {"name": e.get("name", ""), "sets": int(e.get("sets") or 3),
+                 "muscle": e.get("muscle") or "Autre"}
+                for e in exos
+            ]
+            for sname, exos in seances
+        },
+        "seance_order": [s for s, _ in seances],
+        "origin_seance_names": sorted(_origin_seance_names(prog)),
+        "origin": prog.get("_origin"),
+    }
+
     return render_template(
         "programme.html",
         active="plus",
@@ -103,7 +120,81 @@ def programme():
         origin_seance_names=_origin_seance_names(prog),
         catalog_programs=catalog.list_programs(),
         current_program_meta=current_program_meta,
+        ui_state=ui_state,
     )
+
+
+# ── Sauvegarde groupée (AJAX sans refresh) ───────────────────────
+@bp.route("/programme/state", methods=["POST"])
+def save_state():
+    """Reçoit l'état complet (nom, planning, séances) et le persiste.
+    Préserve les clés techniques (_origin, _settings, _archive, _extras, _libre_draft).
+    """
+    try:
+        data = request.get_json(force=True, silent=False)
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    new_name = (data.get("name") or "").strip()[:80]
+    raw_seances = data.get("seances") or {}
+    raw_planning = data.get("planning") or {}
+    seance_order = data.get("seance_order") or []
+
+    if not isinstance(raw_seances, dict) or not isinstance(raw_planning, dict):
+        return jsonify({"ok": False, "error": "invalid_shape"}), 400
+
+    old = get_prog()
+
+    # Nouveau dict programme : ordre = seance_order puis reste
+    ordered_names = [s for s in seance_order if isinstance(s, str) and s in raw_seances and not s.startswith("_")]
+    for s in raw_seances:
+        if s not in ordered_names and isinstance(s, str) and not s.startswith("_"):
+            ordered_names.append(s)
+
+    new_prog: dict = {}
+    for sname in ordered_names:
+        exos = raw_seances.get(sname, [])
+        if not isinstance(exos, list):
+            continue
+        cleaned = []
+        for e in exos:
+            if not isinstance(e, dict):
+                continue
+            ex_name = (e.get("name") or "").strip()
+            if not ex_name:
+                continue
+            try:
+                sets = int(e.get("sets") or 3)
+            except (TypeError, ValueError):
+                sets = 3
+            muscle = (e.get("muscle") or "Autre").strip() or "Autre"
+            cleaned.append({"name": ex_name, "sets": sets, "muscle": muscle})
+        new_prog[sname] = cleaned
+
+    # Planning nettoyé
+    new_prog["_planning"] = {
+        d: (raw_planning.get(d, "") if isinstance(raw_planning.get(d, ""), str) else "")
+        for d in DAYS_FR
+    }
+    # Ne garde un planning que pour les séances qui existent encore
+    valid_names = set(new_prog.keys()) - {"_planning"}
+    for d in DAYS_FR:
+        if new_prog["_planning"][d] and new_prog["_planning"][d] not in valid_names:
+            new_prog["_planning"][d] = ""
+
+    if new_name:
+        new_prog["_name"] = new_name
+
+    # Préserve les données utilisateur qui n'appartiennent pas au programme
+    for key in ("_origin", "_settings", "_archive", "_legacy_volume",
+                "_extras", "_libre_draft"):
+        if key in old:
+            new_prog[key] = old[key]
+
+    save_prog(new_prog)
+    return jsonify({"ok": True})
 
 
 # ── Planning ─────────────────────────────────────────────────────
@@ -272,9 +363,13 @@ def import_program():
 # ── Changer de programme (catalogue) ──────────────────────────────
 @bp.route("/programme/change-program", methods=["POST"])
 def change_program():
-    """Remplace le programme courant par un autre du catalogue (ou vide
-    pour 'créer mon propre'). Conserve historique + settings + archive."""
+    """Remplace ou fusionne le programme courant avec un autre du catalogue.
+    mode=replace (défaut) : écrase toutes les séances actuelles.
+    mode=merge : ajoute les séances du nouveau prog qui n'existent pas déjà.
+    Conserve historique + settings + archive dans tous les cas.
+    """
     prog_id = (request.form.get("programme_id") or "").strip()
+    mode = (request.form.get("mode") or "replace").strip()
     if request.form.get("confirm") != "yes":
         return redirect(url_for("programme.programme"))
 
@@ -284,6 +379,7 @@ def change_program():
             if not k.startswith("_"):
                 prog.pop(k)
         prog.pop("_origin", None)
+        prog.pop("_name", None)
         save_prog(prog)
         return redirect(url_for("programme.programme") + "?program_changed=1")
 
@@ -292,11 +388,34 @@ def change_program():
         return redirect(url_for("programme.programme"))
 
     old = get_prog()
-    new_prog = catalog.build_program(prog_id, src["freq"])
-    for key in ("_settings", "_archive", "_legacy_volume", "_extras"):
-        if key in old:
-            new_prog[key] = old[key]
-    save_prog(new_prog)
+    built = catalog.build_program(prog_id, src["freq"])
+
+    if mode == "merge":
+        # Garde les séances existantes, ajoute celles du nouveau qui n'existent pas
+        merged: dict = {}
+        for sname, exos in _seance_items(old):
+            merged[sname] = exos
+        for sname, exos in built.items():
+            if sname.startswith("_"):
+                continue
+            if sname not in merged:
+                merged[sname] = exos
+        # Planning : on garde l'ancien (l'utilisateur a déjà fait ses choix)
+        merged["_planning"] = old.get("_planning") or built.get("_planning", {})
+        # Pas d'origine unique après merge — c'est devenu un programme custom
+        merged.pop("_origin", None)
+        for key in ("_settings", "_archive", "_legacy_volume", "_extras",
+                    "_libre_draft", "_name"):
+            if key in old:
+                merged[key] = old[key]
+        save_prog(merged)
+    else:
+        new_prog = built
+        for key in ("_settings", "_archive", "_legacy_volume", "_extras",
+                    "_libre_draft"):
+            if key in old:
+                new_prog[key] = old[key]
+        save_prog(new_prog)
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
 
