@@ -122,14 +122,14 @@ function neonBox(ctx, x, y, w, h, color) {
   const SPAWN_INTERVAL = isMobile ? 110 : 95;
   const MAX_DT = 33; // cap delta-time à 33ms (≈30fps min)
 
-  let bell, bars, frame, score, over, started;
+  let bell, bars, spawnAccum, score, over, started;
   let flapRequested = false;
   let lastTime = 0;
   let record = parseInt(localStorage.getItem('flappyDumbbellRecord') || 0);
 
   function reset() {
     bell = { x: 80, y: H/2, vy: 0, r: 18 };
-    bars = []; frame = 0; score = 0;
+    bars = []; spawnAccum = SPAWN_INTERVAL; score = 0;
     over = false; started = false;
     flapRequested = false;
     lastTime = 0;
@@ -177,7 +177,8 @@ function neonBox(ctx, x, y, w, h, color) {
       bell.y += bell.vy * dt;
 
       const speed = (BASE_SPEED + Math.floor(score / 5) * 0.15) * dt;
-      if (frame % SPAWN_INTERVAL === 0) spawn();
+      spawnAccum += dt; // dt en "frames 60fps" → indépendant du rafraîchissement écran
+      if (spawnAccum >= SPAWN_INTERVAL) { spawn(); spawnAccum = 0; }
 
       for (let i = bars.length - 1; i >= 0; i--) {
         const b = bars[i];
@@ -220,7 +221,6 @@ function neonBox(ctx, x, y, w, h, color) {
     neonText(ctx, '⚡ ' + score, 18, 32, CYBER.success, 20);
     neonText(ctx, '🏆 ' + record, W - 100, 32, CYBER.gold, 20);
 
-    frame++;
     requestAnimationFrame(step);
   }
 
