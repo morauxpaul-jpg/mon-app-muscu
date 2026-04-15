@@ -285,20 +285,33 @@ def progres():
     zoom = None
     if sel_exo:
         df_e = [r for r in df_p if r["Exercice"] == sel_exo]
+        # Enrichit chaque ligne avec son rel_week (S1/S2/…) — utilisé partout
+        # en dessous. _rel_week peut renvoyer None si Date manquante → on
+        # met 0 par défaut pour garder la ligne visible mais en dernier.
+        for r in df_e:
+            r["_rw"] = _rel_week(r.get("Date"), start_monday) or 0
         if df_e:
             best = max(df_e, key=lambda r: (r["Poids"], r["Reps"]))
             one_rm = calc_1rm(best["Poids"], best["Reps"])
-            # Évolution par semaine : max poids par semaine
+            # Évolution par semaine : max poids par semaine relative
             by_week = {}
             for r in df_e:
-                w = int(r["Semaine"])
+                w = r["_rw"]
                 if r["Poids"] > by_week.get(w, -1):
                     by_week[w] = r["Poids"]
             weeks = sorted(by_week.keys())
-            chart_x = weeks
+            chart_x = [f"S{w}" for w in weeks]
             chart_y = [by_week[w] for w in weeks]
-            # Table historique triée semaine desc
-            table = sorted(df_e, key=lambda r: (-int(r["Semaine"]), -r["Poids"]))
+
+            # ── Table historique : filtre par semaine (défaut = dernière) ──
+            avail_weeks = sorted({r["_rw"] for r in df_e}, reverse=True)
+            try:
+                sel_week = int(request.args.get("w") or 0) or avail_weeks[0]
+            except (ValueError, TypeError, IndexError):
+                sel_week = avail_weeks[0] if avail_weeks else 0
+            table = [r for r in df_e if r["_rw"] == sel_week]
+            table = sorted(table, key=lambda r: (-r["Poids"], -int(r.get("Série") or 0)))
+
             zoom = {
                 "exo": sel_exo,
                 "best_w": best["Poids"],
@@ -308,6 +321,9 @@ def progres():
                 "chart_x": chart_x,
                 "chart_y": chart_y,
                 "table": table,
+                "avail_weeks": avail_weeks,
+                "sel_week": sel_week,
+                "total_sets": len(df_e),
             }
 
     # ── Calendrier mensuel ──────────────────────────────────

@@ -181,7 +181,7 @@
       <div class="detail-row" style="margin-top:12px;">
         <div class="detail-metric"><div class="detail-label">MEILLEUR</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.best_w }}×{{ zoom.best_r }}</div></div>
         <div class="detail-metric"><div class="detail-label">1RM</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.one_rm }}</div></div>
-        <div class="detail-metric"><div class="detail-label">SÉRIES</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.table|length }}</div></div>
+        <div class="detail-metric"><div class="detail-label">SÉRIES</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.total_sets }}</div></div>
       </div>
 
       {% if zoom.rep_ests %}
@@ -194,12 +194,21 @@
 
       <div id="zoom-chart" style="width:100%; height:220px; margin-top:14px;"></div>
 
-      <div class="field-label" style="margin-top:12px;">Historique</div>
-      <table class="ltable">
-        <thead><tr><th>S</th><th>Poids</th><th>Reps</th></tr></thead>
+      <div class="field-label" style="margin-top:12px;">Historique — semaine</div>
+      <form method="get" action="/progres#zoom">
+        {% for m in selected_muscles %}<input type="hidden" name="m" value="{{ m }}">{% endfor %}
+        <input type="hidden" name="exo" value="{{ sel_exo }}">
+        <select name="w" class="field" onchange="this.form.submit()">
+          {% for w in zoom.avail_weeks %}
+            <option value="{{ w }}" {% if w == zoom.sel_week %}selected{% endif %}>Semaine {{ w }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <table class="ltable" style="margin-top:6px;">
+        <thead><tr><th>Série</th><th>Poids</th><th>Reps</th></tr></thead>
         <tbody>
-          {% for r in zoom.table[:15] %}
-            <tr><td>{{ r.Semaine }}</td><td>{{ r.Poids }}</td><td>{{ r.Reps }}</td></tr>
+          {% for r in zoom.table %}
+            <tr><td>{{ r.Série }}</td><td>{{ r.Poids }}</td><td>{{ r.Reps }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
