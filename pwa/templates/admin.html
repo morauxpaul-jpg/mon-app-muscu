@@ -16,32 +16,63 @@
     </div>
   </div>
 
-  {% if not users %}
-    <div class="card" style="text-align:center; color:var(--text-dim);">Aucun utilisateur.</div>
-  {% endif %}
-
-  {% for u in users %}
-    <div class="admin-user">
-      <div style="flex:1; min-width:0;">
-        <div style="font-size:0.88rem; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
-        <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">
-          {% if u.prenom %}{{ u.prenom }} · {% endif %}Inscrit le {{ u.created_at or '?' }}
-        </div>
-      </div>
-      <form method="post" action="/admin/set-tier" style="margin:0; display:flex; align-items:center; gap:6px;">
-        <input type="hidden" name="user_id" value="{{ u.id }}">
-        {% if u.tier == 'vip' %}
-          <span class="tier-pill tier-vip">VIP</span>
-          <input type="hidden" name="tier" value="free">
-          <button type="submit" class="mini-btn" title="Retirer VIP">×</button>
-        {% else %}
-          <span class="tier-pill tier-free">FREE</span>
-          <input type="hidden" name="tier" value="vip">
-          <button type="submit" class="btn" style="padding:4px 10px; font-size:0.72rem;" data-haptic="1">Passer VIP</button>
-        {% endif %}
-      </form>
+  {# ── Stats globales ── #}
+  <div class="card admin-stats">
+    <h3 class="label-icon" style="margin-top:0;"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Statistiques globales</h3>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-v">{{ stats.active_7d }}</div><div class="stat-l">Actifs 7 j</div></div>
+      <div class="stat"><div class="stat-v">{{ stats.active_30d }}</div><div class="stat-l">Actifs 30 j</div></div>
+      <div class="stat"><div class="stat-v">{{ stats.total_seances }}</div><div class="stat-l">Séances</div></div>
+      <div class="stat"><div class="stat-v">{{ (stats.total_tonnage / 1000)|round(1) }} t</div><div class="stat-l">Tonnage</div></div>
+      <div class="stat"><div class="stat-v">{{ stats.total_rows }}</div><div class="stat-l">Séries loggées</div></div>
     </div>
-  {% endfor %}
+  </div>
+
+  {# ── Recherche + liste users ── #}
+  <div class="card" style="padding:10px 12px;">
+    <input id="admin-search" type="search" class="field" placeholder="🔍 Rechercher email ou prénom…" style="width:100%; margin:0;" autocomplete="off">
+  </div>
+
+  <div id="admin-user-list">
+    {% if not users %}
+      <div class="card" style="text-align:center; color:var(--text-dim);">Aucun utilisateur.</div>
+    {% endif %}
+
+    {% for u in users %}
+      <div class="admin-user" data-email="{{ (u.email or '')|lower }}" data-prenom="{{ (u.prenom or '')|lower }}">
+        <div style="flex:1; min-width:0; cursor:pointer;" onclick="adminShowUser('{{ u.id }}', {{ (u.email or '—')|tojson }})">
+          <div style="font-size:0.88rem; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
+          <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">
+            {% if u.prenom %}{{ u.prenom }} · {% endif %}Inscrit le {{ u.created_at or '?' }}
+          </div>
+        </div>
+        <form method="post" action="/admin/set-tier" style="margin:0; display:flex; align-items:center; gap:6px;">
+          <input type="hidden" name="user_id" value="{{ u.id }}">
+          {% if u.tier == 'vip' %}
+            <span class="tier-pill tier-vip">VIP</span>
+            <input type="hidden" name="tier" value="free">
+            <button type="submit" class="mini-btn" title="Retirer VIP">×</button>
+          {% else %}
+            <span class="tier-pill tier-free">FREE</span>
+            <input type="hidden" name="tier" value="vip">
+            <button type="submit" class="btn" style="padding:4px 10px; font-size:0.72rem;" data-haptic="1">Passer VIP</button>
+          {% endif %}
+        </form>
+      </div>
+    {% endfor %}
+    <div id="admin-empty-filter" class="card" style="display:none; text-align:center; color:var(--text-dim);">Aucun résultat.</div>
+  </div>
+
+  {# ── Modal fiche user ── #}
+  <div id="admin-user-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this){this.style.display='none'}">
+    <div style="background:#0B1428; border:2px solid var(--accent,#58CCFF); border-radius:14px; padding:18px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto;">
+      <h3 id="admin-u-title" style="color:var(--accent); margin:0 0 10px; word-break:break-all; font-size:1rem;"></h3>
+      <div id="admin-u-body" style="font-size:0.85rem; line-height:1.5; color:#E0EAF5;">Chargement…</div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button type="button" class="btn btn-cancel" style="flex:1;" onclick="document.getElementById('admin-user-modal').style.display='none'">Fermer</button>
+      </div>
+    </div>
+  </div>
 
   <style>
     .admin-user {
@@ -54,21 +85,89 @@
       border:1px solid rgba(255,255,255,0.05);
       margin-bottom:6px;
     }
-    .tier-pill {
-      font-size:0.65rem;
-      font-weight:800;
-      letter-spacing:1px;
-      padding:3px 8px;
-      border-radius:6px;
-    }
-    .tier-free {
-      color:var(--text-dim);
-      background:rgba(255,255,255,0.05);
-    }
-    .tier-vip {
-      color:#FFD700;
-      background:rgba(255,215,0,0.12);
-      border:1px solid rgba(255,215,0,0.35);
-    }
+    .admin-user:hover { border-color:rgba(88,204,255,0.25); background:rgba(88,204,255,0.04); }
+    .tier-pill { font-size:0.65rem; font-weight:800; letter-spacing:1px; padding:3px 8px; border-radius:6px; }
+    .tier-free { color:var(--text-dim); background:rgba(255,255,255,0.05); }
+    .tier-vip { color:#FFD700; background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.35); }
+
+    .admin-stats .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:8px; margin-top:8px; }
+    .admin-stats .stat { padding:8px; border-radius:8px; background:rgba(88,204,255,0.05); text-align:center; }
+    .admin-stats .stat-v { font-size:1.05rem; font-weight:800; color:var(--accent); }
+    .admin-stats .stat-l { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+
+    .mrow-admin { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.08); }
+    .mrow-admin:last-child { border-bottom:none; }
+    .mrow-admin span { color:var(--text-dim); }
+    .mrow-admin b { color:#fff; }
   </style>
+
+  <script>
+    // Recherche live
+    (function() {
+      var input = document.getElementById('admin-search');
+      var empty = document.getElementById('admin-empty-filter');
+      if (!input) return;
+      input.addEventListener('input', function() {
+        var q = (input.value || '').toLowerCase().trim();
+        var visible = 0;
+        document.querySelectorAll('.admin-user').forEach(function(row) {
+          var hay = (row.dataset.email || '') + ' ' + (row.dataset.prenom || '');
+          var show = !q || hay.indexOf(q) !== -1;
+          row.style.display = show ? '' : 'none';
+          if (show) visible++;
+        });
+        if (empty) empty.style.display = visible === 0 ? '' : 'none';
+      });
+    })();
+
+    // Fiche user
+    function adminShowUser(uid, email) {
+      var modal = document.getElementById('admin-user-modal');
+      var body = document.getElementById('admin-u-body');
+      document.getElementById('admin-u-title').textContent = email || uid;
+      body.textContent = 'Chargement…';
+      modal.style.display = 'flex';
+      fetch('/admin/user/' + encodeURIComponent(uid))
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function(d) {
+          var tonnageKg = d.total_tonnage || 0;
+          var tonnageT = (tonnageKg / 1000).toFixed(1);
+          var html =
+            '<div class="mrow-admin"><span>Tier</span><b>' + (d.tier || 'free').toUpperCase() + '</b></div>' +
+            '<div class="mrow-admin"><span>Prénom</span><b>' + (d.prenom || '—') + '</b></div>' +
+            '<div class="mrow-admin"><span>Séances loggées</span><b>' + (d.total_seances || 0) + '</b></div>' +
+            '<div class="mrow-admin"><span>Séries totales</span><b>' + (d.total_rows || 0) + '</b></div>' +
+            '<div class="mrow-admin"><span>Tonnage total</span><b>' + tonnageKg + ' kg (' + tonnageT + ' t)</b></div>' +
+            '<div class="mrow-admin"><span>Dernière séance</span><b>' + (d.last_date || '—') + '</b></div>' +
+            '<div class="mrow-admin"><span>Msg coach (total)</span><b>' + (d.coach_msgs_total || 0) + '</b></div>' +
+            '<div class="mrow-admin"><span>Quota coach (jour)</span><b>' + (d.coach_quota_used || 0) + ' / 20</b></div>' +
+            '<div style="margin-top:12px;">' +
+            '  <button type="button" class="btn" style="width:100%;" onclick="adminResetQuota(\'' + uid + '\', this)">Remettre à 0 le quota coach</button>' +
+            '</div>';
+          body.innerHTML = html;
+        })
+        .catch(function() { body.textContent = 'Erreur de chargement.'; });
+    }
+
+    function adminResetQuota(uid, btn) {
+      if (!confirm('Remettre à zéro le quota coach IA de cet user ?')) return;
+      btn.disabled = true;
+      btn.textContent = 'Reset…';
+      var fd = new FormData();
+      fd.append('user_id', uid);
+      fetch('/admin/reset-quota', { method:'POST', body:fd })
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function() {
+          btn.textContent = '✓ Quota remis à 0';
+          btn.classList.add('primary');
+          setTimeout(function() {
+            document.getElementById('admin-user-modal').style.display = 'none';
+          }, 900);
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Erreur — réessayer';
+        });
+    }
+  </script>
 {% endblock %}

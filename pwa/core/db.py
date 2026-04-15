@@ -428,6 +428,108 @@ def clear_coach_messages(user_id: str) -> None:
     client.table("coach_messages").delete().eq("user_id", user_id).execute()
 
 
+# ────────────────────────────────────────────────────────────
+# Admin — stats globales + fiche user
+# ────────────────────────────────────────────────────────────
+
+def get_admin_stats() -> dict:
+    """Agrégats cross-users pour le dashboard admin.
+    Retourne : total_rows, total_tonnage, total_seances (distinct user+date+seance),
+    active_7d, active_30d (distinct user_id avec date récente)."""
+    import datetime as _dt
+    client = get_client()
+    try:
+        resp = client.table("history").select("user_id, date, seance, reps, poids").execute()
+        rows = resp.data or []
+    except Exception as e:
+        logger.error("get_admin_stats FAILED: %s", e)
+        return {"total_rows": 0, "total_tonnage": 0, "total_seances": 0, "active_7d": 0, "active_30d": 0}
+
+    today = _dt.date.today()
+    cutoff_7 = (today - _dt.timedelta(days=7)).isoformat()
+    cutoff_30 = (today - _dt.timedelta(days=30)).isoformat()
+
+    tonnage = 0.0
+    sessions = set()
+    a7, a30 = set(), set()
+    for r in rows:
+        reps = int(r.get("reps") or 0)
+        poids = float(r.get("poids") or 0)
+        tonnage += reps * poids
+        d = str(r.get("date") or "")[:10]
+        uid = r.get("user_id")
+        if uid and d:
+            sessions.add((uid, d, r.get("seance") or ""))
+            if d >= cutoff_30:
+                a30.add(uid)
+                if d >= cutoff_7:
+                    a7.add(uid)
+    return {
+        "total_rows": len(rows),
+        "total_tonnage": int(tonnage),
+        "total_seances": len(sessions),
+        "active_7d": len(a7),
+        "active_30d": len(a30),
+    }
+
+
+def get_user_details(user_id: str) -> dict:
+    """Fiche détaillée d'un user pour l'admin."""
+    import datetime as _dt
+    client = get_client()
+    # Historique
+    try:
+        resp = client.table("history").select("date, seance, reps, poids").eq("user_id", user_id).execute()
+        rows = resp.data or []
+    except Exception as e:
+        logger.error("get_user_details history FAILED user=%s: %s", user_id, e)
+        rows = []
+    tonnage = 0.0
+    sessions = set()
+    last_date = ""
+    for r in rows:
+        tonnage += int(r.get("reps") or 0) * float(r.get("poids") or 0)
+        d = str(r.get("date") or "")[:10]
+        if d:
+            sessions.add((d, r.get("seance") or ""))
+            if d > last_date:
+                last_date = d
+    # Profil + quota coach
+    try:
+        presp = client.table("profiles").select("tier, prenom, coach_quota_date, coach_quota_count").eq("id", user_id).maybe_single().execute()
+        prof = (presp.data if presp else None) or {}
+    except Exception as e:
+        logger.error("get_user_details profile FAILED user=%s: %s", user_id, e)
+        prof = {}
+    # Nb msg coach total
+    try:
+        cresp = client.table("coach_messages").select("id", count="exact").eq("user_id", user_id).execute()
+        coach_count = int(getattr(cresp, "count", None) or 0)
+    except Exception as e:
+        logger.error("get_user_details coach FAILED user=%s: %s", user_id, e)
+        coach_count = 0
+    today = _dt.date.today().isoformat()
+    q_date = str(prof.get("coach_quota_date") or "")
+    q_used = int(prof.get("coach_quota_count") or 0) if q_date == today else 0
+    return {
+        "user_id": user_id,
+        "tier": prof.get("tier") or "free",
+        "prenom": prof.get("prenom") or "",
+        "total_rows": len(rows),
+        "total_tonnage": int(tonnage),
+        "total_seances": len(sessions),
+        "last_date": last_date,
+        "coach_msgs_total": coach_count,
+        "coach_quota_used": q_used,
+    }
+
+
+def reset_user_coach_quota(user_id: str) -> None:
+    """Remet à 0 le quota coach IA du jour pour un user (admin)."""
+    client = get_client()
+    client.table("profiles").upsert({"id": user_id, "coach_quota_count": 0}).execute()
+
+
 def sum_nutrition_day(user_id: str, date_str: str) -> dict:
     rows = list_nutrition(user_id, date_str)
     out = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}

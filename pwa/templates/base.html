@@ -67,6 +67,22 @@
     // Utilise lastSeenVersion pour comparer avec la version du changelog.
     // Si le SW vient de reloader (pending_changelog flag), affiche immédiatement.
     (function() {
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, function(c) {
+          return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+        });
+      }
+      function renderItem(c, idx, demos) {
+        var text, demoKey = null;
+        if (typeof c === 'string') { text = c; }
+        else { text = c.text || ''; demoKey = c.demo || null; }
+        var btn = '';
+        if (demoKey && demos && demos[demoKey]) {
+          btn = ' <button type="button" data-demo-key="' + esc(demoKey) + '" class="patch-demo-btn" ' +
+                'style="margin-left:6px;padding:2px 10px;border-radius:999px;border:1px solid var(--accent,#58CCFF);background:rgba(88,204,255,0.12);color:var(--accent,#58CCFF);font-size:0.72rem;font-weight:700;cursor:pointer;vertical-align:middle;">Voir</button>';
+        }
+        return '<li>' + esc(text) + btn + '</li>';
+      }
       function showChangelog() {
         fetch('/static/changelog.json?_=' + Date.now())
           .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -76,28 +92,49 @@
               var seen = localStorage.getItem('lastSeenVersion');
               if (seen === currentVersion) return;
             } catch(e) { return; }
-            // Nettoyer le flag pending
             try { localStorage.removeItem('pending_changelog'); } catch(e) {}
+            var demos = data.demos || {};
+            var items = (data.changes || []).map(function(c, i) { return renderItem(c, i, demos); }).join('');
             var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);" id="patchnotes-modal">' +
-              '<div style="background:#0B1428;border:2px solid var(--accent,#58CCFF);border-radius:14px;padding:18px;max-width:340px;width:calc(100vw - 32px);color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">' +
-              '<h3 style="color:var(--accent,#58CCFF);margin:0 0 4px;">\ud83c\udf89 ' + data.title + '</h3>' +
-              '<div style="font-size:0.75rem;color:var(--text-dim,#8899aa);margin-bottom:12px;">' + data.date + '</div>' +
-              '<ul style="padding-left:18px;margin:0 0 14px;font-size:0.88rem;line-height:1.6;">' +
-              data.changes.map(function(c) { return '<li>' + c + '</li>'; }).join('') +
-              '</ul>' +
-              '<button onclick="try{localStorage.setItem(\'lastSeenVersion\',\'' + currentVersion + '\')}catch(e){} document.getElementById(\'patchnotes-modal\').remove()" style="width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent,#58CCFF),#0077AA);color:#001;font-weight:700;font-size:0.9rem;cursor:pointer;">OK, compris !</button>' +
+              '<div style="background:#0B1428;border:2px solid var(--accent,#58CCFF);border-radius:14px;padding:18px;max-width:360px;width:calc(100vw - 32px);color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">' +
+              '<h3 style="color:var(--accent,#58CCFF);margin:0 0 4px;">\ud83c\udf89 ' + esc(data.title) + '</h3>' +
+              '<div style="font-size:0.75rem;color:var(--text-dim,#8899aa);margin-bottom:12px;">' + esc(data.date) + '</div>' +
+              '<ul style="padding-left:18px;margin:0 0 14px;font-size:0.88rem;line-height:1.7;">' + items + '</ul>' +
+              '<button id="patchnotes-ok" style="width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent,#58CCFF),#0077AA);color:#001;font-weight:700;font-size:0.9rem;cursor:pointer;">OK, compris !</button>' +
               '</div></div>';
             document.body.insertAdjacentHTML('beforeend', html);
+            var modal = document.getElementById('patchnotes-modal');
+            modal.querySelector('#patchnotes-ok').addEventListener('click', function() {
+              try { localStorage.setItem('lastSeenVersion', currentVersion); } catch(e) {}
+              modal.remove();
+            });
+            modal.querySelectorAll('.patch-demo-btn').forEach(function(btn) {
+              btn.addEventListener('click', function() {
+                var key = btn.getAttribute('data-demo-key');
+                var demo = demos[key];
+                if (!demo) return;
+                try { localStorage.setItem('lastSeenVersion', currentVersion); } catch(e) {}
+                var payload = { url: demo.url || null, steps: demo.steps || [] };
+                if (demo.url && location.pathname !== demo.url) {
+                  try { sessionStorage.setItem('pending_demo', JSON.stringify(payload)); } catch(e) {}
+                  modal.remove();
+                  location.href = demo.url;
+                } else {
+                  modal.remove();
+                  if (typeof window.playFeatureDemo === 'function') {
+                    setTimeout(function() { window.playFeatureDemo(payload.steps); }, 200);
+                  }
+                }
+              });
+            });
           })
           .catch(function() {});
       }
-      // Si le SW vient de reloader la page, afficher immédiatement
       var pending = false;
       try { pending = localStorage.getItem('pending_changelog') === '1'; } catch(e) {}
       if (pending) {
         showChangelog();
       } else {
-        // Sinon attendre 2s pour laisser le SW se stabiliser
         setTimeout(showChangelog, 2000);
       }
     })();

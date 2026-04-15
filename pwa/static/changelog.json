@@ -1,13 +1,46 @@
 {
-  "version": "v24",
-  "date": "2026-04-14",
-  "title": "Mise à jour v24 — Coach IA + Finitions",
+  "version": "v34",
+  "date": "2026-04-15",
+  "title": "v34 — Coach IA historique + Carte du corps réaliste",
   "changes": [
-    "Nouveau : Coach IA — assistant musculation alimenté par Claude (20 msg/jour)",
-    "Calendrier mensuel dans Progrès avec navigation et taux d'assiduité",
-    "Graphique de volume hebdomadaire (8 dernières semaines)",
-    "Système de badges : Première séance, Centurion, Tonnage, Régulier, Costaud…",
-    "Préparation infra premium (tier profile) — tout reste gratuit pour l'instant",
-    "Lien mailto pour signaler un problème depuis la page d'erreur"
-  ]
+    { "text": "Coach IA : historique sauvegardé côté serveur, regroupé par date", "demo": "coach-history" },
+    { "text": "Carte anatomique réaliste du corps dans Progrès", "demo": "body-map" },
+    { "text": "Table des maxima (RM) + calculateur 1RM (formule d'Epley)", "demo": "rm-table" },
+    { "text": "Fiche exercice enrichie : onglet Table RM + mini-carte du corps", "demo": "exo-info" },
+    "Raccourci « Demander conseil au coach » depuis la fiche exercice",
+    "Bouton « Voir » sur les patch notes pour démo interactive"
+  ],
+  "demos": {
+    "coach-history": {
+      "url": "/coach",
+      "steps": [
+        { "center": true, "title": "Coach IA — historique persistant", "text": "Tes échanges avec le coach sont maintenant sauvegardés côté serveur. Tu retrouves ta conversation même après avoir fermé l'app." },
+        { "target": ".coach-messages", "title": "Tes conversations", "text": "Les 50 derniers messages sont rechargés à l'ouverture. Le coach se souvient des 10 derniers pour garder le contexte." },
+        { "target": ".date-sep", "title": "Regroupement par jour", "text": "Les messages sont séparés par date : Aujourd'hui, Hier, puis JJ mois." },
+        { "target": ".coach-clear-btn", "title": "Effacer l'historique", "text": "Pour repartir de zéro quand tu veux.", "finalLabel": "Compris" }
+      ]
+    },
+    "body-map": {
+      "url": "/progres",
+      "steps": [
+        { "center": true, "title": "Carte anatomique réaliste", "text": "La carte du corps dans Progrès affiche désormais un rendu anatomique des muscles, avec dégradés et effet de relief." },
+        { "target": "#svg-front", "title": "Vue de face", "text": "Chaque groupe musculaire travaillé est coloré selon ton volume d'entraînement. Clique dessus pour voir tes records." },
+        { "target": "#vbtn-back", "title": "Face / Dos", "text": "Bascule entre vue de face et vue de dos avec ces boutons.", "finalLabel": "Compris" }
+      ]
+    },
+    "rm-table": {
+      "url": "/progres",
+      "steps": [
+        { "center": true, "title": "Table des maxima (RM)", "text": "Clique un muscle sur la carte, puis un exercice pour voir ta nouvelle table des maxima." },
+        { "target": ".rm-table-wrap", "title": "Tous tes RM en un coup d'œil", "text": "Poids estimé pour 1, 2, 3, 5, 8, 10, 12, 15 et 20 reps — calculés depuis ton 1RM via la formule d'Epley inverse." },
+        { "target": ".rm-calc", "title": "Calculateur 1RM", "text": "Entre un poids + un nombre de reps pour estimer ton 1RM. Utile pour jauger une série qui n'est pas un vrai record.", "finalLabel": "Compris" }
+      ]
+    },
+    "exo-info": {
+      "url": "/seance",
+      "steps": [
+        { "center": true, "title": "Fiche exercice enrichie", "text": "Dans une séance, clique sur le ? d'un exercice pour ouvrir sa fiche. Elle contient maintenant un onglet Table RM, une mini-carte des muscles travaillés et un raccourci vers le coach IA.", "finalLabel": "Compris" }
+      ]
+    }
+  }
 }
