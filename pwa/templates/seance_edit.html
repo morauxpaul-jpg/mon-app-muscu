@@ -450,6 +450,40 @@
     </script>
   {% endif %}
 
+  {# ── Cardios déjà enregistrés pour cette séance ── #}
+  {% if cardio_done %}
+    {% for c in cardio_done %}
+      <div class="card" style="margin-top:10px; border-color: rgba(255,159,10,0.4);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div class="label-icon" style="font-weight:700; color:#FF9F0A;">
+            <svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#flame"/></svg>
+            Cardio · {{ c.activite }}
+          </div>
+          <form method="post" action="/seance/delete-cardio" style="margin:0;"
+                onsubmit="return confirm('Supprimer ce bloc cardio ?');">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="semaine" value="{{ c.semaine }}">
+            <input type="hidden" name="activite" value="{{ c.activite }}">
+            <button type="submit" class="btn mini" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
+          </form>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:0.85rem;">
+          {% if c.duree %}<span><strong style="color:#58CCFF;">{{ c.duree }}</strong> min</span>{% endif %}
+          {% if c.distance %}<span><strong style="color:#58CCFF;">{{ c.distance|round(2) }}</strong></span>{% endif %}
+          {% if c.vitesse %}<span>Vit. <strong style="color:#58CCFF;">{{ c.vitesse }}</strong></span>{% endif %}
+          {% if c.calories %}<span><strong style="color:#FF9F0A;">{{ c.calories }}</strong> kcal</span>{% endif %}
+          {% if c.rpe %}<span style="padding:1px 8px; border-radius:10px; background:rgba(88,204,255,0.15); color:#58CCFF; font-size:0.75rem;">{{ c.rpe }}</span>{% endif %}
+        </div>
+        {% if c.note %}
+          <div style="margin-top:6px; font-size:0.82rem; color:var(--text-dim); font-style:italic;">{{ c.note }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+
   {# ── Bloc cardio inline (optionnel, ajoute un cardio à cette séance) ── #}
   <div class="card" x-data="cardioBlock()" style="margin-top:14px;">
     <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" @click="open = !open">

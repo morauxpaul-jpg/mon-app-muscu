@@ -389,6 +389,7 @@ def seance():
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
+            cardio_done=_build_cardio_done(hist, name, date_iso),
         )
 
     # ── Vue édition : mode libre ──────────────────────────────────
@@ -425,6 +426,7 @@ def seance():
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
+            cardio_done=_build_cardio_done(hist, libre_name, date_iso),
         )
 
     abort(404)
@@ -439,6 +441,52 @@ def _back_to_editor(form):
         "seance.seance",
         date=form["date"], mode=form["mode"], name=form["name"]
     ))
+
+
+def _parse_cardio_remarque(remarque):
+    """Extrait Cal/Vit/RPE/note d'une remarque CARDIO du type
+    'Cal:360 | Vit:10.5 | RPE:Modéré | commentaire libre'."""
+    out = {"calories": 0, "vitesse": "", "rpe": "", "note": ""}
+    if not remarque:
+        return out
+    parts = [p.strip() for p in remarque.split("|") if p.strip()]
+    for p in parts:
+        low = p.lower()
+        if low.startswith("cal:"):
+            try:
+                out["calories"] = int(float(p[4:].strip()))
+            except ValueError:
+                pass
+        elif low.startswith("vit:"):
+            out["vitesse"] = p[4:].strip()
+        elif low.startswith("fc:"):
+            out["fc"] = p[3:].strip()
+        elif low.startswith("rpe:"):
+            out["rpe"] = p[4:].strip()
+        else:
+            out["note"] = p
+    return out
+
+
+def _build_cardio_done(hist, seance_name, date_iso):
+    """Retourne la liste des blocs cardio déjà enregistrés pour cette séance/date."""
+    out = []
+    for r in hist:
+        if r.get("Date") != date_iso or r.get("Séance") != seance_name:
+            continue
+        exo = r.get("Exercice") or ""
+        if not exo.startswith("CARDIO:"):
+            continue
+        activite = exo.split(":", 1)[1] or "Autre"
+        parsed = _parse_cardio_remarque(r.get("Remarque") or "")
+        out.append({
+            "activite": activite,
+            "duree": int(r.get("Reps") or 0),
+            "distance": float(r.get("Poids") or 0),
+            "semaine": int(r.get("Semaine") or 0),
+            **parsed,
+        })
+    return out
 
 
 def _update_extras(prog_dict, key, mutate_fn):
@@ -678,6 +726,26 @@ def add_cardio():
         replace_exo_rows(semaine, seance_name, exo_final, rows)
     except Exception as e:
         logger.error("add-cardio FAILED: %s", e)
+    return _back_to_editor(f)
+
+
+@bp.route("/seance/delete-cardio", methods=["POST"])
+@limiter.limit("20 per minute")
+def delete_cardio():
+    from core.data import delete_exo_rows
+    f = request.form
+    try:
+        semaine = int(f["semaine"])
+    except (KeyError, ValueError):
+        return _back_to_editor(f)
+    seance_name = f["seance_name"]
+    activite = (f.get("activite") or "").strip()
+    if not activite:
+        return _back_to_editor(f)
+    try:
+        delete_exo_rows(semaine, seance_name, f"CARDIO:{activite}")
+    except Exception as e:
+        logger.error("delete-cardio FAILED: %s", e)
     return _back_to_editor(f)
 
 
