@@ -17,6 +17,7 @@ from core.dates import today_paris, today_paris_str, now_paris, DAYS_FR, MONTHS_
 from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
 from core.exercises_data import get_exercise_info
+from core.body_map import get_body_polygons
 
 bp = Blueprint("seance", __name__)
 
@@ -393,6 +394,7 @@ def seance():
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
             cardio_done=_build_cardio_done(hist, name, date_iso),
+            body_polygons=get_body_polygons(),
         )
 
     # ── Vue édition : mode libre ──────────────────────────────────
@@ -430,6 +432,7 @@ def seance():
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
             cardio_done=_build_cardio_done(hist, libre_name, date_iso),
+            body_polygons=get_body_polygons(),
         )
 
     abort(404)

@@ -14,8 +14,20 @@
       letter-spacing:1px;
     }
     .vbtn.active { border-color: var(--accent); color: var(--accent); background: rgba(88,204,255,0.1); }
-    .zone { cursor:pointer; transition: opacity 0.2s; }
-    .zone:hover { opacity: 1 !important; }
+
+    /* Body map (react-body-highlighter polygons, MIT GV79) */
+    .body-svg {
+      width: 200px; max-width: 65vw;
+      height: auto;
+      filter: drop-shadow(0 6px 18px rgba(0,0,0,0.45));
+      --body-fill: #15283f;
+      --body-stroke: #1e3a5a;
+    }
+    .body-svg .body-neutral polygon { opacity: 0.85; }
+    .body-svg .zone { cursor: pointer; transition: transform 0.2s, filter 0.2s; transform-origin: center; transform-box: fill-box; }
+    .body-svg .zone:hover { transform: scale(1.04); }
+    .body-svg .zone:hover polygon { stroke: var(--accent, #58CCFF); stroke-width: 0.5; }
+    .body-svg .zone.active polygon { stroke: rgba(255,255,255,0.35); stroke-width: 0.3; }
     .legend { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; font-size:0.7rem; color:#5a7a9a; margin-top:6px; }
     .legend span { display:inline-flex; align-items:center; gap:4px; }
     .legend i { width:10px; height:10px; border-radius:2px; display:inline-block; }

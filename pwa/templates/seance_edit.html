@@ -129,6 +129,7 @@
 .exo-info-tab.active { color: var(--accent, #58CCFF); border-bottom-color: var(--accent, #58CCFF); }
 .exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; }
 .exo-info-box .rm-row-max td { color: var(--accent, #58CCFF); background: rgba(88,204,255,0.06); }
+.mini-body-svg { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45)); }
 </style>
 {% endblock %}
 
@@ -623,6 +624,7 @@
       </div>
 
       <div id="exo-tab-fiche" class="exo-tab-pane">
+        <div id="exo-info-bodymap" class="mini-bodymap" style="display:flex; justify-content:center; gap:8px; margin-bottom:10px;"></div>
         <div class="info-section">
           <div class="info-label">MUSCLES</div>
           <div id="exo-info-muscles" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
@@ -679,6 +681,76 @@
   </div>
 
   <script>
+  // Polygones du corps (partagés par la mini-carte du modal info)
+  window.__BODY_POLYGONS__ = {{ body_polygons | tojson }};
+
+  // Les descriptions d'exos utilisent des libellés détaillés ("Pectoraux (haut)",
+  // "Épaules antérieures", "Dos (grand dorsal)"…). On normalise vers les noms
+  // canoniques de la carte du corps via la sous-chaîne présente dans le libellé.
+  var MUSCLE_ALIASES = [
+    { needle: "pector", canonical: "Pecs" },
+    { needle: "pec ",   canonical: "Pecs" },
+    { needle: "dos",    canonical: "Dos" },
+    { needle: "dorsal", canonical: "Dos" },
+    { needle: "rhombo", canonical: "Dos" },
+    { needle: "trapèz", canonical: "Dos" },
+    { needle: "lombai", canonical: "Dos" },
+    { needle: "épaul",  canonical: "Épaules" },
+    { needle: "deltoï", canonical: "Épaules" },
+    { needle: "biceps", canonical: "Biceps" },
+    { needle: "triceps", canonical: "Triceps" },
+    { needle: "avant-bras", canonical: "Avant-bras" },
+    { needle: "forearm", canonical: "Avant-bras" },
+    { needle: "abdo",   canonical: "Abdos" },
+    { needle: "oblique",canonical: "Abdos" },
+    { needle: "quadri", canonical: "Quadriceps" },
+    { needle: "ischio", canonical: "Ischio-jambiers" },
+    { needle: "hamstring", canonical: "Ischio-jambiers" },
+    { needle: "fessi",  canonical: "Fessiers" },
+    { needle: "glute",  canonical: "Fessiers" },
+    { needle: "mollet", canonical: "Mollets" },
+    { needle: "soléai", canonical: "Mollets" },
+  ];
+  function normalizeMuscles(list) {
+    var out = {};
+    (list || []).forEach(function (raw) {
+      var s = String(raw || "").toLowerCase();
+      MUSCLE_ALIASES.forEach(function (a) {
+        if (s.indexOf(a.needle) >= 0) out[a.canonical] = true;
+      });
+    });
+    return Object.keys(out);
+  }
+
+  // Construit un <svg> mini montrant les muscles visés en accent, le reste grisé.
+  // view = 'anterior' | 'posterior'. muscles = liste de noms FR canoniques.
+  function buildMiniBodySvg(view, muscles) {
+    var data = window.__BODY_POLYGONS__ || {};
+    var side = (view === 'posterior') ? 'posterior' : 'anterior';
+    var allMuscles = data[side] || {};
+    var neutralPolys = data[side + '_neutral'] || [];
+    var accent = '#FF9F0A';
+    var dim = '#22384f';
+    var stroke = '#2a4466';
+
+    var svg = '<svg viewBox="0 0 100 220" width="120" class="mini-body-svg" xmlns="http://www.w3.org/2000/svg">';
+    // Silhouette neutre (tête, cou, etc.)
+    neutralPolys.forEach(function (pts) {
+      svg += '<polygon points="' + pts + '" fill="' + dim + '" stroke="' + stroke + '" stroke-width="0.3"/>';
+    });
+    // Muscles
+    Object.keys(allMuscles).forEach(function (m) {
+      var isTarget = muscles && muscles.indexOf(m) >= 0;
+      var fill = isTarget ? accent : dim;
+      var sw = isTarget ? 0.5 : 0.3;
+      allMuscles[m].forEach(function (pts) {
+        svg += '<polygon points="' + pts + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + (isTarget ? ' opacity="0.92"' : ' opacity="0.7"') + '/>';
+      });
+    });
+    svg += '</svg>';
+    return svg;
+  }
+
   // ── Exercise info modal (Feature 8) ────────────────────────────
   function showExoInfo(info) {
     document.getElementById('exo-info-title').textContent = info.name || '';
@@ -691,12 +763,23 @@
     }
     // Muscles as colored tags
     var musclesEl = document.getElementById('exo-info-muscles');
+    var muscleList = [];
     if (Array.isArray(info.muscles)) {
-      musclesEl.innerHTML = info.muscles.map(function(m) {
-        return '<span style="font-size:0.75rem; padding:2px 8px; border-radius:8px; background:rgba(88,204,255,0.12); border:1px solid rgba(88,204,255,0.3); color:#58CCFF;">' + m + '</span>';
+      muscleList = info.muscles.filter(Boolean);
+      musclesEl.innerHTML = muscleList.map(function(m) {
+        return '<span style="font-size:0.75rem; padding:2px 8px; border-radius:8px; background:rgba(255,159,10,0.12); border:1px solid rgba(255,159,10,0.4); color:#FF9F0A;">' + m + '</span>';
       }).join('');
     } else {
       musclesEl.innerHTML = '<span style="font-size:0.85rem; color:var(--text);">' + (info.muscles || '') + '</span>';
+      muscleList = String(info.muscles || '').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    }
+
+    // Mini-carte anatomique : on affiche les 2 vues (face + dos) avec
+    // les muscles visés en orange.
+    var bmEl = document.getElementById('exo-info-bodymap');
+    if (bmEl) {
+      var canonical = normalizeMuscles(muscleList);
+      bmEl.innerHTML = buildMiniBodySvg('anterior', canonical) + buildMiniBodySvg('posterior', canonical);
     }
     // Description
     document.getElementById('exo-info-desc').textContent = info.description || '';

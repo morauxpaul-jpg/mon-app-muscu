@@ -11,6 +11,7 @@ from flask import Blueprint, render_template, request
 from core.data import get_hist, get_prog
 from core.dates import today_paris, DAYS_FR
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations, get_rep_table
+from core.body_map import get_body_polygons
 
 logger = logging.getLogger(__name__)
 
@@ -431,6 +432,7 @@ def progres():
         active="progres",
         muscle_data=muscle_data,
         svg_ctx=svg_ctx,
+        body_polygons=get_body_polygons(),
         display_muscles=list(MUSCLES.keys()),
         filter_muscles=FILTER_MUSCLES,
         selected_muscles=selected_muscles,
