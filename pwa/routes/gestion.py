@@ -179,23 +179,6 @@ def export_data():
     )
 
 
-@bp.route("/gestion/export-programme")
-def export_programme():
-    """Exporte uniquement le programme en JSON."""
-    prog = get_prog()
-    payload = {
-        "version": 1,
-        "exported_at": date.today().isoformat(),
-        "programme": prog,
-    }
-    filename = f"muscu-programme-{date.today().isoformat()}.json"
-    return Response(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        mimetype="application/json",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
-
-
 @bp.route("/gestion/import", methods=["POST"])
 @limiter.limit("5 per minute")
 def import_data():

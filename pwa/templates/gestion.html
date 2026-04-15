@@ -27,7 +27,7 @@
 
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil et, si tu veux, changer de programme.</p>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil (taille, poids, niveau, matériel). Pour seulement changer de programme sans refaire le profil, va dans <a href="/programme" style="color:var(--violet);">Programme → Changer de programme</a>.</p>
     <form method="post" action="/gestion/redo-onboarding">
       <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</button>
     </form>
@@ -125,12 +125,10 @@
   </div>
 
   <div class="card">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegardes</h3>
-    <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <a href="/gestion/export" class="btn primary label-icon" style="flex:1; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
-      <a href="/gestion/export-programme" class="btn label-icon" style="flex:1; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Programme seul</a>
-    </div>
-    <form method="post" action="/gestion/import" enctype="multipart/form-data"
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegarde complète</h3>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin:0 0 8px;">Exporte <strong>toutes</strong> tes données (programme + historique + archives) dans un fichier JSON. Pour partager seulement ton programme à un ami, utilise plutôt l'export depuis <a href="/programme" style="color:var(--violet);">Programme</a>.</p>
+    <a href="/gestion/export" class="btn primary label-icon" style="width:100%; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
+    <form method="post" action="/gestion/import" enctype="multipart/form-data" style="margin-top:10px;"
           onsubmit="return showModal(event, 'Importer des données ?', 'Les données actuelles seront remplacées par le contenu du fichier. Cette action est irréversible.', true);">
       <label class="field-label">Importer un fichier JSON</label>
       <input type="file" name="file" accept=".json" required class="field" style="padding:8px;">
