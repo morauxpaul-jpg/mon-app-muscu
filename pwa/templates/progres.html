@@ -116,16 +116,16 @@
       </div>
     </div>
 
-    {% if cardio.values %}
+    {% if cardio['values'] %}
       <div class="field-label" style="margin-top: 14px;">Minutes par semaine</div>
-      <svg class="vol-chart" viewBox="0 0 {{ cardio.values|length * 50 }} 140" preserveAspectRatio="xMidYMid meet">
+      <svg class="vol-chart" viewBox="0 0 {{ cardio['values']|length * 50 }} 140" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="cardioGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#FF7A00" stop-opacity="0.85"/>
             <stop offset="100%" stop-color="#FF7A00" stop-opacity="0.1"/>
           </linearGradient>
         </defs>
-        {% for v in cardio.values %}
+        {% for v in cardio['values'] %}
           {% set bar_h = (v / cardio.max_val * 90) if cardio.max_val > 0 else 0 %}
           {% set x = loop.index0 * 50 + 8 %}
           <rect x="{{ x }}" y="{{ 110 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="url(#cardioGrad)"/>
