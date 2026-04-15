@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v39-2026-04-15";
+const CACHE_VERSION = "v40-2026-04-15";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -17,6 +17,7 @@ const APP_SHELL = [
   "/static/js/tutorial.js",
   "/static/js/tuto-seance.js",
   "/static/js/ui-fx.js",
+  "/static/js/prefetch.js",
   "/static/icon-192.png",
   "/static/icon-512.png",
   "/static/changelog.json",
@@ -90,7 +91,7 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// ── Fetch : Network First avec fallback cache ─────────────────────
+// ── Fetch : Stale-While-Revalidate pour navigations HTML, Network First sinon ─
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -99,10 +100,34 @@ self.addEventListener("fetch", (event) => {
   // Ignore les requêtes cross-origin (Plotly CDN, etc.)
   if (url.origin !== self.location.origin) return;
 
+  const isNav = req.mode === "navigate" ||
+                (req.headers.get("accept") || "").includes("text/html");
+
+  if (isNav) {
+    // Stale-While-Revalidate : on sert le cache instantanément si dispo,
+    // et on rafraîchit en arrière-plan pour la prochaine visite.
+    event.respondWith(
+      caches.open(CACHE).then((c) =>
+        c.match(req).then((cached) => {
+          const networkFetch = fetch(req)
+            .then((resp) => {
+              if (resp && resp.status === 200 && resp.type === "basic") {
+                c.put(req, resp.clone());
+              }
+              return resp;
+            })
+            .catch(() => cached || c.match("/accueil"));
+          return cached || networkFetch;
+        })
+      )
+    );
+    return;
+  }
+
+  // Assets statiques : Network First avec fallback cache.
   event.respondWith(
     fetch(req)
       .then((resp) => {
-        // Réponse OK → on met en cache et on retourne
         if (resp && resp.status === 200 && resp.type === "basic") {
           const copy = resp.clone();
           caches.open(CACHE).then((c) => c.put(req, copy));

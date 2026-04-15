@@ -1,14 +1,11 @@
 {
-  "version": "v34",
+  "version": "v35",
   "date": "2026-04-15",
-  "title": "v34 — Coach IA historique + Carte du corps réaliste",
+  "title": "v35 — Navigation ultra-fluide",
   "changes": [
-    { "text": "Coach IA : historique sauvegardé côté serveur, regroupé par date", "demo": "coach-history" },
-    { "text": "Carte anatomique réaliste du corps dans Progrès", "demo": "body-map" },
-    { "text": "Table des maxima (RM) + calculateur 1RM (formule d'Epley)", "demo": "rm-table" },
-    { "text": "Fiche exercice enrichie : onglet Table RM + mini-carte du corps", "demo": "exo-info" },
-    "Raccourci « Demander conseil au coach » depuis la fiche exercice",
-    "Bouton « Voir » sur les patch notes pour démo interactive"
+    "Navigation quasi-instantanée entre les onglets (cache stale-while-revalidate)",
+    "Préchargement des pages au survol / toucher des liens",
+    "Crossfade fluide entre routes (View Transitions API sur navigateurs récents)"
   ],
   "demos": {
     "coach-history": {

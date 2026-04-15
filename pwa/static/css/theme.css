@@ -412,6 +412,18 @@ button.violet, .btn.violet {
 @keyframes pageFade { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
 .page-fade { animation: pageFade 0.15s ease-out; }
 
+/* ── View Transitions API (Chrome 126+) : crossfade fluide entre routes ── */
+@view-transition { navigation: auto; }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.18s;
+  animation-timing-function: ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}
+
 /* ── Success flash (validation d'une série) ── */
 @keyframes rowFlash {
   0%   { background: rgba(0,255,127,0); box-shadow: none; }
