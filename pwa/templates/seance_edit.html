@@ -104,6 +104,8 @@
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,0.7);
+  padding: 16px;
+  overflow: hidden;
 }
 .exo-info-box {
   background: #0B1428;
@@ -112,6 +114,10 @@
   padding: 18px;
   max-width: 340px;
   width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   color: #fff;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
@@ -130,6 +136,13 @@
 .exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; }
 .exo-info-box .rm-row-max td { color: var(--accent, #58CCFF); background: rgba(88,204,255,0.06); }
 .mini-body-svg { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45)); }
+.exo-info-close {
+  position: sticky; bottom: -18px;
+  width: 100%; margin-top: 14px;
+  padding: 12px;
+  background: var(--accent, #58CCFF);
+  box-shadow: 0 -8px 12px -4px #0B1428;
+}
 </style>
 {% endblock %}
 
@@ -664,7 +677,7 @@
         </div>
       </div>
 
-      <button type="button" class="btn primary" style="width:100%; margin-top:10px;" onclick="document.getElementById('exo-info-modal').style.display='none'">Fermer</button>
+      <button type="button" class="btn primary exo-info-close" onclick="document.getElementById('exo-info-modal').style.display='none'">Fermer</button>
     </div>
   </div>
 
@@ -733,7 +746,7 @@
     var dim = '#22384f';
     var stroke = '#2a4466';
 
-    var svg = '<svg viewBox="0 0 100 220" width="120" class="mini-body-svg" xmlns="http://www.w3.org/2000/svg">';
+    var svg = '<svg viewBox="0 0 100 220" width="100" class="mini-body-svg" xmlns="http://www.w3.org/2000/svg">';
     // Silhouette neutre (tête, cou, etc.)
     neutralPolys.forEach(function (pts) {
       svg += '<polygon points="' + pts + '" fill="' + dim + '" stroke="' + stroke + '" stroke-width="0.3"/>';
