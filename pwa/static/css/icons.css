@@ -22,6 +22,7 @@
 .icon-success { color: var(--success, #00FF7F); }
 .icon-danger  { color: var(--danger,  #FF453A); }
 .icon-accent  { color: var(--accent,  #58CCFF); }
+.icon-violet  { color: var(--violet,  #B388FF); }
 .icon-gold    { color: #FFD700; }
 .icon-silver  { color: #C0C7D1; }
 .icon-bronze  { color: #D68A4F; }

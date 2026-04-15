@@ -9,25 +9,6 @@
           style="font-size:0.72rem; padding:4px 10px; border-radius:10px; background:rgba(88,204,255,0.15); color:#58CCFF;"></span>
   </div>
 
-  {# ── Nom du programme (éditable) ─────────────── #}
-  <div class="card" style="margin-top:10px;">
-    <div class="label-icon" style="font-size:0.78rem; color:var(--text-mute); margin-bottom:6px;">
-      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard"/></svg>Nom du programme
-    </div>
-    <div x-show="!editingName" style="display:flex; align-items:center; gap:8px;">
-      <strong style="color:#58CCFF; font-size:1.05rem;" x-text="programName"></strong>
-      <button type="button" class="btn mini" @click="editingName = true; $nextTick(() => $refs.nameInput && $refs.nameInput.focus())" aria-label="Renommer">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>
-      </button>
-    </div>
-    <div x-show="editingName" x-transition style="display:flex; gap:6px;">
-      <input type="text" x-ref="nameInput" x-model="programName" class="field" maxlength="80"
-             style="flex:1;" @keydown.enter.prevent="editingName=false; scheduleSave()"
-             @keydown.escape="editingName=false">
-      <button type="button" class="btn primary" @click="editingName=false; scheduleSave()">OK</button>
-    </div>
-  </div>
-
   {% if request.args.get('program_changed') %}
     <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Nouveau programme chargé.</div>
   {% endif %}
@@ -53,13 +34,13 @@
   </div>
 
   {# ── Programmes (dossiers de séances) ─────────────────── #}
-  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#folder"/></svg>Mes programmes</h3>
+  <h3 class="label-icon"><svg class="icon icon-md icon-violet"><use href="/static/img/icons.svg#folder"/></svg>Mes programmes</h3>
 
   <template x-for="pg in programmes" :key="pg.id">
     <div class="card prog-section" x-data="{ open: true, editing: false, draftName: '', newSname: '' }">
       <div class="prog-head">
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;" @click="open = !open">
-          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>
+          <svg class="icon icon-sm icon-violet"><use href="/static/img/icons.svg#folder"/></svg>
           <span x-show="!editing" class="prog-name" x-text="pg.name"></span>
           <input x-show="editing" x-ref="pn" type="text" class="field" style="margin:0; flex:1;"
                  maxlength="80" x-model="draftName"
@@ -126,12 +107,12 @@
 
   {# ── Nouveau programme ─────────────────────────────────── #}
   <div class="card" x-data="{ newProgName: '' }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus"/></svg>Nouveau programme</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-violet"><use href="/static/img/icons.svg#plus"/></svg>Nouveau programme</h3>
     <div style="display:flex; gap:6px;">
       <input type="text" x-model="newProgName" class="field" style="flex:1; margin:0;"
              placeholder="Nom (ex: Force, Hypertrophie…)" maxlength="80"
              @keydown.enter.prevent="if(newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
-      <button type="button" class="btn primary label-icon"
+      <button type="button" class="btn violet label-icon"
               @click="if(newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer
       </button>

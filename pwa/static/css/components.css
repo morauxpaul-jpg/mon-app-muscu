@@ -65,6 +65,31 @@
   animation: slideIn 0.3s ease-out;
 }
 
+/* Dossier programme (multi-programmes) */
+.prog-section {
+  border-color: rgba(179,136,255,0.35);
+  background: linear-gradient(135deg, rgba(179,136,255,0.06), rgba(88,204,255,0.03));
+}
+.prog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.prog-name {
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--violet, #B388FF);
+  font-size: 1rem;
+  text-shadow: 0 0 10px rgba(179,136,255,0.35);
+}
+.save-pill {
+  background: rgba(179,136,255,0.15) !important;
+  color: var(--violet, #B388FF) !important;
+  border: 1px solid rgba(179,136,255,0.3);
+}
+
 /* Barres XP / volume (réutilisables pour les pages suivantes) */
 .xp-bar-bg {
   width: 100%;
