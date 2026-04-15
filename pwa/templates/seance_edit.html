@@ -276,9 +276,9 @@
             <template x-for="(s, i) in sets" :key="i">
               <tr>
                 <td x-text="i + 1"></td>
-                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @click="onRowFocus(i)"></td>
+                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @input="onSetFilled(i)"></td>
                 {% if not exo.is_bw %}
-                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @click="onRowFocus(i)"></td>
+                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
                 {% endif %}
                 <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                 <td>
@@ -450,11 +450,57 @@
     </script>
   {% endif %}
 
+  {# ── Bloc cardio inline (optionnel, ajoute un cardio à cette séance) ── #}
+  <div class="card" x-data="{ open: false }" style="margin-top:14px;">
+    <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" @click="open = !open">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#flame"/></svg>
+      <span x-text="open ? 'Fermer le cardio' : 'Ajouter du cardio'"></span>
+    </button>
+    <form method="post" action="/seance/add-cardio" x-show="open" x-transition style="margin-top:10px;">
+      <input type="hidden" name="mode" value="{{ mode }}">
+      <input type="hidden" name="seance_name" value="{{ seance_name }}">
+      <input type="hidden" name="date" value="{{ date_iso }}">
+      <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:4px;">Type</label>
+      <select name="activite" class="cell-input" style="width:100%;">
+        <option>Course</option>
+        <option>Vélo</option>
+        <option>Rameur</option>
+        <option>Natation</option>
+        <option>Corde</option>
+        <option>HIIT</option>
+        <option>Marche</option>
+        <option>Elliptique</option>
+        <option>Montée d'escaliers</option>
+        <option>Autre</option>
+      </select>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+        <div>
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Durée (min)</label>
+          <input type="number" inputmode="numeric" min="0" name="duree_min" class="cell-input" style="width:100%;" placeholder="20">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Distance (km)</label>
+          <input type="number" inputmode="decimal" step="0.1" min="0" name="distance_km" class="cell-input" style="width:100%;" placeholder="0">
+        </div>
+      </div>
+      <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:8px;">Intensité</label>
+      <select name="rpe" class="cell-input" style="width:100%;">
+        <option value="">—</option>
+        <option>Facile</option>
+        <option>Modéré</option>
+        <option>Intense</option>
+      </select>
+      <button type="submit" class="btn primary label-icon" style="width:100%; margin-top:10px; justify-content:center;" data-haptic="1">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer le cardio
+      </button>
+    </form>
+  </div>
+
   <form method="post" action="/seance/finish" onsubmit="clearAllDrafts()">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="date" value="{{ date_iso }}">
-    <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
+    <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
   </form>
 
   {# ── Chrono de repos (non-bloquant, bandeau fixe) ──────── #}
@@ -576,13 +622,26 @@
     }
   }
 
-  // ── Rest Timer (non-bloquant) ──────────────────────────────────
+  // ── Rest Timer (non-bloquant, background-aware) ───────────────
+  // On calcule tout à partir de _timerEndTime (Date.now() absolue). Ça
+  // permet au compteur de rester juste si l'onglet passe en arrière-plan
+  // (les setInterval sont throttlés sur mobile). En parallèle on planifie
+  // une notification via le Service Worker pour prévenir quand c'est fini.
   var _timerInterval = null;
-  var _timerRemaining = 0;
   var _timerTotal = 90;
+  var _timerEndTime = 0;
+  var _timerRemaining = 0;
+  var _originalTitle = document.title;
+
+  function _postTimerMsg(msg) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      try { navigator.serviceWorker.controller.postMessage(msg); } catch(e) {}
+    }
+  }
 
   function startTimer(seconds) {
     _timerTotal = seconds || _timerTotal;
+    _timerEndTime = Date.now() + _timerTotal * 1000;
     _timerRemaining = _timerTotal;
     var bar = document.getElementById('rest-timer');
     bar.classList.remove('timer-done');
@@ -590,23 +649,42 @@
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS';
     updateTimerDisplay();
     highlightPreset(_timerTotal);
+    // Demande la permission de notif si pas encore accordée (non bloquant)
+    if ('Notification' in window && Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch(e) {}
+    }
+    // Planifie la notif SW (alarme fiable même si l'onglet est fermé)
+    _postTimerMsg({
+      type: 'SCHEDULE_TIMER',
+      delay: _timerTotal * 1000,
+      title: 'Repos terminé !',
+      body: "C'est reparti — série suivante"
+    });
     clearInterval(_timerInterval);
-    _timerInterval = setInterval(function() {
-      _timerRemaining--;
-      updateTimerDisplay();
-      if (_timerRemaining <= 0) {
-        clearInterval(_timerInterval);
-        timerFinished();
-      }
-    }, 1000);
+    _timerInterval = setInterval(tickTimer, 1000);
+  }
+
+  function tickTimer() {
+    _timerRemaining = Math.max(0, Math.ceil((_timerEndTime - Date.now()) / 1000));
+    updateTimerDisplay();
+    if (_timerRemaining <= 0) {
+      clearInterval(_timerInterval);
+      timerFinished();
+    }
   }
 
   function updateTimerDisplay() {
-    var m = Math.floor(Math.max(0, _timerRemaining) / 60);
-    var s = Math.max(0, _timerRemaining) % 60;
-    document.getElementById('timer-display').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    var r = Math.max(0, _timerRemaining);
+    var m = Math.floor(r / 60);
+    var s = r % 60;
+    var txt = m + ':' + (s < 10 ? '0' : '') + s;
+    document.getElementById('timer-display').textContent = txt;
     var pct = (_timerRemaining / _timerTotal) * 100;
     document.getElementById('timer-progress-bar').style.width = pct + '%';
+    // Titre d'onglet : décompte visible sur l'écran de verrouillage / preview PWA
+    if (r > 0) {
+      document.title = 'Repos ' + txt + ' — Muscu PRO';
+    }
   }
 
   function timerFinished() {
@@ -614,6 +692,8 @@
     bar.classList.add('timer-done');
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    document.title = 'GO ! — Muscu PRO';
+    _timerEndTime = 0;
     setTimeout(function() {
       if (bar.style.display !== 'none') skipTimer();
     }, 3000);
@@ -621,25 +701,43 @@
 
   function skipTimer() {
     clearInterval(_timerInterval);
+    _timerEndTime = 0;
+    document.title = _originalTitle;
     document.getElementById('rest-timer').style.display = 'none';
+    _postTimerMsg({ type: 'CANCEL_TIMER' });
   }
 
   function setTimerDuration(sec) {
     localStorage.setItem('restTimerDefault', sec);
     _timerTotal = sec;
+    _timerEndTime = Date.now() + sec * 1000;
     _timerRemaining = sec;
     updateTimerDisplay();
     highlightPreset(sec);
+    // Re-planifie la notif avec la nouvelle durée
+    _postTimerMsg({ type: 'CANCEL_TIMER' });
+    _postTimerMsg({
+      type: 'SCHEDULE_TIMER',
+      delay: sec * 1000,
+      title: 'Repos terminé !',
+      body: "C'est reparti — série suivante"
+    });
     clearInterval(_timerInterval);
-    _timerInterval = setInterval(function() {
-      _timerRemaining--;
+    _timerInterval = setInterval(tickTimer, 1000);
+  }
+
+  // Quand l'onglet revient au premier plan, recalcule le reste à partir
+  // de endTime (setInterval a pu être throttlé pendant l'absence).
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && _timerEndTime) {
+      _timerRemaining = Math.max(0, Math.ceil((_timerEndTime - Date.now()) / 1000));
       updateTimerDisplay();
       if (_timerRemaining <= 0) {
         clearInterval(_timerInterval);
         timerFinished();
       }
-    }, 1000);
-  }
+    }
+  });
 
   function highlightPreset(sec) {
     document.querySelectorAll('.rest-timer-bar-presets button').forEach(function(b) {
@@ -724,13 +822,18 @@
       clearWeights: function () {
         this.sets.forEach(function(s) { s.poids = ''; });
       },
-      onRowFocus: function (i) {
-        if (!AUTO_REST_TIMER || i === 0) return;
-        var prev = this.sets[i - 1];
-        if (!prev || !prev.reps || prev.reps <= 0) return;
-        if (!this.isBw && (!prev.poids || prev.poids <= 0)) return;
-        if (prev._timerFired) return;
-        prev._timerFired = true;
+      onSetFilled: function (i) {
+        // Chrono auto : se lance dès que la SÉRIE ACTUELLE est remplie
+        // (reps > 0 ET poids > 0, ou reps > 0 si exo au poids du corps).
+        // Un flag _timerFired par série empêche le redéclenchement si
+        // l'user modifie la valeur après coup.
+        if (!AUTO_REST_TIMER) return;
+        var cur = this.sets[i];
+        if (!cur || cur._timerFired) return;
+        var repsOk = cur.reps && Number(cur.reps) > 0;
+        var poidsOk = this.isBw || (cur.poids && Number(cur.poids) > 0);
+        if (!repsOk || !poidsOk) return;
+        cur._timerFired = true;
         this.startRestTimer();
       },
       startRestTimer: function () {

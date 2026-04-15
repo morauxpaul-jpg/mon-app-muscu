@@ -610,6 +610,63 @@ def remove_extra():
     return _back_to_editor(f)
 
 
+@bp.route("/seance/add-cardio", methods=["POST"])
+@limiter.limit("20 per minute")
+def add_cardio():
+    """Ajoute un bloc cardio à la séance muscu en cours (même Séance + Date)."""
+    from routes.cardio import ACTIVITES_MAP, RPE_LABELS, _estimate_calories
+    from core.data import get_profile
+    f = request.form
+    date_str = f["date"]
+    target = _parse_date(date_str) or today_paris()
+    semaine = _iso_week(target)
+    seance_name = f["seance_name"]
+
+    activite = (f.get("activite") or "Autre").strip()
+    if activite not in ACTIVITES_MAP:
+        activite = "Autre"
+    _icon, met = ACTIVITES_MAP[activite]
+
+    try:
+        duree_min = max(0, int(float(f.get("duree_min") or 0)))
+    except ValueError:
+        duree_min = 0
+    try:
+        distance_km = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
+    except ValueError:
+        distance_km = 0.0
+    rpe = (f.get("rpe") or "").strip()
+    if rpe not in RPE_LABELS:
+        rpe = ""
+
+    profile = get_profile() or {}
+    poids_kg = float(profile.get("poids_kg") or 0)
+    calories = _estimate_calories(met, duree_min, poids_kg) if duree_min > 0 else 0
+
+    parts = []
+    if calories > 0: parts.append(f"Cal:{calories}")
+    if rpe: parts.append(f"RPE:{rpe}")
+    remarque = " | ".join(parts)
+
+    exo_final = f"CARDIO:{activite}"
+    rows = [{
+        "Semaine": semaine,
+        "Séance": seance_name,
+        "Exercice": exo_final,
+        "Série": 1,
+        "Reps": duree_min,
+        "Poids": distance_km,
+        "Remarque": remarque,
+        "Muscle": "Cardio",
+        "Date": date_str,
+    }]
+    try:
+        replace_exo_rows(semaine, seance_name, exo_final, rows)
+    except Exception as e:
+        logger.error("add-cardio FAILED: %s", e)
+    return _back_to_editor(f)
+
+
 @bp.route("/seance/finish", methods=["POST"])
 def finish():
     """Termine la séance : nettoie le brouillon libre ou les extras et retourne à l'accueil."""

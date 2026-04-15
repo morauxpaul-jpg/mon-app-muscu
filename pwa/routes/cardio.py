@@ -29,6 +29,7 @@ ACTIVITES = [
     ("HIIT", "flame", 9.0),
     ("Marche", "footprints", 3.5),
     ("Elliptique", "activity", 6.5),
+    ("Montée d'escaliers", "activity", 8.0),
     ("Autre", "heart", 6.0),
 ]
 ACTIVITES_MAP = {name: (icon, met) for name, icon, met in ACTIVITES}
