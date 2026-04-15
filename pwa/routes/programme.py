@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import re
+import uuid
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for, send_file, jsonify
@@ -32,6 +33,50 @@ def _ensure_planning(prog):
     for d in DAYS_FR:
         planning.setdefault(d, "")
     return planning
+
+
+def _gen_prog_id() -> str:
+    return "p_" + uuid.uuid4().hex[:8]
+
+
+def _ensure_programmes(prog):
+    """Migre l'ancien schéma (dict plat de séances) vers le nouveau schéma
+    multi-programmes : _programmes = liste de {id, name} et _seance_prog = map
+    seance_name → prog_id. Les séances non mappées tombent dans "Non classé".
+    """
+    progs = prog.get("_programmes")
+    mapping = prog.get("_seance_prog")
+    seance_names = [k for k in prog.keys() if not k.startswith("_")]
+
+    if not isinstance(progs, list):
+        progs = []
+    if not isinstance(mapping, dict):
+        mapping = {}
+
+    if not progs:
+        # Premier chargement avec l'ancien schéma : crée un programme par
+        # défaut et y assigne toutes les séances existantes.
+        default_name = (prog.get("_name") or "").strip()
+        origin = prog.get("_origin")
+        if not default_name and origin:
+            src = catalog.get_program(origin)
+            if src:
+                default_name = src["title"]
+        if not default_name:
+            default_name = "Mon programme"
+        default_id = _gen_prog_id()
+        progs = [{"id": default_id, "name": default_name[:80]}]
+        for sname in seance_names:
+            mapping[sname] = default_id
+    else:
+        # Normalise : garde uniquement les entrées valides
+        valid_ids = {p.get("id") for p in progs if isinstance(p, dict) and p.get("id")}
+        existing = set(seance_names)
+        mapping = {s: pid for s, pid in mapping.items() if s in existing and pid in valid_ids}
+
+    prog["_programmes"] = progs
+    prog["_seance_prog"] = mapping
+    return progs, mapping
 
 
 def _seance_items(prog):
@@ -81,6 +126,8 @@ def programme():
             message="Impossible de charger le programme. Vérifie ta connexion.",
         ), 503
     _ensure_planning(prog)
+    programmes, seance_prog = _ensure_programmes(prog)
+    save_prog(prog)  # persiste la migration si c'était la première fois
     seances = _seance_items(prog)
 
     current_origin = prog.get("_origin")
@@ -107,6 +154,8 @@ def programme():
         "seance_order": [s for s, _ in seances],
         "origin_seance_names": sorted(_origin_seance_names(prog)),
         "origin": prog.get("_origin"),
+        "programmes": [{"id": p["id"], "name": p["name"]} for p in programmes],
+        "seance_prog": dict(seance_prog),
     }
 
     return render_template(
@@ -192,6 +241,32 @@ def save_state():
                 "_extras", "_libre_draft"):
         if key in old:
             new_prog[key] = old[key]
+
+    # _programmes + _seance_prog (multi-programmes)
+    raw_progs = data.get("programmes")
+    raw_mapping = data.get("seance_prog")
+    new_programmes = []
+    if isinstance(raw_progs, list):
+        for p in raw_progs:
+            if not isinstance(p, dict):
+                continue
+            pid = (p.get("id") or "").strip()
+            pname = (p.get("name") or "").strip()[:80]
+            if not pid or not pname:
+                continue
+            new_programmes.append({"id": pid, "name": pname})
+    # Si le client n'en envoie pas, on réutilise l'ancien état
+    if not new_programmes:
+        new_programmes = old.get("_programmes") or []
+    valid_ids = {p["id"] for p in new_programmes}
+    new_mapping = {}
+    src_mapping = raw_mapping if isinstance(raw_mapping, dict) else (old.get("_seance_prog") or {})
+    existing_names = set(new_prog.keys()) - {"_planning", "_name"}
+    for sname, pid in src_mapping.items():
+        if sname in existing_names and pid in valid_ids:
+            new_mapping[sname] = pid
+    new_prog["_programmes"] = new_programmes
+    new_prog["_seance_prog"] = new_mapping
 
     save_prog(new_prog)
     return jsonify({"ok": True})

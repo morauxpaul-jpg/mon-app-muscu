@@ -52,140 +52,125 @@
     {% endfor %}
   </div>
 
-  {# ── Séances & exercices ─────────────────────────────── #}
-  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#folder"/></svg>Séances</h3>
+  {# ── Programmes (dossiers de séances) ─────────────────── #}
+  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#folder"/></svg>Mes programmes</h3>
 
-  <template x-for="(sname, sidx) in seanceOrder" :key="sname">
-    <div class="card" x-data="{ open: false, renaming: false, newName: '' }">
-      <div class="exo-head" @click="open = !open">
-        <div class="exo-title" x-text="sname"></div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:11px; color:#5a7a9a;" x-text="(prog[sname] || []).length + ' exos'"></span>
+  <template x-for="pg in programmes" :key="pg.id">
+    <div class="card prog-section" x-data="{ open: true, editing: false, draftName: '', newSname: '' }">
+      <div class="prog-head">
+        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;" @click="open = !open">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>
+          <span x-show="!editing" class="prog-name" x-text="pg.name"></span>
+          <input x-show="editing" x-ref="pn" type="text" class="field" style="margin:0; flex:1;"
+                 maxlength="80" x-model="draftName"
+                 @click.stop
+                 @keydown.enter.prevent="renameProgramme(pg.id, draftName); editing=false"
+                 @keydown.escape="editing=false">
+          <span style="font-size:11px; color:#5a7a9a;" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
           <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
         </div>
       </div>
 
-      <div class="exo-body" x-show="open" x-transition>
-        <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
-          <button type="button" class="btn label-icon" @click="moveSeance(sname, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
-          <button type="button" class="btn label-icon" @click="moveSeance(sname, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
-          <button type="button" class="btn label-icon" @click="renaming = true; newName = sname; $nextTick(() => { var el = $el.closest('.card').querySelector('.rn-input'); if (el) el.focus(); })">
+      <div x-show="open" x-transition>
+        <div style="display:flex; gap:6px; margin:8px 0 10px; flex-wrap:wrap;">
+          <button type="button" class="btn mini label-icon" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
+          <button type="button" class="btn mini label-icon" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
+          <button type="button" class="btn mini label-icon" @click="editing=true; draftName=pg.name; $nextTick(() => $refs.pn && $refs.pn.focus())">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
-          <button type="button" class="btn label-icon" @click="if(confirm('Supprimer la séance ' + sname + ' ?')) deleteSeance(sname)">
+          <button type="button" class="btn mini label-icon"
+                  @click="if(confirm('Supprimer le programme « ' + pg.name + ' » ? (les séances seront déplacées en Non classé)')) deleteProgramme(pg.id)">
             <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
           </button>
-          <template x-if="originSeanceNames.includes(sname)">
-            <form method="post" action="/programme/seance/reset"
-                  onsubmit="return confirm('Réinitialiser cette séance à sa version d\'origine ?');" style="display:inline;">
-              <input type="hidden" name="name" :value="sname">
-              <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
-            </form>
-          </template>
         </div>
 
-        <div x-show="renaming" x-transition style="display:flex; gap:6px; margin-bottom:10px;">
-          <input type="text" class="rn-input field" x-model="newName" style="flex:1;" maxlength="60"
-                 @keydown.enter.prevent="renameSeance(sname, newName); renaming=false"
-                 @keydown.escape="renaming=false">
-          <button type="button" class="btn primary" @click="renameSeance(sname, newName); renaming=false">OK</button>
-        </div>
-
-        <template x-for="(ex, exIdx) in prog[sname]" :key="sname + '|' + exIdx + '|' + ex.name">
-          <div class="prog-exo-row">
-            <div class="prog-exo-form">
-              <div class="prog-exo-name" x-text="ex.name"></div>
-              <div class="prog-exo-fields">
-                <label class="field-label" style="margin-top:4px;">Séries</label>
-                <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()">
-                <label class="field-label">Muscle(s)</label>
-                <div class="muscle-checks">
-                  {% for m in muscle_list %}
-                    <label class="muscle-check">
-                      <input type="checkbox" value="{{ m }}"
-                             :checked="(ex.muscle || '').split(',').map(s => s.trim()).includes('{{ m }}')"
-                             @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
-                      <span>{{ m }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-            <div class="prog-exo-actions">
-              <button type="button" class="btn mini" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
-              <button type="button" class="btn mini" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
-              <button type="button" class="btn mini" aria-label="Supprimer" @click="if(confirm('Supprimer ' + ex.name + ' ?')) deleteExo(sname, exIdx)"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
-            </div>
-          </div>
+        <template x-for="sname in seancesIn(pg.id)" :key="sname">
+          {% include "_programme_seance_card.html" %}
         </template>
 
-        <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
+        <div x-show="seancesIn(pg.id).length === 0" style="font-size:0.82rem; color:var(--text-dim); margin:8px 0; text-align:center;">
+          Aucune séance — ajoute-en une ci-dessous.
+        </div>
 
-        <div x-data="{ newExo: { name: '', sets: 3, muscles: [] } }">
-          <label class="field-label" style="margin-top:0;">Nouvel exercice</label>
-          <input type="text" x-model="newExo.name" class="field" placeholder="Nom de l'exercice">
-          <label class="field-label">Séries</label>
-          <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15">
-          <label class="field-label">Muscle(s) — vide = auto-détection</label>
-          <div class="muscle-checks new-exo-muscles">
-            {% for m in muscle_list %}
-              <label class="muscle-check">
-                <input type="checkbox" value="{{ m }}" @change="$event.target.checked ? newExo.muscles.push('{{ m }}') : newExo.muscles.splice(newExo.muscles.indexOf('{{ m }}'), 1)">
-                <span>{{ m }}</span>
-              </label>
-            {% endfor %}
-          </div>
-          <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"
-                  @click="addExo(sname, newExo); newExo = { name: '', sets: 3, muscles: [] }; $el.parentElement.querySelectorAll('.new-exo-muscles input[type=\'checkbox\']').forEach(c => c.checked = false)">
-            <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
+        <div style="display:flex; gap:6px; margin-top:10px;">
+          <input type="text" x-model="newSname" class="field" style="flex:1; margin:0;"
+                 placeholder="Nouvelle séance (ex: Push)" maxlength="60"
+                 @keydown.enter.prevent="if(newSname.trim()){ addSeance(newSname.trim(), pg.id); newSname=''; }">
+          <button type="button" class="btn primary label-icon"
+                  @click="if(newSname.trim()){ addSeance(newSname.trim(), pg.id); newSname=''; }">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter
           </button>
         </div>
       </div>
     </div>
   </template>
 
-  {# ── Nouvelle séance (vide ou depuis catalogue) ─────────── #}
-  <div class="card" x-data="{ tab: 'new', newSname: '', catalogPick: '', catalogSeance: '' }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une séance</h3>
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button type="button" class="btn" :class="{ primary: tab==='new' }" @click="tab='new'">Vide</button>
-      <button type="button" class="btn" :class="{ primary: tab==='catalog' }" @click="tab='catalog'">Depuis le catalogue</button>
+  {# ── Non classé (séances sans programme) ───────────────── #}
+  <template x-if="seancesIn(null).length > 0">
+    <div class="card prog-section" x-data="{ open: true }">
+      <div class="prog-head" @click="open = !open">
+        <div style="display:flex; align-items:center; gap:8px; flex:1;">
+          <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>
+          <span class="prog-name" style="color:var(--text-dim);">Non classé</span>
+          <span style="font-size:11px; color:#5a7a9a;" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
+          <div class="exo-toggle" style="margin-left:auto;" x-text="open ? '−' : '+'"></div>
+        </div>
+      </div>
+      <div x-show="open" x-transition>
+        <template x-for="sname in seancesIn(null)" :key="sname">
+          {% include "_programme_seance_card.html" %}
+        </template>
+      </div>
     </div>
+  </template>
 
-    <div x-show="tab==='new'">
-      <input type="text" x-model="newSname" class="field" placeholder="Nom de la séance (ex: Push)"
-             @keydown.enter.prevent="if(newSname.trim()){ addSeance(newSname.trim()); newSname=''; }">
-      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
-              @click="if(newSname.trim()){ addSeance(newSname.trim()); newSname=''; }">
+  {# ── Nouveau programme ─────────────────────────────────── #}
+  <div class="card" x-data="{ newProgName: '' }">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus"/></svg>Nouveau programme</h3>
+    <div style="display:flex; gap:6px;">
+      <input type="text" x-model="newProgName" class="field" style="flex:1; margin:0;"
+             placeholder="Nom (ex: Force, Hypertrophie…)" maxlength="80"
+             @keydown.enter.prevent="if(newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
+      <button type="button" class="btn primary label-icon"
+              @click="if(newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer
       </button>
     </div>
+  </div>
 
-    <div x-show="tab==='catalog'">
-      <label class="field-label" style="margin-top:0;">Programme</label>
-      <select x-model="catalogPick" class="field" @change="catalogSeance=''">
-        <option value="">— Choisis un programme —</option>
-        {% for p in catalog_programs %}
-          <option value="{{ p.id }}">{{ p.title }}</option>
-        {% endfor %}
-      </select>
-      <template x-for="p in catalogPrograms" :key="p.id">
-        <div x-show="catalogPick === p.id">
-          <label class="field-label">Séance</label>
-          <select x-model="catalogSeance" class="field">
-            <option value="">— Choisis une séance —</option>
-            <template x-for="sp in p.seances_preview" :key="sp.name">
-              <option :value="sp.name" x-text="sp.name + ' (' + sp.exercises.length + ' exos)'"></option>
-            </template>
-          </select>
-        </div>
+  {# ── Ajouter une séance depuis le catalogue ─────────────── #}
+  <div class="card" x-data="{ catalogPick: '', catalogSeance: '', destProg: '' }">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ajouter depuis le catalogue</h3>
+    <label class="field-label" style="margin-top:0;">Programme du catalogue</label>
+    <select x-model="catalogPick" class="field" @change="catalogSeance=''">
+      <option value="">— Choisis un programme —</option>
+      {% for p in catalog_programs %}
+        <option value="{{ p.id }}">{{ p.title }}</option>
+      {% endfor %}
+    </select>
+    <template x-for="p in catalogPrograms" :key="p.id">
+      <div x-show="catalogPick === p.id">
+        <label class="field-label">Séance</label>
+        <select x-model="catalogSeance" class="field">
+          <option value="">— Choisis une séance —</option>
+          <template x-for="sp in p.seances_preview" :key="sp.name">
+            <option :value="sp.name" x-text="sp.name + ' (' + sp.exercises.length + ' exos)'"></option>
+          </template>
+        </select>
+      </div>
+    </template>
+    <label class="field-label">Ajouter à</label>
+    <select x-model="destProg" class="field">
+      <template x-for="pg in programmes" :key="pg.id">
+        <option :value="pg.id" x-text="pg.name"></option>
       </template>
-      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
-              :disabled="!catalogPick || !catalogSeance"
-              @click="addSeanceFromCatalog(catalogPick, catalogSeance); catalogSeance=''">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cette séance
-      </button>
-    </div>
+      <option value="__none__">Non classé</option>
+    </select>
+    <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+            :disabled="!catalogPick || !catalogSeance"
+            @click="addSeanceFromCatalog(catalogPick, catalogSeance, destProg); catalogSeance=''">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cette séance
+    </button>
   </div>
 
   {# ── Exporter / Importer mon programme ──────────── #}
@@ -307,6 +292,8 @@
       originSeanceNames: [],
       origin: null,
       catalogPrograms: [],
+      programmes: [],
+      seanceProg: {},
       editingName: false,
       saveState: '',
       _saveTimer: null,
@@ -320,6 +307,8 @@
         this.originSeanceNames = initial.origin_seance_names || [];
         this.origin = initial.origin || null;
         this.catalogPrograms = JSON.parse(document.getElementById('catalog-data').textContent);
+        this.programmes = initial.programmes || [];
+        this.seanceProg = initial.seance_prog || {};
       },
 
       scheduleSave() {
@@ -340,6 +329,8 @@
               planning: this.planning,
               seances: this.prog,
               seance_order: this.seanceOrder,
+              programmes: this.programmes,
+              seance_prog: this.seanceProg,
             }),
           });
           if (resp.ok) {
@@ -354,16 +345,75 @@
         }
       },
 
+      _genProgId() {
+        return 'p_' + Math.random().toString(16).slice(2, 10);
+      },
+
+      // ── Programmes (dossiers) ──
+      seancesIn(progId) {
+        var target = progId || null;
+        var sp = this.seanceProg || {};
+        return this.seanceOrder.filter(function (s) {
+          return (sp[s] || null) === target;
+        });
+      },
+      addProgramme(name) {
+        name = (name || '').trim();
+        if (!name) return;
+        var id = this._genProgId();
+        while (this.programmes.some(function (p) { return p.id === id; })) id = this._genProgId();
+        this.programmes.push({ id: id, name: name });
+        this.scheduleSave();
+      },
+      renameProgramme(id, name) {
+        name = (name || '').trim();
+        if (!name) return;
+        var pg = this.programmes.find(function (p) { return p.id === id; });
+        if (pg) { pg.name = name; this.scheduleSave(); }
+      },
+      deleteProgramme(id) {
+        this.programmes = this.programmes.filter(function (p) { return p.id !== id; });
+        // Séances du programme supprimé → Non classé
+        for (var s in this.seanceProg) {
+          if (this.seanceProg[s] === id) delete this.seanceProg[s];
+        }
+        this.scheduleSave();
+      },
+      moveProgramme(id, dir) {
+        var i = this.programmes.findIndex(function (p) { return p.id === id; });
+        if (i < 0) return;
+        var j = dir === 'up' ? i - 1 : i + 1;
+        if (j < 0 || j >= this.programmes.length) return;
+        var tmp = this.programmes[i];
+        this.programmes[i] = this.programmes[j];
+        this.programmes[j] = tmp;
+        this.scheduleSave();
+      },
+      moveSeanceToProg(sname, progId) {
+        if (!this.prog[sname]) return;
+        if (progId === '__none__' || !progId) {
+          delete this.seanceProg[sname];
+        } else {
+          if (!this.programmes.some(function (p) { return p.id === progId; })) return;
+          this.seanceProg[sname] = progId;
+        }
+        this.scheduleSave();
+      },
+
       // ── Séances ──
-      addSeance(name) {
+      addSeance(name, progId) {
         name = (name || '').trim();
         if (!name || this.prog[name]) return;
         this.prog[name] = [];
         this.seanceOrder.push(name);
+        if (progId && this.programmes.some(function (p) { return p.id === progId; })) {
+          this.seanceProg[name] = progId;
+        }
         this.scheduleSave();
       },
       deleteSeance(name) {
         delete this.prog[name];
+        delete this.seanceProg[name];
         this.seanceOrder = this.seanceOrder.filter(function (s) { return s !== name; });
         for (var d in this.planning) {
           if (this.planning[d] === name) this.planning[d] = '';
@@ -382,22 +432,32 @@
         }
         this.prog = newProg;
         this.seanceOrder = this.seanceOrder.map(function (s) { return s === oldName ? newName : s; });
+        if (this.seanceProg[oldName]) {
+          this.seanceProg[newName] = this.seanceProg[oldName];
+          delete this.seanceProg[oldName];
+        }
         for (var d in this.planning) {
           if (this.planning[d] === oldName) this.planning[d] = newName;
         }
         this.scheduleSave();
       },
-      moveSeance(name, dir) {
+      moveSeanceInProg(name, dir) {
+        // Déplace la séance parmi ses voisines du même programme
+        var pid = this.seanceProg[name] || null;
+        var siblings = this.seancesIn(pid);
+        var posInGroup = siblings.indexOf(name);
+        if (posInGroup < 0) return;
+        var swapName = dir === 'up' ? siblings[posInGroup - 1] : siblings[posInGroup + 1];
+        if (!swapName) return;
         var i = this.seanceOrder.indexOf(name);
-        if (i < 0) return;
-        var j = dir === 'up' ? i - 1 : i + 1;
-        if (j < 0 || j >= this.seanceOrder.length) return;
+        var j = this.seanceOrder.indexOf(swapName);
+        if (i < 0 || j < 0) return;
         var tmp = this.seanceOrder[i];
         this.seanceOrder[i] = this.seanceOrder[j];
         this.seanceOrder[j] = tmp;
         this.scheduleSave();
       },
-      addSeanceFromCatalog(progId, seanceName) {
+      addSeanceFromCatalog(progId, seanceName, destProg) {
         var p = this.catalogPrograms.find(function (x) { return x.id === progId; });
         if (!p) return;
         var sp = p.seances_preview.find(function (x) { return x.name === seanceName; });
@@ -410,6 +470,9 @@
           return { name: e.name, sets: e.sets, muscle: e.muscle };
         });
         this.seanceOrder.push(finalName);
+        if (destProg && destProg !== '__none__' && this.programmes.some(function (x) { return x.id === destProg; })) {
+          this.seanceProg[finalName] = destProg;
+        }
         this.scheduleSave();
       },
 

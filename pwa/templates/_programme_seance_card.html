@@ -1,0 +1,108 @@
+{# Carte séance — utilisée dans programme.html, dans une boucle par programme.
+   Variables Alpine attendues dans le scope parent :
+     - sname : nom de la séance
+     - prog, seanceOrder, seanceProg, programmes, originSeanceNames
+     - moveSeanceInProg, renameSeance, deleteSeance, moveSeanceToProg
+     - addExo, moveExo, deleteExo, toggleMuscle, scheduleSave
+#}
+<div class="card" x-data="{ open: false, renaming: false, newName: '', showMove: false }">
+  <div class="exo-head" @click="open = !open">
+    <div class="exo-title" x-text="sname"></div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:11px; color:#5a7a9a;" x-text="(prog[sname] || []).length + ' exos'"></span>
+      <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
+    </div>
+  </div>
+
+  <div class="exo-body" x-show="open" x-transition>
+    <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+      <button type="button" class="btn label-icon" @click="moveSeanceInProg(sname, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
+      <button type="button" class="btn label-icon" @click="moveSeanceInProg(sname, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
+      <button type="button" class="btn label-icon" @click="renaming = true; newName = sname; $nextTick(() => { var el = $el.closest('.card').querySelector('.rn-input'); if (el) el.focus(); })">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
+      </button>
+      <button type="button" class="btn label-icon" @click="showMove = !showMove">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#folder"/></svg>Déplacer
+      </button>
+      <button type="button" class="btn label-icon" @click="if(confirm('Supprimer la séance ' + sname + ' ?')) deleteSeance(sname)">
+        <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
+      </button>
+      <template x-if="originSeanceNames.includes(sname)">
+        <form method="post" action="/programme/seance/reset"
+              onsubmit="return confirm('Réinitialiser cette séance à sa version d\'origine ?');" style="display:inline;">
+          <input type="hidden" name="name" :value="sname">
+          <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
+        </form>
+      </template>
+    </div>
+
+    <div x-show="showMove" x-transition style="display:flex; gap:6px; margin-bottom:10px; align-items:center;">
+      <label class="field-label" style="margin:0; white-space:nowrap;">Déplacer vers</label>
+      <select class="field" style="flex:1; margin:0;"
+              @change="moveSeanceToProg(sname, $event.target.value); showMove=false; $event.target.value=''">
+        <option value="">— Choisir —</option>
+        <template x-for="pg in programmes" :key="pg.id">
+          <option :value="pg.id" :disabled="seanceProg[sname] === pg.id" x-text="pg.name"></option>
+        </template>
+        <option value="__none__" :disabled="!seanceProg[sname]">Non classé</option>
+      </select>
+    </div>
+
+    <div x-show="renaming" x-transition style="display:flex; gap:6px; margin-bottom:10px;">
+      <input type="text" class="rn-input field" x-model="newName" style="flex:1;" maxlength="60"
+             @keydown.enter.prevent="renameSeance(sname, newName); renaming=false"
+             @keydown.escape="renaming=false">
+      <button type="button" class="btn primary" @click="renameSeance(sname, newName); renaming=false">OK</button>
+    </div>
+
+    <template x-for="(ex, exIdx) in prog[sname]" :key="sname + '|' + exIdx + '|' + ex.name">
+      <div class="prog-exo-row">
+        <div class="prog-exo-form">
+          <div class="prog-exo-name" x-text="ex.name"></div>
+          <div class="prog-exo-fields">
+            <label class="field-label" style="margin-top:4px;">Séries</label>
+            <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()">
+            <label class="field-label">Muscle(s)</label>
+            <div class="muscle-checks">
+              {% for m in muscle_list %}
+                <label class="muscle-check">
+                  <input type="checkbox" value="{{ m }}"
+                         :checked="(ex.muscle || '').split(',').map(s => s.trim()).includes('{{ m }}')"
+                         @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
+                  <span>{{ m }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="prog-exo-actions">
+          <button type="button" class="btn mini" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
+          <button type="button" class="btn mini" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
+          <button type="button" class="btn mini" aria-label="Supprimer" @click="if(confirm('Supprimer ' + ex.name + ' ?')) deleteExo(sname, exIdx)"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
+        </div>
+      </div>
+    </template>
+
+    <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
+
+    <div x-data="{ newExo: { name: '', sets: 3, muscles: [] } }">
+      <label class="field-label" style="margin-top:0;">Nouvel exercice</label>
+      <input type="text" x-model="newExo.name" class="field" placeholder="Nom de l'exercice">
+      <label class="field-label">Séries</label>
+      <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15">
+      <label class="field-label">Muscle(s) — vide = auto-détection</label>
+      <div class="muscle-checks new-exo-muscles">
+        {% for m in muscle_list %}
+          <label class="muscle-check">
+            <input type="checkbox" value="{{ m }}" @change="$event.target.checked ? newExo.muscles.push('{{ m }}') : newExo.muscles.splice(newExo.muscles.indexOf('{{ m }}'), 1)">
+            <span>{{ m }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"
+              @click="addExo(sname, newExo); newExo = { name: '', sets: 3, muscles: [] }; $el.parentElement.querySelectorAll('.new-exo-muscles input[type=\'checkbox\']').forEach(c => c.checked = false)">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
+      </button>
+    </div>
+  </div>
+</div>
