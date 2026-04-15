@@ -458,6 +458,7 @@
     </button>
     <form method="post" action="/seance/add-cardio" x-show="open" x-transition style="margin-top:10px;">
       <input type="hidden" name="mode" value="{{ mode }}">
+      <input type="hidden" name="name" value="{{ seance_name }}">
       <input type="hidden" name="seance_name" value="{{ seance_name }}">
       <input type="hidden" name="date" value="{{ date_iso }}">
       <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:4px;">Type</label>
