@@ -10,7 +10,7 @@ from flask import Blueprint, render_template, request
 
 from core.data import get_hist, get_prog
 from core.dates import today_paris, DAYS_FR
-from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations
+from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations, get_rep_table
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +320,7 @@ def progres():
                 "best_r": int(best["Reps"]),
                 "one_rm": round(one_rm, 1),
                 "rep_ests": get_rep_estimations(one_rm),
+                "rep_table": get_rep_table(one_rm),
                 "chart_x": chart_x,
                 "chart_y": chart_y,
                 "table": table,

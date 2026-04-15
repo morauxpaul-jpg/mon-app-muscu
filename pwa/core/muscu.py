@@ -11,6 +11,24 @@ def get_rep_estimations(one_rm):
             {1: 1.0, 3: 0.94, 5: 0.89, 8: 0.81, 10: 0.75, 12: 0.71}.items()}
 
 
+def get_rep_table(one_rm):
+    """Table complète d'estimation du poids par nombre de reps via l'inverse
+    de la formule d'Epley : poids = 1RM / (1 + reps/30).
+    Retourne une liste de dicts {reps, weight, pct} ordonnée par reps croissant."""
+    if not one_rm or one_rm <= 0:
+        return []
+    reps_list = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20]
+    out = []
+    for r in reps_list:
+        w = one_rm / (1 + r / 30)
+        out.append({
+            "reps": r,
+            "weight": round(w, 1),
+            "pct": round(w / one_rm * 100),
+        })
+    return out
+
+
 def get_base_name(full_name):
     """'Développé couché (Barre)' -> 'Développé couché'."""
     return full_name.split("(")[0].strip() if "(" in full_name else full_name

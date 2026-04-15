@@ -16,7 +16,9 @@
       quotaRemaining: {{ quota_remaining }},
       quotaLimit: {{ quota_limit }},
       suggestions: {{ suggestions | tojson }},
-      prenom: {{ prenom | tojson }}
+      prenom: {{ prenom | tojson }},
+      messages: {{ messages | tojson }},
+      prefill: {{ prefill | tojson }}
     };
   </script>
 
@@ -42,10 +44,15 @@
         </div>
       </template>
 
-      <!-- Historique -->
-      <template x-for="(m, i) in messages" :key="i">
-        <div :class="'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-bot')">
-          <div class="msg-bubble" x-html="renderMd(m.content)"></div>
+      <!-- Historique groupé par date -->
+      <template x-for="(grp, gi) in groupedMessages()" :key="gi">
+        <div>
+          <div class="date-sep"><span x-text="grp.label"></span></div>
+          <template x-for="(m, i) in grp.items" :key="gi + '-' + i">
+            <div :class="'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-bot')">
+              <div class="msg-bubble" x-html="renderMd(m.content)"></div>
+            </div>
+          </template>
         </div>
       </template>
 
@@ -59,6 +66,14 @@
       <!-- Message d'erreur -->
       <div class="msg msg-bot" x-show="errorMsg" x-cloak>
         <div class="msg-bubble msg-error" x-text="errorMsg"></div>
+      </div>
+
+      <!-- Bouton effacer (si historique non vide) -->
+      <div x-show="messages.length > 0" style="text-align:center; margin-top:14px;">
+        <button type="button" class="btn mini label-icon" @click="askClear()" style="color:var(--text-dim); font-size:0.75rem;">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>
+          Effacer l'historique
+        </button>
       </div>
     </div>
 
@@ -83,12 +98,28 @@
     </div>
   </div>
 
+  <!-- Modal de confirmation "effacer" -->
+  <div id="coach-clear-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:200; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#0b1423; border:1px solid rgba(255,69,58,0.35); border-radius:14px; padding:18px; max-width:320px; width:100%;">
+      <div style="font-weight:700; color:#FF8F85; margin-bottom:8px;">Effacer tout l'historique ?</div>
+      <div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:14px;">Tous tes échanges avec le coach seront supprimés. Cette action est définitive.</div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-cancel" style="flex:1;" onclick="document.getElementById('coach-clear-modal').style.display='none'">Annuler</button>
+        <form method="post" action="/coach/clear" style="flex:1; margin:0;">
+          <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.2); border-color:rgba(255,69,58,0.5); color:#FF8F85;">Effacer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script>
     function coachChat() {
       var cfg = window.__coachInit || {};
       return {
-        messages: JSON.parse(sessionStorage.getItem('coach_history') || '[]'),
-        draft: '',
+        messages: (cfg.messages || []).map(function (m) {
+          return { role: m.role, content: m.content, created_at: m.created_at || null };
+        }),
+        draft: cfg.prefill || '',
         typing: false,
         errorMsg: '',
         quotaLeft: cfg.quotaRemaining || 0,
@@ -98,8 +129,34 @@
         init() {
           this.$nextTick(() => this.scrollDown());
         },
-        persist() {
-          try { sessionStorage.setItem('coach_history', JSON.stringify(this.messages)); } catch (e) {}
+        askClear() {
+          document.getElementById('coach-clear-modal').style.display = 'flex';
+        },
+        groupedMessages() {
+          // Regroupe par jour civil local (Aujourd'hui / Hier / JJ mois).
+          var MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+          var today = new Date(); today.setHours(0,0,0,0);
+          var yesterday = new Date(today.getTime() - 86400000);
+          function dayKey(d) { return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); }
+          function labelFor(d) {
+            if (dayKey(d) === dayKey(today)) return "Aujourd'hui";
+            if (dayKey(d) === dayKey(yesterday)) return 'Hier';
+            return d.getDate() + ' ' + MOIS[d.getMonth()];
+          }
+          var groups = [];
+          var current = null;
+          for (var i = 0; i < this.messages.length; i++) {
+            var m = this.messages[i];
+            var when = m.created_at ? new Date(m.created_at) : new Date();
+            if (isNaN(when.getTime())) when = new Date();
+            var key = dayKey(when);
+            if (!current || current.key !== key) {
+              current = { key: key, label: labelFor(when), items: [] };
+              groups.push(current);
+            }
+            current.items.push(m);
+          }
+          return groups;
         },
         renderMd(text) {
           // Escape HTML puis applique un markdown minimal : **bold**, *italic*,
@@ -128,9 +185,9 @@
           const msg = (text || '').trim();
           if (!msg || this.typing || this.quotaLeft <= 0) return;
           this.errorMsg = '';
-          this.messages.push({ role: 'user', content: msg });
+          const now = new Date().toISOString();
+          this.messages.push({ role: 'user', content: msg, created_at: now });
           this.draft = '';
-          this.persist();
           this.typing = true;
           this.$nextTick(() => this.scrollDown());
           try {
@@ -144,9 +201,8 @@
               this.errorMsg = data.error || 'Erreur lors de l\'envoi.';
               if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
             } else {
-              this.messages.push({ role: 'assistant', content: data.reply || '' });
+              this.messages.push({ role: 'assistant', content: data.reply || '', created_at: new Date().toISOString() });
               if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
-              this.persist();
             }
           } catch (e) {
             this.errorMsg = 'Réseau indisponible.';
@@ -234,6 +290,21 @@
     @keyframes typing-dot {
       0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
       30% { transform: translateY(-4px); opacity: 1; }
+    }
+    .date-sep {
+      text-align: center;
+      margin: 10px 0 4px;
+      font-size: 0.7rem;
+      color: var(--text-dim, #8899aa);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      position: relative;
+    }
+    .date-sep span {
+      background: rgba(5,10,24,0.6);
+      padding: 2px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06);
     }
     .coach-suggestions {
       display: flex;

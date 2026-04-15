@@ -251,6 +251,9 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
             "tips": [],
             "image": None,
         }
+    # Expose le 1RM courant au modal pour afficher la Table RM
+    info = dict(info)
+    info["one_rm"] = float(record.get("one_rm") or 0) if isinstance(record, dict) else 0
 
     return {
         "base": base,

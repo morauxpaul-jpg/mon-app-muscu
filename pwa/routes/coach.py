@@ -9,9 +9,12 @@ profiles.coach_quota_count (reset automatique à chaque nouveau jour).
 import logging
 import os
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 
-from core.data import get_prog, get_hist, get_profile, save_profile, get_onboarding
+from core.data import (
+    get_prog, get_hist, get_profile, save_profile, get_onboarding,
+    list_coach_messages, insert_coach_message, clear_coach_messages,
+)
 from core.dates import today_paris_str
 from core.limiter import limiter
 
@@ -127,8 +130,14 @@ def index():
     except Exception as e:
         logger.error("/coach load profile/onboarding FAILED: %s", e)
         profile, onboarding = {}, {}
+    try:
+        messages = list_coach_messages(50) or []
+    except Exception as e:
+        logger.error("/coach load history FAILED: %s", e)
+        messages = []
     prenom = (onboarding.get("prenom") or profile.get("prenom") or "").strip()
     remaining = _quota_remaining(profile)
+    prefill = (request.args.get("q") or "").strip()[:500]
     return render_template(
         "coach.html",
         active="plus",
@@ -136,7 +145,19 @@ def index():
         suggestions=SUGGESTIONS,
         quota_remaining=remaining,
         quota_limit=DAILY_QUOTA,
+        messages=messages,
+        prefill=prefill,
     )
+
+
+@bp.route("/coach/clear", methods=["POST"])
+@limiter.limit("10 per minute")
+def clear():
+    try:
+        clear_coach_messages()
+    except Exception as e:
+        logger.error("/coach/clear FAILED: %s", e)
+    return redirect(url_for("coach.index"))
 
 
 @bp.route("/coach/ask", methods=["POST"])
@@ -193,13 +214,26 @@ def ask():
         dernieres_seances=_dernieres_seances(hist),
     )
 
+    # Historique (10 derniers) envoyé comme contexte conversationnel
+    try:
+        history = list_coach_messages(10) or []
+    except Exception as e:
+        logger.error("/coach/ask history load FAILED: %s", e)
+        history = []
+    api_messages = [
+        {"role": m["role"], "content": m["content"]}
+        for m in history
+        if m.get("role") in ("user", "assistant") and m.get("content")
+    ]
+    api_messages.append({"role": "user", "content": message})
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
             system=system_prompt,
-            messages=[{"role": "user", "content": message}],
+            messages=api_messages,
         )
         # Concatène les blocs text (Anthropic renvoie une liste de content blocks)
         reply_parts = []
@@ -225,6 +259,14 @@ def ask():
         else:
             user_msg = f"Erreur Anthropic ({err_type}) : {err_msg}"
         return jsonify({"error": user_msg}), 502
+
+    # Persiste le tour de conversation (user puis assistant) pour que
+    # l'historique survive aux rechargements et aux autres sessions.
+    try:
+        insert_coach_message("user", message)
+        insert_coach_message("assistant", reply)
+    except Exception as e:
+        logger.error("/coach/ask persist FAILED: %s", e)
 
     return jsonify({
         "reply": reply,

@@ -119,6 +119,16 @@
 .exo-info-box .info-section { margin-bottom: 8px; }
 .exo-info-box .info-label { font-size: 0.7rem; color: var(--text-dim, #8899aa); letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; }
 .exo-info-box .info-text { font-size: 0.88rem; line-height: 1.4; }
+.exo-info-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid rgba(88,204,255,0.15); }
+.exo-info-tab {
+  background: none; border: 0; padding: 6px 12px;
+  color: var(--text-dim, #8899aa); font-size: 0.82rem;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  font-weight: 600;
+}
+.exo-info-tab.active { color: var(--accent, #58CCFF); border-bottom-color: var(--accent, #58CCFF); }
+.exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; }
+.exo-info-box .rm-row-max td { color: var(--accent, #58CCFF); background: rgba(88,204,255,0.06); }
 </style>
 {% endblock %}
 
@@ -606,18 +616,52 @@
     <div class="exo-info-box" onclick="event.stopPropagation()">
       <h4 id="exo-info-title"></h4>
       <div id="exo-info-image" style="text-align:center; margin-bottom:12px;"></div>
-      <div class="info-section">
-        <div class="info-label">MUSCLES</div>
-        <div id="exo-info-muscles" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
+
+      <div class="exo-info-tabs" role="tablist">
+        <button type="button" class="exo-info-tab active" data-tab="fiche" onclick="switchExoTab('fiche')">Fiche</button>
+        <button type="button" class="exo-info-tab" data-tab="rm" onclick="switchExoTab('rm')">Table RM</button>
       </div>
-      <div class="info-section">
-        <div class="info-label">EXÉCUTION</div>
-        <div class="info-text" id="exo-info-desc"></div>
+
+      <div id="exo-tab-fiche" class="exo-tab-pane">
+        <div class="info-section">
+          <div class="info-label">MUSCLES</div>
+          <div id="exo-info-muscles" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
+        </div>
+        <div class="info-section">
+          <div class="info-label">EXÉCUTION</div>
+          <div class="info-text" id="exo-info-desc"></div>
+        </div>
+        <div class="info-section" id="exo-info-tips-section">
+          <div class="info-label">CONSEILS</div>
+          <ul id="exo-info-tips" style="padding-left:18px; margin:4px 0 0; font-size:0.88rem; line-height:1.5;"></ul>
+        </div>
+        <a id="exo-info-coach-link" href="/coach" class="btn label-icon"
+           style="width:100%; justify-content:center; margin-top:10px; color:var(--accent); border-color:rgba(88,204,255,0.4);">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#message-circle"/></svg>
+          Demander conseil au coach
+        </a>
       </div>
-      <div class="info-section" id="exo-info-tips-section">
-        <div class="info-label">CONSEILS</div>
-        <ul id="exo-info-tips" style="padding-left:18px; margin:4px 0 0; font-size:0.88rem; line-height:1.5;"></ul>
+
+      <div id="exo-tab-rm" class="exo-tab-pane" style="display:none;">
+        <div id="exo-rm-empty" class="info-section" style="text-align:center; color:var(--text-dim); padding:14px 0;">
+          Aucun 1RM estimé pour cet exercice — fais d'abord quelques séries pour débloquer la Table RM.
+        </div>
+        <div id="exo-rm-content" style="display:none;">
+          <div class="info-section">
+            <div class="info-label">1RM ESTIMÉ</div>
+            <div style="font-size:1.2rem; font-weight:700; color:var(--accent);"><span id="exo-rm-value"></span> kg</div>
+          </div>
+          <div class="info-label" style="margin-top:8px;">POIDS PAR NOMBRE DE REPS</div>
+          <table class="ltable rm-table" style="margin-top:4px;">
+            <thead><tr><th>Reps</th><th>Poids</th><th>% 1RM</th></tr></thead>
+            <tbody id="exo-rm-rows"></tbody>
+          </table>
+          <div style="font-size:0.72rem; color:var(--text-dim); margin-top:6px; font-style:italic;">
+            Formule Epley : poids = 1RM / (1 + reps/30)
+          </div>
+        </div>
       </div>
+
       <button type="button" class="btn primary" style="width:100%; margin-top:10px;" onclick="document.getElementById('exo-info-modal').style.display='none'">Fermer</button>
     </div>
   </div>
@@ -668,7 +712,48 @@
     } else {
       tipsSection.style.display = 'none';
     }
+
+    // Lien coach pré-rempli avec le nom de l'exercice
+    var coachLink = document.getElementById('exo-info-coach-link');
+    if (coachLink) {
+      var exoName = info.name || '';
+      var q = 'Comment progresser au ' + exoName + ' ?';
+      coachLink.href = '/coach?q=' + encodeURIComponent(q);
+    }
+
+    // Table RM — remplit la 2e tab depuis info.one_rm
+    var oneRM = parseFloat(info.one_rm || 0) || 0;
+    var rmEmpty = document.getElementById('exo-rm-empty');
+    var rmContent = document.getElementById('exo-rm-content');
+    if (oneRM > 0) {
+      rmEmpty.style.display = 'none';
+      rmContent.style.display = '';
+      document.getElementById('exo-rm-value').textContent = Math.round(oneRM * 10) / 10;
+      var reps = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
+      var tbody = document.getElementById('exo-rm-rows');
+      tbody.innerHTML = reps.map(function (r) {
+        var w = oneRM / (1 + r / 30);
+        var pct = Math.round(w / oneRM * 100);
+        var cls = r === 1 ? 'rm-row-max' : '';
+        return '<tr class="' + cls + '"><td><strong>' + r + ' rep' + (r > 1 ? 's' : '') + '</strong></td><td>' + (Math.round(w * 10) / 10) + ' kg</td><td>' + pct + '%</td></tr>';
+      }).join('');
+    } else {
+      rmEmpty.style.display = '';
+      rmContent.style.display = 'none';
+    }
+
+    // Revient toujours sur la Fiche en ouvrant le modal
+    switchExoTab('fiche');
     document.getElementById('exo-info-modal').style.display = 'flex';
+  }
+
+  function switchExoTab(tab) {
+    var tabs = document.querySelectorAll('.exo-info-tab');
+    tabs.forEach(function (t) {
+      t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+    });
+    document.getElementById('exo-tab-fiche').style.display = (tab === 'fiche') ? '' : 'none';
+    document.getElementById('exo-tab-rm').style.display = (tab === 'rm') ? '' : 'none';
   }
 
   // ── Modal system (Feature 4) ──────────────────────────────────

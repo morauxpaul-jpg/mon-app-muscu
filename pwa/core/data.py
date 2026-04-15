@@ -96,6 +96,19 @@ def sum_nutrition_day(date_str):
     return db.sum_nutrition_day(_uid(), date_str)
 
 
+# ── Coach IA (historique) ───────────────────────────────────────────────
+def list_coach_messages(limit=50):
+    return db.list_coach_messages(_uid(), limit)
+
+
+def insert_coach_message(role, content):
+    return db.insert_coach_message(_uid(), role, content)
+
+
+def clear_coach_messages():
+    return db.clear_coach_messages(_uid())
+
+
 # ── Tier (Prompt D — paywall préparé, non activé) ───────────────────────
 def is_premium() -> bool:
     """True si l'utilisateur courant est tier 'vip'. Pour l'instant tout le

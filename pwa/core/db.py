@@ -396,6 +396,38 @@ def set_user_tier(user_id: str, tier: str) -> None:
     client.table("profiles").upsert({"id": user_id, "tier": tier}).execute()
 
 
+def list_coach_messages(user_id: str, limit: int = 50) -> list[dict]:
+    """Derniers messages du coach (rôle, content, created_at) en ordre chronologique."""
+    client = get_client()
+    resp = (
+        client.table("coach_messages")
+        .select("role, content, created_at")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = list(resp.data or [])
+    rows.reverse()
+    return rows
+
+
+def insert_coach_message(user_id: str, role: str, content: str) -> None:
+    if role not in ("user", "assistant"):
+        raise ValueError(f"role invalide: {role}")
+    client = get_client()
+    client.table("coach_messages").insert({
+        "user_id": user_id,
+        "role": role,
+        "content": content,
+    }).execute()
+
+
+def clear_coach_messages(user_id: str) -> None:
+    client = get_client()
+    client.table("coach_messages").delete().eq("user_id", user_id).execute()
+
+
 def sum_nutrition_day(user_id: str, date_str: str) -> dict:
     rows = list_nutrition(user_id, date_str)
     out = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}

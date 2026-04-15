@@ -184,12 +184,48 @@
         <div class="detail-metric"><div class="detail-label">SÉRIES</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.total_sets }}</div></div>
       </div>
 
-      {% if zoom.rep_ests %}
-        <div class="field-label" style="margin-top:12px;">Estimations par reps</div>
-        <table class="ltable">
-          <tr>{% for reps, w in zoom.rep_ests.items() %}<th>{{ reps }}r</th>{% endfor %}</tr>
-          <tr>{% for reps, w in zoom.rep_ests.items() %}<td>{{ w }}kg</td>{% endfor %}</tr>
-        </table>
+      {% if zoom.rep_table %}
+        <div class="field-label" style="margin-top:12px;">Table RM — poids estimé par reps (Epley)</div>
+        <div x-data="rmCalc({{ zoom.one_rm }}, {{ zoom.rep_table|tojson }})" class="rm-table-wrap">
+          <table class="ltable rm-table">
+            <thead>
+              <tr><th>Reps</th><th>Poids</th><th>% 1RM</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="r in rows" :key="r.reps">
+                <tr :class="r.reps === 1 ? 'rm-row-max' : ''">
+                  <td><strong x-text="r.reps + ' rep' + (r.reps > 1 ? 's' : '')"></strong></td>
+                  <td><span x-text="r.weight"></span> kg</td>
+                  <td><span x-text="r.pct"></span>%</td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <div class="rm-calc">
+            <div class="field-label" style="margin-top:10px;">Calculateur interactif</div>
+            <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:6px;">Entre un poids et des reps pour estimer le 1RM et comparer.</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end;">
+              <div>
+                <label style="font-size:0.7rem; color:var(--text-dim);">Poids (kg)</label>
+                <input type="number" class="field" step="0.5" min="0" x-model.number="calcW" @input="recalc()">
+              </div>
+              <div>
+                <label style="font-size:0.7rem; color:var(--text-dim);">Reps</label>
+                <input type="number" class="field" step="1" min="1" max="30" x-model.number="calcR" @input="recalc()">
+              </div>
+              <div style="padding-bottom:6px;">
+                <div style="font-size:0.7rem; color:var(--text-dim);">1RM</div>
+                <div style="font-size:1.1rem; font-weight:700; color:var(--accent);" x-text="calcRM ? calcRM + ' kg' : '—'"></div>
+              </div>
+            </div>
+            <div x-show="calcRM > 0" style="font-size:0.78rem; color:var(--text-dim); margin-top:6px;">
+              <span x-text="calcRM >= oneRM ? '↑' : '↓'"></span>
+              <span x-text="Math.abs(Math.round((calcRM - oneRM) * 10) / 10)"></span> kg
+              <span x-text="calcRM >= oneRM ? 'au-dessus' : 'en-dessous'"></span> de ton meilleur 1RM actuel.
+            </div>
+          </div>
+        </div>
       {% endif %}
 
       <div id="zoom-chart" style="width:100%; height:220px; margin-top:14px;"></div>
@@ -376,5 +412,27 @@
   </div>
   {% endif %}
 
+  <style>
+    .rm-table-wrap { margin-top: 4px; }
+    .rm-table td, .rm-table th { text-align: center; font-variant-numeric: tabular-nums; }
+    .rm-row-max td { color: var(--accent, #58CCFF); background: rgba(88,204,255,0.06); }
+    .rm-calc { margin-top: 12px; padding: 10px; border: 1px solid rgba(88,204,255,0.15); border-radius: 10px; background: rgba(88,204,255,0.03); }
+  </style>
+  <script>
+    function rmCalc(oneRM, rows) {
+      return {
+        oneRM: oneRM || 0,
+        rows: rows || [],
+        calcW: 0,
+        calcR: 0,
+        calcRM: 0,
+        recalc() {
+          var w = parseFloat(this.calcW), r = parseInt(this.calcR);
+          if (!w || !r || r <= 0) { this.calcRM = 0; return; }
+          this.calcRM = Math.round(w * (1 + r / 30) * 10) / 10;
+        },
+      };
+    }
+  </script>
   <script>document.getElementById('page-loader').style.display = 'none';</script>
 {% endblock %}
