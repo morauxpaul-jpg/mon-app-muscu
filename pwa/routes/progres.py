@@ -142,7 +142,33 @@ def _build_muscle_data(df_p):
     return out
 
 
-def _build_cardio_stats(cardio_rows):
+def _parse_iso_date(s):
+    try:
+        return date.fromisoformat(str(s))
+    except Exception:
+        return None
+
+
+def _compute_start_monday(rows):
+    """Lundi de la semaine de la première séance trackée. None si aucune date valide."""
+    dates = [_parse_iso_date(r.get("Date")) for r in rows]
+    dates = [d for d in dates if d is not None]
+    if not dates:
+        return None
+    first = min(dates)
+    return first - timedelta(days=first.weekday())
+
+
+def _rel_week(date_str, start_monday):
+    """Indice de semaine 1-based relatif à start_monday. None si parse échoue."""
+    d = _parse_iso_date(date_str)
+    if d is None or start_monday is None:
+        return None
+    d_monday = d - timedelta(days=d.weekday())
+    return (d_monday - start_monday).days // 7 + 1
+
+
+def _build_cardio_stats(cardio_rows, start_monday):
     """Stats cardio : totaux, records, volume par semaine, répartition par type."""
     if not cardio_rows:
         return None
@@ -151,10 +177,12 @@ def _build_cardio_stats(cardio_rows):
     total_km = round(sum(float(r.get("Poids") or 0) for r in cardio_rows), 1)
     sessions = len(cardio_rows)
 
-    # Minutes par semaine (8 dernières)
+    # Minutes par semaine (8 dernières), indexée relatif à la 1ère séance.
     by_week = {}
     for r in cardio_rows:
-        w = int(r.get("Semaine") or 0)
+        w = _rel_week(r.get("Date"), start_monday)
+        if w is None:
+            continue
         by_week[w] = by_week.get(w, 0) + int(r.get("Reps") or 0)
     weeks_sorted = sorted(by_week.keys())[-8:]
     labels = [f"S{w}" for w in weeks_sorted]
@@ -224,7 +252,10 @@ def progres():
 
     # ── Cardio — statistiques dédiées avant filtrage ──
     cardio_rows = [r for r in hist if str(r.get("Exercice") or "").startswith("CARDIO:")]
-    cardio = _build_cardio_stats(cardio_rows)
+    # start_monday : lundi de la semaine de la toute 1ère séance (muscu + cardio)
+    # pour numéroter S1, S2, … relatif à quand le user a commencé à tracker.
+    start_monday = _compute_start_monday(hist)
+    cardio = _build_cardio_stats(cardio_rows, start_monday)
 
     # Exclure le cardio des stats muscu (sinon il fausse les 1RM, le filtre muscle, etc.)
     hist = [r for r in hist if not str(r.get("Exercice") or "").startswith("CARDIO:")]
@@ -363,10 +394,13 @@ def progres():
     next_m, next_y = (cal_month + 1, cal_year) if cal_month < 12 else (1, cal_year + 1)
 
     # ── Volume par semaine (8 dernières) ─────────────────────
+    # Indexé relatif à la 1ère séance (S1, S2, …) — pas ISO week.
     vol_by_week = {}
     for r in hist:
         if r["Poids"] > 0 and r["Reps"] > 0:
-            w = int(r["Semaine"])
+            w = _rel_week(r.get("Date"), start_monday)
+            if w is None:
+                continue
             vol_by_week[w] = vol_by_week.get(w, 0) + int(r["Poids"] * r["Reps"])
     vol_weeks_sorted = sorted(vol_by_week.keys())[-8:]
     vol_labels = [f"S{w}" for w in vol_weeks_sorted]
