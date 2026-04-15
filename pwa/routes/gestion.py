@@ -11,8 +11,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
 from core.limiter import limiter
-from core.muscu import auto_muscles
-
 bp = Blueprint("gestion", __name__)
 
 DEFAULT_SETTINGS = {
@@ -78,22 +76,6 @@ def update_settings():
     prog["_settings"] = s
     save_prog(prog)
     return redirect(url_for("gestion.gestion"))
-
-
-@bp.route("/gestion/auto-muscles", methods=["POST"])
-def auto_assign():
-    prog = get_prog()
-    updated, skipped = [], []
-    for s in [k for k in prog if not k.startswith("_")]:
-        for ex in prog[s]:
-            new_m = auto_muscles(ex["name"])
-            if new_m:
-                ex["muscle"] = new_m
-                updated.append(f"{ex['name']} → {new_m}")
-            else:
-                skipped.append(ex["name"])
-    save_prog(prog)
-    return redirect(url_for("gestion.gestion") + f"?updated={len(updated)}&skipped={len(skipped)}")
 
 
 @bp.route("/gestion/reset-soft", methods=["POST"])

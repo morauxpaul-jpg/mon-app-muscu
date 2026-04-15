@@ -46,7 +46,7 @@
 
       <!-- Historique groupé par date -->
       <template x-for="(grp, gi) in groupedMessages()" :key="gi">
-        <div>
+        <div class="msg-group">
           <div class="date-sep"><span x-text="grp.label"></span></div>
           <template x-for="(m, i) in grp.items" :key="gi + '-' + i">
             <div :class="'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-bot')">
@@ -159,11 +159,15 @@
           return groups;
         },
         renderMd(text) {
-          // Escape HTML puis applique un markdown minimal : **bold**, *italic*,
-          // `code`, tirets et retours ligne.
+          // Escape HTML puis applique un markdown minimal : headers, **bold**,
+          // *italic*, `code`, listes à puce et retours ligne.
           if (!text) return '';
           var esc = String(text)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          // Headers en début de ligne (avant les autres transfos qui touchent *)
+          esc = esc.replace(/^###\s+(.+)$/gm, '<h5 class="md-h">$1</h5>');
+          esc = esc.replace(/^##\s+(.+)$/gm, '<h4 class="md-h">$1</h4>');
+          esc = esc.replace(/^#\s+(.+)$/gm, '<h3 class="md-h">$1</h3>');
           // Code inline avec backticks
           esc = esc.replace(/`([^`\n]+)`/g, '<code>$1</code>');
           // Bold **…**
@@ -173,8 +177,11 @@
           // Listes à puce : lignes commençant par - ou *
           esc = esc.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
           esc = esc.replace(/(<li>.*<\/li>(?:\n|$))+/g, function(m) { return '<ul>' + m.replace(/\n/g, '') + '</ul>'; });
-          // Retours à la ligne
+          // Retours à la ligne (sauf à l'intérieur des headers/listes/blocs déjà transformés)
           esc = esc.replace(/\n/g, '<br>');
+          // Nettoie les <br> parasites avant/après les blocs
+          esc = esc.replace(/<br>\s*(<\/?(?:h[3-5]|ul|li)[^>]*>)/g, '$1');
+          esc = esc.replace(/(<\/(?:h[3-5]|ul|li)>)\s*<br>/g, '$1');
           return esc;
         },
         scrollDown() {
@@ -377,6 +384,24 @@
     }
     .msg-bubble ul li {
       margin-bottom: 2px;
+    }
+    .msg-bubble .md-h {
+      margin: 8px 0 4px;
+      color: #fff;
+      letter-spacing: 0.5px;
+      text-transform: none;
+      text-shadow: none;
+      animation: none;
+    }
+    .msg-bubble h3.md-h { font-size: 1rem; }
+    .msg-bubble h4.md-h { font-size: 0.95rem; color: var(--violet, #B388FF); }
+    .msg-bubble h5.md-h { font-size: 0.88rem; color: var(--accent, #58CCFF); }
+    .msg-bubble .md-h:first-child { margin-top: 0; }
+    /* Espacement entre les bulles à l'intérieur d'un groupe de date */
+    .msg-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
   </style>
 {% endblock %}

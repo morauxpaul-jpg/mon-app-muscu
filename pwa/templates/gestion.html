@@ -4,11 +4,6 @@
 {% block content %}
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Gestion</h1>
 
-  {% if request.args.get('updated') %}
-    <div class="card label-icon" style="border-color: var(--success);">
-      <svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>{{ request.args.get('updated') }} exercice(s) mis à jour, {{ request.args.get('skipped') }} non reconnu(s).
-    </div>
-  {% endif %}
   {% if request.args.get('reset') == 'soft' %}
     <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Historique réinitialisé. Les records sont archivés.</div>
   {% endif %}
@@ -51,16 +46,8 @@
     </div>
   </div>
 
-  {# ── Section : Programme ─────────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>PROGRAMME</h2>
-
-  <div class="card">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Auto-assigner les muscles</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Détecte automatiquement les muscles selon le nom de chaque exercice du programme.</p>
-    <form method="post" action="/gestion/auto-muscles">
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg>Lancer l'auto-assignation</button>
-    </form>
-  </div>
+  {# ── Section : Préférences ─────────────────── #}
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>PRÉFÉRENCES</h2>
 
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sliders"/></svg>Paramètres d'affichage</h3>
