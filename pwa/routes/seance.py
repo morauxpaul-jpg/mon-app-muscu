@@ -632,20 +632,34 @@ def add_cardio():
     except ValueError:
         duree_min = 0
     try:
-        distance_km = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
+        distance_val = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
     except ValueError:
-        distance_km = 0.0
+        distance_val = 0.0
+    try:
+        vitesse = max(0.0, float((f.get("vitesse") or "0").replace(",", ".")))
+    except ValueError:
+        vitesse = 0.0
+    try:
+        cal_saisie = int(float(f.get("calories") or 0))
+    except ValueError:
+        cal_saisie = 0
     rpe = (f.get("rpe") or "").strip()
     if rpe not in RPE_LABELS:
         rpe = ""
+    note = (f.get("note") or "").strip()[:80]
 
-    profile = get_profile() or {}
-    poids_kg = float(profile.get("poids_kg") or 0)
-    calories = _estimate_calories(met, duree_min, poids_kg) if duree_min > 0 else 0
+    if cal_saisie > 0:
+        calories = cal_saisie
+    else:
+        profile = get_profile() or {}
+        poids_kg = float(profile.get("poids_kg") or 0)
+        calories = _estimate_calories(met, duree_min, poids_kg) if duree_min > 0 else 0
 
     parts = []
     if calories > 0: parts.append(f"Cal:{calories}")
+    if vitesse > 0: parts.append(f"Vit:{vitesse:g}")
     if rpe: parts.append(f"RPE:{rpe}")
+    if note: parts.append(note)
     remarque = " | ".join(parts)
 
     exo_final = f"CARDIO:{activite}"
@@ -655,7 +669,7 @@ def add_cardio():
         "Exercice": exo_final,
         "Série": 1,
         "Reps": duree_min,
-        "Poids": distance_km,
+        "Poids": distance_val,
         "Remarque": remarque,
         "Muscle": "Cardio",
         "Date": date_str,

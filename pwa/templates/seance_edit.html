@@ -451,7 +451,7 @@
   {% endif %}
 
   {# ── Bloc cardio inline (optionnel, ajoute un cardio à cette séance) ── #}
-  <div class="card" x-data="{ open: false }" style="margin-top:14px;">
+  <div class="card" x-data="cardioBlock()" style="margin-top:14px;">
     <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" @click="open = !open">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#flame"/></svg>
       <span x-text="open ? 'Fermer le cardio' : 'Ajouter du cardio'"></span>
@@ -461,7 +461,7 @@
       <input type="hidden" name="seance_name" value="{{ seance_name }}">
       <input type="hidden" name="date" value="{{ date_iso }}">
       <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:4px;">Type</label>
-      <select name="activite" class="cell-input" style="width:100%;">
+      <select name="activite" x-model="activite" class="cell-input" style="width:100%;">
         <option>Course</option>
         <option>Vélo</option>
         <option>Rameur</option>
@@ -476,11 +476,21 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div>
           <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Durée (min)</label>
-          <input type="number" inputmode="numeric" min="0" name="duree_min" class="cell-input" style="width:100%;" placeholder="20">
+          <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input" style="width:100%;" placeholder="20">
         </div>
         <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Distance (km)</label>
-          <input type="number" inputmode="decimal" step="0.1" min="0" name="distance_km" class="cell-input" style="width:100%;" placeholder="0">
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().distLabel"></label>
+          <input type="number" inputmode="decimal" :step="units().distStep" min="0" name="distance_km" x-model="distance" class="cell-input" style="width:100%;" placeholder="0">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+        <div>
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().vitLabel || 'Vitesse'"></label>
+          <input type="number" inputmode="decimal" step="0.1" min="0" name="vitesse" x-model="vitesse" class="cell-input" style="width:100%;" :placeholder="autoVitesse()">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Calories (kcal)</label>
+          <input type="number" inputmode="numeric" min="0" name="calories" x-model="calories" class="cell-input" style="width:100%;" placeholder="auto">
         </div>
       </div>
       <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:8px;">Intensité</label>
@@ -490,11 +500,48 @@
         <option>Modéré</option>
         <option>Intense</option>
       </select>
+      <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:8px;">Remarque</label>
+      <input type="text" name="note" class="cell-input" style="width:100%;" maxlength="80" placeholder="ex: fractionné, tempo, lieu…">
       <button type="submit" class="btn primary label-icon" style="width:100%; margin-top:10px; justify-content:center;" data-haptic="1">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer le cardio
       </button>
     </form>
   </div>
+
+  <script>
+    function cardioBlock() {
+      var UNITS = {
+        "Course":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+        "Vélo":                { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+        "Rameur":              { distLabel: "Distance (km)",    vitLabel: "Allure (min/500m)", distStep: "0.1" },
+        "Natation":            { distLabel: "Distance (km)",    vitLabel: "Vitesse (m/min)", distStep: "0.1" },
+        "Corde":               { distLabel: "Nombre de sauts",  vitLabel: "Sauts/min",       distStep: "1" },
+        "HIIT":                { distLabel: "Rounds",           vitLabel: "",                distStep: "1" },
+        "Marche":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+        "Elliptique":          { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+        "Montée d'escaliers":  { distLabel: "Étages (ou marches)", vitLabel: "Marches/min",  distStep: "1" },
+        "Autre":               { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+      };
+      return {
+        open: false,
+        activite: "Course",
+        duree: "",
+        distance: "",
+        vitesse: "",
+        calories: "",
+        units: function () { return UNITS[this.activite] || UNITS["Autre"]; },
+        autoVitesse: function () {
+          var d = parseFloat(this.distance), t = parseFloat(this.duree);
+          if (!d || !t) return "";
+          var u = this.units();
+          if (u.vitLabel.indexOf("km/h") >= 0) return (d / (t / 60)).toFixed(1);
+          if (u.vitLabel.indexOf("m/min") >= 0) return ((d * 1000) / t).toFixed(0);
+          if (u.vitLabel.indexOf("/min") >= 0) return (d / t).toFixed(0);
+          return "";
+        },
+      };
+    }
+  </script>
 
   <form method="post" action="/seance/finish" onsubmit="clearAllDrafts()">
     <input type="hidden" name="mode" value="{{ mode }}">
