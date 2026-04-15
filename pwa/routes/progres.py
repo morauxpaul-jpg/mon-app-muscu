@@ -173,8 +173,9 @@ def _build_cardio_stats(cardio_rows, start_monday):
     if not cardio_rows:
         return None
 
+    from routes.cardio import sum_cardio_km, KM_BASED_ACTIVITES
     total_min = sum(int(r.get("Reps") or 0) for r in cardio_rows)
-    total_km = round(sum(float(r.get("Poids") or 0) for r in cardio_rows), 1)
+    total_km = sum_cardio_km(cardio_rows)
     sessions = len(cardio_rows)
 
     # Minutes par semaine (8 dernières), indexée relatif à la 1ère séance.
@@ -197,7 +198,8 @@ def _build_cardio_stats(cardio_rows, start_monday):
     # Plus longue course
     course_rows = [r for r in cardio_rows if _activity(r) == "Course"]
     longest_run_min = max((int(r.get("Reps") or 0) for r in course_rows), default=0)
-    biggest_distance = max((float(r.get("Poids") or 0) for r in cardio_rows), default=0.0)
+    km_rows = [r for r in cardio_rows if _activity(r) in KM_BASED_ACTIVITES]
+    biggest_distance = max((float(r.get("Poids") or 0) for r in km_rows), default=0.0)
     longest_session_min = max((int(r.get("Reps") or 0) for r in cardio_rows), default=0)
 
     # Répartition par type (minutes)

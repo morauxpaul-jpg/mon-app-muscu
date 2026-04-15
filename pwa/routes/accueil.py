@@ -304,9 +304,10 @@ def index():
     reps_count = sum(r["Reps"] for r in cur_week_muscu)
 
     # Cardio semaine : total minutes + km sur la semaine active
+    from routes.cardio import sum_cardio_km
     cardio_rows = [r for r in cur_week if _is_cardio_row(r)]
     cardio_minutes = sum(int(r.get("Reps") or 0) for r in cardio_rows)
-    cardio_km = round(sum(float(r.get("Poids") or 0) for r in cardio_rows), 1)
+    cardio_km = sum_cardio_km(cardio_rows)
 
     # Widget calories — objectif depuis profile, consommé depuis table nutrition
     cal_cible = int(profile.get("calories_cible") or 0)
