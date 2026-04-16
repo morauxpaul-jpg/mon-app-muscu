@@ -47,6 +47,19 @@ def _get_col(pct):
     return "#00FF7F"
 
 
+def _get_volume_col(vol_pct):
+    """Couleur par volume relatif (pourcentage du total de la période)."""
+    if vol_pct == 0:
+        return "#555555"       # gris — non travaillé
+    if vol_pct <= 20:
+        return "#7EC8E3"       # bleu clair
+    if vol_pct <= 50:
+        return "#3B82F6"       # bleu moyen
+    if vol_pct <= 80:
+        return "#2563EB"       # bleu vif
+    return "#00FFFF"           # cyan néon — dominant
+
+
 def _sid(m):
     out = m.lower()
     for a, b in [("é","e"),("è","e"),("ê","e"),("à","a"),("â","a"),("î","i"),("-",""),(" ","")]:
@@ -226,16 +239,58 @@ def _build_cardio_stats(cardio_rows, start_monday):
     }
 
 
-def _build_svg_context(muscle_data):
-    """Prépare le dict {muscle: {fill_f, fill_b, opacity}} passé à la template SVG."""
+def _build_volume_map(hist, period_days=7):
+    """Calcule le volume (total séries) par muscle pour une période donnée.
+    Retourne {muscle: {sets, vol_pct, color, last_date}} pour la carte du corps."""
+    today = today_paris()
+    cutoff = (today - timedelta(days=period_days)).isoformat()
+
+    period_rows = [r for r in hist
+                   if r.get("Date", "") >= cutoff
+                   and r["Reps"] > 0 and r["Exercice"] != "SESSION"]
+
+    # Comptage séries par muscle
+    muscle_sets = {}
+    muscle_last = {}
+    for r in period_rows:
+        for m in MUSCLES:
+            if m in (r.get("Muscle") or ""):
+                muscle_sets[m] = muscle_sets.get(m, 0) + 1
+                d = r.get("Date", "")
+                if d > muscle_last.get(m, ""):
+                    muscle_last[m] = d
+
+    total_sets = sum(muscle_sets.values()) or 1
+    result = {}
+    for m in MUSCLES:
+        sets = muscle_sets.get(m, 0)
+        vol_pct = round(sets / total_sets * 100, 1) if sets > 0 else 0
+        result[m] = {
+            "sets": sets,
+            "vol_pct": vol_pct,
+            "color": _get_volume_col(vol_pct),
+            "last_date": muscle_last.get(m, ""),
+        }
+    return result
+
+
+def _build_svg_context(muscle_data, volume_map=None):
+    """Prépare le dict {muscle: {fill_f, fill_b, opacity}} passé à la template SVG.
+    Si volume_map est fourni, utilise les couleurs basées sur le volume."""
     svg = {}
     for m, d in muscle_data.items():
-        active = d["pct"] > 0
+        if volume_map and m in volume_map:
+            vm = volume_map[m]
+            active = vm["sets"] > 0
+            col = vm["color"]
+        else:
+            active = d["pct"] > 0
+            col = d["col"]
         svg[m] = {
             "fill_f": f"url(#gf{_sid(m)})" if active else "#1a2a3a",
             "fill_b": f"url(#gb{_sid(m)})" if active else "#1a2a3a",
             "opacity": "0.92" if active else "0.12",
-            "col": d["col"],
+            "col": col,
             "active": active,
             "sid": _sid(m),
         }
@@ -270,8 +325,18 @@ def progres():
     for r in df_p:
         r["1RM"] = calc_1rm(r["Poids"], r["Reps"])
 
+    # ── Carte du corps — période sélectionnée ────────────────
+    bm_period = request.args.get("bm_period", "7")
+    try:
+        bm_days = int(bm_period)
+    except ValueError:
+        bm_days = 7
+    if bm_days not in (7, 30, 90):
+        bm_days = 7
+    volume_map = _build_volume_map(hist, period_days=bm_days)
+
     muscle_data = _build_muscle_data(df_p)
-    svg_ctx = _build_svg_context(muscle_data)
+    svg_ctx = _build_svg_context(muscle_data, volume_map)
 
     # ── Hall of Fame : top 3 par 1RM (filtré par muscles) ───────
     selected_muscles = request.args.getlist("m") or FILTER_MUSCLES
@@ -435,6 +500,8 @@ def progres():
         muscle_data=muscle_data,
         svg_ctx=svg_ctx,
         body_polygons=get_body_polygons(),
+        volume_map=volume_map,
+        bm_days=bm_days,
         display_muscles=list(MUSCLES.keys()),
         filter_muscles=FILTER_MUSCLES,
         selected_muscles=selected_muscles,

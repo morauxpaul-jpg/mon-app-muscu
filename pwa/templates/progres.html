@@ -117,6 +117,15 @@
   {# ── Carte du corps ─────────────────────────────────── #}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire</h3>
+
+    {# Sélecteur de période #}
+    <div style="display:flex; gap:4px; margin-bottom:10px; justify-content:center;">
+      {% for days, label in [(7, "Cette semaine"), (30, "Ce mois"), (90, "30 derniers jours")] %}
+        <a href="/progres?bm_period={{ days }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}&cy={{ cal_year }}&cm={{ cal_month }}"
+           class="vbtn{% if bm_days == days %} active{% endif %}" style="font-size:0.7rem; padding:5px 10px;">{{ label }}</a>
+      {% endfor %}
+    </div>
+
     <div class="bm-wrap">
       <div class="bm-views">
         <button class="vbtn active" id="vbtn-front" onclick="switchView('front')">FACE</button>
@@ -125,12 +134,22 @@
       <div id="bm-svg-container">
         {% include "_body_map_svg.html" %}
       </div>
-      <div class="legend">
-        <span><i style="background:#1a2a3a"></i>Aucune</span>
-        <span><i style="background:#FF453A"></i>&lt;40%</span>
-        <span><i style="background:#FF9F0A"></i>40-70%</span>
-        <span><i style="background:#58CCFF"></i>70-95%</span>
-        <span><i style="background:#00FF7F"></i>≥95%</span>
+      <div class="legend" style="font-size:0.68rem;">
+        <span><i style="background:#555555"></i>Non travaill&eacute;</span>
+        <span><i style="background:#7EC8E3"></i>Faible</span>
+        <span><i style="background:#3B82F6"></i>Mod&eacute;r&eacute;</span>
+        <span><i style="background:#2563EB"></i>&Eacute;lev&eacute;</span>
+        <span><i style="background:#00FFFF"></i>Dominant</span>
+      </div>
+    </div>
+
+    {# Tooltip pour muscle cliqué #}
+    <div id="bm-tooltip" style="display:none; margin-top:10px; padding:10px; border-radius:10px; background:rgba(88,204,255,0.06); border:1px solid rgba(88,204,255,0.2);">
+      <div style="font-weight:700; color:var(--accent); margin-bottom:4px;" id="bm-tt-name"></div>
+      <div style="font-size:0.82rem; color:var(--text);">
+        <div class="mrow"><span>Volume (séries)</span><b id="bm-tt-sets"></b></div>
+        <div class="mrow"><span>% du volume total</span><b id="bm-tt-pct"></b></div>
+        <div class="mrow"><span>Dernier entraînement</span><b id="bm-tt-last"></b></div>
       </div>
     </div>
   </div>
@@ -282,6 +301,7 @@
 
   <script>
     const MDATA = {{ muscle_data|tojson }};
+    const VMAP = {{ volume_map|tojson }};
 
     function switchView(v) {
       document.getElementById('svg-front').style.display = v === 'front' ? '' : 'none';
@@ -295,6 +315,18 @@
     function sel(name) {
       const d = MDATA[name];
       if (!d) return;
+
+      // Tooltip volume
+      var v = VMAP[name];
+      if (v) {
+        var tt = document.getElementById('bm-tooltip');
+        document.getElementById('bm-tt-name').textContent = name;
+        document.getElementById('bm-tt-sets').textContent = v.sets + ' séries';
+        document.getElementById('bm-tt-pct').textContent = v.vol_pct + '%';
+        document.getElementById('bm-tt-last').textContent = v.last_date || 'Jamais';
+        tt.style.display = 'block';
+      }
+
       document.getElementById('md-title').textContent = name + ' — ' + d.pct + '%';
       let html = '';
       html += '<div class="mrow"><span>1RM max</span><b>' + d.rm + ' kg</b></div>';
