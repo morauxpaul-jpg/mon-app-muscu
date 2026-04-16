@@ -158,7 +158,7 @@
   {% endif %}
 
   <div class="seance-header">
-    <div class="seance-label">SÉANCE · SEMAINE {{ s_act }}</div>
+    <div class="seance-label">SÉANCE · SEMAINE {{ s_display }}</div>
     <div class="seance-title">{{ seance_name }}</div>
   </div>
 
@@ -189,7 +189,7 @@
   </form>
 
   <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;"
-        onsubmit="return showModal(event, 'Recommencer la séance ?', 'Toutes les données saisies pour {{ seance_name }} semaine {{ s_act }} seront perdues. Continuer ?', true);">
+        onsubmit="return showModal(event, 'Recommencer la séance ?', 'Toutes les données saisies pour {{ seance_name }} semaine {{ s_display }} seront perdues. Continuer ?', true);">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="semaine" value="{{ s_act }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
@@ -271,9 +271,9 @@
         {% if exo.prev_weeks %}
           {% for pw in exo.prev_weeks %}
             {% if pw.missed %}
-              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week }} — <svg class="icon icon-sm icon-danger" style="margin-left:4px;"><use href="/static/img/icons.svg#flag"/></svg><span style="color:var(--danger);">SÉANCE MANQUÉE</span></div>
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week - week_offset }} — <svg class="icon icon-sm icon-danger" style="margin-left:4px;"><use href="/static/img/icons.svg#flag"/></svg><span style="color:var(--danger);">SÉANCE MANQUÉE</span></div>
             {% else %}
-              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week }}</div>
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week - week_offset }}</div>
               <table class="prev-table">
                 <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
                 <tbody>
@@ -500,7 +500,7 @@
         </div>
         {% endif %}
         <div class="finish-stat">
-          <div class="finish-stat-value">{{ s_act }}</div>
+          <div class="finish-stat-value">{{ s_display }}</div>
           <div class="finish-stat-label">SEMAINE</div>
         </div>
       </div>
@@ -664,20 +664,10 @@
         <button type="button" onclick="setTimerDuration(120)">2:00</button>
         <button type="button" onclick="setTimerDuration(180)">3:00</button>
       </div>
-      <button type="button" class="rest-timer-bar-skip" onclick="openTimerFullscreen()" aria-label="Plein écran" style="font-size:1rem;">&#x26F6;</button>
       <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()" aria-label="Passer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
     </div>
   </div>
 
-  {# ── Timer plein écran overlay ────────────────────────── #}
-  <div id="timer-fullscreen" class="timer-fullscreen" style="display:none;">
-    <div class="timer-fs-label">REPOS</div>
-    <div class="timer-fs-time" id="timer-fs-display">1:30</div>
-    <div class="timer-fs-actions">
-      <button type="button" onclick="closeTimerFullscreen()">Réduire</button>
-      <button type="button" onclick="skipTimer(); closeTimerFullscreen();">Annuler</button>
-    </div>
-  </div>
 
   {# ── Modal info exercice (Feature 8) ────────────────────── #}
   <div id="exo-info-modal" class="exo-info-modal" style="display:none;" onclick="this.style.display='none'">
@@ -981,10 +971,6 @@
     });
     clearInterval(_timerInterval);
     _timerInterval = setInterval(tickTimer, 1000);
-    // Auto plein écran sauf si désactivé dans Gestion
-    if (!localStorage.getItem('timer_fullscreen_disabled')) {
-      openTimerFullscreen();
-    }
   }
 
   function tickTimer() {
@@ -1107,34 +1093,6 @@
       var parts = b.textContent.split(':');
       b.classList.toggle('active', parseInt(parts[0]) * 60 + parseInt(parts[1]) === sec);
     });
-  }
-
-  // ── Timer plein écran ──────────────────────────────────────
-  var _timerFsInterval = null;
-  function openTimerFullscreen() {
-    var el = document.getElementById('timer-fullscreen');
-    el.className = 'timer-fullscreen';
-    el.style.display = 'flex';
-    _updateFsDisplay();
-    if (_timerFsInterval) clearInterval(_timerFsInterval);
-    _timerFsInterval = setInterval(function() {
-      _updateFsDisplay();
-      if (_timerRemaining <= 0) {
-        clearInterval(_timerFsInterval);
-        _timerFsInterval = null;
-        setTimeout(function() { closeTimerFullscreen(); }, 1500);
-      }
-    }, 200);
-  }
-  function closeTimerFullscreen() {
-    document.getElementById('timer-fullscreen').style.display = 'none';
-    if (_timerFsInterval) { clearInterval(_timerFsInterval); _timerFsInterval = null; }
-  }
-  function _updateFsDisplay() {
-    var r = Math.max(0, _timerRemaining);
-    var m = Math.floor(r / 60);
-    var s = r % 60;
-    document.getElementById('timer-fs-display').textContent = m + ':' + (s < 10 ? '0' : '') + s;
   }
 
   var savedTimer = parseInt(localStorage.getItem('restTimerDefault'));

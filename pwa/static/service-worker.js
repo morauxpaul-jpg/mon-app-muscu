@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v42-2026-04-16";
+const CACHE_VERSION = "v43-2026-04-16";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -106,22 +106,22 @@ self.addEventListener("fetch", (event) => {
                 (req.headers.get("accept") || "").includes("text/html");
 
   if (isNav) {
-    // Stale-While-Revalidate : on sert le cache instantanément si dispo,
-    // et on rafraîchit en arrière-plan pour la prochaine visite.
+    // Network First : toujours chercher le HTML frais côté serveur,
+    // fallback sur le cache si offline.
     event.respondWith(
-      caches.open(CACHE).then((c) =>
-        c.match(req).then((cached) => {
-          const networkFetch = fetch(req)
-            .then((resp) => {
-              if (resp && resp.status === 200 && resp.type === "basic") {
-                c.put(req, resp.clone());
-              }
-              return resp;
-            })
-            .catch(() => cached || c.match("/accueil"));
-          return cached || networkFetch;
+      fetch(req)
+        .then((resp) => {
+          if (resp && resp.status === 200 && resp.type === "basic") {
+            const copy = resp.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return resp;
         })
-      )
+        .catch(() =>
+          caches.open(CACHE).then((c) =>
+            c.match(req).then((cached) => cached || c.match("/accueil"))
+          )
+        )
     );
     return;
   }

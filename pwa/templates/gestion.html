@@ -82,17 +82,6 @@
     </form>
   </div>
 
-  {# ── Chronomètre ─────────────────── #}
-  <div class="card" x-data="{ fsAuto: !localStorage.getItem('timer_fullscreen_disabled') }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clock"/></svg>Chronomètre</h3>
-    <label class="muscle-check" style="display:flex; margin:6px 0;">
-      <input type="checkbox" :checked="fsAuto"
-             @change="fsAuto = $event.target.checked; if (fsAuto) localStorage.removeItem('timer_fullscreen_disabled'); else localStorage.setItem('timer_fullscreen_disabled', '1');">
-      <span>Chrono plein écran automatique</span>
-    </label>
-    <div style="font-size:0.78rem; color:var(--text-dim); margin-top:2px;">Quand activé, le chrono de repos s'affiche en plein écran automatiquement.</div>
-  </div>
-
   {# ── Section : Mise à jour ───────────────── #}
   <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>MISE À JOUR</h2>
 

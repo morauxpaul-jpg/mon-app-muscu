@@ -165,8 +165,15 @@ def _parse_iso_date(s):
         return None
 
 
-def _compute_start_monday(rows):
-    """Lundi de la semaine de la première séance trackée. None si aucune date valide."""
+def _compute_start_monday(rows, prog=None):
+    """Lundi de la semaine de début du programme.
+    Utilise _started_at du programme si dispo, sinon 1ère séance trackée."""
+    if prog:
+        started = prog.get("_started_at")
+        if started:
+            d = _parse_iso_date(started)
+            if d:
+                return d - timedelta(days=d.weekday())
     dates = [_parse_iso_date(r.get("Date")) for r in rows]
     dates = [d for d in dates if d is not None]
     if not dates:
@@ -314,7 +321,7 @@ def progres():
     cardio_rows = [r for r in hist if str(r.get("Exercice") or "").startswith("CARDIO:")]
     # start_monday : lundi de la semaine de la toute 1ère séance (muscu + cardio)
     # pour numéroter S1, S2, … relatif à quand le user a commencé à tracker.
-    start_monday = _compute_start_monday(hist)
+    start_monday = _compute_start_monday(hist, prog)
     cardio = _build_cardio_stats(cardio_rows, start_monday)
 
     # Exclure le cardio des stats muscu (sinon il fausse les 1RM, le filtre muscle, etc.)

@@ -238,7 +238,7 @@ def save_state():
 
     # Préserve les données utilisateur qui n'appartiennent pas au programme
     for key in ("_origin", "_settings", "_archive", "_legacy_volume",
-                "_extras", "_libre_draft"):
+                "_extras", "_libre_draft", "_started_at"):
         if key in old:
             new_prog[key] = old[key]
 
@@ -431,6 +431,8 @@ def import_program():
         if key in old:
             new_prog[key] = old[key]
 
+    from core.dates import today_paris_str
+    new_prog["_started_at"] = today_paris_str()
     save_prog(new_prog)
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
@@ -455,6 +457,8 @@ def change_program():
                 prog.pop(k)
         prog.pop("_origin", None)
         prog.pop("_name", None)
+        from core.dates import today_paris_str
+        prog["_started_at"] = today_paris_str()
         save_prog(prog)
         return redirect(url_for("programme.programme") + "?program_changed=1")
 
@@ -490,6 +494,9 @@ def change_program():
                     "_libre_draft"):
             if key in old:
                 new_prog[key] = old[key]
+        # Reset programme start date
+        from core.dates import today_paris_str
+        new_prog["_started_at"] = today_paris_str()
         save_prog(new_prog)
     return redirect(url_for("programme.programme") + "?program_changed=1")
 

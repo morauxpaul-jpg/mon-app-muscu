@@ -54,6 +54,39 @@ def _iso_week(date_):
     return date_.isocalendar().week
 
 
+def _display_week(target_date, prog, hist):
+    """Semaine relative au début du programme (1-based).
+    Utilise _started_at du programme, sinon la date de la 1ère séance."""
+    started = prog.get("_started_at")
+    if started:
+        try:
+            start = datetime.strptime(started, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            start = None
+    else:
+        start = None
+    if start is None:
+        # Fallback: date de la première séance non-archivée avec Date valide
+        dates = []
+        for r in hist:
+            d = r.get("Date")
+            if d:
+                try:
+                    dates.append(datetime.strptime(d, "%Y-%m-%d").date())
+                except (ValueError, TypeError):
+                    pass
+        start = min(dates) if dates else target_date
+        # Persist for next time
+        from core.data import get_prog as _gp, save_prog as _sp
+        p = _gp()
+        if "_started_at" not in p:
+            p["_started_at"] = start.strftime("%Y-%m-%d")
+            _sp(p)
+    start_monday = start - timedelta(days=start.weekday())
+    target_monday = target_date - timedelta(days=target_date.weekday())
+    return max(1, (target_monday - start_monday).days // 7 + 1)
+
+
 def _date_label(date_):
     return f"{DAYS_FR[date_.weekday()]} {date_.day:02d}/{date_.month:02d}/{date_.year}"
 
@@ -298,6 +331,8 @@ def seance():
     target_date = _parse_date(date_iso) or today_paris()
     date_iso = target_date.strftime("%Y-%m-%d")
     s_act = _iso_week(target_date)
+    s_display = _display_week(target_date, prog, hist)
+    week_offset = s_act - s_display  # to convert ISO week → display week
 
     mode = request.args.get("mode")   # "prefaite" | "libre" | None
     name = request.args.get("name")   # nom séance (prefaite) ou libre
@@ -382,6 +417,8 @@ def seance():
             date_label=_date_label(target_date),
             is_rattrapage=(date_iso != today_paris_str()),
             s_act=s_act,
+            s_display=s_display,
+            week_offset=week_offset,
             exos=exos_ctx,
             exos_done=exos_done,
             exos_total=exos_total,
@@ -423,6 +460,8 @@ def seance():
             date_label=_date_label(target_date),
             is_rattrapage=(date_iso != today_paris_str()),
             s_act=s_act,
+            s_display=s_display,
+            week_offset=week_offset,
             exos=exos_ctx,
             exos_done=exos_done,
             exos_total=exos_total,
