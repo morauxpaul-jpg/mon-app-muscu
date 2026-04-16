@@ -51,7 +51,7 @@
         <div style="display:flex; gap:6px; margin:8px 0 10px; flex-wrap:wrap;">
           <button type="button" class="btn mini label-icon" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
           <button type="button" class="btn mini label-icon" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
-          <button type="button" class="btn mini label-icon" @click="const n = prompt('Nouveau nom du programme :', pg.name); if(n !== null && n.trim()) renameProgramme(pg.id, n.trim())">
+          <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
           <button type="button" class="btn mini label-icon"
@@ -253,6 +253,32 @@
     </div>
   </div>
 
+  {# ── Modal renommer un programme ─────────────────────────── #}
+  <div x-show="renameModal.open" x-transition.opacity
+       x-init="$watch('renameModal.open', v => { if(v) document.body.appendChild($el); })"
+       style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;"
+       @click.self="closeRenameModal()"
+       @keydown.escape.window="closeRenameModal()">
+    <div style="background:#0B1428; border:2px solid var(--violet, #B388FF); border-radius:14px; padding:18px; max-width:380px; width:calc(100vw - 32px); box-shadow:0 12px 40px rgba(179,136,255,0.25);"
+         @click.stop>
+      <h4 class="label-icon" style="color:var(--violet, #B388FF); margin:0 0 12px; letter-spacing:1px;">
+        <svg class="icon icon-sm icon-violet"><use href="/static/img/icons.svg#edit"/></svg>Renommer le programme
+      </h4>
+      <label class="field-label" style="margin-top:0;">Nouveau nom</label>
+      <input x-ref="renameInput" type="text" class="field" maxlength="80"
+             x-model="renameModal.name"
+             style="margin:0 0 14px; font-size:1rem;"
+             @keydown.enter.prevent="confirmRenameModal()">
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn" @click="closeRenameModal()">Annuler</button>
+        <button type="button" class="btn violet label-icon" @click="confirmRenameModal()"
+                :disabled="!renameModal.name.trim() || renameModal.name.trim().length > 80">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Valider
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script src="/static/js/exercise-library.js"></script>
@@ -274,6 +300,7 @@
       editingName: false,
       saveState: '',
       _saveTimer: null,
+      renameModal: { open: false, id: null, name: '' },
 
       init() {
         var initial = JSON.parse(document.getElementById('prog-initial').textContent);
@@ -355,6 +382,25 @@
         // Remplace l'objet pour forcer la réactivité Alpine
         this.programmes[i] = { id: this.programmes[i].id, name: name };
         this.scheduleSave();
+      },
+      openRenameModal(pg) {
+        this.renameModal = { open: true, id: pg.id, name: pg.name };
+        var self = this;
+        this.$nextTick(function () {
+          if (self.$refs.renameInput) {
+            self.$refs.renameInput.focus();
+            self.$refs.renameInput.select();
+          }
+        });
+      },
+      closeRenameModal() {
+        this.renameModal = { open: false, id: null, name: '' };
+      },
+      confirmRenameModal() {
+        var n = (this.renameModal.name || '').trim();
+        if (!n) return;
+        this.renameProgramme(this.renameModal.id, n);
+        this.closeRenameModal();
       },
       deleteProgramme(id) {
         this.programmes = this.programmes.filter(function (p) { return p.id !== id; });
