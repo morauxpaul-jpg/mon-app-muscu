@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v40-2026-04-15";
+const CACHE_VERSION = "v41-2026-04-16";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -18,6 +18,8 @@ const APP_SHELL = [
   "/static/js/tuto-seance.js",
   "/static/js/ui-fx.js",
   "/static/js/prefetch.js",
+  "/static/js/exercise-library.js",
+  "/static/css/timer.css",
   "/static/icon-192.png",
   "/static/icon-512.png",
   "/static/changelog.json",
