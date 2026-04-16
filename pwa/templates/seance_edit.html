@@ -912,7 +912,7 @@
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS';
     updateTimerDisplay();
     highlightPreset(_timerTotal);
-    // Demande la permission de notif si pas encore accordée (non bloquant)
+    // Demande la permission de notif au premier lancement du chrono
     if ('Notification' in window && Notification.permission === 'default') {
       try { Notification.requestPermission(); } catch(e) {}
     }
@@ -950,10 +950,50 @@
     }
   }
 
+  // ── Bip sonore via Web Audio API (3 bips courts 880Hz) ──
+  function _playTimerBeep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.2, 0.4].forEach(function(delay) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.frequency.value = 880;
+        osc.type = 'square';
+        gain.gain.value = 0.3;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.1);
+      });
+    } catch(e) {}
+  }
+
+  // ── Notification via SW ou fallback classique ──
+  function _sendTimerNotification() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function(registration) {
+        registration.showNotification("Repos terminé !", {
+          body: "C'est reparti \ud83d\udcaa",
+          icon: "/pwa/static/icons/icon-192.png",
+          tag: "timer-end",
+          requireInteraction: false
+        });
+      }).catch(function() {
+        // Fallback sur Notification classique
+        try { new Notification("Repos terminé !", { body: "C'est reparti \ud83d\udcaa", tag: "timer-end" }); } catch(e) {}
+      });
+    } else {
+      try { new Notification("Repos terminé !", { body: "C'est reparti \ud83d\udcaa", tag: "timer-end" }); } catch(e) {}
+    }
+  }
+
   function timerFinished() {
     var bar = document.getElementById('rest-timer');
     bar.classList.add('timer-done');
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
+    _playTimerBeep();
+    _sendTimerNotification();
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     document.title = 'GO ! — Muscu PRO';
     _timerEndTime = 0;
