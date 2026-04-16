@@ -7,6 +7,29 @@
     <span>Chargement...</span>
   </div>
 
+  {# ── Auto-reprise : si séance active pour aujourd'hui, redirige direct ──
+     Ne se déclenche que si on arrive sans ?date= (= depuis onglet Séance),
+     pour que « ← Changer de séance » reste utilisable. #}
+  <script>
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.has('date')) return;
+        var data = JSON.parse(localStorage.getItem('active_session') || '{}');
+        if (!data.active_session) return;
+        var today = new Date().toISOString().slice(0, 10);
+        if (data.session_date !== today) {
+          localStorage.removeItem('active_session');
+          return;
+        }
+        var url = '/seance?mode=' + (data.session_mode || 'prefaite')
+                + '&name=' + encodeURIComponent(data.session_id)
+                + '&date=' + data.session_date;
+        window.location.replace(url);
+      } catch (e) {}
+    })();
+  </script>
+
   <a href="/accueil" class="btn label-icon" style="display:inline-flex; margin-bottom: 12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <div class="choix-hero">
