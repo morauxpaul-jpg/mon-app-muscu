@@ -2,6 +2,7 @@
 {% block title %}{{ seance_name }} · Muscu PRO{% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="/static/css/timer.css">
 <style>
 /* ── Rest Timer Bar (non-blocking, fixed bottom) ── */
 .rest-timer-bar {
@@ -663,7 +664,18 @@
         <button type="button" onclick="setTimerDuration(120)">2:00</button>
         <button type="button" onclick="setTimerDuration(180)">3:00</button>
       </div>
+      <button type="button" class="rest-timer-bar-skip" onclick="openTimerFullscreen()" aria-label="Plein écran" style="font-size:1rem;">&#x26F6;</button>
       <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()" aria-label="Passer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
+    </div>
+  </div>
+
+  {# ── Timer plein écran overlay ────────────────────────── #}
+  <div id="timer-fullscreen" class="timer-fullscreen" style="display:none;">
+    <div class="timer-fs-label">REPOS</div>
+    <div class="timer-fs-time" id="timer-fs-display">1:30</div>
+    <div class="timer-fs-actions">
+      <button type="button" onclick="closeTimerFullscreen()">Réduire</button>
+      <button type="button" onclick="skipTimer(); closeTimerFullscreen();">Annuler</button>
     </div>
   </div>
 
@@ -1089,6 +1101,38 @@
       var parts = b.textContent.split(':');
       b.classList.toggle('active', parseInt(parts[0]) * 60 + parseInt(parts[1]) === sec);
     });
+  }
+
+  // ── Timer plein écran ──────────────────────────────────────
+  var _timerFsInterval = null;
+  function _getTimerStyleClass() {
+    var style = localStorage.getItem('timer_style') || 'cyber';
+    return 'timer-style-' + style;
+  }
+  function openTimerFullscreen() {
+    var el = document.getElementById('timer-fullscreen');
+    el.className = 'timer-fullscreen ' + _getTimerStyleClass();
+    el.style.display = 'flex';
+    _updateFsDisplay();
+    if (_timerFsInterval) clearInterval(_timerFsInterval);
+    _timerFsInterval = setInterval(function() {
+      _updateFsDisplay();
+      if (_timerRemaining <= 0) {
+        clearInterval(_timerFsInterval);
+        _timerFsInterval = null;
+        setTimeout(function() { closeTimerFullscreen(); }, 1500);
+      }
+    }, 200);
+  }
+  function closeTimerFullscreen() {
+    document.getElementById('timer-fullscreen').style.display = 'none';
+    if (_timerFsInterval) { clearInterval(_timerFsInterval); _timerFsInterval = null; }
+  }
+  function _updateFsDisplay() {
+    var r = Math.max(0, _timerRemaining);
+    var m = Math.floor(r / 60);
+    var s = r % 60;
+    document.getElementById('timer-fs-display').textContent = m + ':' + (s < 10 ? '0' : '') + s;
   }
 
   var savedTimer = parseInt(localStorage.getItem('restTimerDefault'));
