@@ -17,6 +17,36 @@
     {% endif %}
   </div>
 
+  {# ── Banner séance en cours ─────────────────────── #}
+  <div id="active-session-banner" style="display:none;" class="card" onclick="window.location.href=this.dataset.href;">
+    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px;">
+      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clock"/></svg>SÉANCE EN COURS
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+      <span id="active-session-name" style="font-weight:700; color:#fff;"></span>
+      <span style="color:var(--accent); font-weight:600;">Reprendre &rarr;</span>
+    </div>
+  </div>
+  <script>
+    (function() {
+      try {
+        var data = JSON.parse(localStorage.getItem('active_session') || '{}');
+        if (!data.active_session) return;
+        var today = new Date().toISOString().slice(0, 10);
+        if (data.session_date !== today) {
+          localStorage.removeItem('active_session');
+          return;
+        }
+        var banner = document.getElementById('active-session-banner');
+        document.getElementById('active-session-name').textContent = data.session_id;
+        banner.dataset.href = '/seance?mode=' + (data.session_mode || 'prefaite') + '&name=' + encodeURIComponent(data.session_id) + '&date=' + data.session_date;
+        banner.style.display = 'block';
+        banner.style.borderColor = 'rgba(88,204,255,0.5)';
+        banner.style.cursor = 'pointer';
+      } catch(e) {}
+    })();
+  </script>
+
   {% if done_name %}
     <div class="card" style="border-color: rgba(0,255,127,0.4); background: rgba(0,255,127,0.05);">
       <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>SÉANCE ENREGISTRÉE</div>
