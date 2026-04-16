@@ -22,7 +22,7 @@ from core.body_map import get_body_polygons
 bp = Blueprint("seance", __name__)
 
 MUSCLE_LIST = ["Pecs", "Dos", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
-               "Quadriceps", "Ischio-jambiers", "Fessiers", "Mollets", "Autre"]
+               "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
 VARIANTS = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
 BW_EXOS = {"Dips", "Tractions"}
 

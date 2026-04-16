@@ -414,11 +414,53 @@
       {% endfor %}
     </div>
 
-    <form method="post" action="/seance/add-extra" x-show="tab==='new'">
+    <form method="post" action="/seance/add-extra" x-show="tab==='new'"
+          x-data="{ showLib: false, libFilter: 'Tous', libSearch: '' }">
       <input type="hidden" name="mode" value="{{ mode }}">
       <input type="hidden" name="name" value="{{ seance_name }}">
       <input type="hidden" name="date" value="{{ date_iso }}">
       <input type="hidden" name="seance_name" value="{{ seance_name }}">
+
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-bottom:8px; border-color:rgba(88,204,255,0.4);"
+              @click="showLib = true">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Choisir un exercice
+      </button>
+
+      {# Modale bibliothèque inline #}
+      <div x-show="showLib" x-transition style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;" @click.self="showLib = false">
+        <div style="background:#0B1428; border:2px solid var(--accent); border-radius:14px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain;" @click.stop>
+          <h4 style="color:var(--accent); margin:0 0 10px;">Bibliothèque d'exercices</h4>
+          <input type="text" x-model="libSearch" class="field" placeholder="Rechercher..." style="margin-bottom:8px;">
+          <select class="field" x-model="libFilter" style="margin-bottom:10px;">
+            <option value="Tous">Tous les groupes</option>
+            <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="grp">
+              <option :value="grp" x-text="grp"></option>
+            </template>
+          </select>
+          <div style="max-height:300px; overflow-y:auto;">
+            <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="'slib-'+grp">
+              <template x-if="libFilter === 'Tous' || libFilter === grp">
+                <div>
+                  <div style="font-size:0.72rem; color:var(--accent); letter-spacing:1px; font-weight:700; margin:8px 0 4px;" x-text="grp"></div>
+                  <template x-for="ex in (typeof EXERCISE_LIBRARY !== 'undefined' ? (EXERCISE_LIBRARY[grp] || []) : [])" :key="grp+'-'+ex.name">
+                    <div x-show="!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0"
+                         style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                      <div>
+                        <div style="font-size:0.85rem; color:#fff; font-weight:600;" x-text="ex.name"></div>
+                        <div style="font-size:0.7rem; color:var(--text-dim);" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
+                      </div>
+                      <button type="button" class="btn mini" style="white-space:nowrap;"
+                              @click="var form = $el.closest('form'); form.querySelector('[name=exo_name]').value = ex.name; form.querySelector('[name=muscle]').value = (typeof LIBRARY_TO_MUSCLE !== 'undefined' ? LIBRARY_TO_MUSCLE[grp] : 'Autre') || 'Autre'; form.querySelector('[name=sets_count]').value = ex.defaultSets; showLib = false;">+ Ajouter</button>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </template>
+          </div>
+          <button type="button" class="btn primary" style="width:100%; margin-top:10px;" @click="showLib = false">Fermer</button>
+        </div>
+      </div>
+
       <label class="field-label">Nom de l'exercice</label>
       <input type="text" name="exo_name" class="field" required>
       <label class="field-label">Muscle principal</label>
@@ -1171,6 +1213,7 @@
 
   // ── Tuto séance (première ouverture) ───────────────────────────
   </script>
+  <script src="/static/js/exercise-library.js"></script>
   <script src="/static/js/tuto-seance.js"></script>
   <script>initTutoSeance();</script>
 {% endblock %}
