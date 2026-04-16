@@ -20,6 +20,7 @@ bp = Blueprint("progres", __name__)
 MUSCLES = {
     "Pecs":            {"std": 140, "zid_f": "z-pecs",    "zid_b": None},
     "Dos":             {"std": 160, "zid_f": None,        "zid_b": "z-dos"},
+    "Trapèzes":        {"std": 80,  "zid_f": None,        "zid_b": "z-trapezes"},
     "Épaules":         {"std": 90,  "zid_f": "z-epaules", "zid_b": "z-epaules-b"},
     "Biceps":          {"std": 60,  "zid_f": "z-biceps",  "zid_b": None},
     "Triceps":         {"std": 70,  "zid_f": None,        "zid_b": "z-triceps"},

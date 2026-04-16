@@ -46,7 +46,9 @@
                  maxlength="80" x-model="draftName"
                  @click.stop
                  @keydown.enter.prevent="renameProgramme(pg.id, draftName); editing=false"
-                 @keydown.escape="editing=false">
+                 @keydown.escape="editing=false"
+                 @blur="if(editing && draftName.trim() && draftName !== pg.name){ renameProgramme(pg.id, draftName); } editing=false">
+          <button x-show="editing" type="button" class="btn mini primary" @click.stop="renameProgramme(pg.id, draftName); editing=false">OK</button>
           <span style="font-size:11px; color:#5a7a9a;" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
           <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
         </div>
@@ -354,8 +356,12 @@
       renameProgramme(id, name) {
         name = (name || '').trim();
         if (!name) return;
-        var pg = this.programmes.find(function (p) { return p.id === id; });
-        if (pg) { pg.name = name; this.scheduleSave(); }
+        var i = this.programmes.findIndex(function (p) { return p.id === id; });
+        if (i < 0) return;
+        if (this.programmes[i].name === name) return;
+        // Remplace l'objet pour forcer la réactivité Alpine
+        this.programmes[i] = { id: this.programmes[i].id, name: name };
+        this.scheduleSave();
       },
       deleteProgramme(id) {
         this.programmes = this.programmes.filter(function (p) { return p.id !== id; });

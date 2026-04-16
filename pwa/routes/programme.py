@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("programme", __name__)
 
-MUSCLE_LIST = ["Pecs", "Dos", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
+MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
                "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
 
 EXPORT_FORMAT = "muscutracker_program_v1"
