@@ -981,6 +981,10 @@
     });
     clearInterval(_timerInterval);
     _timerInterval = setInterval(tickTimer, 1000);
+    // Auto plein écran sauf si désactivé dans Gestion
+    if (!localStorage.getItem('timer_fullscreen_disabled')) {
+      openTimerFullscreen();
+    }
   }
 
   function tickTimer() {
@@ -1107,13 +1111,9 @@
 
   // ── Timer plein écran ──────────────────────────────────────
   var _timerFsInterval = null;
-  function _getTimerStyleClass() {
-    var style = localStorage.getItem('timer_style') || 'cyber';
-    return 'timer-style-' + style;
-  }
   function openTimerFullscreen() {
     var el = document.getElementById('timer-fullscreen');
-    el.className = 'timer-fullscreen ' + _getTimerStyleClass();
+    el.className = 'timer-fullscreen';
     el.style.display = 'flex';
     _updateFsDisplay();
     if (_timerFsInterval) clearInterval(_timerFsInterval);

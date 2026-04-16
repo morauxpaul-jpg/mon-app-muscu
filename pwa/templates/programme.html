@@ -31,13 +31,6 @@
         </template>
       </select>
     {% endfor %}
-    <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:12px; position:sticky; bottom:70px; z-index:100;"
-            x-data="{ planSaved: '' }"
-            @click="doSave().then(function(){ planSaved = 'ok'; setTimeout(function(){ planSaved = ''; }, 2000); });"
-            :style="planSaved === 'ok' ? 'background:rgba(0,255,127,0.2); border-color:rgba(0,255,127,0.5); color:#00FF7F;' : ''">
-      <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>
-      <span x-text="planSaved === 'ok' ? '\u2713 Enregistré' : '\uD83D\uDCBE Enregistrer le planning'"></span>
-    </button>
   </div>
 
   {# ── Programmes (dossiers de séances) ─────────────────── #}
@@ -303,6 +296,9 @@
       scheduleSave() {
         this.saveState = 'Modifié…';
         this._dirty = true;
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+        var self = this;
+        this._saveTimer = setTimeout(function() { self.doSave(); }, 500);
       },
 
       _dirty: false,

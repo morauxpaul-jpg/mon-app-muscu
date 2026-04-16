@@ -82,30 +82,15 @@
     </form>
   </div>
 
-  {# ── Style du chronomètre ─────────────────── #}
-  <div class="card" x-data="{ style: localStorage.getItem('timer_style') || 'cyber' }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clock"/></svg>Style du chronomètre</h3>
-    <link rel="stylesheet" href="/static/css/timer.css">
-    <div class="timer-style-picker">
-      <label class="timer-style-card style-cyber" :class="{ active: style === 'cyber' }"
-             @click="style = 'cyber'; localStorage.setItem('timer_style', 'cyber');">
-        <input type="radio" name="timer_style" value="cyber">
-        <div class="style-preview">1:30</div>
-        <div class="style-name">Cyber</div>
-      </label>
-      <label class="timer-style-card style-minimal" :class="{ active: style === 'minimal' }"
-             @click="style = 'minimal'; localStorage.setItem('timer_style', 'minimal');">
-        <input type="radio" name="timer_style" value="minimal">
-        <div class="style-preview">1:30</div>
-        <div class="style-name">Minimaliste</div>
-      </label>
-      <label class="timer-style-card style-fire" :class="{ active: style === 'fire' }"
-             @click="style = 'fire'; localStorage.setItem('timer_style', 'fire');">
-        <input type="radio" name="timer_style" value="fire">
-        <div class="style-preview">1:30</div>
-        <div class="style-name">Fire</div>
-      </label>
-    </div>
+  {# ── Chronomètre ─────────────────── #}
+  <div class="card" x-data="{ fsAuto: !localStorage.getItem('timer_fullscreen_disabled') }">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clock"/></svg>Chronomètre</h3>
+    <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <input type="checkbox" :checked="fsAuto"
+             @change="fsAuto = $event.target.checked; if (fsAuto) localStorage.removeItem('timer_fullscreen_disabled'); else localStorage.setItem('timer_fullscreen_disabled', '1');">
+      <span>Chrono plein écran automatique</span>
+    </label>
+    <div style="font-size:0.78rem; color:var(--text-dim); margin-top:2px;">Quand activé, le chrono de repos s'affiche en plein écran automatiquement.</div>
   </div>
 
   {# ── Section : Mise à jour ───────────────── #}

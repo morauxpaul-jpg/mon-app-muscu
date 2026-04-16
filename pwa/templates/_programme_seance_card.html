@@ -83,17 +83,6 @@
       </div>
     </template>
 
-    <div x-show="saveState === 'Modifié…'" x-transition
-         style="position:sticky; bottom:70px; z-index:100; margin:10px 0;">
-      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center;"
-              x-data="{ exoSaved: '' }"
-              @click="doSave().then(function(){ exoSaved = 'ok'; setTimeout(function(){ exoSaved = ''; }, 2000); });"
-              :style="exoSaved === 'ok' ? 'background:rgba(0,255,127,0.2); border-color:rgba(0,255,127,0.5); color:#00FF7F;' : ''">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>
-        <span x-text="exoSaved === 'ok' ? '\u2713 Enregistré' : '\uD83D\uDCBE Enregistrer les modifications'"></span>
-      </button>
-    </div>
-
     <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
 
     <div x-data="{ newExo: { name: '', sets: 3, muscles: [] }, showLibrary: false, libFilter: 'Tous', libSearch: '' }">
@@ -104,7 +93,9 @@
       </button>
 
       {# Modale bibliothèque #}
-      <div x-show="showLibrary" x-transition style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;" @click.self="showLibrary = false">
+      <div x-show="showLibrary" x-transition
+           x-init="$watch('showLibrary', v => { if(v) document.body.appendChild($el); })"
+           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;" @click.self="showLibrary = false">
         <div style="background:#0B1428; border:2px solid var(--accent); border-radius:14px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain;" @click.stop>
           <h4 style="color:var(--accent); margin:0 0 10px;">Bibliothèque d'exercices</h4>
           <input type="text" x-model="libSearch" class="field" placeholder="Rechercher un exercice..." style="margin-bottom:8px;">

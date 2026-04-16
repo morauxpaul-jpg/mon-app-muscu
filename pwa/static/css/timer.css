@@ -8,17 +8,21 @@
   align-items: center;
   justify-content: center;
   gap: 20px;
+  background: #050A18;
 }
 .timer-fullscreen .timer-fs-time {
   font-size: 6rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  color: #58CCFF;
+  text-shadow: 0 0 20px rgba(88,204,255,0.5), 0 0 60px rgba(88,204,255,0.25), 0 0 100px rgba(88,204,255,0.1);
 }
 .timer-fullscreen .timer-fs-label {
   font-size: 1rem;
   letter-spacing: 4px;
   text-transform: uppercase;
+  color: rgba(88,204,255,0.55);
 }
 .timer-fullscreen .timer-fs-actions {
   display: flex;
@@ -33,117 +37,11 @@
   cursor: pointer;
   border: none;
 }
-
-/* ── Style: Cyber (default) ── */
-.timer-style-cyber {
-  background: #000;
+.timer-fullscreen .timer-fs-actions button:first-child {
+  background: rgba(88,204,255,0.15);
+  color: #58CCFF;
 }
-.timer-style-cyber .timer-fs-time {
-  color: #00ffff;
-  text-shadow: 0 0 20px rgba(0,255,255,0.6), 0 0 60px rgba(0,255,255,0.3), 0 0 100px rgba(0,255,255,0.15);
-}
-.timer-style-cyber .timer-fs-label {
-  color: rgba(0,255,255,0.6);
-}
-.timer-style-cyber .timer-fs-actions button:first-child {
-  background: rgba(0,255,255,0.15);
-  color: #00ffff;
-}
-.timer-style-cyber .timer-fs-actions button:last-child {
+.timer-fullscreen .timer-fs-actions button:last-child {
   background: rgba(255,69,58,0.15);
   color: #FF453A;
 }
-
-/* ── Style: Minimaliste ── */
-.timer-style-minimal {
-  background: #1a1a2e;
-}
-.timer-style-minimal .timer-fs-time {
-  color: #ffffff;
-  text-shadow: none;
-}
-.timer-style-minimal .timer-fs-label {
-  color: rgba(255,255,255,0.4);
-}
-.timer-style-minimal .timer-fs-actions button:first-child {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-}
-.timer-style-minimal .timer-fs-actions button:last-child {
-  background: rgba(255,69,58,0.15);
-  color: #FF453A;
-}
-
-/* ── Style: Fire ── */
-.timer-style-fire {
-  background: #0a0a0a;
-}
-.timer-style-fire .timer-fs-time {
-  background: linear-gradient(180deg, #ff8c00, #ff4500, #dc143c);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: firePulse 1.5s ease-in-out infinite;
-}
-.timer-style-fire .timer-fs-label {
-  color: rgba(255,140,0,0.6);
-}
-.timer-style-fire .timer-fs-actions button:first-child {
-  background: rgba(255,140,0,0.15);
-  color: #ff8c00;
-}
-.timer-style-fire .timer-fs-actions button:last-child {
-  background: rgba(255,69,58,0.15);
-  color: #FF453A;
-}
-@keyframes firePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.03); }
-}
-
-/* ── Timer style picker cards (Gestion) ── */
-.timer-style-picker {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 8px;
-}
-.timer-style-card {
-  position: relative;
-  padding: 14px 8px;
-  border-radius: 12px;
-  text-align: center;
-  cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.1);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.timer-style-card.active {
-  border-color: var(--accent, #58CCFF);
-  box-shadow: 0 0 12px rgba(88,204,255,0.3);
-}
-.timer-style-card input[type="radio"] {
-  display: none;
-}
-.timer-style-card .style-preview {
-  font-size: 1.6rem;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 4px;
-}
-.timer-style-card .style-name {
-  font-size: 0.72rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-/* Cyber preview */
-.timer-style-card.style-cyber { background: #000; }
-.timer-style-card.style-cyber .style-preview { color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.5); }
-.timer-style-card.style-cyber .style-name { color: rgba(0,255,255,0.6); }
-/* Minimal preview */
-.timer-style-card.style-minimal { background: #1a1a2e; }
-.timer-style-card.style-minimal .style-preview { color: #fff; }
-.timer-style-card.style-minimal .style-name { color: rgba(255,255,255,0.4); }
-/* Fire preview */
-.timer-style-card.style-fire { background: #0a0a0a; }
-.timer-style-card.style-fire .style-preview { background: linear-gradient(180deg, #ff8c00, #dc143c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.timer-style-card.style-fire .style-name { color: rgba(255,140,0,0.6); }
