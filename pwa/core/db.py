@@ -64,6 +64,13 @@ def _cache_invalidate(key: str):
     _data_cache.pop(key, None)
 
 
+def clear_user_cache(user_id: str):
+    """Invalide explicitement toutes les entrées cache d'un utilisateur.
+    Appelé après chaque save réussi pour éviter les séances vides au reload."""
+    _data_cache.pop(f"hist:{user_id}", None)
+    _data_cache.pop(f"prog:{user_id}", None)
+
+
 # ────────────────────────────────────────────────────────────
 # Historique des séries
 # ────────────────────────────────────────────────────────────

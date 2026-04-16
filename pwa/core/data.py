@@ -26,6 +26,12 @@ def _uid() -> str:
     return uid
 
 
+# ── Cache ──────────────────────────────────────────────────────────────
+def clear_user_cache():
+    """Invalide le cache mémoire de l'utilisateur courant (hist + prog)."""
+    db.clear_user_cache(_uid())
+
+
 # ── Historique ──────────────────────────────────────────────────────────
 def get_hist():
     return db.get_hist(_uid())

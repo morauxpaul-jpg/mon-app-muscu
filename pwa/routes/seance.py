@@ -10,7 +10,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, abort
 logger = logging.getLogger(__name__)
 
 from core.data import (
-    get_hist, get_prog,
+    get_hist, get_prog, clear_user_cache,
     replace_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
 )
 from core.dates import today_paris, today_paris_str, now_paris, DAYS_FR, MONTHS_FR
@@ -558,6 +558,7 @@ def save_exo():
 
     try:
         replace_exo_rows(semaine, seance, exo_final, new_rows)
+        clear_user_cache()
     except Exception as e:
         logger.error("save-exo FAILED seance=%s exo=%s: %s", seance, exo_final, e)
         return render_template(
@@ -582,6 +583,7 @@ def skip_exo():
         "Date": f["date"],
     }]
     replace_exo_rows(semaine, seance, exo_final, new_rows)
+    clear_user_cache()
     return _back_to_editor(f)
 
 
@@ -595,6 +597,7 @@ def reset_exo():
     exo_base = f["exo_base"]
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
     delete_exo_rows(semaine, seance, exo_final)
+    clear_user_cache()
     return _back_to_editor(f)
 
 
@@ -603,6 +606,7 @@ def reset_exo():
 def reset_session():
     f = request.form
     delete_session_rows(int(f["semaine"]), f["seance_name"])
+    clear_user_cache()
     return _back_to_editor(f)
 
 
@@ -615,6 +619,7 @@ def mark_missed():
     semaine = _iso_week(target)
     seance_name = f.get("seance_name") or "Séance manquée"
     mark_session_missed(semaine, seance_name, date_str)
+    clear_user_cache()
     return redirect(url_for("accueil.index"))
 
 
@@ -730,6 +735,7 @@ def add_cardio():
     }]
     try:
         replace_exo_rows(semaine, seance_name, exo_final, rows)
+        clear_user_cache()
     except Exception as e:
         logger.error("add-cardio FAILED: %s", e)
     return _back_to_editor(f)
@@ -750,6 +756,7 @@ def delete_cardio():
         return _back_to_editor(f)
     try:
         delete_exo_rows(semaine, seance_name, f"CARDIO:{activite}")
+        clear_user_cache()
     except Exception as e:
         logger.error("delete-cardio FAILED: %s", e)
     return _back_to_editor(f)
