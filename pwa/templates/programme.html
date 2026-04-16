@@ -31,6 +31,13 @@
         </template>
       </select>
     {% endfor %}
+    <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:12px; position:sticky; bottom:70px; z-index:100;"
+            x-data="{ planSaved: '' }"
+            @click="doSave().then(function(){ planSaved = 'ok'; setTimeout(function(){ planSaved = ''; }, 2000); });"
+            :style="planSaved === 'ok' ? 'background:rgba(0,255,127,0.2); border-color:rgba(0,255,127,0.5); color:#00FF7F;' : ''">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>
+      <span x-text="planSaved === 'ok' ? '\u2713 Enregistré' : '\uD83D\uDCBE Enregistrer le planning'"></span>
+    </button>
   </div>
 
   {# ── Programmes (dossiers de séances) ─────────────────── #}
@@ -294,11 +301,11 @@
       },
 
       scheduleSave() {
-        if (this._saveTimer) clearTimeout(this._saveTimer);
         this.saveState = 'Modifié…';
-        var self = this;
-        this._saveTimer = setTimeout(function () { self.doSave(); }, 500);
+        this._dirty = true;
       },
+
+      _dirty: false,
 
       async doSave() {
         this.saveState = 'Sauvegarde…';
@@ -316,14 +323,15 @@
             }),
           });
           if (resp.ok) {
-            this.saveState = '✓ Sauvegardé';
+            this._dirty = false;
+            this.saveState = '\u2713 Sauvegard\u00e9';
             var self = this;
-            setTimeout(function () { if (self.saveState === '✓ Sauvegardé') self.saveState = ''; }, 1500);
+            setTimeout(function () { if (self.saveState === '\u2713 Sauvegard\u00e9') self.saveState = ''; }, 1500);
           } else {
-            this.saveState = '⚠ Erreur';
+            this.saveState = '\u26a0 Erreur';
           }
         } catch (e) {
-          this.saveState = '⚠ Hors ligne';
+          this.saveState = '\u26a0 Hors ligne';
         }
       },
 

@@ -83,6 +83,17 @@
       </div>
     </template>
 
+    <div x-show="saveState === 'Modifié…'" x-transition
+         style="position:sticky; bottom:70px; z-index:100; margin:10px 0;">
+      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center;"
+              x-data="{ exoSaved: '' }"
+              @click="doSave().then(function(){ exoSaved = 'ok'; setTimeout(function(){ exoSaved = ''; }, 2000); });"
+              :style="exoSaved === 'ok' ? 'background:rgba(0,255,127,0.2); border-color:rgba(0,255,127,0.5); color:#00FF7F;' : ''">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>
+        <span x-text="exoSaved === 'ok' ? '\u2713 Enregistré' : '\uD83D\uDCBE Enregistrer les modifications'"></span>
+      </button>
+    </div>
+
     <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
 
     <div x-data="{ newExo: { name: '', sets: 3, muscles: [] }, showLibrary: false, libFilter: 'Tous', libSearch: '' }">
