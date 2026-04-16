@@ -92,6 +92,12 @@ def auto_muscles(name):
         (["kickback", "kick-back", "donkey kick"], ["Fessiers", "Ischio-jambiers"]),
         (["glute bridge", "fessier", "glute"], ["Fessiers"]),
         (["mollet", "calf raise", "calves", "talon", "standing calf", "seated calf"], ["Mollets"]),
+        (["adducteur", "adduction poulie", "copenhagen"], ["Adducteurs"]),
+        (["squat sumo"], ["Adducteurs"]),
+        (["fente latérale"], ["Adducteurs"]),
+        (["abducteur", "abduction poulie", "clam shell", "marche latérale élastique"], ["Abducteurs"]),
+        (["machine abducteur"], ["Abducteurs"]),
+        (["machine adducteur"], ["Adducteurs"]),
     ]
     for keywords, ms in rules:
         if any(kw in n for kw in keywords):

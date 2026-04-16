@@ -28,6 +28,8 @@ MUSCLES = {
     "Quadriceps":      {"std": 180, "zid_f": "z-quad",    "zid_b": None},
     "Ischio-jambiers": {"std": 110, "zid_f": None,        "zid_b": "z-ischio"},
     "Fessiers":        {"std": 140, "zid_f": None,        "zid_b": "z-fessiers"},
+    "Adducteurs":      {"std": 80,  "zid_f": "z-adducteurs", "zid_b": None},
+    "Abducteurs":      {"std": 80,  "zid_f": "z-abducteurs", "zid_b": None},
     "Mollets":         {"std": 110, "zid_f": "z-mollets", "zid_b": "z-mollets-b"},
 }
 FILTER_MUSCLES = list(MUSCLES.keys())

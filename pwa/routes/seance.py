@@ -144,7 +144,8 @@ def _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2):
 
 def _recup_status(hist, s_act):
     """Statut de récupération par muscle pour la semaine active."""
-    muscles = ["Pecs", "Dos", "Épaules", "Biceps", "Triceps", "Abdos", "Quadriceps", "Mollets"]
+    muscles = ["Pecs", "Dos", "Épaules", "Biceps", "Triceps", "Abdos", "Quadriceps",
+               "Adducteurs", "Abducteurs", "Mollets"]
     now = now_paris().replace(tzinfo=None)
     out = []
     for m in muscles:
