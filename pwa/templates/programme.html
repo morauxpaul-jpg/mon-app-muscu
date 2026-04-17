@@ -45,17 +45,21 @@
                 :style="pf.id === activeProfile ? '' : 'opacity:0.75;'"
                 @click="switchProfile(pf.id)" x-text="pf.name"></button>
       </template>
-      <button type="button" class="btn mini label-icon" @click="addProfile()">
+      <button type="button" class="btn mini label-icon" @click="openAddProfileModal()">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Nouveau
       </button>
       <template x-if="profiles.length > 1">
-        <div style="display:inline-flex; gap:6px; margin-left:auto;">
-          <button type="button" class="btn mini label-icon" @click="renameActiveProfile()" aria-label="Renommer le profil">
+        <div style="display:inline-flex; gap:6px; margin-left:auto; flex-wrap:wrap;">
+          <button type="button" class="btn mini label-icon" @click="openRenameProfileModal()" aria-label="Renommer le profil">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>
           </button>
-          <button type="button" class="btn mini label-icon" @click="deleteActiveProfile()" aria-label="Supprimer le profil">
+          <button type="button" class="btn mini label-icon" x-show="!confirmDeleteProfile" @click="confirmDeleteProfile=true" aria-label="Supprimer le profil">
             <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>
           </button>
+          <span class="inline-confirm" x-show="confirmDeleteProfile" style="display:inline-flex; width:auto; gap:6px;">
+            <button type="button" class="btn mini" @click="confirmDeleteProfile=false">Annuler</button>
+            <button type="button" class="btn mini btn-danger" @click="deleteActiveProfile()">Supprimer</button>
+          </span>
         </div>
       </template>
     </div>
@@ -336,6 +340,33 @@
     </div>
   </div>
 
+  {# ── Modal profil (ajouter / renommer) ──────────────────── #}
+  <div x-show="profileModal.open" x-transition.opacity
+       x-init="$watch('profileModal.open', v => { if(v) document.body.appendChild($el); })"
+       style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;"
+       @click.self="closeProfileModal()"
+       @keydown.escape.window="closeProfileModal()">
+    <div style="background:#0B1428; border:2px solid var(--accent, #58CCFF); border-radius:14px; padding:18px; max-width:380px; width:calc(100vw - 32px); box-shadow:0 12px 40px rgba(88,204,255,0.25);"
+         @click.stop>
+      <h4 class="label-icon" style="color:var(--accent, #58CCFF); margin:0 0 12px; letter-spacing:1px;">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>
+        <span x-text="profileModal.mode === 'add' ? 'Nouveau profil' : 'Renommer le profil'"></span>
+      </h4>
+      <label class="field-label" style="margin-top:0;">Nom (ex: Maison, Salle…)</label>
+      <input x-ref="profileInput" type="text" class="field" maxlength="40"
+             x-model="profileModal.name"
+             style="margin:0 0 14px; font-size:1rem;"
+             @keydown.enter.prevent="confirmProfileModal()">
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn" @click="closeProfileModal()">Annuler</button>
+        <button type="button" class="btn primary label-icon" @click="confirmProfileModal()"
+                :disabled="!profileModal.name.trim()">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Valider
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script src="/static/js/exercise-library.js"></script>
@@ -360,6 +391,8 @@
       saveState: '',
       _saveTimer: null,
       renameModal: { open: false, id: null, name: '' },
+      profileModal: { open: false, mode: 'add', name: '' },
+      confirmDeleteProfile: false,
 
       init() {
         var initial = JSON.parse(document.getElementById('prog-initial').textContent);
@@ -393,34 +426,51 @@
           await fetch('/programme/profile/switch', { method: 'POST', body: fd });
         } catch (e) {}
       },
-      async addProfile() {
-        var name = (prompt('Nom du nouveau profil (ex: Maison, Salle)…') || '').trim();
-        if (!name) return;
-        var fd = new FormData();
-        fd.append('name', name);
-        var resp = await fetch('/programme/profile/add', { method: 'POST', body: fd });
-        var data = await resp.json().catch(function () { return {}; });
-        if (data.ok && data.profile) {
-          this.profiles.push(data.profile);
-          this.activeProfile = data.profile.id;
-        }
+      openAddProfileModal() {
+        this.profileModal = { open: true, mode: 'add', name: '' };
+        var self = this;
+        this.$nextTick(function () {
+          if (self.$refs.profileInput) self.$refs.profileInput.focus();
+        });
       },
-      async renameActiveProfile() {
+      openRenameProfileModal() {
         var current = (this.profiles.find((p) => p.id === this.activeProfile) || {}).name || '';
-        var name = (prompt('Renommer le profil', current) || '').trim();
-        if (!name || name === current) return;
-        var fd = new FormData();
-        fd.append('profile_id', this.activeProfile);
-        fd.append('name', name);
-        var resp = await fetch('/programme/profile/rename', { method: 'POST', body: fd });
-        if (resp.ok) {
-          var i = this.profiles.findIndex((p) => p.id === this.activeProfile);
-          if (i >= 0) this.profiles[i] = { id: this.profiles[i].id, name: name };
+        this.profileModal = { open: true, mode: 'rename', name: current };
+        var self = this;
+        this.$nextTick(function () {
+          if (self.$refs.profileInput) { self.$refs.profileInput.focus(); self.$refs.profileInput.select(); }
+        });
+      },
+      closeProfileModal() {
+        this.profileModal = { open: false, mode: 'add', name: '' };
+      },
+      async confirmProfileModal() {
+        var name = (this.profileModal.name || '').trim();
+        if (!name) return;
+        var mode = this.profileModal.mode;
+        this.closeProfileModal();
+        if (mode === 'add') {
+          var fd = new FormData();
+          fd.append('name', name);
+          var resp = await fetch('/programme/profile/add', { method: 'POST', body: fd });
+          var data = await resp.json().catch(function () { return {}; });
+          if (data.ok && data.profile) {
+            this.profiles.push(data.profile);
+            this.activeProfile = data.profile.id;
+          }
+        } else if (mode === 'rename') {
+          var fd2 = new FormData();
+          fd2.append('profile_id', this.activeProfile);
+          fd2.append('name', name);
+          var resp2 = await fetch('/programme/profile/rename', { method: 'POST', body: fd2 });
+          if (resp2.ok) {
+            var i = this.profiles.findIndex((p) => p.id === this.activeProfile);
+            if (i >= 0) this.profiles[i] = { id: this.profiles[i].id, name: name };
+          }
         }
       },
       async deleteActiveProfile() {
         if (this.profiles.length <= 1) return;
-        if (!confirm('Supprimer ce profil ? Les programmes rattachés passeront sur le premier profil restant.')) return;
         var fd = new FormData();
         fd.append('profile_id', this.activeProfile);
         var resp = await fetch('/programme/profile/delete', { method: 'POST', body: fd });
@@ -428,12 +478,12 @@
         if (data.ok) {
           this.profiles = this.profiles.filter((p) => p.id !== this.activeProfile);
           this.activeProfile = data.active_profile;
-          // Les programmes orphelins tombent sur l'active
           var active = this.activeProfile;
           this.programmes.forEach(function (pg) {
             if (!pg.profile_id) pg.profile_id = active;
           });
         }
+        this.confirmDeleteProfile = false;
       },
       async assignProgrammeProfile(progId, profileId) {
         var pg = this.programmes.find(function (p) { return p.id === progId; });

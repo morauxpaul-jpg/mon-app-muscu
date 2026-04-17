@@ -105,27 +105,31 @@
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,0.7);
-  padding: 16px;
+  padding: 8px;
   overflow: hidden;
 }
 .exo-info-box {
   background: #0B1428;
   border: 2px solid var(--accent, #58CCFF);
   border-radius: 14px;
-  padding: 18px;
+  padding: 12px 14px;
   max-width: 340px;
-  width: calc(100vw - 32px);
-  max-height: calc(100vh - 32px);
+  width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   color: #fff;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
-.exo-info-box h4 { color: var(--accent, #58CCFF); margin: 0 0 8px; font-size: 1rem; }
-.exo-info-box .info-section { margin-bottom: 8px; }
-.exo-info-box .info-label { font-size: 0.7rem; color: var(--text-dim, #8899aa); letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; }
-.exo-info-box .info-text { font-size: 0.88rem; line-height: 1.4; }
+.exo-info-box h4 { color: var(--accent, #58CCFF); margin: 0 0 6px; font-size: 0.95rem; }
+.exo-info-box .info-section { margin-bottom: 6px; }
+.exo-info-box .info-label { font-size: 0.68rem; color: var(--text-dim, #8899aa); letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; }
+.exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; }
+.exo-info-box #exo-info-image img { max-height: 90px; }
+.exo-info-box .mini-bodymap { margin-bottom: 6px !important; }
+.exo-info-box #exo-info-tips { padding-left: 16px; margin: 2px 0 0; font-size: 0.8rem !important; line-height: 1.35 !important; }
+.exo-info-box #exo-info-tips li { margin-bottom: 2px; }
 .exo-info-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid rgba(88,204,255,0.15); }
 .exo-info-tab {
   background: none; border: 0; padding: 6px 12px;
@@ -138,9 +142,9 @@
 .exo-info-box .rm-row-max td { color: var(--accent, #58CCFF); background: rgba(88,204,255,0.06); }
 .mini-body-svg { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45)); }
 .exo-info-close {
-  position: sticky; bottom: -18px;
-  width: 100%; margin-top: 14px;
-  padding: 12px;
+  position: sticky; bottom: -12px;
+  width: 100%; margin-top: 10px;
+  padding: 10px;
   background: var(--accent, #58CCFF);
   box-shadow: 0 -8px 12px -4px #0B1428;
 }

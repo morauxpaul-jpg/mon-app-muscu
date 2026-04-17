@@ -127,7 +127,10 @@
         suggestions: cfg.suggestions || [],
         prenom: cfg.prenom || 'athlète',
         init() {
-          this.$nextTick(() => this.scrollDown());
+          // Double tick + rAF pour attendre que les messages rendus par x-for
+          // aient mis à jour scrollHeight avant de scroller.
+          this.$nextTick(() => requestAnimationFrame(() => this.scrollDown()));
+          setTimeout(() => this.scrollDown(), 120);
         },
         askClear() {
           document.getElementById('coach-clear-modal').style.display = 'flex';
@@ -215,6 +218,7 @@
             this.errorMsg = 'Réseau indisponible.';
           } finally {
             this.typing = false;
+            this.$nextTick(() => this.scrollDown());
           }
         },
       };
