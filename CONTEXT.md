@@ -154,7 +154,7 @@ pwa/
 - Font : système (sans-serif)
 
 ## Git
-- Branche : `pwa-migration`
+- Branche unique : `main` (déployée automatiquement sur Railway — tout commit/push se fait ici)
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
 - CACHE_VERSION : v20 (incrémenter à chaque déploiement)
