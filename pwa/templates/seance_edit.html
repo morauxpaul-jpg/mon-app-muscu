@@ -181,21 +181,29 @@
   </div>
   {% endif %}
 
-  <form method="post" action="/seance/mark-missed" style="margin-bottom: 8px;"
-        onsubmit="return showModal(event, 'Marquer comme manquée ?', 'Ta séance sera marquée comme manquée pour cette date.', false);">
+  <form method="post" action="/seance/mark-missed" style="margin-bottom: 8px;" x-data="{ c:false }">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
-    <button type="submit" class="btn label-icon"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>Séance manquée</button>
+    <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>Séance manquée</button>
+    <div class="inline-confirm" x-show="c">
+      <span class="confirm-label">Marquer comme manquée ?</span>
+      <button type="button" class="btn" @click="c=false">Annuler</button>
+      <button type="submit" class="btn btn-danger">Confirmer</button>
+    </div>
   </form>
 
-  <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;"
-        onsubmit="return showModal(event, 'Recommencer la séance ?', 'Toutes les données saisies pour {{ seance_name }} semaine {{ s_display }} seront perdues. Continuer ?', true);">
+  <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;" x-data="{ c:false }">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="semaine" value="{{ s_act }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="name" value="{{ seance_name }}">
-    <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cette séance</button>
+    <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cette séance</button>
+    <div class="inline-confirm" x-show="c">
+      <span class="confirm-label">Effacer les séries saisies ?</span>
+      <button type="button" class="btn" @click="c=false">Annuler</button>
+      <button type="submit" class="btn btn-danger">Confirmer</button>
+    </div>
   </form>
 
   <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Récupération</h3>
@@ -350,8 +358,7 @@
           </form>
         </div>
 
-        <form method="post" action="/seance/reset-exo" style="margin-top:6px;"
-              onsubmit="return showModal(event, 'Recommencer cet exercice ?', 'Les données de {{ exo.base }} seront effacées.', true);">
+        <form method="post" action="/seance/reset-exo" style="margin-top:6px;" x-data="{ c:false }">
           <input type="hidden" name="mode" value="{{ mode }}">
           <input type="hidden" name="name" value="{{ seance_name }}">
           <input type="hidden" name="date" value="{{ date_iso }}">
@@ -359,7 +366,12 @@
           <input type="hidden" name="seance_name" value="{{ seance_name }}">
           <input type="hidden" name="exo_base" value="{{ exo.base }}">
           <input type="hidden" name="variant" :value="variant">
-          <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
+          <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
+          <div class="inline-confirm" x-show="c">
+            <span class="confirm-label">Effacer les séries de {{ exo.base }} ?</span>
+            <button type="button" class="btn" @click="c=false">Annuler</button>
+            <button type="submit" class="btn btn-danger">Confirmer</button>
+          </div>
         </form>
 
         {% if exo.is_extra %}
@@ -526,15 +538,18 @@
             <svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#flame"/></svg>
             Cardio · {{ c.activite }}
           </div>
-          <form method="post" action="/seance/delete-cardio" style="margin:0;"
-                onsubmit="return confirm('Supprimer ce bloc cardio ?');">
+          <form method="post" action="/seance/delete-cardio" style="margin:0;" x-data="{ c2:false }">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
             <input type="hidden" name="semaine" value="{{ c.semaine }}">
             <input type="hidden" name="activite" value="{{ c.activite }}">
-            <button type="submit" class="btn mini" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
+            <button type="button" class="btn mini label-icon" x-show="!c2" @click="c2=true" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
+            <span class="inline-confirm" x-show="c2" style="display:inline-flex; width:auto;">
+              <button type="button" class="btn mini" @click="c2=false">Annuler</button>
+              <button type="submit" class="btn mini btn-danger">Confirmer</button>
+            </span>
           </form>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:0.85rem;">
@@ -725,18 +740,6 @@
     </div>
   </div>
 
-  {# ── Modal de confirmation (Feature 4) ──────────────────── #}
-  <div id="confirm-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" id="modal-box">
-      <div class="modal-title" id="modal-title"></div>
-      <div class="modal-body" id="modal-body"></div>
-      <div class="modal-actions">
-        <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
-        <button class="btn primary" id="modal-confirm" onclick="confirmModal()">Confirmer</button>
-      </div>
-    </div>
-  </div>
-
   <script>
   // Polygones du corps (partagés par la mini-carte du modal info)
   window.__BODY_POLYGONS__ = {{ body_polygons | tojson }};
@@ -896,39 +899,6 @@
     });
     document.getElementById('exo-tab-fiche').style.display = (tab === 'fiche') ? '' : 'none';
     document.getElementById('exo-tab-rm').style.display = (tab === 'rm') ? '' : 'none';
-  }
-
-  // ── Modal system (Feature 4) ──────────────────────────────────
-  var _pendingForm = null;
-  function showModal(event, title, body, isDanger) {
-    event.preventDefault();
-    _pendingForm = event.target;
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').textContent = body;
-    var box = document.getElementById('modal-box');
-    var btn = document.getElementById('modal-confirm');
-    if (isDanger) {
-      box.classList.add('danger');
-      btn.className = 'btn btn-danger';
-      btn.textContent = 'Confirmer';
-    } else {
-      box.classList.remove('danger');
-      btn.className = 'btn primary';
-      btn.textContent = 'Confirmer';
-    }
-    document.getElementById('confirm-modal').style.display = 'flex';
-    return false;
-  }
-  function closeModal() {
-    document.getElementById('confirm-modal').style.display = 'none';
-    _pendingForm = null;
-  }
-  function confirmModal() {
-    document.getElementById('confirm-modal').style.display = 'none';
-    if (_pendingForm) {
-      _pendingForm.onsubmit = null;
-      _pendingForm.submit();
-    }
   }
 
   // ── Rest Timer (non-bloquant, background-aware) ───────────────

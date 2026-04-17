@@ -116,32 +116,45 @@
     <p style="font-size:0.8rem; color:var(--text-dim); margin:0 0 8px;">Exporte <strong>toutes</strong> tes données (programme + historique + archives) dans un fichier JSON. Pour partager seulement ton programme à un ami, utilise plutôt l'export depuis <a href="/programme" style="color:var(--violet);">Programme</a>.</p>
     <a href="/gestion/export" class="btn primary label-icon" style="width:100%; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
     <form method="post" action="/gestion/import" enctype="multipart/form-data" style="margin-top:10px;"
-          onsubmit="return showModal(event, 'Importer des données ?', 'Les données actuelles seront remplacées par le contenu du fichier. Cette action est irréversible.', true);">
+          x-data="{ c:false }">
       <label class="field-label">Importer un fichier JSON</label>
       <input type="file" name="file" accept=".json" required class="field" style="padding:8px;">
-      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
+      <div class="inline-confirm" x-show="c" style="margin-top:8px;">
+        <span class="confirm-label">Remplacer toutes les données ?</span>
+        <button type="button" class="btn" @click="c=false">Annuler</button>
+        <button type="submit" class="btn btn-danger">Confirmer</button>
+      </div>
     </form>
   </div>
 
   <div class="card" style="border-color: rgba(255,159,10,0.4);">
     <h3 class="label-icon" style="color:#FF9F0A;"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
-    <form method="post" action="/gestion/reset-soft"
-          onsubmit="return showModal(event, 'Réinitialiser l\'historique ?', 'L\'historique sera vidé et les records archivés. Le programme est conservé.', true);">
-      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Confirmer la réinitialisation</button>
+    <form method="post" action="/gestion/reset-soft" x-data="{ c:false }">
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;" x-show="!c" @click="c=true"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</button>
+      <div class="inline-confirm" x-show="c">
+        <span class="confirm-label">Vider l'historique ?</span>
+        <button type="button" class="btn" @click="c=false">Annuler</button>
+        <button type="submit" class="btn btn-danger">Confirmer</button>
+      </div>
     </form>
   </div>
 
   <div class="card" style="border-color: rgba(255,69,58,0.5);">
     <h3 class="label-icon" style="color: var(--danger);"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>Tout remettre à zéro</h3>
     <p class="label-icon" style="font-size:0.85rem; color:var(--text-dim);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
-    <form method="post" action="/gestion/reset-total"
-          onsubmit="return showModal(event, 'TOUT REMETTRE À ZÉRO', 'TOUTES les données seront supprimées. Cette action est irréversible.', true);">
+    <form method="post" action="/gestion/reset-total" x-data="{ c:false }">
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="confirm" value="yes" required>
         <span>Je comprends, je veux tout effacer</span>
       </label>
-      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>TOUT REMETTRE À ZÉRO</button>
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>TOUT REMETTRE À ZÉRO</button>
+      <div class="inline-confirm" x-show="c">
+        <span class="confirm-label">Effacer TOUTES les données ?</span>
+        <button type="button" class="btn" @click="c=false">Annuler</button>
+        <button type="submit" class="btn btn-danger">Confirmer</button>
+      </div>
     </form>
   </div>
 
@@ -151,18 +164,6 @@
   <div class="card" style="text-align:center;">
     <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker PRO</strong></p>
     <p style="font-size:0.8rem; color:var(--text-dim); margin:0;">PWA de suivi musculation · Données privées · Gratuit</p>
-  </div>
-
-  {# ── Modal de confirmation ──────────────────── #}
-  <div id="confirm-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" id="modal-box">
-      <div class="modal-title" id="modal-title"></div>
-      <div class="modal-body" id="modal-body"></div>
-      <div class="modal-actions">
-        <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
-        <button class="btn primary" id="modal-confirm" onclick="confirmModal()">Confirmer</button>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -212,35 +213,6 @@
         btn.classList.remove('loading');
         btn.innerHTML = '<svg class="icon icon-sm" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour';
       });
-    }
-
-    // Modal system
-    var _pendingForm = null;
-    function showModal(event, title, body, isDanger) {
-      event.preventDefault();
-      _pendingForm = event.target;
-      document.getElementById('modal-title').textContent = title;
-      document.getElementById('modal-body').textContent = body;
-      var box = document.getElementById('modal-box');
-      var btn = document.getElementById('modal-confirm');
-      if (isDanger) {
-        box.classList.add('danger');
-        btn.className = 'btn btn-danger';
-      } else {
-        box.classList.remove('danger');
-        btn.className = 'btn primary';
-      }
-      btn.textContent = 'Confirmer';
-      document.getElementById('confirm-modal').style.display = 'flex';
-      return false;
-    }
-    function closeModal() {
-      document.getElementById('confirm-modal').style.display = 'none';
-      _pendingForm = null;
-    }
-    function confirmModal() {
-      document.getElementById('confirm-modal').style.display = 'none';
-      if (_pendingForm) { _pendingForm.onsubmit = null; _pendingForm.submit(); }
     }
 
     // Loading states on form submits

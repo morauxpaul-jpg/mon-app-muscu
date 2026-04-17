@@ -54,10 +54,19 @@
           <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
-          <button type="button" class="btn mini label-icon"
-                  @click="if(confirm('Supprimer le programme « ' + pg.name + ' » ? (les séances seront déplacées en Non classé)')) deleteProgramme(pg.id)">
-            <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
-          </button>
+          <template x-if="true">
+            <div x-data="{ c:false }" style="display:inline-flex; gap:6px;">
+              <button type="button" class="btn mini label-icon" x-show="!c" @click="c=true">
+                <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
+              </button>
+              <template x-if="c">
+                <span class="inline-confirm" style="display:inline-flex; width:auto;">
+                  <button type="button" class="btn mini" @click="c=false">Annuler</button>
+                  <button type="button" class="btn mini btn-danger" @click="deleteProgramme(pg.id); c=false">Confirmer</button>
+                </span>
+              </template>
+            </div>
+          </template>
         </div>
 
         <template x-for="sname in seancesIn(pg.id)" :key="sname">
@@ -159,8 +168,7 @@
   <div class="card" x-data="{ detected: '' }">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. <strong>Attention :</strong> cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
-    <form method="post" action="/programme/import" enctype="multipart/form-data"
-          onsubmit="return confirm('Votre programme actuel sera remplacé par celui du fichier. Continuer ?');">
+    <form method="post" action="/programme/import" enctype="multipart/form-data" x-data="{ c:false }">
       <input type="file" name="file" accept="application/json,.json" class="field" required
              @change="
                const f = $event.target.files[0];
@@ -182,7 +190,12 @@
              ">
       <div x-show="detected" x-text="detected" style="font-size:0.82rem; margin:6px 0; color:#58CCFF;"></div>
       <input type="hidden" name="confirm" value="yes">
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
+      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
+      <div class="inline-confirm" x-show="c" style="margin-top:8px;">
+        <span class="confirm-label">Remplacer le programme actuel ?</span>
+        <button type="button" class="btn" @click="c=false">Annuler</button>
+        <button type="submit" class="btn btn-danger">Confirmer</button>
+      </div>
     </form>
   </div>
 
@@ -226,15 +239,19 @@
           <p style="font-size:0.82rem; margin:8px 0;">{{ p.description }}</p>
           <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim);"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>{{ p.muscles|join(' · ') }}</div>
           <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>{{ p.nb_seances }} séances</div>
-          <form method="post" action="/programme/change-program"
-                @submit="if (!confirm((mode==='merge' ? 'Fusionner' : 'Remplacer par') + ' {{ p.title }} ?')) $event.preventDefault()"
-                style="margin-top:10px;">
+          <form method="post" action="/programme/change-program" style="margin-top:10px;"
+                x-data="{ c:false }">
             <input type="hidden" name="programme_id" value="{{ p.id }}">
             <input type="hidden" name="mode" :value="mode">
             <input type="hidden" name="confirm" value="yes">
-            <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>
+            <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>
               <span x-text="mode==='merge' ? 'Fusionner ce programme' : 'Choisir ce programme'"></span>
             </button>
+            <div class="inline-confirm" x-show="c">
+              <span class="confirm-label" x-text="(mode==='merge' ? 'Fusionner' : 'Remplacer par') + ' {{ p.title }} ?'"></span>
+              <button type="button" class="btn" @click="c=false">Annuler</button>
+              <button type="submit" class="btn btn-danger">Confirmer</button>
+            </div>
           </form>
         </div>
       {% endfor %}
@@ -242,12 +259,16 @@
       <div class="card" style="margin:10px 0; border-color: rgba(255,159,10,0.4);">
         <div class="label-icon" style="font-weight:700; color:#FF9F0A;"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</div>
         <p style="font-size:0.82rem; margin:8px 0;">Vide les séances actuelles et te laisse construire ton programme à zéro depuis cet onglet.</p>
-        <form method="post" action="/programme/change-program"
-              onsubmit="return confirm('Toutes vos séances actuelles seront supprimées. Continuer ?');">
+        <form method="post" action="/programme/change-program" x-data="{ c:false }">
           <input type="hidden" name="programme_id" value="custom">
           <input type="hidden" name="mode" value="replace">
           <input type="hidden" name="confirm" value="yes">
-          <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
+          <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
+          <div class="inline-confirm" x-show="c">
+            <span class="confirm-label">Effacer toutes les séances ?</span>
+            <button type="button" class="btn" @click="c=false">Annuler</button>
+            <button type="submit" class="btn btn-danger">Confirmer</button>
+          </div>
         </form>
       </div>
     </div>

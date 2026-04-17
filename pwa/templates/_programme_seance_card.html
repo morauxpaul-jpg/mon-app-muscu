@@ -5,7 +5,7 @@
      - moveSeanceInProg, renameSeance, deleteSeance, moveSeanceToProg
      - addExo, moveExo, deleteExo, toggleMuscle, scheduleSave
 #}
-<div class="card" x-data="{ open: false, renaming: false, newName: '', showMove: false }">
+<div class="card" x-data="{ open: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
   <div class="exo-head" @click="open = !open">
     <div class="exo-title" x-text="sname"></div>
     <div style="display:flex; align-items:center; gap:8px;">
@@ -24,14 +24,27 @@
       <button type="button" class="btn label-icon" @click="showMove = !showMove">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#folder"/></svg>Déplacer
       </button>
-      <button type="button" class="btn label-icon" @click="if(confirm('Supprimer la séance ' + sname + ' ?')) deleteSeance(sname)">
+      <button type="button" class="btn label-icon" x-show="!confirmDel" @click="confirmDel=true">
         <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
       </button>
+      <template x-if="confirmDel">
+        <span class="inline-confirm" style="width:auto; display:inline-flex;">
+          <span class="confirm-label">Supprimer <span x-text="sname"></span> ?</span>
+          <button type="button" class="btn" @click="confirmDel=false">Annuler</button>
+          <button type="button" class="btn btn-danger" @click="deleteSeance(sname); confirmDel=false">Confirmer</button>
+        </span>
+      </template>
       <template x-if="originSeanceNames.includes(sname)">
-        <form method="post" action="/programme/seance/reset"
-              onsubmit="return confirm('Réinitialiser cette séance à sa version d\'origine ?');" style="display:inline;">
+        <form method="post" action="/programme/seance/reset" style="display:inline;">
           <input type="hidden" name="name" :value="sname">
-          <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
+          <button type="button" class="btn label-icon" x-show="!confirmReset" @click="confirmReset=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
+          <template x-if="confirmReset">
+            <span class="inline-confirm" style="width:auto; display:inline-flex;">
+              <span class="confirm-label">Réinitialiser à l'origine ?</span>
+              <button type="button" class="btn" @click="confirmReset=false">Annuler</button>
+              <button type="submit" class="btn btn-danger">Confirmer</button>
+            </span>
+          </template>
         </form>
       </template>
     </div>
@@ -56,7 +69,7 @@
     </div>
 
     <template x-for="(ex, exIdx) in prog[sname]" :key="sname + '|' + exIdx + '|' + ex.name">
-      <div class="prog-exo-row">
+      <div class="prog-exo-row" x-data="{ confirmExoDel: false }">
         <div class="prog-exo-form">
           <div class="prog-exo-name" x-text="ex.name"></div>
           <div class="prog-exo-fields">
@@ -75,10 +88,15 @@
             </div>
           </div>
         </div>
-        <div class="prog-exo-actions">
-          <button type="button" class="btn mini" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
-          <button type="button" class="btn mini" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
-          <button type="button" class="btn mini" aria-label="Supprimer" @click="if(confirm('Supprimer ' + ex.name + ' ?')) deleteExo(sname, exIdx)"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
+        <div class="prog-exo-actions" x-show="!confirmExoDel">
+          <button type="button" class="btn mini label-icon" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
+          <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
+          <button type="button" class="btn mini label-icon" aria-label="Supprimer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
+        </div>
+        <div class="inline-confirm" x-show="confirmExoDel" style="margin-top:8px;">
+          <span class="confirm-label">Supprimer <span x-text="ex.name"></span> ?</span>
+          <button type="button" class="btn mini" @click="confirmExoDel=false">Annuler</button>
+          <button type="button" class="btn mini btn-danger" @click="deleteExo(sname, exIdx); confirmExoDel=false">Confirmer</button>
         </div>
       </div>
     </template>
