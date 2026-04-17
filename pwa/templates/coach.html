@@ -175,6 +175,14 @@
           esc = esc.replace(/^#\s+(.+)$/gm, '<h3 class="md-h">$1</h3>');
           // Code inline avec backticks
           esc = esc.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+          // Liens markdown [texte](url) — whitelist : URL interne (/...) ou http(s)
+          esc = esc.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, function (_m, txt, url) {
+            var safe = /^(https?:\/\/|\/)[^\s"'<>]*$/.test(url);
+            if (!safe) return txt;
+            var ext = /^https?:/.test(url);
+            var attrs = ext ? ' target="_blank" rel="noopener"' : '';
+            return '<a class="coach-link" href="' + url + '"' + attrs + '>' + txt + '</a>';
+          });
           // Bold **…**
           esc = esc.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
           // Italic *…* (après bold pour ne pas entrer en conflit)
@@ -380,6 +388,19 @@
       padding: 3px 0 0;
     }
     /* Markdown rendu dans les bulles */
+    .msg-bubble .coach-link {
+      display: inline-block;
+      background: rgba(88,204,255,0.14);
+      border: 1px solid rgba(88,204,255,0.4);
+      color: var(--accent, #58CCFF);
+      padding: 2px 9px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.86em;
+      transition: background 0.15s;
+    }
+    .msg-bubble .coach-link:hover { background: rgba(88,204,255,0.26); }
     .msg-bubble strong { color: #fff; font-weight: 700; }
     .msg-bubble em { font-style: italic; color: #d4e4f5; }
     .msg-bubble code {

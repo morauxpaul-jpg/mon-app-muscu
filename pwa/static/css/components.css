@@ -558,3 +558,14 @@ button.btn-danger:hover {
   letter-spacing: 1px;
   margin-bottom: 1rem;
 }
+
+/* Carte catalogue mise en avant quand suggérée par le coach (deep-link ?apply=ID) */
+.catalog-card.catalog-suggested {
+  border-color: rgba(88, 204, 255, 0.7) !important;
+  box-shadow: 0 0 0 1px rgba(88, 204, 255, 0.35), 0 0 24px rgba(88, 204, 255, 0.2);
+  animation: catalogSuggestedPulse 2.4s ease-in-out infinite;
+}
+@keyframes catalogSuggestedPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(88, 204, 255, 0.35), 0 0 24px rgba(88, 204, 255, 0.2); }
+  50%      { box-shadow: 0 0 0 1px rgba(88, 204, 255, 0.6),  0 0 32px rgba(88, 204, 255, 0.35); }
+}

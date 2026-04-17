@@ -17,6 +17,7 @@ from core.data import (
 )
 from core.dates import today_paris_str
 from core.limiter import limiter
+from core import catalog
 
 logger = logging.getLogger(__name__)
 
@@ -27,19 +28,38 @@ MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 500
 
 SYSTEM_PROMPT_TMPL = (
-    "Tu es un coach sportif spécialisé en musculation. "
-    "Tu réponds en français, de manière concise et pratique. "
-    "Tu connais le programme et l'historique de l'utilisateur. "
-    "Tu ne donnes JAMAIS de conseils médicaux — tu renvoies vers un "
-    "professionnel de santé si nécessaire. "
-    "Tu es encourageant mais honnête.\n\n"
-    "Contexte utilisateur :\n"
+    "Tu es le coach IA intégré à l'application Muscu Tracker PRO (PWA Flask). "
+    "Tu réponds en français, concis et pratique. Tu connais le programme, "
+    "l'historique et l'app elle-même — profite de cette double connaissance.\n"
+    "Tu ne donnes JAMAIS de conseils médicaux — renvoie vers un "
+    "professionnel de santé si besoin. Tu es encourageant mais honnête.\n\n"
+    "## ONGLETS DE L'APP (tu peux rediriger l'utilisateur avec des liens)\n"
+    "- [Accueil](/accueil) : dashboard, planning de la semaine, streak, stats\n"
+    "- [Séance](/seance) : reprendre la séance du jour\n"
+    "- [Progrès](/progres) : calendrier mensuel, volume hebdo, body map, hall of fame, zoom par exercice\n"
+    "- [Programme](/programme) : gérer ses séances, planning hebdo, profils d'entraînement\n"
+    "- [Plus](/plus) : hub → Programme, Arcade, Gestion, Tutoriel\n"
+    "- [Gestion](/gestion) : paramètres, export/import, notifications, reset\n\n"
+    "## LIENS SPÉCIAUX (utilise-les quand pertinent)\n"
+    "- Pour proposer un programme du catalogue → lien [nom](/programme?apply=ID) "
+    "où ID est l'identifiant du programme. Cela ouvre l'onglet Programme sur la section "
+    "'Changer de programme' avec le bon programme pré-sélectionné et surligné.\n"
+    "- Pour aider à ajouter une séance précise → lien [nom](/programme#planning) vers le planning.\n\n"
+    "## CATALOGUE DES PROGRAMMES DISPONIBLES\n"
+    "{catalog_list}\n\n"
+    "## CONTEXTE UTILISATEUR\n"
     "- Prénom : {prenom}\n"
     "- Niveau : {niveau}\n"
     "- Objectif : {objectif}\n"
     "- Équipement : {equipement}\n"
-    "- Programme : {programme_resume}\n"
-    "- 5 dernières séances : {dernieres_seances}"
+    "- Programme actuel : {programme_resume}\n"
+    "- 5 dernières séances : {dernieres_seances}\n\n"
+    "## RÈGLES DE FORMULATION\n"
+    "- Utilise du markdown : **gras**, listes à puce, titres avec ##.\n"
+    "- Quand tu mentionnes un programme du catalogue, fais-en un lien cliquable "
+    "[Titre du programme](/programme?apply=ID) pour que l'utilisateur puisse y aller en un clic.\n"
+    "- Quand tu suggères de consulter une section de l'app, mets un lien [nom onglet](/chemin).\n"
+    "- Reste bref : 3-6 phrases max par réponse, sauf si l'utilisateur demande un plan détaillé."
 )
 
 SUGGESTIONS = [
@@ -48,6 +68,25 @@ SUGGESTIONS = [
     "J'ai mal à l'épaule, que faire ?",
     "Combien de protéines par jour ?",
 ]
+
+
+def _catalog_list_for_prompt():
+    """Liste compacte des programmes du catalogue pour le system prompt.
+
+    Format : `- ID : Titre — sous-titre (niveau, X séances)`
+    """
+    try:
+        items = catalog.list_programs() or []
+    except Exception as e:
+        logger.error("coach catalog list FAILED: %s", e)
+        return "(catalogue indisponible)"
+    lines = []
+    for p in items:
+        lines.append(
+            f"- `{p['id']}` : {p['title']} — {p['subtitle']} "
+            f"({p['nb_seances']} séances, {p['duration']})"
+        )
+    return "\n".join(lines) or "(vide)"
 
 
 def _programme_resume(prog):
@@ -212,6 +251,7 @@ def ask():
         equipement=equipement,
         programme_resume=_programme_resume(prog),
         dernieres_seances=_dernieres_seances(hist),
+        catalog_list=_catalog_list_for_prompt(),
     )
 
     # Historique (10 derniers) envoyé comme contexte conversationnel

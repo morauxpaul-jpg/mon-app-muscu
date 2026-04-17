@@ -240,7 +240,28 @@
   </div>
 
   {# ── Changer de programme (catalogue) ────────────── #}
-  <div class="card" x-data="{ open: false, mode: 'replace' }">
+  <div id="change-program" class="card"
+       x-data="{
+         open: false,
+         mode: 'replace',
+         applyId: '',
+         init() {
+           try {
+             var sp = new URLSearchParams(window.location.search);
+             var id = (sp.get('apply') || '').trim();
+             if (id) {
+               this.applyId = id;
+               this.open = true;
+               var self = this;
+               this.$nextTick(function () {
+                 var el = document.getElementById('catalog-' + id);
+                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 else document.getElementById('change-program').scrollIntoView({ behavior: 'smooth' });
+               });
+             }
+           } catch (e) {}
+         }
+       }">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme</h3>
     {% if current_program_meta %}
       <p style="font-size:0.85rem; color:var(--text-dim);">Programme actuel : <strong style="color:#58CCFF;">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
@@ -266,19 +287,48 @@
       </p>
 
       {% for p in catalog_programs %}
-        <div class="card" style="margin:10px 0; border-color: rgba(88,204,255,0.25);">
+        <div id="catalog-{{ p.id }}" class="card catalog-card" style="margin:10px 0; border-color: rgba(88,204,255,0.25);"
+             :class="applyId === '{{ p.id }}' ? 'catalog-suggested' : ''"
+             x-data="{ showDetails: false }">
           <div style="display:flex; justify-content:space-between; align-items:start; gap:8px;">
             <div>
               <div style="font-weight:700; color:#58CCFF;">{{ p.title }}</div>
               <div style="font-size:0.78rem; color:var(--text-dim);">{{ p.subtitle }}</div>
             </div>
-            {% if current_program_meta and current_program_meta.id == p.id %}
-              <span style="font-size:10px; padding:2px 8px; border-radius:10px; background:rgba(0,255,127,0.15); color:#00FF7F;">ACTUEL</span>
-            {% endif %}
+            <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+              <span x-show="applyId === '{{ p.id }}'" x-cloak class="label-icon" style="font-size:10px; padding:2px 8px; border-radius:10px; background:rgba(88,204,255,0.18); color:#58CCFF; border:1px solid rgba(88,204,255,0.4);">
+                <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Suggéré
+              </span>
+              {% if current_program_meta and current_program_meta.id == p.id %}
+                <span style="font-size:10px; padding:2px 8px; border-radius:10px; background:rgba(0,255,127,0.15); color:#00FF7F;">ACTUEL</span>
+              {% endif %}
+            </div>
           </div>
           <p style="font-size:0.82rem; margin:8px 0;">{{ p.description }}</p>
           <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim);"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>{{ p.muscles|join(' · ') }}</div>
           <div class="label-icon" style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>{{ p.nb_seances }} séances</div>
+
+          <button type="button" class="btn mini label-icon" style="margin-top:10px;"
+                  @click="showDetails = !showDetails"
+                  :aria-expanded="showDetails.toString()">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard-list"/></svg>
+            <span x-text="showDetails ? 'Masquer le détail' : 'Détail des séances'"></span>
+          </button>
+          <div x-show="showDetails" x-cloak x-transition style="margin-top:10px; padding:10px 12px; background:rgba(88,204,255,0.05); border:1px solid rgba(88,204,255,0.15); border-radius:8px;">
+            {% for sp in p.seances_preview %}
+              <div style="margin-bottom: {% if not loop.last %}10px{% else %}0{% endif %};">
+                <div class="label-icon" style="font-size:0.8rem; color:#58CCFF; font-weight:700; margin-bottom:4px;">
+                  <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>{{ sp.name }}
+                </div>
+                <ul style="margin:0; padding-left:18px; font-size:0.78rem; color:var(--text-dim); line-height:1.5;">
+                  {% for ex in sp.exercises %}
+                    <li><span style="color:#d4e4f5;">{{ ex.name }}</span> <span style="color:#5a7a9a;">· {{ ex.sets }} séries</span></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endfor %}
+          </div>
+
           <form method="post" action="/programme/change-program" style="margin-top:10px;"
                 x-data="{ c:false }">
             <input type="hidden" name="programme_id" value="{{ p.id }}">
