@@ -4,7 +4,7 @@
 {% block content %}
 <div x-data="programmeApp()" x-init="init()">
   <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-    <h1 style="margin-bottom:0;">Programme</h1>
+    <h1 class="label-icon" style="margin-bottom:0;"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Programme</h1>
     <span class="save-pill" x-show="saveState" x-text="saveState" x-transition
           style="font-size:0.72rem; padding:4px 10px; border-radius:10px; background:rgba(88,204,255,0.15); color:#58CCFF;"></span>
   </div>
@@ -49,8 +49,8 @@
 
       <div x-show="open" x-transition>
         <div style="display:flex; gap:6px; margin:8px 0 10px; flex-wrap:wrap;">
-          <button type="button" class="btn mini label-icon" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
-          <button type="button" class="btn mini label-icon" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
+          <button type="button" class="btn mini label-icon" aria-label="Monter" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
+          <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
           <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
