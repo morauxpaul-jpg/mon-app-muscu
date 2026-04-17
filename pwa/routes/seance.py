@@ -359,6 +359,24 @@ def seance():
             subtitle_text, subtitle_color = "À FAIRE", "#58CCFF"
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
 
+        # Regroupe les séances par programme pour un affichage clair
+        programmes = prog.get("_programmes") or []
+        seance_prog = prog.get("_seance_prog") or {}
+        prog_by_id = {p["id"]: p["name"] for p in programmes if isinstance(p, dict) and p.get("id")}
+        seance_order = list(prog_seances.keys())
+        groups = []
+        for p in programmes:
+            pid = p.get("id") if isinstance(p, dict) else None
+            if not pid:
+                continue
+            snames = [s for s in seance_order if seance_prog.get(s) == pid]
+            if snames:
+                groups.append({"name": p.get("name") or "Programme", "seances": snames})
+        unclassified = [s for s in seance_order if not seance_prog.get(s) or seance_prog.get(s) not in prog_by_id]
+        if unclassified:
+            label_uncl = "Non classé" if groups else "Mes séances"
+            groups.append({"name": label_uncl, "seances": unclassified})
+
         return render_template(
             "seance_choix.html",
             active="seance",
@@ -372,6 +390,7 @@ def seance():
             prog_seances=prog_seances,
             planning=prog.get("_planning", {}),
             jours_map=prog.get("_jours", {}),
+            prog_groups=groups,
         )
 
     # ── Vue édition : mode prefaite ───────────────────────────────

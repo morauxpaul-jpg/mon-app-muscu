@@ -88,21 +88,43 @@
     </div>
   {% endif %}
 
-  <div class="card" style="border-color: rgba(88,204,255,0.3);">
-    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>SÉANCE PRÉ-FAITE</div>
-    {% for sname in seance_names %}
-      <div class="seance-choice-row">
-        <div>
-          <div class="seance-name">{{ sname }}</div>
-          <div class="seance-meta">
-            {{ prog_seances[sname]|length }} exercices
-            {% if jours_map.get(sname) %} · {{ jours_map[sname] }}{% endif %}
-          </div>
+  {% if prog_groups and prog_groups|length > 1 %}
+    {% for group in prog_groups %}
+      <div class="card" style="border-color: rgba(88,204,255,0.3);">
+        <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px; text-shadow: 0 0 8px rgba(88,204,255,0.6);">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>{{ group.name|upper }}
         </div>
-        <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn label-icon" style="display:inline-flex;">Choisir<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
+        {% for sname in group.seances %}
+          <div class="seance-choice-row">
+            <div>
+              <div class="seance-name">{{ sname }}</div>
+              <div class="seance-meta">
+                {{ prog_seances[sname]|length }} exercices
+                {% if jours_map.get(sname) %} · {{ jours_map[sname] }}{% endif %}
+              </div>
+            </div>
+            <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn label-icon" style="display:inline-flex;">Choisir<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
+          </div>
+        {% endfor %}
       </div>
     {% endfor %}
-  </div>
+  {% else %}
+    <div class="card" style="border-color: rgba(88,204,255,0.3);">
+      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>SÉANCE PRÉ-FAITE</div>
+      {% for sname in seance_names %}
+        <div class="seance-choice-row">
+          <div>
+            <div class="seance-name">{{ sname }}</div>
+            <div class="seance-meta">
+              {{ prog_seances[sname]|length }} exercices
+              {% if jours_map.get(sname) %} · {{ jours_map[sname] }}{% endif %}
+            </div>
+          </div>
+          <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn label-icon" style="display:inline-flex;">Choisir<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   <div class="card" style="border-color: rgba(0,255,127,0.3);">
     <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#edit"/></svg>SÉANCE PERSONNALISÉE</div>
