@@ -79,6 +79,45 @@ def _ensure_programmes(prog):
     return progs, mapping
 
 
+def _gen_profile_id() -> str:
+    return "pf_" + uuid.uuid4().hex[:8]
+
+
+def _ensure_profiles(prog):
+    """Seed un profil d'entraînement par défaut si absent. Chaque programme
+    se voit attribuer un `profile_id` par défaut s'il n'en a pas encore.
+    Le profil actif est stocké dans `_active_profile`.
+    """
+    profiles = prog.get("_profiles")
+    if not isinstance(profiles, list) or not profiles:
+        default_id = _gen_profile_id()
+        profiles = [{"id": default_id, "name": "Par défaut"}]
+    # Normalise : garde id+name uniquement
+    clean = []
+    for p in profiles:
+        if isinstance(p, dict) and p.get("id") and p.get("name"):
+            clean.append({"id": p["id"], "name": str(p["name"])[:40]})
+    if not clean:
+        clean = [{"id": _gen_profile_id(), "name": "Par défaut"}]
+    profiles = clean
+
+    valid_ids = {p["id"] for p in profiles}
+    active = prog.get("_active_profile")
+    if active not in valid_ids:
+        active = profiles[0]["id"]
+
+    # Attribue un profil à chaque programme si manquant
+    for pg in (prog.get("_programmes") or []):
+        if isinstance(pg, dict):
+            pid = pg.get("profile_id")
+            if pid not in valid_ids:
+                pg["profile_id"] = active
+
+    prog["_profiles"] = profiles
+    prog["_active_profile"] = active
+    return profiles, active
+
+
 def _seance_items(prog):
     """Liste ordonnée des séances du programme (exclut les clés techniques _*)."""
     return [(k, v) for k, v in prog.items() if not k.startswith("_")]
@@ -127,6 +166,7 @@ def programme():
         ), 503
     _ensure_planning(prog)
     programmes, seance_prog = _ensure_programmes(prog)
+    profiles, active_profile = _ensure_profiles(prog)
     save_prog(prog)  # persiste la migration si c'était la première fois
     seances = _seance_items(prog)
 
@@ -154,8 +194,10 @@ def programme():
         "seance_order": [s for s, _ in seances],
         "origin_seance_names": sorted(_origin_seance_names(prog)),
         "origin": prog.get("_origin"),
-        "programmes": [{"id": p["id"], "name": p["name"]} for p in programmes],
+        "programmes": [{"id": p["id"], "name": p["name"], "profile_id": p.get("profile_id") or active_profile} for p in programmes],
         "seance_prog": dict(seance_prog),
+        "profiles": [{"id": p["id"], "name": p["name"]} for p in profiles],
+        "active_profile": active_profile,
     }
 
     return render_template(
@@ -254,7 +296,11 @@ def save_state():
             pname = (p.get("name") or "").strip()[:80]
             if not pid or not pname:
                 continue
-            new_programmes.append({"id": pid, "name": pname})
+            entry = {"id": pid, "name": pname}
+            prof = p.get("profile_id")
+            if isinstance(prof, str) and prof.strip():
+                entry["profile_id"] = prof.strip()
+            new_programmes.append(entry)
     # Si le client n'en envoie pas, on réutilise l'ancien état
     if not new_programmes:
         new_programmes = old.get("_programmes") or []
@@ -268,8 +314,99 @@ def save_state():
     new_prog["_programmes"] = new_programmes
     new_prog["_seance_prog"] = new_mapping
 
+    # Profils d'entraînement — préserve l'état existant + normalise les profile_id
+    if "_profiles" in old:
+        new_prog["_profiles"] = old["_profiles"]
+    if "_active_profile" in old:
+        new_prog["_active_profile"] = old["_active_profile"]
+    _ensure_profiles(new_prog)
+
     save_prog(new_prog)
     return jsonify({"ok": True})
+
+
+# ── Profils d'entraînement (Maison / Salle / …) ─────────────────
+@bp.route("/programme/profile/switch", methods=["POST"])
+def switch_profile():
+    pid = (request.form.get("profile_id") or "").strip()
+    prog = get_prog()
+    _ensure_profiles(prog)
+    valid = {p["id"] for p in prog.get("_profiles", [])}
+    if pid in valid:
+        prog["_active_profile"] = pid
+        save_prog(prog)
+    return jsonify({"ok": True, "active_profile": prog.get("_active_profile")})
+
+
+@bp.route("/programme/profile/add", methods=["POST"])
+def add_profile():
+    name = (request.form.get("name") or "").strip()[:40]
+    if not name:
+        return jsonify({"ok": False, "error": "empty_name"}), 400
+    prog = get_prog()
+    _ensure_profiles(prog)
+    if len(prog["_profiles"]) >= 8:
+        return jsonify({"ok": False, "error": "too_many"}), 400
+    new_id = _gen_profile_id()
+    prog["_profiles"].append({"id": new_id, "name": name})
+    prog["_active_profile"] = new_id
+    save_prog(prog)
+    return jsonify({"ok": True, "profile": {"id": new_id, "name": name}})
+
+
+@bp.route("/programme/profile/rename", methods=["POST"])
+def rename_profile():
+    pid = (request.form.get("profile_id") or "").strip()
+    name = (request.form.get("name") or "").strip()[:40]
+    if not pid or not name:
+        return jsonify({"ok": False, "error": "invalid"}), 400
+    prog = get_prog()
+    _ensure_profiles(prog)
+    for p in prog["_profiles"]:
+        if p["id"] == pid:
+            p["name"] = name
+            save_prog(prog)
+            return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "not_found"}), 404
+
+
+@bp.route("/programme/profile/delete", methods=["POST"])
+def delete_profile():
+    pid = (request.form.get("profile_id") or "").strip()
+    prog = get_prog()
+    _ensure_profiles(prog)
+    if len(prog["_profiles"]) <= 1:
+        return jsonify({"ok": False, "error": "last_profile"}), 400
+    remaining = [p for p in prog["_profiles"] if p["id"] != pid]
+    if len(remaining) == len(prog["_profiles"]):
+        return jsonify({"ok": False, "error": "not_found"}), 404
+    prog["_profiles"] = remaining
+    # Les programmes rattachés tombent sur le premier profil restant
+    fallback = remaining[0]["id"]
+    for pg in prog.get("_programmes") or []:
+        if isinstance(pg, dict) and pg.get("profile_id") == pid:
+            pg["profile_id"] = fallback
+    if prog.get("_active_profile") == pid:
+        prog["_active_profile"] = fallback
+    save_prog(prog)
+    return jsonify({"ok": True, "active_profile": prog["_active_profile"]})
+
+
+@bp.route("/programme/profile/assign", methods=["POST"])
+def assign_programme_profile():
+    prog_id = (request.form.get("prog_id") or "").strip()
+    profile_id = (request.form.get("profile_id") or "").strip()
+    prog = get_prog()
+    _ensure_profiles(prog)
+    valid = {p["id"] for p in prog["_profiles"]}
+    if profile_id not in valid:
+        return jsonify({"ok": False, "error": "invalid_profile"}), 400
+    for pg in prog.get("_programmes") or []:
+        if isinstance(pg, dict) and pg.get("id") == prog_id:
+            pg["profile_id"] = profile_id
+            save_prog(prog)
+            return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "not_found"}), 404
 
 
 # ── Planning ─────────────────────────────────────────────────────

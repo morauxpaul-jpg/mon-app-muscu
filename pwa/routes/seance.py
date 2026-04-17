@@ -360,23 +360,32 @@ def seance():
             subtitle_text, subtitle_color = "À FAIRE", "#58CCFF"
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
 
-        # Regroupe les séances par programme pour un affichage clair
+        # Regroupe les séances par programme pour un affichage clair,
+        # filtré par profil d'entraînement actif (s'il y en a plusieurs).
         programmes = prog.get("_programmes") or []
         seance_prog = prog.get("_seance_prog") or {}
-        prog_by_id = {p["id"]: p["name"] for p in programmes if isinstance(p, dict) and p.get("id")}
+        profiles = prog.get("_profiles") or []
+        active_profile = prog.get("_active_profile")
+        active_programmes = programmes
+        if len(profiles) > 1 and active_profile:
+            active_programmes = [p for p in programmes if isinstance(p, dict) and (p.get("profile_id") or active_profile) == active_profile]
+        prog_by_id = {p["id"]: p["name"] for p in active_programmes if isinstance(p, dict) and p.get("id")}
         seance_order = list(prog_seances.keys())
         groups = []
-        for p in programmes:
+        for p in active_programmes:
             pid = p.get("id") if isinstance(p, dict) else None
             if not pid:
                 continue
             snames = [s for s in seance_order if seance_prog.get(s) == pid]
             if snames:
                 groups.append({"name": p.get("name") or "Programme", "seances": snames})
-        unclassified = [s for s in seance_order if not seance_prog.get(s) or seance_prog.get(s) not in prog_by_id]
-        if unclassified:
-            label_uncl = "Non classé" if groups else "Mes séances"
-            groups.append({"name": label_uncl, "seances": unclassified})
+        # Séances orphelines : n'apparaissent que si le profil actif n'est pas
+        # filtré (ou s'il n'y a qu'un profil).
+        if len(profiles) <= 1:
+            unclassified = [s for s in seance_order if not seance_prog.get(s) or seance_prog.get(s) not in prog_by_id]
+            if unclassified:
+                label_uncl = "Non classé" if groups else "Mes séances"
+                groups.append({"name": label_uncl, "seances": unclassified})
 
         return render_template(
             "seance_choix.html",

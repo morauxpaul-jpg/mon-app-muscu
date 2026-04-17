@@ -33,10 +33,38 @@
     {% endfor %}
   </div>
 
+  {# ── Profils d'entraînement (Maison / Salle / …) ─────────── #}
+  <div class="card" style="padding:12px 14px;">
+    <div class="label-icon" style="color: var(--accent); font-size:0.7rem; letter-spacing:3px; margin-bottom:8px;">
+      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL D'ENTRAÎNEMENT
+    </div>
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      <template x-for="pf in profiles" :key="pf.id">
+        <button type="button" class="btn mini"
+                :class="pf.id === activeProfile ? 'primary' : ''"
+                :style="pf.id === activeProfile ? '' : 'opacity:0.75;'"
+                @click="switchProfile(pf.id)" x-text="pf.name"></button>
+      </template>
+      <button type="button" class="btn mini label-icon" @click="addProfile()">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Nouveau
+      </button>
+      <template x-if="profiles.length > 1">
+        <div style="display:inline-flex; gap:6px; margin-left:auto;">
+          <button type="button" class="btn mini label-icon" @click="renameActiveProfile()" aria-label="Renommer le profil">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>
+          </button>
+          <button type="button" class="btn mini label-icon" @click="deleteActiveProfile()" aria-label="Supprimer le profil">
+            <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+
   {# ── Programmes (dossiers de séances) ─────────────────── #}
   <h3 class="label-icon"><svg class="icon icon-md icon-violet"><use href="/static/img/icons.svg#folder"/></svg>Mes programmes</h3>
 
-  <template x-for="pg in programmes" :key="pg.id">
+  <template x-for="pg in filteredProgrammes()" :key="pg.id">
     <div class="card prog-section" x-data="{ open: true, newSname: '' }">
       <div class="prog-head">
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;" @click="open = !open">
@@ -54,6 +82,14 @@
           <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
+          <template x-if="profiles.length > 1">
+            <select class="btn mini" style="padding:4px 8px;"
+                    @change="assignProgrammeProfile(pg.id, $event.target.value)">
+              <template x-for="pf in profiles" :key="'assign-'+pg.id+'-'+pf.id">
+                <option :value="pf.id" :selected="(pg.profile_id || activeProfile) === pf.id" x-text="pf.name"></option>
+              </template>
+            </select>
+          </template>
           <template x-if="true">
             <div x-data="{ c:false }" style="display:inline-flex; gap:6px;">
               <button type="button" class="btn mini label-icon" x-show="!c" @click="c=true">
@@ -318,6 +354,8 @@
       catalogPrograms: [],
       programmes: [],
       seanceProg: {},
+      profiles: [],
+      activeProfile: '',
       editingName: false,
       saveState: '',
       _saveTimer: null,
@@ -334,6 +372,77 @@
         this.catalogPrograms = JSON.parse(document.getElementById('catalog-data').textContent);
         this.programmes = initial.programmes || [];
         this.seanceProg = initial.seance_prog || {};
+        this.profiles = initial.profiles || [];
+        this.activeProfile = initial.active_profile || (this.profiles[0] && this.profiles[0].id) || '';
+      },
+
+      // ── Profils d'entraînement ──
+      filteredProgrammes() {
+        if (!this.profiles || this.profiles.length <= 1) return this.programmes;
+        var active = this.activeProfile;
+        return this.programmes.filter(function (p) {
+          return (p.profile_id || active) === active;
+        });
+      },
+      async switchProfile(pid) {
+        if (!pid || pid === this.activeProfile) return;
+        this.activeProfile = pid;
+        try {
+          var fd = new FormData();
+          fd.append('profile_id', pid);
+          await fetch('/programme/profile/switch', { method: 'POST', body: fd });
+        } catch (e) {}
+      },
+      async addProfile() {
+        var name = (prompt('Nom du nouveau profil (ex: Maison, Salle)…') || '').trim();
+        if (!name) return;
+        var fd = new FormData();
+        fd.append('name', name);
+        var resp = await fetch('/programme/profile/add', { method: 'POST', body: fd });
+        var data = await resp.json().catch(function () { return {}; });
+        if (data.ok && data.profile) {
+          this.profiles.push(data.profile);
+          this.activeProfile = data.profile.id;
+        }
+      },
+      async renameActiveProfile() {
+        var current = (this.profiles.find((p) => p.id === this.activeProfile) || {}).name || '';
+        var name = (prompt('Renommer le profil', current) || '').trim();
+        if (!name || name === current) return;
+        var fd = new FormData();
+        fd.append('profile_id', this.activeProfile);
+        fd.append('name', name);
+        var resp = await fetch('/programme/profile/rename', { method: 'POST', body: fd });
+        if (resp.ok) {
+          var i = this.profiles.findIndex((p) => p.id === this.activeProfile);
+          if (i >= 0) this.profiles[i] = { id: this.profiles[i].id, name: name };
+        }
+      },
+      async deleteActiveProfile() {
+        if (this.profiles.length <= 1) return;
+        if (!confirm('Supprimer ce profil ? Les programmes rattachés passeront sur le premier profil restant.')) return;
+        var fd = new FormData();
+        fd.append('profile_id', this.activeProfile);
+        var resp = await fetch('/programme/profile/delete', { method: 'POST', body: fd });
+        var data = await resp.json().catch(function () { return {}; });
+        if (data.ok) {
+          this.profiles = this.profiles.filter((p) => p.id !== this.activeProfile);
+          this.activeProfile = data.active_profile;
+          // Les programmes orphelins tombent sur l'active
+          var active = this.activeProfile;
+          this.programmes.forEach(function (pg) {
+            if (!pg.profile_id) pg.profile_id = active;
+          });
+        }
+      },
+      async assignProgrammeProfile(progId, profileId) {
+        var pg = this.programmes.find(function (p) { return p.id === progId; });
+        if (!pg) return;
+        pg.profile_id = profileId;
+        var fd = new FormData();
+        fd.append('prog_id', progId);
+        fd.append('profile_id', profileId);
+        await fetch('/programme/profile/assign', { method: 'POST', body: fd });
       },
 
       scheduleSave() {
@@ -391,7 +500,9 @@
         if (!name) return;
         var id = this._genProgId();
         while (this.programmes.some(function (p) { return p.id === id; })) id = this._genProgId();
-        this.programmes.push({ id: id, name: name });
+        var entry = { id: id, name: name };
+        if (this.activeProfile) entry.profile_id = this.activeProfile;
+        this.programmes.push(entry);
         this.scheduleSave();
       },
       renameProgramme(id, name) {
