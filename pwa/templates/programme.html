@@ -95,12 +95,13 @@
             </select>
           </template>
           <template x-if="true">
-            <div x-data="{ c:false }" style="display:inline-flex; gap:6px;">
+            <div x-data="{ c:false }" style="display:inline-flex; gap:6px; min-width:0;">
               <button type="button" class="btn mini label-icon" x-show="!c" @click="c=true">
                 <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
               </button>
               <template x-if="c">
-                <span class="inline-confirm" style="display:inline-flex; width:auto;">
+                <span class="inline-confirm" style="flex-basis:100%; width:100%;">
+                  <span class="confirm-label">Supprimer ce programme ?</span>
                   <button type="button" class="btn mini" @click="c=false">Annuler</button>
                   <button type="button" class="btn mini btn-danger" @click="deleteProgramme(pg.id); c=false">Confirmer</button>
                 </span>

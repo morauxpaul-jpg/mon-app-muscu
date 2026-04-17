@@ -28,7 +28,7 @@
         <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
       </button>
       <template x-if="confirmDel">
-        <span class="inline-confirm" style="width:auto; display:inline-flex;">
+        <span class="inline-confirm" style="flex-basis:100%; width:100%;">
           <span class="confirm-label">Supprimer <span x-text="sname"></span> ?</span>
           <button type="button" class="btn" @click="confirmDel=false">Annuler</button>
           <button type="button" class="btn btn-danger" @click="deleteSeance(sname); confirmDel=false">Confirmer</button>
@@ -39,7 +39,7 @@
           <input type="hidden" name="name" :value="sname">
           <button type="button" class="btn label-icon" x-show="!confirmReset" @click="confirmReset=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
           <template x-if="confirmReset">
-            <span class="inline-confirm" style="width:auto; display:inline-flex;">
+            <span class="inline-confirm" style="flex-basis:100%; width:100%;">
               <span class="confirm-label">Réinitialiser à l'origine ?</span>
               <button type="button" class="btn" @click="confirmReset=false">Annuler</button>
               <button type="submit" class="btn btn-danger">Confirmer</button>
