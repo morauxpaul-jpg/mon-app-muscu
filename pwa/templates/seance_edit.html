@@ -300,7 +300,7 @@
             <tr>
               <th>Sér.</th>
               <th>Reps</th>
-              {% if not exo.is_bw %}<th>Poids</th>{% endif %}
+              <th x-show="showWeight">Poids</th>
               <th>Remarque</th>
               <th></th>
             </tr>
@@ -310,9 +310,7 @@
               <tr>
                 <td x-text="i + 1"></td>
                 <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @input="onSetFilled(i)"></td>
-                {% if not exo.is_bw %}
-                <td><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
-                {% endif %}
+                <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
                 <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                 <td>
                   <button type="button" class="mini-btn" @click="removeSet(i)" title="Retirer">×</button>
@@ -339,7 +337,7 @@
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
             <input type="hidden" name="exo_base" value="{{ exo.base }}">
             <input type="hidden" name="muscle" value="{{ exo.muscle }}">
-            <input type="hidden" name="is_bw" value="{{ '1' if exo.is_bw else '0' }}">
+            <input type="hidden" name="is_bw" :value="showWeight ? '0' : '1'">
             <input type="hidden" name="variant" :value="variant">
             <input type="hidden" name="sets_json" :value="JSON.stringify(sets)">
             <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer</button>
@@ -1147,6 +1145,8 @@
       exoInfo: data.info || {},
       variant: data.variant,
       isBw: data.is_bw || false,
+      isBwBase: data.is_bw_base || false,
+      get showWeight() { return !this.isBwBase || this.variant === 'Lesté'; },
       restSeconds: data.rest_seconds || 90,
       sets: (data.sets || []).map(function (s) {
         return {
@@ -1192,7 +1192,7 @@
         var cur = this.sets[i];
         if (!cur || cur._timerFired) return;
         var repsOk = cur.reps && Number(cur.reps) > 0;
-        var poidsOk = this.isBw || (cur.poids && Number(cur.poids) > 0);
+        var poidsOk = !this.showWeight || (cur.poids && Number(cur.poids) > 0);
         if (!repsOk || !poidsOk) return;
         cur._timerFired = true;
         this.startRestTimer();

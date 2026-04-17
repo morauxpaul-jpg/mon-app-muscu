@@ -299,6 +299,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         "variant": var,
         "exo_final": exo_final,
         "is_bw": is_bw,
+        "is_bw_base": base in BW_EXOS,
         "completed": completed,
         "record": record,
         "prev_weeks": prev_weeks,
