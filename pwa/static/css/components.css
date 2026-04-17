@@ -502,6 +502,46 @@ button.btn-danger:hover {
   border-color: var(--danger);
 }
 
+/* ── Logo Muscu Tracker — néon bleu/cyan avec glow ── */
+.app-logo {
+  font-family: 'Orbitron', 'Rajdhani', 'Segoe UI', sans-serif;
+  font-weight: 900;
+  font-size: 2.1rem;
+  line-height: 1.1;
+  text-align: center;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin: 10px 0 6px;
+  background: linear-gradient(135deg, #A8E8FF 0%, #58CCFF 45%, #2E9FE0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(88,204,255,0.55)) drop-shadow(0 0 18px rgba(88,204,255,0.28));
+  animation: appLogoGlow 3.5s ease-in-out infinite;
+}
+.app-logo .pro {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 8px;
+  font-size: 0.6em;
+  letter-spacing: 2px;
+  vertical-align: middle;
+  border: 1.5px solid rgba(88,204,255,0.6);
+  border-radius: 6px;
+  background: rgba(88,204,255,0.08);
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  -webkit-text-fill-color: #58CCFF;
+  color: #58CCFF;
+  box-shadow: 0 0 10px rgba(88,204,255,0.3);
+  filter: none;
+}
+@keyframes appLogoGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(88,204,255,0.55)) drop-shadow(0 0 18px rgba(88,204,255,0.28)); }
+  50%      { filter: drop-shadow(0 0 14px rgba(88,204,255,0.85)) drop-shadow(0 0 28px rgba(88,204,255,0.45)); }
+}
+
 /* Stub placeholder pour les pages non encore migrées */
 .stub {
   text-align: center;
