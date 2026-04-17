@@ -189,7 +189,7 @@
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>Séance manquée</button>
-    <div class="inline-confirm" x-show="c">
+    <div class="inline-confirm" x-show="c" x-cloak>
       <span class="confirm-label">Marquer comme manquée ?</span>
       <button type="button" class="btn" @click="c=false">Annuler</button>
       <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -203,7 +203,7 @@
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="name" value="{{ seance_name }}">
     <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cette séance</button>
-    <div class="inline-confirm" x-show="c">
+    <div class="inline-confirm" x-show="c" x-cloak>
       <span class="confirm-label">Effacer les séries saisies ?</span>
       <button type="button" class="btn" @click="c=false">Annuler</button>
       <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -369,7 +369,7 @@
           <input type="hidden" name="exo_base" value="{{ exo.base }}">
           <input type="hidden" name="variant" :value="variant">
           <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
-          <div class="inline-confirm" x-show="c">
+          <div class="inline-confirm" x-show="c" x-cloak>
             <span class="confirm-label">Effacer les séries de {{ exo.base }} ?</span>
             <button type="button" class="btn" @click="c=false">Annuler</button>
             <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -548,7 +548,7 @@
             <input type="hidden" name="semaine" value="{{ c.semaine }}">
             <input type="hidden" name="activite" value="{{ c.activite }}">
             <button type="button" class="btn mini label-icon" x-show="!c2" @click="c2=true" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
-            <span class="inline-confirm" x-show="c2" style="display:inline-flex; width:auto;">
+            <span class="inline-confirm" x-show="c2" x-cloak style="display:inline-flex; width:auto;">
               <button type="button" class="btn mini" @click="c2=false">Annuler</button>
               <button type="submit" class="btn mini btn-danger">Confirmer</button>
             </span>

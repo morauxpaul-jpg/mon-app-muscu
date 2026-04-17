@@ -56,7 +56,7 @@
           <button type="button" class="btn mini label-icon" x-show="!confirmDeleteProfile" @click="confirmDeleteProfile=true" aria-label="Supprimer le profil">
             <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>
           </button>
-          <span class="inline-confirm" x-show="confirmDeleteProfile" style="display:inline-flex; width:auto; gap:6px;">
+          <span class="inline-confirm" x-show="confirmDeleteProfile" x-cloak style="display:inline-flex; width:auto; gap:6px;">
             <button type="button" class="btn mini" @click="confirmDeleteProfile=false">Annuler</button>
             <button type="button" class="btn mini btn-danger" @click="deleteActiveProfile()">Supprimer</button>
           </span>
@@ -231,7 +231,7 @@
       <div x-show="detected" x-text="detected" style="font-size:0.82rem; margin:6px 0; color:#58CCFF;"></div>
       <input type="hidden" name="confirm" value="yes">
       <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
-      <div class="inline-confirm" x-show="c" style="margin-top:8px;">
+      <div class="inline-confirm" x-show="c" x-cloak style="margin-top:8px;">
         <span class="confirm-label">Remplacer le programme actuel ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -287,7 +287,7 @@
             <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>
               <span x-text="mode==='merge' ? 'Fusionner ce programme' : 'Choisir ce programme'"></span>
             </button>
-            <div class="inline-confirm" x-show="c">
+            <div class="inline-confirm" x-show="c" x-cloak>
               <span class="confirm-label" x-text="(mode==='merge' ? 'Fusionner' : 'Remplacer par') + ' {{ p.title }} ?'"></span>
               <button type="button" class="btn" @click="c=false">Annuler</button>
               <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -304,7 +304,7 @@
           <input type="hidden" name="mode" value="replace">
           <input type="hidden" name="confirm" value="yes">
           <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
-          <div class="inline-confirm" x-show="c">
+          <div class="inline-confirm" x-show="c" x-cloak>
             <span class="confirm-label">Effacer toutes les séances ?</span>
             <button type="button" class="btn" @click="c=false">Annuler</button>
             <button type="submit" class="btn btn-danger">Confirmer</button>

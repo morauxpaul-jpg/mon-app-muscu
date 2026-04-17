@@ -93,7 +93,7 @@
           <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
           <button type="button" class="btn mini label-icon" aria-label="Supprimer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
         </div>
-        <div class="inline-confirm" x-show="confirmExoDel" style="margin-top:8px;">
+        <div class="inline-confirm" x-show="confirmExoDel" x-cloak style="margin-top:8px;">
           <span class="confirm-label">Supprimer <span x-text="ex.name"></span> ?</span>
           <button type="button" class="btn mini" @click="confirmExoDel=false">Annuler</button>
           <button type="button" class="btn mini btn-danger" @click="deleteExo(sname, exIdx); confirmExoDel=false">Confirmer</button>

@@ -120,7 +120,7 @@
       <label class="field-label">Importer un fichier JSON</label>
       <input type="file" name="file" accept=".json" required class="field" style="padding:8px;">
       <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
-      <div class="inline-confirm" x-show="c" style="margin-top:8px;">
+      <div class="inline-confirm" x-show="c" x-cloak style="margin-top:8px;">
         <span class="confirm-label">Remplacer toutes les données ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -133,7 +133,7 @@
     <p style="font-size:0.85rem; color:var(--text-dim);">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-soft" x-data="{ c:false }">
       <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;" x-show="!c" @click="c=true"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</button>
-      <div class="inline-confirm" x-show="c">
+      <div class="inline-confirm" x-show="c" x-cloak>
         <span class="confirm-label">Vider l'historique ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -150,7 +150,7 @@
         <span>Je comprends, je veux tout effacer</span>
       </label>
       <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>TOUT REMETTRE À ZÉRO</button>
-      <div class="inline-confirm" x-show="c">
+      <div class="inline-confirm" x-show="c" x-cloak>
         <span class="confirm-label">Effacer TOUTES les données ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>

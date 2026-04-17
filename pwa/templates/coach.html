@@ -127,10 +127,12 @@
         suggestions: cfg.suggestions || [],
         prenom: cfg.prenom || 'athlète',
         init() {
-          // Double tick + rAF pour attendre que les messages rendus par x-for
-          // aient mis à jour scrollHeight avant de scroller.
+          // Le scroll réel se fait sur la fenêtre (coach-messages n'est pas
+          // overflow:auto) — on attend le layout puis on pousse en bas.
           this.$nextTick(() => requestAnimationFrame(() => this.scrollDown()));
           setTimeout(() => this.scrollDown(), 120);
+          setTimeout(() => this.scrollDown(), 400);
+          window.addEventListener('load', () => this.scrollDown(), { once: true });
         },
         askClear() {
           document.getElementById('coach-clear-modal').style.display = 'flex';
@@ -188,7 +190,13 @@
           return esc;
         },
         scrollDown() {
-          const el = this.$refs.scroll;
+          // coach-messages n'a pas d'overflow — on scrolle la fenêtre.
+          var h = Math.max(
+            document.body.scrollHeight,
+            document.documentElement.scrollHeight
+          );
+          window.scrollTo({ top: h, behavior: 'auto' });
+          var el = this.$refs.scroll;
           if (el) el.scrollTop = el.scrollHeight;
         },
         async send(text) {
