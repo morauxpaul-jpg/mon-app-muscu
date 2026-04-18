@@ -43,6 +43,22 @@
     </div>
   </div>
 
+  {% if next_session %}
+    <a href="/seance?date={{ next_session.date_iso }}" class="card next-session-card">
+      <div class="card-label">PROCHAINE SÉANCE</div>
+      <div class="next-session-row">
+        <div class="next-session-info">
+          <div class="next-session-title">{{ next_session.seance }}</div>
+          <div class="next-session-when">{{ next_session.relative }} · {{ next_session.date_short }}</div>
+        </div>
+        <div class="next-session-cta label-icon">
+          <span>{% if next_session.is_today %}Commencer{% else %}Voir{% endif %}</span>
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg>
+        </div>
+      </div>
+    </a>
+  {% endif %}
+
   <div class="stats-row">
     <div class="stat-card stat-blue">
       <div class="stat-label">SÉANCES</div>

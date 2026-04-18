@@ -201,6 +201,42 @@
 .day-today  { background: var(--accent-bg);  color: var(--accent); border: 1px solid rgba(91,155,213,0.25); }
 .day-future { background: var(--bg-elevated); color: var(--text-disabled); }
 
+/* ── Prochaine séance (accueil) ── */
+.next-session-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  margin-top: var(--sp-md);
+  border-color: var(--accent);
+  transition: transform .15s ease, border-color .15s ease;
+}
+.next-session-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.next-session-card:active { transform: translateY(0); }
+.next-session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+  margin-top: 4px;
+}
+.next-session-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.2;
+}
+.next-session-when {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.next-session-cta {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 /* ── Detail metrics (accueil) ── */
 .detail-row {
   display: grid;

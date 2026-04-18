@@ -271,6 +271,39 @@ def index():
     )
     streak_danger = bool(today_seance and not today_done and today.weekday() < 5)
 
+    # Prochaine séance — premier jour (aujourd'hui inclus) avec un planning
+    # non vide et pas encore faite.
+    next_session = None
+    for offset in range(0, 14):
+        d = today + timedelta(days=offset)
+        d_name = DAYS_FR[d.weekday()]
+        seance_name = planning_map.get(d_name, "")
+        if not seance_name:
+            continue
+        d_iso = d.strftime("%Y-%m-%d")
+        d_done = any(
+            r for r in hist
+            if r["Date"] == d_iso and (
+                r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0)
+            )
+        )
+        if d_done:
+            continue
+        if offset == 0:
+            relative = "Aujourd'hui"
+        elif offset == 1:
+            relative = "Demain"
+        else:
+            relative = DAYS_FR[d.weekday()].capitalize()
+        next_session = {
+            "seance": seance_name,
+            "date_iso": d_iso,
+            "date_short": f"{d.day:02d}/{d.month:02d}",
+            "relative": relative,
+            "is_today": offset == 0,
+        }
+        break
+
     # Palier streak — icon_id = symbole SVG dans icons.svg, color = classe icon-*
     if streak >= 24:
         streak_tier = "diamond"
@@ -365,4 +398,5 @@ def index():
         cal_pct=cal_pct,
         badges=badges,
         badges_new=badges_new,
+        next_session=next_session,
     )
