@@ -88,6 +88,19 @@ def _require_login():
     g.user_id = user_id
     g.email = session.get("email", "")
 
+    # Phase 5 : statut VIP disponible partout via g.is_vip. Lu depuis
+    # profiles.tier ∈ {'free','vip'}. Mis en cache session (invalidation
+    # explicite dans /admin/set-tier).
+    cached_vip = session.get("is_vip")
+    if cached_vip is None:
+        try:
+            profile = core_db.get_profile(user_id) or {}
+            cached_vip = (profile.get("tier") or "free").strip().lower() == "vip"
+        except Exception:
+            cached_vip = False
+        session["is_vip"] = cached_vip
+    g.is_vip = bool(cached_vip)
+
     # Phase 4 : gate onboarding. Les routes /onboarding/* et /logout sont
     # exemptées pour éviter la boucle de redirection.
     if path.startswith("/onboarding") or path == "/logout":
@@ -139,6 +152,7 @@ def _inject_user():
         "current_user_email": session.get("email", ""),
         "is_authenticated": bool(uid),
         "is_premium": premium,
+        "is_vip": premium,
         "is_admin": bool(email) and email in admin_emails,
     }
 

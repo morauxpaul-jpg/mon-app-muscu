@@ -6,7 +6,7 @@ import calendar
 import logging
 from datetime import date, timedelta
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, g
 
 from core.data import get_hist, get_prog
 from core.dates import today_paris, DAYS_FR
@@ -333,6 +333,8 @@ def progres():
     for r in df_p:
         r["1RM"] = calc_1rm(r["Poids"], r["Reps"])
 
+    is_vip = bool(getattr(g, "is_vip", False))
+
     # ── Carte du corps — période sélectionnée ────────────────
     bm_period = request.args.get("bm_period", "7")
     try:
@@ -341,20 +343,29 @@ def progres():
         bm_days = 7
     if bm_days not in (7, 30, 90):
         bm_days = 7
-    volume_map = _build_volume_map(hist, period_days=bm_days)
-
-    muscle_data = _build_muscle_data(df_p)
-    svg_ctx = _build_svg_context(muscle_data, volume_map)
+    # Stats avancées (body map + hall of fame + 1RM) : VIP only.
+    # Pour les non-VIP on ne calcule rien — le template affiche un aperçu verrouillé.
+    if is_vip:
+        volume_map = _build_volume_map(hist, period_days=bm_days)
+        muscle_data = _build_muscle_data(df_p)
+        svg_ctx = _build_svg_context(muscle_data, volume_map)
+    else:
+        volume_map = {}
+        muscle_data = {}
+        svg_ctx = {}
 
     # ── Hall of Fame : top 3 par 1RM (filtré par muscles) ───────
     selected_muscles = request.args.getlist("m") or FILTER_MUSCLES
-    filtered = [r for r in df_p if any(m in (r.get("Muscle") or "") for m in selected_muscles)]
-    by_exo = {}
-    for r in filtered:
-        cur = by_exo.get(r["Exercice"], 0)
-        if r["1RM"] > cur:
-            by_exo[r["Exercice"]] = r["1RM"]
-    podium = sorted(by_exo.items(), key=lambda kv: kv[1], reverse=True)[:3]
+    if is_vip:
+        filtered = [r for r in df_p if any(m in (r.get("Muscle") or "") for m in selected_muscles)]
+        by_exo = {}
+        for r in filtered:
+            cur = by_exo.get(r["Exercice"], 0)
+            if r["1RM"] > cur:
+                by_exo[r["Exercice"]] = r["1RM"]
+        podium = sorted(by_exo.items(), key=lambda kv: kv[1], reverse=True)[:3]
+    else:
+        podium = []
 
     # ── Zoom mouvement ──────────────────────────────────────────
     all_exos = sorted({r["Exercice"] for r in df_p})
@@ -394,9 +405,9 @@ def progres():
                 "exo": sel_exo,
                 "best_w": best["Poids"],
                 "best_r": int(best["Reps"]),
-                "one_rm": round(one_rm, 1),
-                "rep_ests": get_rep_estimations(one_rm),
-                "rep_table": get_rep_table(one_rm),
+                "one_rm": round(one_rm, 1) if is_vip else None,
+                "rep_ests": get_rep_estimations(one_rm) if is_vip else None,
+                "rep_table": get_rep_table(one_rm) if is_vip else None,
                 "chart_x": chart_x,
                 "chart_y": chart_y,
                 "table": table,

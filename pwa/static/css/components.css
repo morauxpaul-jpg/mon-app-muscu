@@ -645,3 +645,129 @@ button.btn-danger:hover {
   border-bottom: 0.5px solid var(--border-default);
 }
 .settings-item:last-child { border-bottom: none; }
+
+/* ── VIP / PRO ── */
+.badge-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #d4944a, #e8b86a);
+  color: #1a1d24;
+  vertical-align: middle;
+}
+.locked {
+  position: relative;
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+.locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(17, 19, 24, 0.4);
+  pointer-events: none;
+}
+.lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 2;
+  pointer-events: auto;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--text-1);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.lock-overlay svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-1);
+  fill: none;
+}
+.vip-blur {
+  position: relative;
+  overflow: hidden;
+}
+.vip-blur > *:not(.lock-overlay) {
+  filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+.vip-lock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: var(--sp-xl) var(--sp-md);
+  color: var(--text-2);
+}
+.vip-lock-icon {
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.vip-lock-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.vip-lock-text {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  max-width: 280px;
+  line-height: 1.4;
+}
+.vip-wall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 60vh;
+  padding: var(--sp-xl);
+  gap: var(--sp-sm);
+}
+.vip-wall-icon { margin-bottom: var(--sp-lg); }
+.vip-wall-title {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-1);
+  margin: 0 0 var(--sp-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.vip-wall-text {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  max-width: 300px;
+  margin: 0 0 var(--sp-xl);
+  line-height: 1.5;
+}
+.btn-pro-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.btn-pro-wrap .badge-pro {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 3;
+}

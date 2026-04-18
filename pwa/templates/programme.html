@@ -152,16 +152,26 @@
 
   {# ── Nouveau programme ─────────────────────────────────── #}
   <div class="card" x-data="{ newProgName: '' }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-violet"><use href="/static/img/icons.svg#plus"/></svg>Nouveau programme</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-violet"><use href="/static/img/icons.svg#plus"/></svg>Nouveau programme
+      {% if not is_vip %}<span class="badge-pro" style="margin-left:6px;" x-show="!canAddProgramme()">PRO</span>{% endif %}
+    </h3>
     <div style="display:flex; gap:6px;">
       <input type="text" x-model="newProgName" class="field" style="flex:1; margin:0;"
-             placeholder="Nom (ex: Force, Hypertrophie…)" maxlength="80"
-             @keydown.enter.prevent="if(newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
+             :disabled="!canAddProgramme()"
+             :placeholder="canAddProgramme() ? 'Nom (ex: Force, Hypertrophie…)' : 'Limite de 2 programmes atteinte'" maxlength="80"
+             @keydown.enter.prevent="if(canAddProgramme() && newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
       <button type="button" class="btn violet label-icon"
-              @click="if(newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
+              :class="{ locked: !canAddProgramme() }"
+              :disabled="!canAddProgramme()"
+              @click="if(canAddProgramme() && newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer
       </button>
     </div>
+    {% if not is_vip %}
+      <p x-show="!canAddProgramme()" style="font-size:0.78rem; color:var(--text-2); margin-top:8px;">
+        Limite de 2 programmes en gratuit. <a href="/premium" style="color:var(--accent);">Passe en PRO</a> pour en créer plus.
+      </p>
+    {% endif %}
   </div>
 
   {# ── Ajouter une séance depuis le catalogue ─────────────── #}
@@ -201,14 +211,23 @@
 
   {# ── Exporter / Importer mon programme ──────────── #}
   <div class="card">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme {% if not is_vip %}<span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Télécharge l'intégralité de ton programme (toutes les séances + planning) dans un fichier <code>.json</code>. Tu peux le partager à un ami pour qu'il importe exactement le tien.</p>
-    <a href="/programme/export" class="btn primary label-icon" style="width:100%; justify-content:center; display:flex;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</a>
+    {% if is_vip %}
+      <a href="/programme/export" class="btn primary label-icon" style="width:100%; justify-content:center; display:flex;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</a>
+    {% else %}
+      <button type="button" class="btn primary label-icon locked" style="width:100%; justify-content:center; display:flex;" disabled><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Exporter mon programme</button>
+      <p style="font-size:0.78rem; color:var(--text-2); text-align:center; margin-top:8px;">Réservé aux membres <span class="badge-pro">PRO</span></p>
+    {% endif %}
   </div>
 
   <div class="card" x-data="{ detected: '' }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme {% if not is_vip %}<span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}</h3>
     <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. <strong>Attention :</strong> cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
+    {% if not is_vip %}
+      <button type="button" class="btn primary label-icon locked" style="width:100%; justify-content:center; display:flex;" disabled><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Importer un programme</button>
+      <p style="font-size:0.78rem; color:var(--text-2); text-align:center; margin-top:8px;">Réservé aux membres <span class="badge-pro">PRO</span></p>
+    {% else %}
     <form method="post" action="/programme/import" enctype="multipart/form-data" x-data="{ c:false }">
       <input type="file" name="file" accept="application/json,.json" class="field" required
              @change="
@@ -238,6 +257,7 @@
         <button type="submit" class="btn btn-danger">Confirmer</button>
       </div>
     </form>
+    {% endif %}
   </div>
 
   {# ── Changer de programme (catalogue) ────────────── #}
@@ -427,6 +447,7 @@
 <script>
   function programmeApp() {
     return {
+      isVip: {{ 'true' if is_vip else 'false' }},
       prog: {},
       planning: {},
       programName: '',
@@ -596,9 +617,14 @@
           return (sp[s] || null) === target;
         });
       },
+      canAddProgramme() {
+        if (this.isVip) return true;
+        return (this.programmes || []).length < 2;
+      },
       addProgramme(name) {
         name = (name || '').trim();
         if (!name) return;
+        if (!this.canAddProgramme()) return;
         var id = this._genProgId();
         while (this.programmes.some(function (p) { return p.id === id; })) id = this._genProgId();
         var entry = { id: id, name: name };

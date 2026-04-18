@@ -64,6 +64,9 @@ def set_tier():
         core_db.set_user_tier(user_id, tier)
     except Exception as e:
         logger.error("/admin/set-tier FAILED user=%s tier=%s: %s", user_id, tier, e)
+    # Invalide le cache VIP si l'admin modifie son propre tier
+    if user_id == session.get("user_id"):
+        session.pop("is_vip", None)
     return redirect(url_for("admin.index"))
 
 

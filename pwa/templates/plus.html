@@ -27,7 +27,9 @@
     <div style="display:flex; align-items:center; gap:14px;">
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
       <div>
-        <h3 style="margin:0 0 2px;">Coach IA <span class="badge badge-info" style="margin-left:6px;">NEW</span></h3>
+        <h3 style="margin:0 0 2px;">Coach IA
+          {% if is_vip %}<span class="badge badge-info" style="margin-left:6px;">NEW</span>{% else %}<span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}
+        </h3>
         <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Ton assistant musculation personnel, alimenté par Claude.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>

@@ -116,7 +116,8 @@
     <div class="card stub"><p>Aucune donnée. Enregistre une séance pour voir tes progrès.</p></div>
   {% else %}
 
-  {# ── Carte du corps ─────────────────────────────────── #}
+  {# ── Carte du corps (VIP) ─────────────────────────── #}
+  {% if is_vip %}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire</h3>
 
@@ -163,8 +164,26 @@
     <div id="md-content"></div>
     <div id="md-chart" style="width:100%; height:180px; margin-top:10px;"></div>
   </div>
+  {% else %}
+  {# ── Carte du corps — aperçu verrouillé pour les non-VIP ── #}
+  <div class="card" style="position:relative; padding:0; overflow:hidden;">
+    <div style="padding:14px 14px 6px;">
+      <h3 class="label-icon" style="margin:0;"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire <span class="badge-pro" style="margin-left:6px;">PRO</span></h3>
+    </div>
+    <div style="position:relative;">
+      <div style="padding:20px 14px 24px; filter:blur(4px); user-select:none; pointer-events:none; text-align:center; color:var(--text-2); font-size:0.8rem;">
+        <div style="height:260px; background:linear-gradient(180deg,var(--bg-elevated),var(--bg-surface)); border-radius:var(--radius-md); margin:8px 16px;"></div>
+      </div>
+      <a href="/premium" class="lock-overlay" style="flex-direction:column; gap:8px;">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span style="display:flex; align-items:center; gap:8px;">Débloquer <span class="badge-pro">PRO</span></span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
 
-  {# ── Hall of Fame ───────────────────────────────────── #}
+  {# ── Hall of Fame (VIP) ──────────────────────────── #}
+  {% if is_vip %}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>Hall of Fame</h3>
     <form method="get" action="/progres#hof">
@@ -196,6 +215,26 @@
       <p style="text-align:center; color:var(--text-dim); font-size:0.85rem;">Aucun mouvement pour ce filtre.</p>
     {% endif %}
   </div>
+  {% else %}
+  <div class="card" style="position:relative; padding:0; overflow:hidden;">
+    <div style="padding:14px 14px 6px;">
+      <h3 class="label-icon" style="margin:0;"><svg class="icon icon-md icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>Hall of Fame <span class="badge-pro" style="margin-left:6px;">PRO</span></h3>
+    </div>
+    <div style="position:relative;">
+      <div style="padding:14px; filter:blur(4px); user-select:none; pointer-events:none;">
+        <div class="podium">
+          <div class="podium-item podium-gold"><div class="rank">1</div><div class="exo">Développé couché</div><div class="rm">1RM — kg</div></div>
+          <div class="podium-item podium-silver"><div class="rank">2</div><div class="exo">Squat</div><div class="rm">1RM — kg</div></div>
+          <div class="podium-item podium-bronze"><div class="rank">3</div><div class="exo">Soulevé de terre</div><div class="rm">1RM — kg</div></div>
+        </div>
+      </div>
+      <a href="/premium" class="lock-overlay" style="flex-direction:column; gap:8px;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span style="display:flex; align-items:center; gap:8px;">Débloquer le Hall of Fame <span class="badge-pro">PRO</span></span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
 
   {# ── Zoom mouvement ─────────────────────────────────── #}
   <div class="card" id="zoom">
@@ -213,11 +252,18 @@
     {% if zoom %}
       <div class="detail-row" style="margin-top:12px;">
         <div class="detail-metric"><div class="detail-label">MEILLEUR</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.best_w }}×{{ zoom.best_r }}</div></div>
-        <div class="detail-metric"><div class="detail-label">1RM</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.one_rm }}</div></div>
+        {% if is_vip %}
+          <div class="detail-metric"><div class="detail-label">1RM</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.one_rm }}</div></div>
+        {% else %}
+          <a href="/premium" class="detail-metric" style="text-decoration:none; color:inherit; position:relative;">
+            <div class="detail-label">1RM <span class="badge-pro" style="margin-left:4px;">PRO</span></div>
+            <div class="detail-value" style="font-size:1.1rem; filter:blur(2px);">—</div>
+          </a>
+        {% endif %}
         <div class="detail-metric"><div class="detail-label">SÉRIES</div><div class="detail-value" style="font-size:1.1rem;">{{ zoom.total_sets }}</div></div>
       </div>
 
-      {% if zoom.rep_table %}
+      {% if is_vip and zoom.rep_table %}
         <div class="field-label" style="margin-top:12px;">Table RM — poids estimé par reps (Epley)</div>
         <div x-data="rmCalc({{ zoom.one_rm }}, {{ zoom.rep_table|tojson }})" class="rm-table-wrap">
           <table class="ltable rm-table">
@@ -300,6 +346,7 @@
     {% endif %}
   </div>
 
+  {% if is_vip %}
   <script>
     const MDATA = {{ muscle_data|tojson }};
     const VMAP = {{ volume_map|tojson }};
@@ -374,6 +421,7 @@
     }
 
   </script>
+  {% endif %}
 
   {% endif %}
 

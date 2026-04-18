@@ -9,7 +9,7 @@ profiles.coach_quota_count (reset automatique à chaque nouveau jour).
 import logging
 import os
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g
 
 from core.data import (
     get_prog, get_hist, get_profile, save_profile, get_onboarding,
@@ -163,6 +163,8 @@ def _quota_remaining(profile):
 
 @bp.route("/coach")
 def index():
+    if not getattr(g, "is_vip", False):
+        return render_template("vip_wall.html", active="plus", feature="Coach IA")
     try:
         profile = get_profile() or {}
         onboarding = get_onboarding() or {}
@@ -192,6 +194,8 @@ def index():
 @bp.route("/coach/clear", methods=["POST"])
 @limiter.limit("10 per minute")
 def clear():
+    if not getattr(g, "is_vip", False):
+        return redirect(url_for("accueil.index"))
     try:
         clear_coach_messages()
     except Exception as e:
@@ -202,6 +206,8 @@ def clear():
 @bp.route("/coach/ask", methods=["POST"])
 @limiter.limit("30 per minute")
 def ask():
+    if not getattr(g, "is_vip", False):
+        return jsonify({"error": "Coach IA réservé aux membres PRO."}), 403
     payload = request.get_json(silent=True) or {}
     message = (payload.get("message") or "").strip()
     if not message:

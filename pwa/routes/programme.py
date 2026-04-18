@@ -10,7 +10,7 @@ import re
 import uuid
 
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, send_file, jsonify
+    Blueprint, render_template, request, redirect, url_for, send_file, jsonify, g
 )
 
 from core.data import get_prog, save_prog
@@ -304,6 +304,17 @@ def save_state():
     # Si le client n'en envoie pas, on réutilise l'ancien état
     if not new_programmes:
         new_programmes = old.get("_programmes") or []
+
+    # Limite 2 programmes pour les non-VIP. On tolère l'état existant
+    # (ex: un user qui aurait déjà 3 programmes avant d'être passé free)
+    # mais on bloque toute création d'un nouveau programme au-delà.
+    if not getattr(g, "is_vip", False):
+        old_ids = {p.get("id") for p in (old.get("_programmes") or []) if isinstance(p, dict)}
+        added = [p for p in new_programmes if p.get("id") not in old_ids]
+        if added and len(new_programmes) > max(2, len(old_ids)):
+            return jsonify({"ok": False, "error": "vip_required",
+                            "message": "Limite de 2 programmes — passe en PRO pour en créer plus."}), 403
+
     valid_ids = {p["id"] for p in new_programmes}
     new_mapping = {}
     src_mapping = raw_mapping if isinstance(raw_mapping, dict) else (old.get("_seance_prog") or {})
@@ -486,6 +497,8 @@ def reset_seance():
 # ── Export / Import du PROGRAMME entier ───────────────────────────
 @bp.route("/programme/export", methods=["GET"])
 def export_program():
+    if not getattr(g, "is_vip", False):
+        return render_template("vip_wall.html", active="plus", feature="Export de programme"), 403
     prog = get_prog()
     seances = {}
     for sname, exos in _seance_items(prog):
@@ -511,6 +524,8 @@ def export_program():
 
 @bp.route("/programme/import", methods=["POST"])
 def import_program():
+    if not getattr(g, "is_vip", False):
+        return render_template("vip_wall.html", active="plus", feature="Import de programme"), 403
     if request.form.get("confirm") != "yes":
         return redirect(url_for("programme.programme"))
     file = request.files.get("file")
