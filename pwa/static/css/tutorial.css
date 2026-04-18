@@ -110,13 +110,13 @@
   cursor: pointer;
   font-family: inherit;
 }
-.tuto-btn:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+.tuto-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text-1); }
 .tuto-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .tuto-btn.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  background: var(--accent);
   border-color: var(--accent);
-  color: #001;
-  font-weight: 700;
+  color: #fff;
+  font-weight: 500;
 }
 
 #tuto-bubble.center {

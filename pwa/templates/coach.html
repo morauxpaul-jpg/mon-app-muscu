@@ -285,21 +285,21 @@
       word-wrap: break-word;
     }
     .msg-user .msg-bubble {
-      background: linear-gradient(135deg, rgba(88,204,255,0.24), rgba(88,204,255,0.12));
-      color: #fff;
-      border: 1px solid rgba(88,204,255,0.35);
+      background: var(--accent-bg);
+      color: var(--text-1);
+      border: 0.5px solid rgba(91,155,213,0.2);
       border-bottom-right-radius: 4px;
     }
     .msg-bot .msg-bubble {
-      background: rgba(255,255,255,0.04);
-      color: #e8f0fa;
-      border: 1px solid rgba(88,204,255,0.14);
+      background: var(--bg-surface);
+      color: var(--text-1);
+      border: 0.5px solid var(--border-default);
       border-bottom-left-radius: 4px;
     }
     .msg-error {
-      background: rgba(255,69,58,0.1) !important;
-      border-color: rgba(255,69,58,0.35) !important;
-      color: #FF8F85 !important;
+      background: var(--danger-bg) !important;
+      border-color: var(--danger) !important;
+      color: var(--danger) !important;
     }
     .msg-bubble.typing {
       display: inline-flex;
@@ -308,7 +308,7 @@
     }
     .msg-bubble.typing span {
       width: 6px; height: 6px; border-radius: 50%;
-      background: var(--accent, #58CCFF);
+      background: var(--accent);
       animation: typing-dot 1.2s infinite ease-in-out;
     }
     .msg-bubble.typing span:nth-child(2) { animation-delay: 0.15s; }
@@ -321,16 +321,16 @@
       text-align: center;
       margin: 10px 0 4px;
       font-size: 0.7rem;
-      color: var(--text-dim, #8899aa);
+      color: var(--text-3);
       letter-spacing: 1px;
       text-transform: uppercase;
       position: relative;
     }
     .date-sep span {
-      background: rgba(5,10,24,0.6);
+      background: var(--bg-elevated);
       padding: 2px 10px;
       border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 0.5px solid var(--border-subtle);
     }
     .coach-suggestions {
       display: flex;
@@ -339,9 +339,9 @@
       margin-top: 4px;
     }
     .coach-suggestion {
-      background: rgba(88,204,255,0.08);
-      border: 1px solid rgba(88,204,255,0.22);
-      color: var(--accent, #58CCFF);
+      background: var(--accent-bg);
+      border: 0.5px solid var(--accent);
+      color: var(--accent);
       border-radius: 14px;
       padding: 8px 12px;
       font-size: 0.78rem;
@@ -349,7 +349,7 @@
       transition: all 0.15s ease;
     }
     .coach-suggestion:hover {
-      background: rgba(88,204,255,0.15);
+      background: var(--accent-bg-hover);
     }
     /* Footer groupé (input + compteur) posé en fixed juste au-dessus de
        la bottom-nav. Plus simple et plus fiable que deux sticky
@@ -358,9 +358,8 @@
       position: fixed;
       left: 0; right: 0;
       bottom: var(--nav-h, 64px);
-      background: rgba(5, 10, 24, 0.96);
-      backdrop-filter: blur(8px);
-      border-top: 1px solid rgba(255,255,255,0.08);
+      background: var(--bg-base);
+      border-top: 0.5px solid var(--border-default);
       padding: 8px 16px 6px;
       z-index: 20;
     }
@@ -384,28 +383,28 @@
     .coach-quota {
       text-align: center;
       font-size: 0.68rem;
-      color: var(--text-dim, #8899aa);
+      color: var(--text-3);
       padding: 3px 0 0;
     }
     /* Markdown rendu dans les bulles */
     .msg-bubble .coach-link {
       display: inline-block;
-      background: rgba(88,204,255,0.14);
-      border: 1px solid rgba(88,204,255,0.4);
-      color: var(--accent, #58CCFF);
+      background: var(--accent-bg);
+      border: 0.5px solid var(--accent);
+      color: var(--accent);
       padding: 2px 9px;
       border-radius: 10px;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 500;
       font-size: 0.86em;
       transition: background 0.15s;
     }
-    .msg-bubble .coach-link:hover { background: rgba(88,204,255,0.26); }
-    .msg-bubble strong { color: #fff; font-weight: 700; }
-    .msg-bubble em { font-style: italic; color: #d4e4f5; }
+    .msg-bubble .coach-link:hover { background: var(--accent-bg-hover); }
+    .msg-bubble strong { color: var(--text-1); font-weight: 600; }
+    .msg-bubble em { font-style: italic; color: var(--text-1); }
     .msg-bubble code {
-      background: rgba(88,204,255,0.12);
-      color: var(--accent, #58CCFF);
+      background: var(--bg-elevated);
+      color: var(--accent);
       padding: 1px 5px;
       border-radius: 4px;
       font-size: 0.85em;
@@ -419,15 +418,15 @@
     }
     .msg-bubble .md-h {
       margin: 8px 0 4px;
-      color: #fff;
+      color: var(--text-1);
       letter-spacing: 0.5px;
       text-transform: none;
       text-shadow: none;
       animation: none;
     }
     .msg-bubble h3.md-h { font-size: 1rem; }
-    .msg-bubble h4.md-h { font-size: 0.95rem; color: var(--violet, #B388FF); }
-    .msg-bubble h5.md-h { font-size: 0.88rem; color: var(--accent, #58CCFF); }
+    .msg-bubble h4.md-h { font-size: 0.95rem; color: var(--text-1); }
+    .msg-bubble h5.md-h { font-size: 0.88rem; color: var(--accent); }
     .msg-bubble .md-h:first-child { margin-top: 0; }
     /* Espacement entre les bulles à l'intérieur d'un groupe de date */
     .msg-group {

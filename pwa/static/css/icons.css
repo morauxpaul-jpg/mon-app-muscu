@@ -19,14 +19,14 @@
 .icon-lg { width: 24px; height: 24px; }
 .icon-xl { width: 32px; height: 32px; }
 
-.icon-success { color: var(--success, #00FF7F); }
-.icon-danger  { color: var(--danger,  #FF453A); }
-.icon-accent  { color: var(--accent,  #58CCFF); }
-.icon-violet  { color: var(--violet,  #B388FF); }
-.icon-gold    { color: #FFD700; }
-.icon-silver  { color: #C0C7D1; }
-.icon-bronze  { color: #D68A4F; }
-.icon-mute    { color: var(--text-dim, #8899aa); }
+.icon-success { color: var(--success); }
+.icon-danger  { color: var(--danger); }
+.icon-accent  { color: var(--accent); }
+.icon-violet  { color: var(--accent); }
+.icon-gold    { color: var(--gold); }
+.icon-silver  { color: var(--silver); }
+.icon-bronze  { color: var(--bronze); }
+.icon-mute    { color: var(--text-2); }
 
 /* Bouton-icon : cercle tactile, 40px min pour a11y */
 .icon-btn {
@@ -35,26 +35,25 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--card-border, rgba(88,204,255,0.18));
-  background: var(--card-bg, rgba(10,20,40,0.5));
-  color: var(--text, #fff);
+  border-radius: var(--radius-md);
+  border: 0.5px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-1);
   cursor: pointer;
   transition: transform 90ms ease, border-color 150ms ease, background 150ms ease;
 }
 .icon-btn:active { transform: scale(0.94); }
-.icon-btn:hover  { border-color: var(--accent, #58CCFF); }
+.icon-btn:hover  { border-color: var(--border-hover); }
 
 /* Puce verticale remplaçant les emojis devant les titres d'exercice */
 .exo-bullet {
   display: inline-block;
   width: 3px;
   height: 1em;
-  background: var(--accent, #58CCFF);
+  background: var(--accent);
   border-radius: 2px;
   vertical-align: -0.15em;
   margin-right: 8px;
-  box-shadow: 0 0 6px rgba(88,204,255,0.35);
 }
 
 /* Badge-icon inline (petits pictos contextuels devant un label) */

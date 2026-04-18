@@ -5,30 +5,30 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#grid"/></svg>Plus</h1>
 
   {% if is_premium %}
-    <div class="card" style="border-color:rgba(255,215,0,0.4); background:linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,122,0,0.04)); display:flex; align-items:center; gap:12px;">
-      <svg class="icon icon-lg" style="color:#FFD700;"><use href="/static/img/icons.svg#gem"/></svg>
+    <div class="card" style="display:flex; align-items:center; gap:12px;">
+      <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
       <div style="flex:1;">
-        <div style="font-weight:800; color:#FFD700; font-size:0.9rem;">Membre VIP</div>
-        <div style="font-size:0.75rem; color:var(--text-dim);">Merci de ton soutien — toutes les features sont débloquées.</div>
+        <div style="font-weight:500; color: var(--text-1); font-size:0.9rem;">Membre VIP</div>
+        <div style="font-size:0.75rem; color:var(--text-2);">Merci de ton soutien — toutes les features sont débloquées.</div>
       </div>
     </div>
   {% else %}
-    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(255,215,0,0.35); background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(255,122,0,0.02));">
-      <svg class="icon icon-lg" style="color:#FFD700;"><use href="/static/img/icons.svg#gem"/></svg>
+    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+      <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
       <div style="flex:1;">
-        <div style="font-weight:800; color:#FFD700; font-size:0.9rem;">Passe en Premium</div>
-        <div style="font-size:0.75rem; color:var(--text-dim);">Coach IA illimité, export, programmes avancés…</div>
+        <div style="font-weight:500; color: var(--text-1); font-size:0.9rem;">Passe en Premium</div>
+        <div style="font-size:0.75rem; color:var(--text-2);">Coach IA illimité, export, programmes avancés…</div>
       </div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
   {% endif %}
 
-  <a href="/coach" class="card plus-link" style="text-decoration:none; color:inherit; display:block; border-color: rgba(88,204,255,0.35); background: linear-gradient(135deg, rgba(88,204,255,0.08), rgba(0,255,127,0.04));">
+  <a href="/coach" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
     <div style="display:flex; align-items:center; gap:14px;">
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
       <div>
-        <h3 style="margin:0 0 2px;">Coach IA <span style="font-size:0.6rem; letter-spacing:2px; color:var(--accent); background:rgba(88,204,255,0.12); padding:2px 6px; border-radius:6px; margin-left:6px;">NEW</span></h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Ton assistant musculation personnel, alimenté par Claude.</p>
+        <h3 style="margin:0 0 2px;">Coach IA <span class="badge badge-info" style="margin-left:6px;">NEW</span></h3>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Ton assistant musculation personnel, alimenté par Claude.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
@@ -39,7 +39,7 @@
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>
       <div>
         <h3 style="margin:0 0 2px;">Programme</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Gère tes séances, exercices et planning hebdomadaire.</p>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Gère tes séances, exercices et planning hebdomadaire.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
@@ -50,7 +50,7 @@
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>
       <div>
         <h3 style="margin:0 0 2px;">Nutrition</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Calories, macros, objectifs quotidiens et suivi des repas.</p>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Calories, macros, objectifs quotidiens et suivi des repas.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
@@ -61,7 +61,7 @@
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#heart"/></svg>
       <div>
         <h3 style="margin:0 0 2px;">Cardio</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Suivi des sessions cardio : course, vélo, rameur, durée, FC, calories.</p>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Suivi des sessions cardio : course, vélo, rameur, durée, FC, calories.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
@@ -72,7 +72,7 @@
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#gamepad"/></svg>
       <div>
         <h3 style="margin:0 0 2px;">Arcade</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Mini-jeux fun entre deux séances.</p>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Mini-jeux fun entre deux séances.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
@@ -83,18 +83,18 @@
       <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#settings"/></svg>
       <div>
         <h3 style="margin:0 0 2px;">Gestion</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Paramètres, mises à jour, réinitialisation des données.</p>
+        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Paramètres, mises à jour, réinitialisation des données.</p>
       </div>
       <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </div>
   </a>
 
   {% if is_admin %}
-    <a href="/admin" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(0,255,127,0.3);">
+    <a href="/admin" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
       <svg class="icon icon-lg" style="color:var(--success);"><use href="/static/img/icons.svg#shield-check"/></svg>
       <div style="flex:1;">
-        <div style="font-weight:800; color:var(--success); font-size:0.9rem;">Admin</div>
-        <div style="font-size:0.75rem; color:var(--text-dim);">Gérer les utilisateurs et attribuer VIP.</div>
+        <div style="font-weight:500; color:var(--success); font-size:0.9rem;">Admin</div>
+        <div style="font-size:0.75rem; color:var(--text-2);">Gérer les utilisateurs et attribuer VIP.</div>
       </div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>

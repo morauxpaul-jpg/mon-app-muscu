@@ -105,30 +105,30 @@
       align-items: center;
       gap: 4px;
       padding: 12px 6px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(88,204,255,0.18);
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border-default);
       border-radius: 10px;
       cursor: pointer;
       font-size: 0.8rem;
-      color: var(--text-dim);
+      color: var(--text-2);
       transition: all 0.15s ease;
       text-align: center;
     }
     .cardio-activite:hover { border-color: var(--accent); }
     .cardio-activite.selected {
-      background: rgba(88,204,255,0.12);
+      background: var(--accent-bg);
       border-color: var(--accent);
       color: var(--accent);
     }
     .cardio-chrono-display {
       text-align: center;
-      font-family: 'Courier New', monospace;
-      font-size: 3rem;
-      font-weight: 900;
-      color: var(--accent);
-      text-shadow: 0 0 18px rgba(88,204,255,0.4);
+      font-family: var(--font);
+      font-size: 2.8rem;
+      font-weight: 500;
+      color: var(--text-1);
+      font-variant-numeric: tabular-nums;
       margin: 4px 0 12px;
-      letter-spacing: 2px;
+      letter-spacing: 0;
     }
     .cardio-chrono-btns {
       display: flex;
@@ -150,19 +150,19 @@
     .rpe-btn {
       padding: 10px 6px;
       text-align: center;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(88,204,255,0.18);
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border-default);
       border-radius: 10px;
       cursor: pointer;
       font-size: 0.85rem;
-      color: var(--text-dim);
+      color: var(--text-2);
       transition: all 0.15s ease;
     }
     .rpe-btn.selected {
-      background: rgba(88,204,255,0.15);
+      background: var(--accent-bg);
       border-color: var(--accent);
       color: var(--accent);
-      font-weight: 700;
+      font-weight: 600;
     }
     .cardio-summary {
       display: grid;
@@ -172,21 +172,21 @@
     .summary-item {
       text-align: center;
       padding: 10px 6px;
-      background: rgba(0,255,127,0.06);
-      border: 1px solid rgba(0,255,127,0.2);
+      background: var(--success-bg);
+      border: 0.5px solid var(--success);
       border-radius: 10px;
     }
     .summary-label {
       font-size: 0.7rem;
-      color: var(--text-dim);
+      color: var(--text-3);
       letter-spacing: 1px;
       text-transform: uppercase;
     }
     .summary-value {
-      font-family: 'Courier New', monospace;
       font-size: 1.15rem;
       color: var(--success);
-      font-weight: 800;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
       margin-top: 2px;
     }
   </style>

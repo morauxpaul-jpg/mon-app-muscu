@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#050A18">
+  <meta name="theme-color" content="#111318">
   <title>Connexion · Muscu PRO</title>
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/icons.css">
@@ -22,14 +23,16 @@
     }
     .login-logo { width: 96px; height: 96px; border-radius: 24px; margin-bottom: 16px; }
     .login-title { font-size: 1.6rem; margin: 0 0 6px 0; }
-    .login-sub { color: var(--text-dim); margin-bottom: 28px; font-size: 0.95rem; }
+    .login-sub { color: var(--text-2); margin-bottom: 28px; font-size: 0.95rem; }
     .google-btn {
       display: inline-flex; align-items: center; gap: 10px;
-      padding: 12px 22px; font-size: 1rem; font-weight: 600;
-      border-radius: 14px; cursor: pointer;
-      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-      border: 1px solid var(--accent); color: #fff;
+      padding: 12px 22px; font-size: 1rem; font-weight: 500;
+      border-radius: var(--radius-md); cursor: pointer;
+      background: var(--accent);
+      border: none; color: #fff;
+      transition: background var(--ease-fast);
     }
+    .google-btn:hover { background: var(--accent-hover); }
     .err { color: var(--danger); margin-top: 14px; font-size: 0.85rem; }
   </style>
 </head>

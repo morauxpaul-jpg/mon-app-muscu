@@ -8,7 +8,7 @@
 
   <div class="card" style="margin-bottom:12px;">
     <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-      <span><strong style="color:#fff;">{{ total_count }}</strong> utilisateur{% if total_count != 1 %}s{% endif %}</span>
+      <span><strong style="color:var(--text-1);">{{ total_count }}</strong> utilisateur{% if total_count != 1 %}s{% endif %}</span>
       <span><strong style="color:var(--success);">{{ vip_count }}</strong> VIP</span>
     </div>
     <div style="font-size:0.72rem; color:var(--text-dim); margin-top:6px;">
@@ -41,7 +41,7 @@
     {% for u in users %}
       <div class="admin-user" data-email="{{ (u.email or '')|lower }}" data-prenom="{{ (u.prenom or '')|lower }}">
         <div style="flex:1; min-width:0; cursor:pointer;" onclick="adminShowUser('{{ u.id }}', {{ (u.email or '—')|tojson }})">
-          <div style="font-size:0.88rem; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
+          <div style="font-size:0.88rem; color:var(--text-1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
           <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">
             {% if u.prenom %}{{ u.prenom }} · {% endif %}Inscrit le {{ u.created_at or '?' }}
           </div>
@@ -64,10 +64,10 @@
   </div>
 
   {# ── Modal fiche user ── #}
-  <div id="admin-user-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this){this.style.display='none'}">
-    <div style="background:#0B1428; border:2px solid var(--accent,#58CCFF); border-radius:14px; padding:18px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto;">
-      <h3 id="admin-u-title" style="color:var(--accent); margin:0 0 10px; word-break:break-all; font-size:1rem;"></h3>
-      <div id="admin-u-body" style="font-size:0.85rem; line-height:1.5; color:#E0EAF5;">Chargement…</div>
+  <div id="admin-user-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:var(--bg-overlay); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this){this.style.display='none'}">
+    <div style="background:var(--bg-surface); border:0.5px solid var(--border-default); border-radius:14px; padding:18px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto;">
+      <h3 id="admin-u-title" style="color:var(--text-1); margin:0 0 10px; word-break:break-all; font-size:1rem;"></h3>
+      <div id="admin-u-body" style="font-size:0.85rem; line-height:1.5; color:var(--text-1);">Chargement…</div>
       <div style="display:flex; gap:8px; margin-top:14px;">
         <button type="button" class="btn btn-cancel" style="flex:1;" onclick="document.getElementById('admin-user-modal').style.display='none'">Fermer</button>
       </div>
@@ -81,24 +81,24 @@
       gap:10px;
       padding:10px 12px;
       border-radius:10px;
-      background:rgba(255,255,255,0.02);
-      border:1px solid rgba(255,255,255,0.05);
+      background:var(--bg-surface);
+      border:0.5px solid var(--border-default);
       margin-bottom:6px;
     }
-    .admin-user:hover { border-color:rgba(88,204,255,0.25); background:rgba(88,204,255,0.04); }
-    .tier-pill { font-size:0.65rem; font-weight:800; letter-spacing:1px; padding:3px 8px; border-radius:6px; }
-    .tier-free { color:var(--text-dim); background:rgba(255,255,255,0.05); }
-    .tier-vip { color:#FFD700; background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.35); }
+    .admin-user:hover { border-color:var(--accent); background:var(--accent-bg); }
+    .tier-pill { font-size:0.65rem; font-weight:600; letter-spacing:1px; padding:3px 8px; border-radius:6px; }
+    .tier-free { color:var(--text-3); background:var(--bg-elevated); }
+    .tier-vip { color:var(--gold); background:var(--warning-bg); border:0.5px solid var(--warning); }
 
     .admin-stats .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:8px; margin-top:8px; }
-    .admin-stats .stat { padding:8px; border-radius:8px; background:rgba(88,204,255,0.05); text-align:center; }
-    .admin-stats .stat-v { font-size:1.05rem; font-weight:800; color:var(--accent); }
-    .admin-stats .stat-l { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+    .admin-stats .stat { padding:8px; border-radius:8px; background:var(--bg-elevated); text-align:center; }
+    .admin-stats .stat-v { font-size:1.05rem; font-weight:600; color:var(--accent); }
+    .admin-stats .stat-l { font-size:0.65rem; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
 
-    .mrow-admin { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.08); }
+    .mrow-admin { display:flex; justify-content:space-between; padding:4px 0; border-bottom:0.5px solid var(--border-subtle); }
     .mrow-admin:last-child { border-bottom:none; }
-    .mrow-admin span { color:var(--text-dim); }
-    .mrow-admin b { color:#fff; }
+    .mrow-admin span { color:var(--text-2); }
+    .mrow-admin b { color:var(--text-1); }
   </style>
 
   <script>

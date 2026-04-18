@@ -101,11 +101,11 @@
       </div>
     </template>
 
-    <hr style="border: 0; border-top: 1px solid rgba(88,204,255,0.15); margin: 14px 0;">
+    <hr style="border: 0; border-top: 0.5px solid var(--border-subtle); margin: 14px 0;">
 
     <div x-data="{ newExo: { name: '', sets: 3, muscles: [] }, showLibrary: false, libFilter: 'Tous', libSearch: '' }">
       <label class="field-label" style="margin-top:0;">Nouvel exercice</label>
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-bottom:8px; border-color:rgba(88,204,255,0.4);"
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-bottom:8px;"
               @click="showLibrary = true">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Choisir un exercice
       </button>
@@ -113,9 +113,9 @@
       {# Modale bibliothèque #}
       <div x-show="showLibrary" x-transition
            x-init="$watch('showLibrary', v => { if(v) document.body.appendChild($el); })"
-           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;" @click.self="showLibrary = false">
-        <div style="background:#0B1428; border:2px solid var(--accent); border-radius:14px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain;" @click.stop>
-          <h4 style="color:var(--accent); margin:0 0 10px;">Bibliothèque d'exercices</h4>
+           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:var(--bg-overlay); padding:16px;" @click.self="showLibrary = false">
+        <div style="background:var(--bg-surface); border:0.5px solid var(--border-default); border-radius:14px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain;" @click.stop>
+          <h4 style="color:var(--text-1); margin:0 0 10px;">Bibliothèque d'exercices</h4>
           <input type="text" x-model="libSearch" class="field" placeholder="Rechercher un exercice..." style="margin-bottom:8px;">
           <select class="field" x-model="libFilter" style="margin-bottom:10px;">
             <option value="Tous">Tous les groupes</option>
@@ -127,12 +127,12 @@
             <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="'lib-'+grp">
               <template x-if="libFilter === 'Tous' || libFilter === grp">
                 <div>
-                  <div style="font-size:0.72rem; color:var(--accent); letter-spacing:1px; font-weight:700; margin:8px 0 4px;" x-text="grp"></div>
+                  <div style="font-size:0.72rem; color:var(--text-3); letter-spacing:1px; font-weight:600; margin:8px 0 4px;" x-text="grp"></div>
                   <template x-for="ex in (typeof EXERCISE_LIBRARY !== 'undefined' ? (EXERCISE_LIBRARY[grp] || []) : [])" :key="grp+'-'+ex.name">
                     <div x-show="!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0"
-                         style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                         style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid var(--border-subtle);">
                       <div>
-                        <div style="font-size:0.85rem; color:#fff; font-weight:600;" x-text="ex.name"></div>
+                        <div style="font-size:0.85rem; color:var(--text-1); font-weight:500;" x-text="ex.name"></div>
                         <div style="font-size:0.7rem; color:var(--text-dim);" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
                       </div>
                       <button type="button" class="btn mini" style="white-space:nowrap;"
@@ -143,7 +143,7 @@
               </template>
             </template>
           </div>
-          <hr style="border:0; border-top:1px solid rgba(88,204,255,0.15); margin:12px 0;">
+          <hr style="border:0; border-top:0.5px solid var(--border-subtle); margin:12px 0;">
           <div style="font-size:0.82rem; color:var(--text-dim); margin-bottom:6px;">Exercice personnalisé</div>
           <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" @click="showLibrary = false; newExo.name = ''; newExo.sets = 3; newExo.muscles = [];">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Saisir manuellement

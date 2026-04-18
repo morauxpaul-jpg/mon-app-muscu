@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#050A18">
+  <meta name="theme-color" content="#111318">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Muscu Tracker PRO — Suivi musculation intelligent</title>
@@ -11,93 +11,68 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/icons.css">
   <style>
-    body { overflow-x:hidden; }
-    .landing-bg {
-      position:fixed; inset:0; z-index:-1; pointer-events:none;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(88,204,255,0.12), transparent 40%),
-        radial-gradient(circle at 80% 60%, rgba(0,255,127,0.08), transparent 45%),
-        radial-gradient(circle at 40% 90%, rgba(255,159,10,0.06), transparent 40%);
-      background-size: 200% 200%;
-      animation: bgShift 18s ease-in-out infinite;
-    }
-    @keyframes bgShift {
-      0%,100% { background-position: 0% 0%, 100% 100%, 0% 100%; }
-      50%     { background-position: 30% 20%, 70% 70%, 30% 80%; }
-    }
+    body { overflow-x:hidden; background: var(--bg-base); }
     .landing { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:32px 20px 48px; }
     .landing-hero { text-align:center; margin-bottom:28px; max-width:480px; }
     .landing-logo {
       width:88px; height:88px; border-radius:22px; margin-bottom:14px;
-      box-shadow: 0 12px 40px rgba(88,204,255,0.3);
-      animation: float 4s ease-in-out infinite;
-    }
-    @keyframes float {
-      0%,100% { transform: translateY(0); }
-      50%     { transform: translateY(-6px); }
     }
     .landing-title {
-      font-size:2rem; margin:0 0 6px; font-weight:800;
-      background: linear-gradient(135deg, #58CCFF, #00FF7F);
-      -webkit-background-clip: text; background-clip: text;
-      color: transparent;
+      font-size:2rem; margin:0 0 6px; font-weight:500;
+      color: var(--text-1);
+      letter-spacing: 0;
     }
-    .landing-sub { color:var(--text-dim); font-size:1rem; max-width:360px; margin:0 auto; line-height:1.5; }
+    .landing-sub { color:var(--text-2); font-size:1rem; max-width:360px; margin:0 auto; line-height:1.5; }
 
     .landing-mockup {
       width: 100%; max-width: 260px; margin: 22px 0 28px;
       display: block;
-      filter: drop-shadow(0 18px 36px rgba(0,0,0,0.55));
     }
 
     .landing-features { width:100%; max-width:420px; margin-bottom:28px; }
     .landing-feat {
       display:flex; align-items:flex-start; gap:14px;
       padding:14px 16px; margin-bottom:10px;
-      background:var(--card-bg); border:1px solid var(--card-border);
-      border-radius:14px;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      background:var(--bg-surface); border:0.5px solid var(--border-default);
+      border-radius:var(--radius-lg);
+      transition: border-color var(--ease-fast);
     }
-    .landing-feat:hover { transform: translateY(-2px); border-color: rgba(88,204,255,0.35); }
+    .landing-feat:hover { border-color: var(--border-hover); }
     .landing-feat-ic {
-      flex-shrink:0; width:40px; height:40px; border-radius:10px;
+      flex-shrink:0; width:40px; height:40px; border-radius:var(--radius-md);
       display:flex; align-items:center; justify-content:center;
-      background: rgba(88,204,255,0.1); border:1px solid rgba(88,204,255,0.25);
+      background: var(--accent-bg); border:0.5px solid var(--border-default);
     }
     .landing-feat-ic svg { width:22px; height:22px; color: var(--accent); }
-    .landing-feat h3 { margin:0 0 2px; font-size:0.95rem; color:#fff; }
-    .landing-feat p { margin:0; font-size:0.82rem; color:var(--text-dim); line-height:1.4; }
+    .landing-feat h3 { margin:0 0 2px; font-size:var(--text-base); color:var(--text-1); font-weight:500; }
+    .landing-feat p { margin:0; font-size:var(--text-sm); color:var(--text-2); line-height:1.4; }
 
     .landing-cta {
       display:inline-flex; align-items:center; gap:10px;
-      padding:14px 28px; font-size:1.05rem; font-weight:700;
-      border-radius:14px; cursor:pointer; text-decoration:none;
-      background:linear-gradient(135deg, var(--accent), var(--accent-dark));
-      border:1px solid var(--accent); color:#fff;
-      box-shadow:0 0 20px rgba(88,204,255,0.3);
-      animation: ctaPulse 2.4s ease-in-out infinite;
+      padding:14px 28px; font-size:1rem; font-weight:500;
+      border-radius:var(--radius-md); cursor:pointer; text-decoration:none;
+      background: var(--accent);
+      border:none; color:#fff;
+      transition: background var(--ease-fast), transform var(--ease-fast);
     }
-    @keyframes ctaPulse {
-      0%,100% { box-shadow: 0 0 20px rgba(88,204,255,0.3); transform: scale(1); }
-      50%     { box-shadow: 0 0 32px rgba(88,204,255,0.55); transform: scale(1.02); }
-    }
-    .landing-cta:active { transform:scale(0.97); animation: none; }
+    .landing-cta:hover { background: var(--accent-hover); }
+    .landing-cta:active { transform:scale(0.97); }
 
     .landing-social {
-      margin-top:14px; font-size:0.82rem; color:var(--text-dim);
+      margin-top:14px; font-size:var(--text-sm); color:var(--text-2);
       display:inline-flex; align-items:center; gap:6px;
     }
     .landing-social svg { width:14px; height:14px; color: var(--success); }
 
-    .landing-footer { margin-top:24px; font-size:0.75rem; color:var(--text-dim); text-align:center; max-width:340px; }
+    .landing-footer { margin-top:24px; font-size:var(--text-xs); color:var(--text-3); text-align:center; max-width:340px; }
   </style>
 </head>
 <body>
-  <div class="landing-bg"></div>
   <div class="landing">
     <div class="landing-hero">
       <img src="/static/icon-192.png" alt="Muscu PRO" class="landing-logo">
@@ -106,36 +81,26 @@
     </div>
 
     <svg class="landing-mockup" viewBox="0 0 280 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="mockBg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0B1428"/>
-          <stop offset="100%" stop-color="#050A18"/>
-        </linearGradient>
-        <linearGradient id="mockBar" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#58CCFF" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#58CCFF" stop-opacity="0.25"/>
-        </linearGradient>
-      </defs>
-      <rect x="4" y="4" width="272" height="392" rx="28" fill="url(#mockBg)" stroke="#58CCFF" stroke-opacity="0.35"/>
-      <rect x="22" y="26" width="90" height="10" rx="5" fill="#58CCFF" opacity="0.7"/>
-      <rect x="22" y="44" width="140" height="22" rx="6" fill="#fff" opacity="0.85"/>
-      <rect x="22" y="82" width="236" height="68" rx="14" fill="rgba(88,204,255,0.08)" stroke="rgba(88,204,255,0.25)"/>
-      <text x="40" y="112" fill="#58CCFF" font-size="12" font-weight="700" font-family="sans-serif">SEMAINE 14</text>
-      <text x="40" y="134" fill="#fff" font-size="20" font-weight="800" font-family="sans-serif">3/4 séances</text>
-      <rect x="22" y="168" width="110" height="68" rx="14" fill="rgba(0,255,127,0.08)" stroke="rgba(0,255,127,0.3)"/>
-      <text x="34" y="194" fill="#3a8a5a" font-size="10" font-weight="700" font-family="sans-serif">VOLUME</text>
-      <text x="34" y="222" fill="#00FF7F" font-size="20" font-weight="800" font-family="sans-serif">24.8k</text>
-      <rect x="148" y="168" width="110" height="68" rx="14" fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.3)"/>
-      <text x="160" y="194" fill="#8a7a2a" font-size="10" font-weight="700" font-family="sans-serif">STREAK</text>
-      <text x="160" y="222" fill="#FFD700" font-size="20" font-weight="800" font-family="sans-serif">5 sem.</text>
-      <rect x="22" y="254" width="236" height="120" rx="14" fill="rgba(88,204,255,0.04)" stroke="rgba(88,204,255,0.18)"/>
-      <rect x="40"  y="340" width="24" height="24" rx="3" fill="url(#mockBar)"/>
-      <rect x="72"  y="320" width="24" height="44" rx="3" fill="url(#mockBar)"/>
-      <rect x="104" y="300" width="24" height="64" rx="3" fill="url(#mockBar)"/>
-      <rect x="136" y="288" width="24" height="76" rx="3" fill="url(#mockBar)"/>
-      <rect x="168" y="270" width="24" height="94" rx="3" fill="url(#mockBar)"/>
-      <rect x="200" y="278" width="24" height="86" rx="3" fill="url(#mockBar)"/>
-      <rect x="232" y="262" width="24" height="102" rx="3" fill="url(#mockBar)"/>
+      <rect x="4" y="4" width="272" height="392" rx="28" fill="#1a1d24" stroke="#2a2d36"/>
+      <rect x="22" y="26" width="90" height="10" rx="5" fill="#5b9bd5" opacity="0.7"/>
+      <rect x="22" y="44" width="140" height="22" rx="6" fill="#e8e9ed" opacity="0.9"/>
+      <rect x="22" y="82" width="236" height="68" rx="14" fill="#22252e" stroke="#2a2d36"/>
+      <text x="40" y="112" fill="#9ca3af" font-size="12" font-weight="500" font-family="sans-serif">SEMAINE 14</text>
+      <text x="40" y="134" fill="#e8e9ed" font-size="20" font-weight="500" font-family="sans-serif">3/4 séances</text>
+      <rect x="22" y="168" width="110" height="68" rx="14" fill="#1a3328" stroke="#2a2d36"/>
+      <text x="34" y="194" fill="#9ca3af" font-size="10" font-weight="500" font-family="sans-serif">VOLUME</text>
+      <text x="34" y="222" fill="#5bbd8a" font-size="20" font-weight="500" font-family="sans-serif">24.8k</text>
+      <rect x="148" y="168" width="110" height="68" rx="14" fill="#332a1a" stroke="#2a2d36"/>
+      <text x="160" y="194" fill="#9ca3af" font-size="10" font-weight="500" font-family="sans-serif">STREAK</text>
+      <text x="160" y="222" fill="#d4944a" font-size="20" font-weight="500" font-family="sans-serif">5 sem.</text>
+      <rect x="22" y="254" width="236" height="120" rx="14" fill="#22252e" stroke="#2a2d36"/>
+      <rect x="40"  y="340" width="24" height="24" rx="3" fill="#5b9bd5" opacity="0.6"/>
+      <rect x="72"  y="320" width="24" height="44" rx="3" fill="#5b9bd5" opacity="0.65"/>
+      <rect x="104" y="300" width="24" height="64" rx="3" fill="#5b9bd5" opacity="0.7"/>
+      <rect x="136" y="288" width="24" height="76" rx="3" fill="#5b9bd5" opacity="0.75"/>
+      <rect x="168" y="270" width="24" height="94" rx="3" fill="#5b9bd5" opacity="0.8"/>
+      <rect x="200" y="278" width="24" height="86" rx="3" fill="#5b9bd5" opacity="0.85"/>
+      <rect x="232" y="262" width="24" height="102" rx="3" fill="#5b9bd5" opacity="0.9"/>
     </svg>
 
     <div class="landing-features">

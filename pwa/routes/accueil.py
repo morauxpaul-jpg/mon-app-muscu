@@ -153,32 +153,32 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
             types = {r["Exercice"].split(":", 1)[1] for r in cardio_rows}
             label = ", ".join(sorted(types))
             return {"status": "done", "title": f"Cardio · {label}", "badge": "CARDIO",
-                    "color": "#FF7A00", "cardio": True}
+                    "color": "#d4944a", "cardio": True}
         # Séance majoritaire = celle avec le plus d'exos distincts (hors cardio)
         rows_for_top = non_cardio or real
         counts = {}
         for r in rows_for_top:
             counts.setdefault(r["Séance"], set()).add(r["Exercice"])
         top = max(counts.items(), key=lambda kv: len(kv[1]))[0]
-        return {"status": "done", "title": str(top), "badge": "FAIT", "color": "#00FF7F"}
+        return {"status": "done", "title": str(top), "badge": "FAIT", "color": "#5bbd8a"}
 
     if is_rest:
-        return {"status": "rest", "title": "Repos", "badge": "REPOS", "color": "#5a7a9a"}
+        return {"status": "rest", "title": "Repos", "badge": "REPOS", "color": "#6b7280"}
 
     # Marqueur SESSION "SÉANCE MANQUÉE" explicite
     for r in day_rows:
         if r["Exercice"] == "SESSION" and "MANQUÉE" in (r.get("Remarque") or ""):
-            return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#FF453A"}
+            return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#d45a5a"}
 
     # Pour un nouveau compte : ne jamais afficher "manquée" sur des jours
     # antérieurs à l'inscription (l'user n'avait pas encore l'app).
     if joined_date and day_date < joined_date:
-        return {"status": "upcoming", "title": "Repos", "badge": "—", "color": "#5a7a9a"}
+        return {"status": "upcoming", "title": "Repos", "badge": "—", "color": "#6b7280"}
     if day_date < today:
-        return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#FF453A"}
+        return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#d45a5a"}
     if day_date == today:
-        return {"status": "today", "title": "Séance à faire", "badge": "AUJOURD'HUI", "color": "#58CCFF"}
-    return {"status": "upcoming", "title": "Séance à faire", "badge": "À VENIR", "color": "#5a7a9a"}
+        return {"status": "today", "title": "Séance à faire", "badge": "AUJOURD'HUI", "color": "#5b9bd5"}
+    return {"status": "upcoming", "title": "Séance à faire", "badge": "À VENIR", "color": "#6b7280"}
 
 
 @bp.route("/accueil")

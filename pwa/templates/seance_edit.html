@@ -11,9 +11,8 @@
   left: 0;
   right: 0;
   z-index: 900;
-  background: rgba(5, 10, 24, 0.96);
-  border-top: 2px solid var(--accent, #58CCFF);
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  background: var(--bg-surface);
+  border-top: 0.5px solid var(--border-default);
   overflow: hidden;
 }
 .rest-timer-bar-progress {
@@ -21,7 +20,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  background: rgba(88, 204, 255, 0.08);
+  background: var(--accent-bg);
   transition: width 1s linear;
 }
 .rest-timer-bar-content {
@@ -34,15 +33,16 @@
 }
 .rest-timer-bar-label {
   font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--accent, #58CCFF);
-  letter-spacing: 1px;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 .rest-timer-bar-time {
   font-size: 1.3rem;
-  font-weight: 700;
-  color: #fff;
+  font-weight: 500;
+  color: var(--text-1);
   font-variant-numeric: tabular-nums;
   min-width: 42px;
 }
@@ -52,31 +52,31 @@
   margin-left: auto;
 }
 .rest-timer-bar-presets button {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #fff;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-default);
+  color: var(--text-2);
   font-size: 0.68rem;
   padding: 3px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .rest-timer-bar-presets button.active {
-  background: var(--accent, #58CCFF);
-  color: #000;
-  border-color: var(--accent, #58CCFF);
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
 }
 .rest-timer-bar-skip {
   background: none;
   border: none;
-  color: var(--text-dim, #8899aa);
+  color: var(--text-2);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 4px 8px;
   flex-shrink: 0;
 }
-.rest-timer-bar.timer-done { border-top-color: var(--success, #00FF7F); }
-.rest-timer-bar.timer-done .rest-timer-bar-label { color: var(--success, #00FF7F); }
-.rest-timer-bar.timer-done .rest-timer-bar-time { color: var(--success, #00FF7F); }
+.rest-timer-bar.timer-done { border-top-color: var(--success); }
+.rest-timer-bar.timer-done .rest-timer-bar-label { color: var(--success); }
+.rest-timer-bar.timer-done .rest-timer-bar-time { color: var(--success); }
 
 /* ── Exercise info button ── */
 .exo-info-btn {
@@ -86,11 +86,11 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 1px solid var(--accent, #58CCFF);
-  background: rgba(88, 204, 255, 0.1);
-  color: var(--accent, #58CCFF);
+  border: 0.5px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-2);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   vertical-align: middle;
   margin-left: 6px;
@@ -104,14 +104,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.7);
+  background: var(--bg-overlay);
   padding: 8px;
   overflow: hidden;
 }
 .exo-info-box {
-  background: #0B1428;
-  border: 2px solid var(--accent, #58CCFF);
-  border-radius: 14px;
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
   padding: 12px 14px;
   max-width: 340px;
   width: calc(100vw - 16px);
@@ -119,34 +119,33 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  color: #fff;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  color: var(--text-1);
 }
-.exo-info-box h4 { color: var(--accent, #58CCFF); margin: 0 0 6px; font-size: 0.95rem; }
+.exo-info-box h4 { color: var(--text-1); margin: 0 0 6px; font-size: 0.95rem; font-weight: 500; }
 .exo-info-box .info-section { margin-bottom: 6px; }
-.exo-info-box .info-label { font-size: 0.68rem; color: var(--text-dim, #8899aa); letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; }
-.exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; }
+.exo-info-box .info-label { font-size: 0.68rem; color: var(--text-3); letter-spacing: 0.8px; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
+.exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; color: var(--text-2); }
 .exo-info-box #exo-info-image img { max-height: 90px; }
 .exo-info-box .mini-bodymap { margin-bottom: 6px !important; }
 .exo-info-box #exo-info-tips { padding-left: 16px; margin: 2px 0 0; font-size: 0.8rem !important; line-height: 1.35 !important; }
 .exo-info-box #exo-info-tips li { margin-bottom: 2px; }
-.exo-info-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid rgba(88,204,255,0.15); }
+.exo-info-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 0.5px solid var(--border-default); }
 .exo-info-tab {
   background: none; border: 0; padding: 6px 12px;
-  color: var(--text-dim, #8899aa); font-size: 0.82rem;
+  color: var(--text-3); font-size: 0.82rem;
   cursor: pointer; border-bottom: 2px solid transparent;
-  font-weight: 600;
+  font-weight: 500;
 }
-.exo-info-tab.active { color: var(--accent, #58CCFF); border-bottom-color: var(--accent, #58CCFF); }
-.exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; }
-.exo-info-box .rm-row-max td { color: var(--accent, #58CCFF); background: rgba(88,204,255,0.06); }
-.mini-body-svg { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45)); }
+.exo-info-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; color: var(--text-2); }
+.exo-info-box .rm-row-max td { color: var(--accent); background: var(--accent-bg); }
 .exo-info-close {
   position: sticky; bottom: -12px;
   width: 100%; margin-top: 10px;
   padding: 10px;
-  background: var(--accent, #58CCFF);
-  box-shadow: 0 -8px 12px -4px #0B1428;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-md);
 }
 </style>
 {% endblock %}
@@ -436,7 +435,7 @@
       <input type="hidden" name="date" value="{{ date_iso }}">
       <input type="hidden" name="seance_name" value="{{ seance_name }}">
 
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-bottom:8px; border-color:rgba(88,204,255,0.4);"
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-bottom:8px;"
               @click="showLib = true">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Choisir un exercice
       </button>
@@ -554,15 +553,15 @@
             </span>
           </form>
         </div>
-        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:0.85rem;">
-          {% if c.duree %}<span><strong style="color:#58CCFF;">{{ c.duree }}</strong> min</span>{% endif %}
-          {% if c.distance %}<span><strong style="color:#58CCFF;">{{ c.distance|round(2) }}</strong></span>{% endif %}
-          {% if c.vitesse %}<span>Vit. <strong style="color:#58CCFF;">{{ c.vitesse }}</strong></span>{% endif %}
-          {% if c.calories %}<span><strong style="color:#FF9F0A;">{{ c.calories }}</strong> kcal</span>{% endif %}
-          {% if c.rpe %}<span style="padding:1px 8px; border-radius:10px; background:rgba(88,204,255,0.15); color:#58CCFF; font-size:0.75rem;">{{ c.rpe }}</span>{% endif %}
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:0.85rem; color: var(--text-2);">
+          {% if c.duree %}<span><strong style="color:var(--text-1);">{{ c.duree }}</strong> min</span>{% endif %}
+          {% if c.distance %}<span><strong style="color:var(--text-1);">{{ c.distance|round(2) }}</strong></span>{% endif %}
+          {% if c.vitesse %}<span>Vit. <strong style="color:var(--text-1);">{{ c.vitesse }}</strong></span>{% endif %}
+          {% if c.calories %}<span><strong style="color:var(--warning);">{{ c.calories }}</strong> kcal</span>{% endif %}
+          {% if c.rpe %}<span class="badge badge-info">{{ c.rpe }}</span>{% endif %}
         </div>
         {% if c.note %}
-          <div style="margin-top:6px; font-size:0.82rem; color:var(--text-dim); font-style:italic;">{{ c.note }}</div>
+          <div style="margin-top:6px; font-size:0.82rem; color:var(--text-2); font-style:italic;">{{ c.note }}</div>
         {% endif %}
       </div>
     {% endfor %}
@@ -713,7 +712,7 @@
           <ul id="exo-info-tips" style="padding-left:18px; margin:4px 0 0; font-size:0.88rem; line-height:1.5;"></ul>
         </div>
         <a id="exo-info-coach-link" href="/coach" class="btn label-icon"
-           style="width:100%; justify-content:center; margin-top:10px; color:var(--accent); border-color:rgba(88,204,255,0.4);">
+           style="width:100%; justify-content:center; margin-top:10px; color:var(--accent);">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#message-circle"/></svg>
           Demander conseil au coach
         </a>

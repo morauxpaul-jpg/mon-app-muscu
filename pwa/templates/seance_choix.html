@@ -64,14 +64,14 @@
         document.getElementById('active-session-name').textContent = data.session_id;
         banner.dataset.href = '/seance?mode=' + (data.session_mode || 'prefaite') + '&name=' + encodeURIComponent(data.session_id) + '&date=' + data.session_date;
         banner.style.display = 'block';
-        banner.style.borderColor = 'rgba(88,204,255,0.5)';
+        banner.style.borderColor = 'var(--accent)';
         banner.style.cursor = 'pointer';
       } catch(e) {}
     })();
   </script>
 
   {% if done_name %}
-    <div class="card" style="border-color: rgba(0,255,127,0.4); background: rgba(0,255,127,0.05);">
+    <div class="card" style="border-color:var(--success); background:var(--success-bg);">
       <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>SÉANCE ENREGISTRÉE</div>
       <div style="color: #8aaa9a; font-size: 0.85rem; margin-top: 6px;">Consulter ou modifier « {{ done_name }} ».</div>
       {% if done_name in seance_names %}
@@ -90,9 +90,9 @@
 
   {% if prog_groups and prog_groups|length > 1 %}
     {% for group in prog_groups %}
-      <div class="card" style="border-color: rgba(88,204,255,0.3);">
-        <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px; text-shadow: 0 0 8px rgba(88,204,255,0.6);">
-          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>{{ group.name|upper }}
+      <div class="card">
+        <div class="label-icon" style="color: var(--text-3); font-size: 0.75rem; letter-spacing: 0.8px; margin-bottom: 12px; text-transform: uppercase;">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>{{ group.name }}
         </div>
         {% for sname in group.seances %}
           <div class="seance-choice-row">
@@ -109,7 +109,7 @@
       </div>
     {% endfor %}
   {% else %}
-    <div class="card" style="border-color: rgba(88,204,255,0.3);">
+    <div class="card" style="border-color:var(--accent);">
       <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>SÉANCE PRÉ-FAITE</div>
       {% for sname in seance_names %}
         <div class="seance-choice-row">
@@ -126,7 +126,7 @@
     </div>
   {% endif %}
 
-  <div class="card" style="border-color: rgba(0,255,127,0.3);">
+  <div class="card" style="border-color:var(--success);">
     <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#edit"/></svg>SÉANCE PERSONNALISÉE</div>
     <div style="font-size: 0.85rem; color: #5a8a6a; margin-bottom: 12px;">
       Construis ta séance exercice par exercice, en piochant dans ton programme ou en créant du nouveau.
@@ -136,17 +136,17 @@
     </a>
   </div>
 
-  <div class="card" style="border-color: rgba(255,122,0,0.35);">
-    <div class="label-icon" style="color: #FF7A00; font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm" style="color:#FF7A00;"><use href="/static/img/icons.svg#heart"/></svg>SÉANCE CARDIO</div>
+  <div class="card" style="border-color:var(--warning);">
+    <div class="label-icon" style="color: var(--warning); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>SÉANCE CARDIO</div>
     <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 12px;">
       Course, vélo, rameur, HIIT... Chrono intégré, calcul calorique automatique.
     </div>
-    <a href="/cardio?date={{ date_iso }}" class="btn label-icon" style="width:100%; justify-content:center; background: rgba(255,122,0,0.1); border-color: rgba(255,122,0,0.4); color: #FF7A00;">
+    <a href="/cardio?date={{ date_iso }}" class="btn label-icon" style="width:100%; justify-content:center; background: var(--warning-bg); border-color: var(--warning); color: var(--warning);">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#activity"/></svg>Lancer une séance cardio
     </a>
   </div>
 
-  <div class="card" style="border-color: rgba(255,69,58,0.25);">
+  <div class="card" style="border-color:var(--danger);">
     <div class="label-icon" style="color: var(--danger); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>PASSER UNE SÉANCE</div>
     <form method="post" action="/seance/mark-missed">
       <input type="hidden" name="date" value="{{ date_iso }}">

@@ -37,7 +37,7 @@
             <div class="detail-value" style="font-size:1.3rem;">{{ targets.tdee }}</div>
           </div>
         </div>
-        <div class="detail-metric" style="background: rgba(0,255,127,0.06); border-color: rgba(0,255,127,0.25);">
+        <div class="detail-metric" style="background:var(--success-bg); border-color:var(--success);">
           <div class="detail-label" style="color: var(--success);">Objectif quotidien</div>
           <div class="detail-value" style="font-size: 1.8rem; color: var(--success);">{{ targets.calories_cible }} <span style="font-size:0.9rem;">kcal</span></div>
         </div>
@@ -80,7 +80,7 @@
       <label class="field-label" style="margin-top: 10px;">Objectif</label>
       <div class="rpe-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
         {% for val, label, sub in objectifs %}
-          <label class="obj-btn" style="padding: 10px 4px; text-align:center; background: rgba(255,255,255,0.03); border: 1px solid rgba(88,204,255,0.18); border-radius: 10px; cursor: pointer; font-size: 0.8rem; color: var(--text-dim); display:block;">
+          <label class="obj-btn" style="padding: 10px 4px; text-align:center; background:var(--bg-elevated); border:0.5px solid var(--border-default); border-radius: 10px; cursor: pointer; font-size: 0.8rem; color: var(--text-2); display:block;">
             <input type="radio" name="objectif_nutrition" value="{{ val }}" {% if (profile.objectif_nutrition or 'maintien') == val %}checked{% endif %} style="display:none;" onchange="this.parentElement.parentElement.querySelectorAll('label').forEach(l=>l.classList.remove('selected'));this.parentElement.classList.add('selected');">
             <div style="font-weight: 700;">{{ label }}</div>
             <div style="font-size: 0.7rem; margin-top: 2px;">{{ sub }}</div>
@@ -104,16 +104,10 @@
       {% set circ = (2 * 3.14159 * radius) | round(1) %}
       {% set offset = (circ * (100 - cal_pct) / 100) | round(1) %}
       <svg width="180" height="180" viewBox="0 0 180 180">
-        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="rgba(88,204,255,0.15)" stroke-width="14"/>
-        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="url(#kcalGrad)" stroke-width="14"
+        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--border-default)" stroke-width="14"/>
+        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--accent)" stroke-width="14"
                 stroke-linecap="round" stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}"
-                transform="rotate(-90 90 90)" style="filter: drop-shadow(0 0 10px rgba(88,204,255,0.5)); transition: stroke-dashoffset 1s ease-out;"/>
-        <defs>
-          <linearGradient id="kcalGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#58CCFF"/>
-            <stop offset="100%" stop-color="#00FF7F"/>
-          </linearGradient>
-        </defs>
+                transform="rotate(-90 90 90)" style="transition: stroke-dashoffset 1s ease-out;"/>
       </svg>
       <div class="kcal-donut-center">
         <div class="kcal-big">{{ totals.calories }}</div>
@@ -123,15 +117,15 @@
     </div>
 
     <div class="macro-bars">
-      {% for key, label, color in [('protein', 'Protéines', '#58CCFF'), ('carbs', 'Glucides', '#FFD700'), ('fat', 'Lipides', '#FF9F0A')] %}
+      {% for key, label, color in [('protein', 'Protéines', 'var(--accent)'), ('carbs', 'Glucides', 'var(--warning)'), ('fat', 'Lipides', 'var(--success)')] %}
         {% set mp = macros_progress[key] %}
         <div class="macro-bar">
           <div class="macro-label">
-            <span style="color:{{ color }}; font-weight:700;">{{ label }}</span>
-            <span style="color: var(--text-dim); font-size: 0.78rem;">{{ mp.val }}/{{ mp.goal }} g</span>
+            <span style="color:{{ color }}; font-weight:600;">{{ label }}</span>
+            <span style="color: var(--text-3); font-size: 0.78rem;">{{ mp.val }}/{{ mp.goal }} g</span>
           </div>
           <div class="macro-track">
-            <div class="macro-fill" style="width: {{ mp.pct }}%; background: {{ color }}; box-shadow: 0 0 8px {{ color }}55;"></div>
+            <div class="macro-fill" style="width: {{ mp.pct }}%; background: {{ color }};"></div>
           </div>
         </div>
       {% endfor %}
@@ -194,15 +188,15 @@
     {% set items = meals_by_type.get(mt_val, []) %}
     {% if items %}
       <div class="card" style="padding: 10px 14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:700; color:#fff; margin-bottom:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; color:var(--text-1); margin-bottom:6px;">
           <span>{{ mt_label }}</span>
           <span style="color:var(--accent);">{{ items | sum(attribute='calories') }} kcal</span>
         </div>
         {% for it in items %}
           <div class="meal-item">
             <div style="flex:1;">
-              <div style="font-size:0.85rem; color:#fff;">{{ it.note or '—' }}</div>
-              <div style="font-size:0.72rem; color:var(--text-dim); margin-top:2px;">
+              <div style="font-size:0.85rem; color:var(--text-1);">{{ it.note or '—' }}</div>
+              <div style="font-size:0.72rem; color:var(--text-3); margin-top:2px;">
                 {{ it.calories }} kcal · P {{ it.protein or 0 }}g · G {{ it.carbs or 0 }}g · L {{ it.fat or 0 }}g
               </div>
             </div>
@@ -219,7 +213,7 @@
 
   <style>
     .obj-btn.selected {
-      background: rgba(88,204,255,0.15) !important;
+      background: var(--accent-bg) !important;
       border-color: var(--accent) !important;
       color: var(--accent) !important;
     }
@@ -239,21 +233,21 @@
       text-align: center;
     }
     .kcal-big {
-      font-family: 'Courier New', monospace;
+      font-variant-numeric: tabular-nums;
       font-size: 2rem;
-      font-weight: 900;
-      color: var(--accent);
+      font-weight: 600;
+      color: var(--text-1);
       line-height: 1;
     }
     .kcal-sub {
       font-size: 0.72rem;
-      color: var(--text-dim);
+      color: var(--text-3);
       margin-top: 4px;
     }
     .kcal-pct {
       font-size: 0.85rem;
       color: var(--success);
-      font-weight: 700;
+      font-weight: 600;
       margin-top: 4px;
     }
     .macro-bars {
@@ -269,7 +263,7 @@
     }
     .macro-track {
       height: 8px;
-      background: rgba(255,255,255,0.06);
+      background: var(--bg-elevated);
       border-radius: 10px;
       overflow: hidden;
     }
@@ -285,23 +279,23 @@
     }
     .meal-btn {
       padding: 10px 4px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(88,204,255,0.2);
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border-default);
       border-radius: 10px;
-      color: var(--text-dim);
+      color: var(--text-2);
       font-size: 0.78rem;
       cursor: pointer;
       position: relative;
       transition: all 0.15s ease;
     }
     .meal-btn.selected {
-      background: rgba(88,204,255,0.15);
+      background: var(--accent-bg);
       border-color: var(--accent);
       color: var(--accent);
     }
     .meal-count {
       font-size: 0.65rem;
-      color: var(--text-dim);
+      color: var(--text-3);
       margin-bottom: 2px;
     }
     .meal-btn.selected .meal-count { color: var(--accent); }
@@ -310,7 +304,7 @@
       align-items: center;
       gap: 8px;
       padding: 8px 0;
-      border-top: 1px solid rgba(255,255,255,0.05);
+      border-top: 0.5px solid var(--border-subtle);
     }
     .meal-item:first-child { border-top: none; }
   </style>

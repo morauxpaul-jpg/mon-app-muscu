@@ -185,7 +185,7 @@
       sessionStorage.removeItem('app-updated');
       var toast = document.createElement('div');
       toast.innerHTML = '<svg class="icon icon-sm icon-success" style="vertical-align:-3px;margin-right:6px;"><use href="/static/img/icons.svg#check-circle"/></svg>App mise à jour !';
-      toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,255,127,0.15);border:1px solid rgba(0,255,127,0.4);color:#00FF7F;padding:10px 20px;border-radius:12px;font-size:0.9rem;z-index:9999;animation:slideIn 0.3s ease-out;';
+      toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--success-bg);border:0.5px solid var(--success);color:var(--success);padding:10px 20px;border-radius:12px;font-size:0.9rem;z-index:9999;animation:slideIn 0.3s ease-out;';
       document.body.appendChild(toast);
       setTimeout(function() { toast.remove(); }, 4000);
     }

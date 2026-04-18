@@ -13,10 +13,10 @@
   </div>
 
   {% if is_premium %}
-    <div class="card" style="text-align:center; border-color:rgba(255,215,0,0.4); background:linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,122,0,0.04));">
-      <svg class="icon icon-lg" style="color:#FFD700;"><use href="/static/img/icons.svg#shield-check"/></svg>
-      <h3 style="margin:8px 0 4px;">Tu es déjà VIP</h3>
-      <p style="margin:0; font-size:0.82rem; color:var(--text-dim);">Toutes les features premium sont débloquées. Merci de soutenir l'app.</p>
+    <div class="card" style="text-align:center;">
+      <svg class="icon icon-lg" style="color:var(--gold);"><use href="/static/img/icons.svg#shield-check"/></svg>
+      <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Tu es déjà VIP</h3>
+      <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app.</p>
     </div>
   {% else %}
 
@@ -76,7 +76,7 @@
         <li><span class="ok">✓</span>Soutien le créateur</li>
         <li><span class="ok">✓</span>Badge VIP doré</li>
       </ul>
-      <button class="btn tier-cta" disabled style="background:linear-gradient(135deg, #FFD700, #FF9F0A); color:#1a1a1a; font-weight:800;">
+      <button class="btn tier-cta" disabled style="background:var(--warning-bg); color:var(--warning); font-weight:500; border-color:var(--warning);">
         Bientôt disponible
       </button>
       <div class="tier-note">Pour les 100 premiers utilisateurs</div>
@@ -84,8 +84,8 @@
 
   </div>
 
-  <div class="card" style="margin-top:14px; font-size:0.78rem; color:var(--text-dim); line-height:1.5;">
-    <strong style="color:#fff;">FAQ rapide</strong><br><br>
+  <div class="card" style="margin-top:14px; font-size:0.78rem; color:var(--text-2); line-height:1.5;">
+    <strong style="color:var(--text-1);">FAQ rapide</strong><br><br>
     <strong>Puis-je annuler ?</strong> Oui, à tout moment. L'accès reste actif jusqu'à la fin de la période payée.<br><br>
     <strong>L'abonnement se renouvelle-t-il automatiquement ?</strong> Oui, via Google Play. Tu peux désactiver le renouvellement dans les paramètres Google Play à tout moment.<br><br>
     <strong>Que se passe-t-il si j'annule ?</strong> Tu repasses en gratuit — tu gardes toutes tes données, seules les features premium sont désactivées.<br><br>
@@ -112,61 +112,61 @@
       padding:18px 16px;
     }
     .tier-highlight {
-      border-color:rgba(88,204,255,0.4);
-      background:linear-gradient(135deg, rgba(88,204,255,0.08), rgba(0,255,127,0.02));
-      box-shadow:0 0 20px rgba(88,204,255,0.1);
+      border-color:var(--accent);
+      background:var(--bg-surface);
     }
     .tier-lifetime {
-      border-color:rgba(255,215,0,0.35);
-      background:linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,122,0,0.02));
+      border-color:var(--warning);
+      background:var(--bg-surface);
     }
     .tier-ribbon {
       position:absolute;
       top:-10px;
       right:14px;
-      background:var(--accent, #58CCFF);
-      color:#001018;
+      background:var(--accent);
+      color:#fff;
       font-size:0.62rem;
-      font-weight:800;
+      font-weight:600;
       letter-spacing:2px;
       padding:4px 10px;
       border-radius:8px;
     }
     .ribbon-gold {
-      background:linear-gradient(135deg, #FFD700, #FF9F0A);
-      color:#1a1a1a;
+      background:var(--warning-bg);
+      color:var(--warning);
+      border:0.5px solid var(--warning);
     }
     .tier-header { margin-bottom:12px; }
     .tier-name {
       font-size:0.72rem;
       letter-spacing:3px;
-      color:var(--text-dim);
-      font-weight:700;
+      color:var(--text-3);
+      font-weight:600;
       margin-bottom:4px;
     }
     .tier-price { display:flex; align-items:baseline; gap:4px; }
     .tier-price .amount {
       font-size:2rem;
-      font-weight:800;
-      color:#fff;
+      font-weight:600;
+      color:var(--text-1);
       line-height:1;
     }
     .tier-price .period {
       font-size:0.8rem;
-      color:var(--text-dim);
+      color:var(--text-3);
     }
     .tier-sub {
       font-size:0.75rem;
-      color:var(--text-dim);
+      color:var(--text-2);
       margin-top:4px;
     }
     .tier-save {
-      background:rgba(0,255,127,0.12);
+      background:var(--success-bg);
       color:var(--success);
       padding:2px 6px;
       border-radius:6px;
       font-size:0.68rem;
-      font-weight:700;
+      font-weight:600;
       margin-left:4px;
     }
     .tier-feats {
@@ -179,22 +179,22 @@
       gap:8px;
       padding:5px 0;
       font-size:0.82rem;
-      color:#e8f0fa;
+      color:var(--text-1);
       line-height:1.35;
     }
-    .tier-feats li.muted { color:var(--text-dim); }
-    .tier-feats .ok { color:var(--success); font-weight:700; flex-shrink:0; }
-    .tier-feats .ko { color:var(--text-dim); flex-shrink:0; }
+    .tier-feats li.muted { color:var(--text-3); }
+    .tier-feats .ok { color:var(--success); font-weight:600; flex-shrink:0; }
+    .tier-feats .ko { color:var(--text-3); flex-shrink:0; }
     .tier-cta {
       width:100%;
       justify-content:center;
       padding:12px;
-      font-weight:700;
+      font-weight:500;
     }
     .tier-note {
       text-align:center;
       font-size:0.7rem;
-      color:var(--text-dim);
+      color:var(--text-3);
       margin-top:8px;
     }
   </style>
