@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Gestion · Muscu PRO{% endblock %}
+{% block title %}Gestion · Muscu Tracker{% endblock %}
 
 {% block content %}
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Gestion</h1>
@@ -61,23 +61,23 @@
         <span>Afficher l'estimation 1RM</span>
       </label>
       <label class="muscle-check" style="display:flex; margin:6px 0;">
-        <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %}>
-        <span>Animations du thème (cartes, glow, pulse)</span>
-      </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
         <span>Chrono de repos automatique entre les séries</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
-        <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
-        <span>Pré-remplir les poids de la dernière séance</span>
+      <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
+        <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
+        <span>Animations du thème (cartes, glow, pulse) {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
-        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this)">
-        <span>Notifications de rappel (jours d'entraînement)</span>
+      <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
+        <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
+        <span>Pré-remplir les poids de la dernière séance {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
       </label>
-      <label class="field-label">Nombre de semaines précédentes affichées en séance</label>
-      <input type="number" name="show_previous_weeks" min="0" max="10" value="{{ settings.show_previous_weeks }}" class="field">
+      <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
+        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} {% if not is_vip %}disabled{% else %}onchange="handleNotifToggle(this)"{% endif %}>
+        <span>Notifications de rappel (jours d'entraînement) {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
+      </label>
+      <label class="field-label" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">Nombre de semaines précédentes affichées en séance {% if not is_vip %}<span class="badge-pro" style="font-size:0.6rem; padding:1px 5px;">PRO au-delà de 2</span>{% endif %}</label>
+      <input type="number" name="show_previous_weeks" min="0" max="{% if is_vip %}10{% else %}2{% endif %}" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
     </form>
   </div>
@@ -111,6 +111,7 @@
     </div>
   </div>
 
+  {% if is_vip %}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegarde complète</h3>
     <p style="font-size:0.8rem; color:var(--text-dim); margin:0 0 8px;">Exporte <strong>toutes</strong> tes données (programme + historique + archives) dans un fichier JSON. Pour partager seulement ton programme à un ami, utilise plutôt l'export depuis <a href="/programme" style="color:var(--violet);">Programme</a>.</p>
@@ -127,6 +128,16 @@
       </div>
     </form>
   </div>
+  {% else %}
+  <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+    <svg class="icon icon-lg icon-mute"><use href="/static/img/icons.svg#save"/></svg>
+    <div style="flex:1;">
+      <div style="font-weight:500; color:var(--text-1); font-size:0.9rem;">Sauvegarde complète <span class="badge-pro" style="margin-left:4px;">PRO</span></div>
+      <div style="font-size:0.75rem; color:var(--text-2);">Exporte / importe toutes tes données (programme + historique + archives) en JSON.</div>
+    </div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+  </a>
+  {% endif %}
 
   <div class="card" style="border-color: rgba(255,159,10,0.4);">
     <h3 class="label-icon" style="color:#FF9F0A;"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>
@@ -162,8 +173,8 @@
   <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>À PROPOS</h2>
 
   <div class="card" style="text-align:center;">
-    <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker PRO</strong></p>
-    <p style="font-size:0.8rem; color:var(--text-dim); margin:0;">PWA de suivi musculation · Données privées · Gratuit</p>
+    <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker</strong></p>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin:0;">PWA de suivi musculation · Données privées</p>
   </div>
 
   <script>

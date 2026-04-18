@@ -368,7 +368,12 @@ def seance():
         active_profile = prog.get("_active_profile")
         active_programmes = programmes
         if len(profiles) > 1 and active_profile:
-            active_programmes = [p for p in programmes if isinstance(p, dict) and (p.get("profile_id") or active_profile) == active_profile]
+            valid_pids = {p.get("id") for p in profiles if isinstance(p, dict)}
+            fallback_pid = profiles[0].get("id") if profiles else None
+            for pg in programmes:
+                if isinstance(pg, dict) and pg.get("profile_id") not in valid_pids:
+                    pg["profile_id"] = fallback_pid
+            active_programmes = [p for p in programmes if isinstance(p, dict) and p.get("profile_id") == active_profile]
         prog_by_id = {p["id"]: p["name"] for p in active_programmes if isinstance(p, dict) and p.get("id")}
         seance_order = list(prog_seances.keys())
         groups = []

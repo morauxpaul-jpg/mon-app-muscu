@@ -1,6 +1,6 @@
 {
-  "name": "Muscu Tracker PRO",
-  "short_name": "Muscu PRO",
+  "name": "Muscu Tracker",
+  "short_name": "Muscu Tracker",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

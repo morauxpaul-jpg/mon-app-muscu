@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Séance · Muscu PRO{% endblock %}
+{% block title %}Séance · Muscu Tracker{% endblock %}
 
 {% block content %}
   <div class="loading-overlay" id="page-loader">
@@ -88,7 +88,7 @@
     </div>
   {% endif %}
 
-  {% if prog_groups and prog_groups|length > 1 %}
+  {% if prog_groups %}
     {% for group in prog_groups %}
       <div class="card">
         <div class="label-icon" style="color: var(--text-3); font-size: 0.75rem; letter-spacing: 0.8px; margin-bottom: 12px; text-transform: uppercase;">
@@ -110,19 +110,8 @@
     {% endfor %}
   {% else %}
     <div class="card" style="border-color:var(--accent);">
-      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>SÉANCE PRÉ-FAITE</div>
-      {% for sname in seance_names %}
-        <div class="seance-choice-row">
-          <div>
-            <div class="seance-name">{{ sname }}</div>
-            <div class="seance-meta">
-              {{ prog_seances[sname]|length }} exercices
-              {% if jours_map.get(sname) %} · {{ jours_map[sname] }}{% endif %}
-            </div>
-          </div>
-          <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn label-icon" style="display:inline-flex;">Choisir<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
-        </div>
-      {% endfor %}
+      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 12px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>AUCUNE SÉANCE</div>
+      <div style="font-size:0.85rem; color:var(--text-2);">Crée un programme et des séances pour ce profil dans <a href="/programme" style="color:var(--accent);">Programme</a>.</div>
     </div>
   {% endif %}
 

@@ -6,7 +6,7 @@
   const STEPS = [
     {
       target: '[data-tuto="welcome"]',
-      title: "Bienvenue sur Muscu Tracker PRO",
+      title: "Bienvenue sur Muscu Tracker",
       text: "Ce rapide tutoriel te montre les onglets de l'app. Tu ne le verras qu'une seule fois !",
       center: true,
     },

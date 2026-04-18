@@ -7,7 +7,7 @@ reset soft, reset total, vider l'archive.
 import json
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
 
 from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
 from core.limiter import limiter
@@ -36,6 +36,11 @@ def gestion():
     hist = get_hist()
     settings = _get_settings(prog)
 
+    # Applique les limites Free côté affichage : historique capé à 2 semaines,
+    # options premium forcées à off si affichage pour un non-VIP.
+    if not getattr(g, "is_vip", False):
+        settings["show_previous_weeks"] = min(settings.get("show_previous_weeks", 2), 2)
+
     nb_seances = len([k for k in prog if not k.startswith("_")])
     nb_exos = sum(len(prog[k]) for k in prog if not k.startswith("_"))
     nb_hist = len(hist)
@@ -63,16 +68,25 @@ def redo_onboarding():
 def update_settings():
     prog = get_prog()
     s = _get_settings(prog)
+    is_vip = bool(getattr(g, "is_vip", False))
     s["auto_collapse"] = request.form.get("auto_collapse") == "on"
     s["show_1rm"] = request.form.get("show_1rm") == "on"
-    s["theme_animations"] = request.form.get("theme_animations") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
-    s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
-    s["notifications"] = request.form.get("notifications") == "on"
+    # Options VIP : en Free on force à off quoi qu'il arrive.
+    if is_vip:
+        s["theme_animations"] = request.form.get("theme_animations") == "on"
+        s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
+        s["notifications"] = request.form.get("notifications") == "on"
+    else:
+        s["theme_animations"] = False
+        s["auto_prefill_weight"] = False
+        s["notifications"] = False
     try:
-        s["show_previous_weeks"] = max(0, min(10, int(request.form.get("show_previous_weeks", 2))))
+        weeks = int(request.form.get("show_previous_weeks", 2))
     except (ValueError, TypeError):
-        s["show_previous_weeks"] = 2
+        weeks = 2
+    max_weeks = 10 if is_vip else 2
+    s["show_previous_weeks"] = max(0, min(max_weeks, weeks))
     prog["_settings"] = s
     save_prog(prog)
     return redirect(url_for("gestion.gestion"))
@@ -140,7 +154,9 @@ def reset_total():
 
 @bp.route("/gestion/export")
 def export_data():
-    """Exporte toutes les données utilisateur en JSON."""
+    """Exporte toutes les données utilisateur en JSON (VIP uniquement)."""
+    if not getattr(g, "is_vip", False):
+        return render_template("vip_wall.html", active="plus", feature="Export complet"), 403
     prog = get_prog()
     hist = get_hist()
     profile = get_profile() or {}
@@ -164,7 +180,9 @@ def export_data():
 @bp.route("/gestion/import", methods=["POST"])
 @limiter.limit("5 per minute")
 def import_data():
-    """Importe des données depuis un fichier JSON."""
+    """Importe des données depuis un fichier JSON (VIP uniquement)."""
+    if not getattr(g, "is_vip", False):
+        return render_template("vip_wall.html", active="plus", feature="Import complet"), 403
     f = request.files.get("file")
     if not f:
         return redirect(url_for("gestion.gestion") + "?import=error")

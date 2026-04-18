@@ -311,9 +311,9 @@ def save_state():
     if not getattr(g, "is_vip", False):
         old_ids = {p.get("id") for p in (old.get("_programmes") or []) if isinstance(p, dict)}
         added = [p for p in new_programmes if p.get("id") not in old_ids]
-        if added and len(new_programmes) > max(2, len(old_ids)):
+        if added and len(new_programmes) > max(1, len(old_ids)):
             return jsonify({"ok": False, "error": "vip_required",
-                            "message": "Limite de 2 programmes — passe en PRO pour en créer plus."}), 403
+                            "message": "1 programme max en gratuit — passe en PRO pour en créer plus."}), 403
 
     valid_ids = {p["id"] for p in new_programmes}
     new_mapping = {}
@@ -356,6 +356,9 @@ def add_profile():
         return jsonify({"ok": False, "error": "empty_name"}), 400
     prog = get_prog()
     _ensure_profiles(prog)
+    if not getattr(g, "is_vip", False) and len(prog["_profiles"]) >= 1:
+        return jsonify({"ok": False, "error": "vip_required",
+                        "message": "1 profil max en gratuit — passe en PRO pour en créer plus."}), 403
     if len(prog["_profiles"]) >= 8:
         return jsonify({"ok": False, "error": "too_many"}), 400
     new_id = _gen_profile_id()

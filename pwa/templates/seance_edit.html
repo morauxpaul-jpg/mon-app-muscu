@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ seance_name }} · Muscu PRO{% endblock %}
+{% block title %}{{ seance_name }} · Muscu Tracker{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="/static/css/timer.css">
@@ -964,7 +964,7 @@
     document.getElementById('timer-progress-bar').style.width = pct + '%';
     // Titre d'onglet : décompte visible sur l'écran de verrouillage / preview PWA
     if (r > 0) {
-      document.title = 'Repos ' + txt + ' — Muscu PRO';
+      document.title = 'Repos ' + txt + ' — Muscu Tracker';
     }
   }
 
@@ -1037,7 +1037,7 @@
     _playTimerBeep();
     _sendTimerNotification();
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    document.title = 'GO ! — Muscu PRO';
+    document.title = 'GO ! — Muscu Tracker';
     _timerEndTime = 0;
     setTimeout(function() {
       if (bar.style.display !== 'none') skipTimer();

@@ -1,11 +1,13 @@
 {
-  "version": "v35",
-  "date": "2026-04-15",
-  "title": "v35 — Navigation ultra-fluide",
+  "version": "v36",
+  "date": "2026-04-18",
+  "title": "v36 — App resserrée + tiers Free/PRO",
   "changes": [
-    "Navigation quasi-instantanée entre les onglets (cache stale-while-revalidate)",
-    "Préchargement des pages au survol / toucher des liens",
-    "Crossfade fluide entre routes (View Transitions API sur navigateurs récents)"
+    "Séances correctement isolées par profil d'entraînement",
+    "Page Programme clarifiée : sections + outils avancés repliés",
+    "Plus d'icônes qui chargent en retard sur la page Plus",
+    "Limites Free revues : 1 programme, 1 profil, 1 jeu d'arcade",
+    "Gestion : nouvelles options PRO (historique, notifications, animations)"
   ],
   "demos": {
     "coach-history": {
