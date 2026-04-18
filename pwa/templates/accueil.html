@@ -25,18 +25,22 @@
     <div class="week-num">SEMAINE {{ s_act }}</div>
   </div>
 
-  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Cette semaine</h3>
-  <div class="week-grid">
-    {% for d in week %}
-      <a href="/seance?date={{ d.date_iso }}" class="day-card {% if d.is_today %}today{% endif %}"
-         style="--day-color: {{ d.color }};">
-        <div>
-          <div class="day-label">{{ d.day_label|upper }} · {{ d.date_short }}</div>
-          <div class="day-title">{{ d.title }}</div>
-        </div>
-        <div class="day-badge">{{ d.badge }}</div>
-      </a>
-    {% endfor %}
+  <div class="card">
+    <div class="card-label">Cette semaine</div>
+    <div class="week-grid">
+      {% for d in week %}
+        {% if d.status == 'done' %}
+          {% set cell_class = 'day-done' %}
+        {% elif d.status == 'missed' %}
+          {% set cell_class = 'day-missed' %}
+        {% elif d.status == 'today' %}
+          {% set cell_class = 'day-today' %}
+        {% else %}
+          {% set cell_class = 'day-future' %}
+        {% endif %}
+        <a href="/seance?date={{ d.date_iso }}" class="day-cell {{ cell_class }}" title="{{ d.day_label }} {{ d.date_short }} · {{ d.title }}">{{ d.day_label[0]|upper }}</a>
+      {% endfor %}
+    </div>
   </div>
 
   <div class="stats-row">

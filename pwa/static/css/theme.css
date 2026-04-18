@@ -21,7 +21,7 @@ body {
 }
 
 /* Empêche la sélection/menu contextuel sur les éléments interactifs mobiles. */
-.day-card, .day-card *,
+.day-cell, .day-cell *,
 .exo-head, .exo-head *,
 .seance-choice-row, .seance-choice-row *,
 .btn, .btn *,

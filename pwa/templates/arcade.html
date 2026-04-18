@@ -6,29 +6,31 @@
   <style>
     .game-tabs { display:flex; gap:6px; margin-bottom:14px; }
     .game-tabs button {
-      flex:1; padding:10px 4px; border-radius:10px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--card-border);
-      color: var(--text); cursor:pointer;
-      font-size:0.72rem; letter-spacing:1px; font-weight:700;
+      flex:1; padding:10px 4px;
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border-default);
+      color: var(--text-2); cursor:pointer;
+      font-size:0.72rem; letter-spacing:1px; font-weight:500;
     }
     .game-tabs button.active {
-      background: linear-gradient(135deg, rgba(88,204,255,0.2), rgba(0,255,127,0.12));
-      border-color: var(--accent); color: var(--accent);
-      box-shadow: 0 0 12px rgba(88,204,255,0.4);
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
     }
     .game-wrap { display:none; text-align:center; }
     .game-wrap.on { display:block; }
     .game-wrap canvas {
       width: 100%; height: auto; max-width: 380px;
       display: block; margin: 0 auto;
-      border-radius: 12px; background: #050A18;
+      border-radius: var(--radius-lg);
+      background: var(--bg-base);
+      border: 0.5px solid var(--border-default);
       touch-action: none; -webkit-tap-highlight-color: transparent;
-      box-shadow: 0 0 24px rgba(88,204,255,0.25);
     }
     .game-info {
-      font-size: 0.75rem; color: var(--text-dim);
-      margin-top: 8px; letter-spacing: 1px;
+      font-size: 0.75rem; color: var(--text-2);
+      margin-top: 8px; letter-spacing: 0;
     }
   </style>
 {% endblock %}
@@ -38,9 +40,9 @@
 
   <div class="card">
     <div class="game-tabs">
-      <button id="tab-flappy"  class="active" onclick="showGame('flappy')">🏋️ FLAPPY</button>
-      <button id="tab-snake"   onclick="showGame('snake')">🐍 GAINZ</button>
-      <button id="tab-rain"    onclick="showGame('rain')">⚡ IRON RAIN</button>
+      <button id="tab-flappy"  class="active" onclick="showGame('flappy')">FLAPPY</button>
+      <button id="tab-snake"   onclick="showGame('snake')">GAINZ</button>
+      <button id="tab-rain"    onclick="showGame('rain')">IRON RAIN</button>
     </div>
 
     <div id="game-flappy" class="game-wrap on">
@@ -60,14 +62,16 @@
   </div>
 
 <script>
-const CYBER = {
-  bg: '#050A18',
-  accent: '#58CCFF',
-  success: '#00FF7F',
-  danger: '#FF453A',
-  gold: '#FFD700',
-  pink: '#FF00FF',
-  grid: 'rgba(88,204,255,0.08)'
+const PAL = {
+  bg:      '#111318',
+  surface: '#1a1d24',
+  border:  '#2a2d36',
+  text:    '#e8e9ed',
+  text2:   '#9ca3af',
+  accent:  '#5b9bd5',
+  success: '#5bbd8a',
+  danger:  '#d45a5a',
+  warning: '#d4944a',
 };
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
@@ -79,7 +83,7 @@ function showGame(g) {
 }
 
 function drawGrid(ctx, w, h) {
-  ctx.strokeStyle = CYBER.grid;
+  ctx.strokeStyle = PAL.border;
   ctx.lineWidth = 1;
   for (let x = 0; x < w; x += 20) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
@@ -89,21 +93,30 @@ function drawGrid(ctx, w, h) {
   }
 }
 
-function neonText(ctx, txt, x, y, color, size) {
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
+function drawText(ctx, txt, x, y, color, size, weight) {
   ctx.fillStyle = color;
-  ctx.font = 'bold ' + size + 'px Arial';
+  ctx.font = (weight || '500') + ' ' + size + 'px system-ui, -apple-system, sans-serif';
   ctx.fillText(txt, x, y);
-  ctx.shadowBlur = 0;
 }
 
-function neonBox(ctx, x, y, w, h, color) {
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 14;
+function drawBox(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
-  ctx.shadowBlur = 0;
+}
+
+function drawOverlay(ctx, W, H, title, score, record, hint) {
+  ctx.fillStyle = 'rgba(17,19,24,0.85)';
+  ctx.fillRect(0, 0, W, H);
+  const bx = W/2 - 130, by = 200, bw = 260, bh = 200;
+  ctx.fillStyle = PAL.surface;
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = PAL.border;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+  drawText(ctx, title, W/2 - ctx.measureText(title).width/2 + 10, by + 48, PAL.text, 22, '600');
+  drawText(ctx, 'Score : ' + score, W/2 - 55, by + 92, PAL.accent, 16);
+  drawText(ctx, 'Record : ' + record, W/2 - 55, by + 120, PAL.warning, 16);
+  drawText(ctx, hint, W/2 - 75, by + 170, PAL.text2, 13);
 }
 
 /* ════════════════════════════════════════
@@ -114,13 +127,12 @@ function neonBox(ctx, x, y, w, h, color) {
   const ctx = c.getContext('2d');
   const W = c.width, H = c.height;
 
-  // Constantes physiques FIXES (normalisées pour 60fps)
   const GRAVITY = isMobile ? 0.25 : 0.35;
   const LIFT = isMobile ? -5.8 : -6.8;
   const GAP = isMobile ? 190 : 170;
   const BASE_SPEED = isMobile ? 2.0 : 2.6;
   const SPAWN_INTERVAL = isMobile ? 110 : 95;
-  const MAX_DT = 33; // cap delta-time à 33ms (≈30fps min)
+  const MAX_DT = 33;
 
   let bell, bars, spawnAccum, score, over, started;
   let flapRequested = false;
@@ -137,14 +149,11 @@ function neonBox(ctx, x, y, w, h, color) {
   reset();
 
   function drawDumbbell(x, y) {
-    ctx.shadowColor = CYBER.accent;
-    ctx.shadowBlur = 14;
-    ctx.fillStyle = CYBER.accent;
+    ctx.fillStyle = PAL.accent;
     ctx.fillRect(x - 22, y - 12, 8, 24);
     ctx.fillRect(x + 14, y - 12, 8, 24);
-    ctx.fillStyle = CYBER.success;
+    ctx.fillStyle = PAL.text;
     ctx.fillRect(x - 14, y - 3, 28, 6);
-    ctx.shadowBlur = 0;
   }
 
   function spawn() {
@@ -155,38 +164,35 @@ function neonBox(ctx, x, y, w, h, color) {
   }
 
   function step(now) {
-    // Delta-time : cappé à MAX_DT pour éviter les sauts
     if (!lastTime) lastTime = now;
     const rawDt = now - lastTime;
     lastTime = now;
-    const dt = Math.min(rawDt, MAX_DT) / 16.667; // normalize to 60fps (1 = 16.67ms)
+    const dt = Math.min(rawDt, MAX_DT) / 16.667;
 
-    ctx.fillStyle = CYBER.bg;
+    ctx.fillStyle = PAL.bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid(ctx, W, H);
 
     if (started && !over) {
-      // Consommer le flap UNE SEULE FOIS
       if (flapRequested) {
-        bell.vy = LIFT; // valeur fixe, pas d'accumulation
+        bell.vy = LIFT;
         flapRequested = false;
       }
 
-      // Physique : gravité constante × dt
       bell.vy += GRAVITY * dt;
       bell.y += bell.vy * dt;
 
       const speed = (BASE_SPEED + Math.floor(score / 5) * 0.15) * dt;
-      spawnAccum += dt; // dt en "frames 60fps" → indépendant du rafraîchissement écran
+      spawnAccum += dt;
       if (spawnAccum >= SPAWN_INTERVAL) { spawn(); spawnAccum = 0; }
 
       for (let i = bars.length - 1; i >= 0; i--) {
         const b = bars[i];
         b.x -= speed;
 
-        neonBox(ctx, b.x, 0, 60, b.topH, CYBER.danger);
-        neonBox(ctx, b.x, b.topH + b.gap, 60, H - b.topH - b.gap, CYBER.danger);
-        ctx.fillStyle = '#1a0010';
+        drawBox(ctx, b.x, 0, 60, b.topH, PAL.danger);
+        drawBox(ctx, b.x, b.topH + b.gap, 60, H - b.topH - b.gap, PAL.danger);
+        ctx.fillStyle = PAL.bg;
         for (let yy = 10; yy < b.topH; yy += 22)
           ctx.fillRect(b.x + 6, yy, 48, 4);
         for (let yy = b.topH + b.gap + 10; yy < H; yy += 22)
@@ -202,38 +208,31 @@ function neonBox(ctx, x, y, w, h, color) {
 
       if (bell.y + bell.r > H || bell.y - bell.r < 0) over = true;
     } else if (!started) {
-      neonText(ctx, 'FLAPPY DUMBBELL', W/2 - 110, 240, CYBER.accent, 22);
-      neonText(ctx, 'TAP pour démarrer', W/2 - 80, 280, CYBER.success, 14);
+      drawText(ctx, 'FLAPPY DUMBBELL', W/2 - 100, 240, PAL.text, 20, '600');
+      drawText(ctx, 'TAP pour démarrer', W/2 - 75, 280, PAL.text2, 13);
     }
 
     drawDumbbell(bell.x, bell.y);
 
     if (over) {
       if (score > record) { record = score; localStorage.setItem('flappyDumbbellRecord', record); }
-      ctx.fillStyle = 'rgba(255,69,58,0.78)';
-      ctx.fillRect(0, 0, W, H);
-      neonText(ctx, 'GAME OVER', W/2 - 90, 240, '#fff', 30);
-      neonText(ctx, 'Score : ' + score, W/2 - 55, 290, CYBER.gold, 18);
-      neonText(ctx, 'Record : ' + record, W/2 - 60, 320, CYBER.accent, 18);
-      neonText(ctx, 'TAP pour rejouer', W/2 - 75, 380, CYBER.success, 14);
+      drawOverlay(ctx, W, H, 'GAME OVER', score, record, 'TAP pour rejouer');
     }
 
-    neonText(ctx, '⚡ ' + score, 18, 32, CYBER.success, 20);
-    neonText(ctx, '🏆 ' + record, W - 100, 32, CYBER.gold, 20);
+    drawText(ctx, 'Score ' + score, 18, 32, PAL.accent, 16, '600');
+    drawText(ctx, 'Record ' + record, W - 110, 32, PAL.warning, 16, '600');
 
     requestAnimationFrame(step);
   }
 
-  // Flap = UNE impulsion unique, ignoré si déjà en attente
   function flap(e) {
     if (e) e.preventDefault();
     if (over) { reset(); return; }
     if (!started) { started = true; lastTime = performance.now(); }
-    flapRequested = true; // consommé UNE SEULE FOIS dans step()
+    flapRequested = true;
   }
   c.addEventListener('mousedown', flap);
   c.addEventListener('touchstart', flap, {passive:false});
-  // Ignorer touchend/mouseup — aucune logique liée à la durée d'appui
   document.addEventListener('keydown', e => {
     if (document.getElementById('game-flappy').classList.contains('on') &&
         (e.code === 'Space' || e.code === 'ArrowUp')) flap(e);
@@ -273,7 +272,7 @@ function neonBox(ctx, x, y, w, h, color) {
     dir = {x:1,y:0}; nextDir = {x:1,y:0};
     score = 0; over = false; started = false;
     tickAccum = 0;
-    speed = isMobile ? 9 : 11; // ticks/sec
+    speed = isMobile ? 9 : 11;
     placeFood();
   }
   reset();
@@ -283,7 +282,7 @@ function neonBox(ctx, x, y, w, h, color) {
     const dt = (now - lastTime) / 1000;
     lastTime = now;
 
-    ctx.fillStyle = CYBER.bg;
+    ctx.fillStyle = PAL.bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid(ctx, W, H);
 
@@ -292,7 +291,6 @@ function neonBox(ctx, x, y, w, h, color) {
       const tickRate = 1 / speed;
       while (tickAccum >= tickRate) {
         tickAccum -= tickRate;
-        // Empêche demi-tour
         if (nextDir.x !== -dir.x || nextDir.y !== -dir.y) dir = nextDir;
         const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
         if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) { over = true; break; }
@@ -308,56 +306,41 @@ function neonBox(ctx, x, y, w, h, color) {
       }
     }
 
-    // Food
     if (foodKind === 'dumbbell') {
-      ctx.shadowColor = CYBER.accent; ctx.shadowBlur = 14;
-      ctx.fillStyle = CYBER.accent;
+      ctx.fillStyle = PAL.accent;
       ctx.fillRect(food.x*CELL+2, food.y*CELL+6, 4, 8);
       ctx.fillRect(food.x*CELL+14, food.y*CELL+6, 4, 8);
-      ctx.fillStyle = CYBER.success;
+      ctx.fillStyle = PAL.text;
       ctx.fillRect(food.x*CELL+5, food.y*CELL+8, 10, 4);
     } else {
-      ctx.shadowColor = CYBER.pink; ctx.shadowBlur = 16;
-      ctx.fillStyle = CYBER.pink;
+      ctx.fillStyle = PAL.warning;
       ctx.fillRect(food.x*CELL+3, food.y*CELL+3, CELL-6, CELL-6);
     }
-    ctx.shadowBlur = 0;
 
-    // Snake
     snake.forEach((s, i) => {
-      const col = i === 0 ? CYBER.success : '#00aa55';
-      ctx.shadowColor = CYBER.success;
-      ctx.shadowBlur = i === 0 ? 14 : 6;
-      ctx.fillStyle = col;
+      ctx.fillStyle = i === 0 ? PAL.success : '#3d8a60';
       ctx.fillRect(s.x*CELL+1, s.y*CELL+1, CELL-2, CELL-2);
     });
-    ctx.shadowBlur = 0;
 
     if (!started) {
-      ctx.fillStyle = 'rgba(5,10,24,0.7)';
+      ctx.fillStyle = 'rgba(17,19,24,0.75)';
       ctx.fillRect(0, 0, W, H);
-      neonText(ctx, 'SNAKE GAINZ', W/2 - 90, 250, CYBER.success, 24);
-      neonText(ctx, 'SWIPE / FLÈCHES', W/2 - 75, 290, CYBER.accent, 14);
-      neonText(ctx, 'TAP pour démarrer', W/2 - 80, 320, CYBER.gold, 13);
+      drawText(ctx, 'SNAKE GAINZ', W/2 - 80, 250, PAL.text, 22, '600');
+      drawText(ctx, 'SWIPE / FLÈCHES', W/2 - 70, 290, PAL.text2, 13);
+      drawText(ctx, 'TAP pour démarrer', W/2 - 75, 318, PAL.accent, 13);
     }
 
     if (over) {
       if (score > record) { record = score; localStorage.setItem('snakeGainzRecord', record); }
-      ctx.fillStyle = 'rgba(255,69,58,0.78)';
-      ctx.fillRect(0, 0, W, H);
-      neonText(ctx, 'GAME OVER', W/2 - 90, 240, '#fff', 30);
-      neonText(ctx, 'Gainz : ' + score, W/2 - 55, 290, CYBER.gold, 18);
-      neonText(ctx, 'Record : ' + record, W/2 - 60, 320, CYBER.accent, 18);
-      neonText(ctx, 'TAP pour rejouer', W/2 - 75, 380, CYBER.success, 14);
+      drawOverlay(ctx, W, H, 'GAME OVER', score, record, 'TAP pour rejouer');
     }
 
-    neonText(ctx, '💪 ' + score, 18, 32, CYBER.success, 20);
-    neonText(ctx, '🏆 ' + record, W - 100, 32, CYBER.gold, 20);
+    drawText(ctx, 'Gainz ' + score, 18, 32, PAL.success, 16, '600');
+    drawText(ctx, 'Record ' + record, W - 110, 32, PAL.warning, 16, '600');
 
     requestAnimationFrame(step);
   }
 
-  // Contrôles
   function setDir(dx, dy) {
     if (!started) { started = true; }
     if (over) return;
@@ -371,7 +354,6 @@ function neonBox(ctx, x, y, w, h, color) {
     if (e.code === 'ArrowRight') setDir(1, 0);
   });
 
-  // Tap pour démarrer / rejouer + swipe
   let tStart = null;
   c.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -417,9 +399,9 @@ function neonBox(ctx, x, y, w, h, color) {
 
   function spawnDrop() {
     const types = [
-      { color: CYBER.accent, w: 36, h: 36, val: 1 },
-      { color: CYBER.success, w: 30, h: 30, val: 2 },
-      { color: CYBER.gold,    w: 24, h: 24, val: 5 },
+      { color: PAL.accent,  w: 36, h: 36, val: 1 },
+      { color: PAL.success, w: 30, h: 30, val: 2 },
+      { color: PAL.warning, w: 24, h: 24, val: 5 },
     ];
     const t = types[Math.floor(Math.random() * types.length)];
     drops.push({
@@ -429,7 +411,7 @@ function neonBox(ctx, x, y, w, h, color) {
   }
 
   function step() {
-    ctx.fillStyle = CYBER.bg;
+    ctx.fillStyle = PAL.bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid(ctx, W, H);
 
@@ -442,19 +424,15 @@ function neonBox(ctx, x, y, w, h, color) {
         const d = drops[i];
         d.y += speed;
 
-        // Disque (cercle néon)
-        ctx.shadowColor = d.color; ctx.shadowBlur = 16;
         ctx.fillStyle = d.color;
         ctx.beginPath();
         ctx.arc(d.x + d.w/2, d.y + d.h/2, d.w/2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#0b1224';
+        ctx.fillStyle = PAL.bg;
         ctx.beginPath();
         ctx.arc(d.x + d.w/2, d.y + d.h/2, d.w/4, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
-        // Collision
         if (d.y + d.h >= bar.y && d.y < bar.y + bar.h &&
             d.x + d.w > bar.x && d.x < bar.x + bar.w) {
           score += d.val;
@@ -468,33 +446,25 @@ function neonBox(ctx, x, y, w, h, color) {
         }
       }
     } else if (!started) {
-      neonText(ctx, 'IRON RAIN', W/2 - 75, 250, CYBER.accent, 26);
-      neonText(ctx, 'Attrape les disques', W/2 - 85, 290, CYBER.success, 14);
-      neonText(ctx, 'TAP pour démarrer', W/2 - 80, 320, CYBER.gold, 13);
+      drawText(ctx, 'IRON RAIN', W/2 - 65, 250, PAL.text, 22, '600');
+      drawText(ctx, 'Attrape les disques', W/2 - 80, 290, PAL.text2, 13);
+      drawText(ctx, 'TAP pour démarrer', W/2 - 75, 318, PAL.accent, 13);
     }
 
-    // Barre olympique
-    ctx.shadowColor = CYBER.accent; ctx.shadowBlur = 14;
-    ctx.fillStyle = CYBER.accent;
+    ctx.fillStyle = PAL.accent;
     ctx.fillRect(bar.x, bar.y, bar.w, bar.h);
-    ctx.fillStyle = '#0077AA';
+    ctx.fillStyle = PAL.border;
     ctx.fillRect(bar.x - 8, bar.y - 4, 8, bar.h + 8);
     ctx.fillRect(bar.x + bar.w, bar.y - 4, 8, bar.h + 8);
-    ctx.shadowBlur = 0;
 
     if (over) {
       if (score > record) { record = score; localStorage.setItem('ironRainRecord', record); }
-      ctx.fillStyle = 'rgba(255,69,58,0.78)';
-      ctx.fillRect(0, 0, W, H);
-      neonText(ctx, 'GAME OVER', W/2 - 90, 240, '#fff', 30);
-      neonText(ctx, 'Score : ' + score, W/2 - 55, 290, CYBER.gold, 18);
-      neonText(ctx, 'Record : ' + record, W/2 - 60, 320, CYBER.accent, 18);
-      neonText(ctx, 'TAP pour rejouer', W/2 - 75, 380, CYBER.success, 14);
+      drawOverlay(ctx, W, H, 'GAME OVER', score, record, 'TAP pour rejouer');
     }
 
-    neonText(ctx, '💪 ' + score, 18, 32, CYBER.success, 20);
-    neonText(ctx, '❤️ ' + lives, W/2 - 20, 32, CYBER.danger, 20);
-    neonText(ctx, '🏆 ' + record, W - 100, 32, CYBER.gold, 20);
+    drawText(ctx, 'Score ' + score, 18, 32, PAL.accent, 16, '600');
+    drawText(ctx, 'Vies ' + lives, W/2 - 20, 32, PAL.danger, 16, '600');
+    drawText(ctx, 'Record ' + record, W - 110, 32, PAL.warning, 16, '600');
 
     frame++;
     requestAnimationFrame(step);
