@@ -7,7 +7,6 @@ Rate limit : 20 messages/jour/user via profiles.coach_quota_date +
 profiles.coach_quota_count (reset automatique à chaque nouveau jour).
 """
 import logging
-import os
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g
 
@@ -16,6 +15,7 @@ from core.data import (
     list_coach_messages, insert_coach_message, clear_coach_messages,
 )
 from core.dates import today_paris_str
+from core.db import _env
 from core.limiter import limiter
 from core import catalog
 
@@ -134,8 +134,9 @@ def _check_and_bump_quota(profile):
     """Retourne (allowed: bool, count_after: int, limit: int).
 
     Reset automatique à chaque changement de jour. Si allowed, incrémente
-    déjà le compteur et le persiste avant l'appel à l'API (pas de double
-    décrément à faire ensuite).
+    déjà le compteur et le persiste avant l'appel à l'API. En cas d'échec
+    API, l'appelant doit appeler _revert_quota(profile) pour ne pas faire
+    payer un message qui n'a jamais abouti.
     """
     today = today_paris_str()
     q_date = str(profile.get("coach_quota_date") or "")
@@ -150,6 +151,19 @@ def _check_and_bump_quota(profile):
     except Exception as e:
         logger.error("coach save_profile quota FAILED: %s", e)
     return True, q_count, DAILY_QUOTA
+
+
+def _revert_quota():
+    """Décrémente le compteur de 1 (si > 0) après un échec API."""
+    try:
+        profile = get_profile() or {}
+        today = today_paris_str()
+        q_date = str(profile.get("coach_quota_date") or "")
+        q_count = int(profile.get("coach_quota_count") or 0)
+        if q_date == today and q_count > 0:
+            save_profile({"coach_quota_date": today, "coach_quota_count": q_count - 1})
+    except Exception as e:
+        logger.error("coach revert_quota FAILED: %s", e)
 
 
 def _quota_remaining(profile):
@@ -215,7 +229,8 @@ def ask():
     if len(message) > 1500:
         message = message[:1500]
 
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    # _env() strip les guillemets et `=` parasites souvent injectés par Railway
+    api_key = _env("ANTHROPIC_API_KEY")
     if not api_key:
         return jsonify({"error": "Coach IA non configuré (ANTHROPIC_API_KEY manquante)."}), 503
 
@@ -234,11 +249,11 @@ def ask():
         logger.error("/coach/ask context load FAILED: %s", e)
         profile, onboarding, prog, hist = {}, {}, {}, []
 
-    # Quota (persisté)
+    # Quota (persisté).
     allowed, count_after, limit = _check_and_bump_quota(profile)
     if not allowed:
         return jsonify({
-            "error": f"Limite quotidienne atteinte ({limit} messages/jour). Reviens demain.",
+            "error": f"Limite quotidienne atteinte : {limit}/{limit} messages utilisés aujourd'hui. Reviens demain.",
             "quota_remaining": 0,
             "quota_limit": limit,
         }), 429
@@ -289,6 +304,9 @@ def ask():
                 reply_parts.append(text)
         reply = "\n".join(reply_parts).strip() or "Désolé, je n'ai pas pu répondre."
     except Exception as e:
+        # L'appel API a échoué : on reverse l'incrément de quota pour ne pas
+        # faire payer un message qui n'a jamais abouti.
+        _revert_quota()
         # On log le détail côté serveur et on renvoie un message parlant au
         # client pour faciliter le debug (sans fuiter la clé API).
         err_type = type(e).__name__
@@ -296,11 +314,11 @@ def ask():
         logger.error("/coach/ask anthropic FAILED (%s): %s", err_type, err_msg)
         # Messages spécifiques pour les erreurs les plus fréquentes
         lower = err_msg.lower()
-        if "authentication" in lower or "invalid" in lower and "api" in lower:
+        if "authentication" in lower or ("invalid" in lower and "api" in lower):
             user_msg = "Clé API Anthropic invalide. Vérifie ANTHROPIC_API_KEY dans Railway."
         elif "credit" in lower or "billing" in lower or "quota" in lower:
             user_msg = "Crédit Anthropic épuisé. Ajoute du crédit sur console.anthropic.com."
-        elif "not_found" in lower or "model" in lower and "not" in lower:
+        elif "not_found" in lower or ("model" in lower and "not" in lower):
             user_msg = f"Modèle introuvable côté API. Détail : {err_msg}"
         else:
             user_msg = f"Erreur Anthropic ({err_type}) : {err_msg}"
