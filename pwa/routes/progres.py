@@ -8,7 +8,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, render_template, request, g
 
-from core.data import get_hist, get_prog
+from core.data import get_hist, get_prog, get_onboarding
 from core.dates import today_paris, DAYS_FR
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations, get_rep_table
 from core.body_map import get_body_polygons
@@ -429,7 +429,25 @@ def progres():
     elif cal_month > 12:
         cal_month, cal_year = 1, cal_year + 1
 
-    planning_map = get_prog().get("_planning", {})
+    _prog_for_cal = get_prog() or {}
+    planning_map = _prog_for_cal.get("_planning", {})
+    # Date plancher : ne jamais marquer « manquée » une journée antérieure
+    # à la création du compte / au démarrage du programme. Couvre le cas
+    # de l'onboarding en fin de semaine (vendredi/samedi) où Lundi/Mercredi
+    # apparaissaient à tort comme manqués.
+    floor_date = None
+    try:
+        from datetime import datetime as _dt
+        started = _prog_for_cal.get("_started_at")
+        if started:
+            floor_date = _dt.fromisoformat(str(started)[:10]).date()
+        else:
+            onb = get_onboarding() or {}
+            completed = onb.get("completed_at")
+            if completed:
+                floor_date = _dt.fromisoformat(str(completed)[:10]).date()
+    except (ValueError, TypeError):
+        floor_date = None
     hist_dates_done = set()
     hist_dates_missed = set()
     for r in hist:
@@ -467,12 +485,15 @@ def progres():
             status = "missed"
         elif d > today:
             status = "upcoming" if is_training_day else "rest"
+        elif floor_date and d < floor_date:
+            # Avant la création du compte : pas de "manquée".
+            status = "rest"
         elif is_training_day:
             status = "missed"
         else:
             status = "rest"
 
-        if is_training_day:
+        if is_training_day and not (floor_date and d < floor_date):
             planned_count += 1
 
         cal_days.append({

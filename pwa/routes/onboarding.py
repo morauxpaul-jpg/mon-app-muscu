@@ -17,6 +17,7 @@ exemptées de cette gate pour éviter la boucle de redirection.
 from flask import Blueprint, render_template, request, redirect, url_for, g, session
 
 from core.data import save_onboarding, save_profile, save_prog, get_onboarding, get_prog
+from core.dates import today_paris_str
 from core import catalog
 
 bp = Blueprint("onboarding", __name__, url_prefix="/onboarding")
@@ -83,7 +84,11 @@ def submit():
     except (json.JSONDecodeError, TypeError):
         equipment_details = []
 
-    # 1. Sauvegarde onboarding + prenom côté profile
+    # 1. Sauvegarde onboarding + prenom côté profile. completed_at sert
+    # de garde-fou anti-« séances manquées » : on ne marque jamais comme
+    # manquée une séance planifiée AVANT la création du compte (calendrier,
+    # dashboard).
+    today_iso = today_paris_str()
     save_onboarding({
         "prenom": prenom,
         "age": age,
@@ -92,6 +97,7 @@ def submit():
         "frequence": frequence,
         "objectif": objectif,
         "equipement": equipement,
+        "completed_at": today_iso,
     })
     save_profile({"prenom": prenom})
 
@@ -117,6 +123,10 @@ def submit():
         # pour filtrer les exos servis en séance même après changement.
         prog["_equipment_details"] = equipment_details
         prog["_equipement"] = equipement
+        # _started_at = date d'aujourd'hui à l'onboarding initial. Évite que
+        # les jours d'entraînement de la semaine en cours antérieurs à
+        # l'inscription soient marqués comme manqués dans le calendrier.
+        prog.setdefault("_started_at", today_iso)
         save_prog(prog)
 
     session["onboarded"] = True
