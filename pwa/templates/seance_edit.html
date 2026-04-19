@@ -911,6 +911,7 @@
   var _timerTotal = 90;
   var _timerEndTime = 0;
   var _timerRemaining = 0;
+  var _timerFinished = false; // évite un double déclenchement (setInterval + visibilitychange)
   var _originalTitle = document.title;
 
   function _postTimerMsg(msg) {
@@ -923,6 +924,7 @@
     _timerTotal = seconds || _timerTotal;
     _timerEndTime = Date.now() + _timerTotal * 1000;
     _timerRemaining = _timerTotal;
+    _timerFinished = false;
     var bar = document.getElementById('rest-timer');
     bar.classList.remove('timer-done');
     bar.style.display = 'block';
@@ -949,6 +951,7 @@
     updateTimerDisplay();
     if (_timerRemaining <= 0) {
       clearInterval(_timerInterval);
+      _timerInterval = null;
       timerFinished();
     }
   }
@@ -1009,6 +1012,8 @@
   }
 
   function timerFinished() {
+    if (_timerFinished) return; // idempotent : background→foreground peut tirer 2 fois
+    _timerFinished = true;
     var bar = document.getElementById('rest-timer');
     bar.classList.add('timer-done');
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
@@ -1024,7 +1029,9 @@
 
   function skipTimer() {
     clearInterval(_timerInterval);
+    _timerInterval = null;
     _timerEndTime = 0;
+    _timerFinished = false;
     document.title = _originalTitle;
     document.getElementById('rest-timer').style.display = 'none';
     _postTimerMsg({ type: 'CANCEL_TIMER' });
@@ -1035,6 +1042,7 @@
     _timerTotal = sec;
     _timerEndTime = Date.now() + sec * 1000;
     _timerRemaining = sec;
+    _timerFinished = false;
     updateTimerDisplay();
     highlightPreset(sec);
     // Re-planifie la notif avec la nouvelle durée
@@ -1050,17 +1058,25 @@
   }
 
   // Quand l'onglet revient au premier plan, recalcule le reste à partir
-  // de endTime (setInterval a pu être throttlé pendant l'absence).
-  document.addEventListener('visibilitychange', function() {
-    if (!document.hidden && _timerEndTime) {
-      _timerRemaining = Math.max(0, Math.ceil((_timerEndTime - Date.now()) / 1000));
-      updateTimerDisplay();
-      if (_timerRemaining <= 0) {
-        clearInterval(_timerInterval);
-        timerFinished();
-      }
+  // de endTime (setInterval a pu être throttlé pendant l'absence) et
+  // relance le tick pour reprendre proprement le décompte.
+  function _resumeTimerOnFocus() {
+    if (document.hidden || !_timerEndTime) return;
+    _timerRemaining = Math.max(0, Math.ceil((_timerEndTime - Date.now()) / 1000));
+    updateTimerDisplay();
+    if (_timerRemaining <= 0) {
+      clearInterval(_timerInterval);
+      _timerInterval = null;
+      timerFinished();
+    } else {
+      // Restart le tick — l'interval throttlé en background n'est pas fiable.
+      clearInterval(_timerInterval);
+      _timerInterval = setInterval(tickTimer, 1000);
     }
-  });
+  }
+  document.addEventListener('visibilitychange', _resumeTimerOnFocus);
+  // pageshow couvre le cas iOS bfcache (retour navigateur sur la séance).
+  window.addEventListener('pageshow', _resumeTimerOnFocus);
 
   function highlightPreset(sec) {
     document.querySelectorAll('.rest-timer-bar-presets button').forEach(function(b) {
