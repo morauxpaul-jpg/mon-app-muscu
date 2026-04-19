@@ -16,7 +16,7 @@ from core.data import (
 from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
-from core.exercises_data import get_exercise_info
+from core.exercises_data import get_exercise_info, filter_exos_by_equipment
 from core.body_map import get_body_polygons
 
 bp = Blueprint("seance", __name__)
@@ -480,6 +480,14 @@ def seance():
             return redirect(url_for("seance.seance", date=date_iso))
 
         exos_prog = list(prog_seances[name])
+        # Filtrage équipement : si l'utilisateur n'est pas en profil salle,
+        # on substitue les exos qui exigent du matériel qu'il n'a pas. Couvre
+        # aussi le cas où l'équipement a changé après la création du programme.
+        _equipement = (prog.get("_equipement") or "").strip().lower()
+        if _equipement and _equipement != "salle":
+            exos_prog = filter_exos_by_equipment(
+                exos_prog, prog.get("_equipment_details") or []
+            )
         logger.info("seance ordre exos seance=%s exos=%s",
                     name, [e.get("name") for e in exos_prog])
         # Extras : stockés dans prog sous "_extras" par (seance, date) pour partage entre sessions

@@ -113,8 +113,10 @@ def submit():
         equipment_arg = equipment_details if equipement != "salle" else None
         prog = catalog.build_program(programme_id, frequence, equipment=equipment_arg)
         prog.update(meta)
-        # Stocker l'équipement dans le programme pour le re-onboarding
+        # Stocker l'équipement dans le programme pour le re-onboarding ET
+        # pour filtrer les exos servis en séance même après changement.
         prog["_equipment_details"] = equipment_details
+        prog["_equipement"] = equipement
         save_prog(prog)
 
     session["onboarded"] = True

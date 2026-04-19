@@ -1097,10 +1097,76 @@ def get_all_exercises_info():
     return EXERCISES_INFO
 
 
+def detect_equipment_needs(exercise_name):
+    """Heuristique nom→équipement pour les exercices non listés explicitement
+    dans EQUIPMENT_FOR_EXERCISE. Couvre les variantes (« Curl haltères »,
+    « Floor press haltères », « Curl barre EZ », etc.).
+
+    Retourne une liste de matériel requis (peut être vide).
+    """
+    if not exercise_name:
+        return []
+    n = exercise_name.lower()
+    needs = set()
+    # Haltères : tout ce qui contient « haltère(s) », « gobelet », « marteau »,
+    # « kickback », « arnold », « floor press », « pompes lestées »
+    if any(k in n for k in ("haltère", "gobelet", "marteau", "kickback",
+                              "arnold", "floor press", "pompes lestées",
+                              "shrugs")):
+        needs.add("halteres")
+    # Barre droite + disques : rowing barre, curl barre (hors EZ),
+    # soulevé de terre, squat (chargé), front squat, push press, good morning
+    if any(k in n for k in ("rowing barre", "soulevé de terre",
+                              "front squat", "push press", "good morning",
+                              "shrug barre", "barre au front")):
+        needs.add("barre")
+    if "curl barre" in n and "ez" not in n:
+        needs.add("barre")
+    # Barre EZ
+    if "barre ez" in n or " ez" in (" " + n):
+        needs.add("barre_ez")
+    # Banc
+    if "incliné" in n and ("développé" in n or "press" in n or "haltères" in n):
+        needs.add("banc_inclinable")
+    # Tractions / dips lestés (besoin de barre de traction)
+    if "traction" in n and "australien" not in n and "inversé" not in n:
+        needs.add("barre_traction")
+    if "dips lesté" in n or n.strip() == "dips":
+        needs.add("barre_traction")
+    # Machines / poulies
+    if any(k in n for k in ("poulie", "presse à cuisses", "leg curl",
+                              "leg extension", "abductions hanches",
+                              "kickback poulie", "rowing machine",
+                              "dips machine", "tirage vertical",
+                              "tirage horizontal", "écarté poulie",
+                              "écartés poulie", "curl pupitre",
+                              "extensions triceps poulie", "corde triceps")):
+        needs.add("machine")
+    # Élastiques
+    if "élastique" in n:
+        needs.add("elastiques")
+    # Kettlebell
+    if "kettlebell" in n:
+        needs.add("kettlebell")
+    # TRX
+    if "trx" in n:
+        needs.add("trx")
+    return list(needs)
+
+
+def required_equipment(exercise_name):
+    """Renvoie la liste fusionnée du matériel requis : entrée explicite
+    EQUIPMENT_FOR_EXERCISE prioritaire, sinon heuristique."""
+    explicit = EQUIPMENT_FOR_EXERCISE.get(exercise_name)
+    if explicit is not None:
+        return explicit
+    return detect_equipment_needs(exercise_name)
+
+
 def check_equipment(exercise_name, user_equipment):
     """Vérifie si l'utilisateur a le matériel requis pour un exercice.
     Retourne True si oui ou si l'exercice n'a pas de prérequis connu."""
-    required = EQUIPMENT_FOR_EXERCISE.get(exercise_name)
+    required = required_equipment(exercise_name)
     if not required:
         return True
     return all(eq in user_equipment for eq in required)
@@ -1108,4 +1174,62 @@ def check_equipment(exercise_name, user_equipment):
 
 def get_substitution(exercise_name):
     """Retourne le nom de l'exercice de substitution, ou None."""
-    return EXERCISE_SUBSTITUTIONS.get(exercise_name)
+    sub = EXERCISE_SUBSTITUTIONS.get(exercise_name)
+    if sub:
+        return sub
+    # Fallback heuristique : tout exo "haltères/gobelet/marteau" → variante PDC
+    if not exercise_name:
+        return None
+    n = exercise_name.lower()
+    if "squat" in n and ("haltère" in n or "gobelet" in n):
+        return "Squat (poids du corps ou lesté)"
+    if "fentes" in n:
+        return "Fentes"
+    if "rowing" in n:
+        return "Tractions australiennes"
+    if "développé" in n or "press" in n or "floor press" in n:
+        return "Pompes"
+    if "élévations" in n:
+        return "Pompes diamant"
+    if "curl" in n:
+        return "Tractions australiennes"  # biceps via supination
+    if "extension" in n or "kickback" in n:
+        return "Pompes diamant"
+    if "soulevé de terre" in n:
+        return "Hip thrust (sol)"
+    return None
+
+
+def filter_exos_by_equipment(exos, available_equipment):
+    """Renvoie une nouvelle liste d'exos avec substitutions appliquées
+    selon le matériel disponible. Les exos sans substitution viable sont
+    conservés tels quels (mieux que rien — l'utilisateur peut adapter).
+
+    - ``exos`` : liste de dicts ``{"name": str, "sets": int, "muscle": str, ...}``.
+    - ``available_equipment`` : iterable d'IDs matériel possédés par l'user.
+      Si vide ou contient « rien », tout est filtré au plus dur.
+    """
+    available = set(available_equipment or [])
+    # « banc_inclinable » implique « banc_plat ».
+    if "banc_inclinable" in available:
+        available.add("banc_plat")
+    pdc_only = (not available) or available == {"rien"}
+    out = []
+    for e in exos:
+        name = e.get("name") or ""
+        if pdc_only:
+            # Mode poids du corps strict : tout exo nécessitant un matériel
+            # est substitué.
+            needs = required_equipment(name)
+            if needs:
+                sub = get_substitution(name)
+                if sub:
+                    out.append({**e, "name": sub})
+                    continue
+        elif not check_equipment(name, available):
+            sub = get_substitution(name)
+            if sub:
+                out.append({**e, "name": sub})
+                continue
+        out.append(dict(e))
+    return out
