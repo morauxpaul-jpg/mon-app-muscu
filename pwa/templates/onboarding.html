@@ -59,39 +59,57 @@
   }
 
   /* ── Programme cards ── */
+  .prog-list { display:flex; flex-direction:column; gap:12px; margin-top:4px; }
   .prog-card {
     position:relative; background: var(--bg-surface); border: 0.5px solid var(--border-default);
-    border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; cursor:pointer; transition: border-color var(--ease-fast), background var(--ease-fast);
+    border-radius:var(--radius-lg); padding:14px 14px 12px; cursor:pointer;
+    transition: border-color var(--ease-fast), background var(--ease-fast);
   }
   .prog-card:hover { border-color: var(--border-hover); }
   .prog-card.sel { border-color: var(--accent); background: var(--accent-bg); }
   .prog-card.reco-card { border-color: var(--accent); }
   .prog-card.custom { border-style: dashed; }
   .prog-card.custom.sel { border-style: solid; border-color: var(--warning); background: var(--warning-bg); }
-  .prog-title { font-size:1.05rem; font-weight:500; margin:0 0 2px; display:flex; align-items:center; gap:8px; color: var(--text-1); }
+  .prog-card.locked { opacity: 0.78; cursor: default; }
+  .prog-card.locked:hover { border-color: var(--border-default); }
+  .prog-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  .prog-title { font-size:1.02rem; font-weight:500; margin:0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; color: var(--text-1); min-width:0; }
   .prog-sub { color: var(--text-3); font-size:.82rem; margin-bottom:4px; }
-  .prog-explanation { font-size:.8rem; color:var(--accent); margin-bottom:8px; font-style:italic; }
-  .prog-desc { font-size:.85rem; line-height:1.45; color: var(--text-2); margin-bottom:10px; }
-  .prog-meta { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
-  .prog-meta-item { font-size:.75rem; color:var(--text-3); display:flex; align-items:center; gap:4px; }
-  .prog-stars { color: var(--warning); letter-spacing:2px; }
-  .prog-muscles { display:flex; flex-wrap:wrap; gap:4px; }
+  .prog-explanation { font-size:.78rem; color:var(--accent); margin:0 0 8px; line-height:1.35; }
+  .prog-desc { font-size:.82rem; line-height:1.45; color: var(--text-2); margin:4px 0 8px; }
+  .prog-meta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .prog-meta-item { font-size:.72rem; color:var(--text-3); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+  .prog-stars { color: var(--warning); letter-spacing:1px; white-space:nowrap; }
+  .prog-muscles { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
   .prog-muscle-tag {
     font-size:.65rem; padding:2px 8px; border-radius:var(--radius-sm);
     background: var(--bg-elevated); border: 0.5px solid var(--border-default);
     color: var(--text-2); white-space:nowrap;
   }
   .badge-reco {
-    position:absolute; top:-8px; right:12px;
+    flex-shrink:0;
     background: var(--accent); color:#fff;
-    padding:3px 10px; border-radius:var(--radius-full); font-size:.68rem; font-weight:500;
-    letter-spacing:.05em; text-transform:uppercase;
+    padding:3px 10px; border-radius:var(--radius-full); font-size:.66rem; font-weight:500;
+    letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;
+  }
+  .badge-pro-inline {
+    flex-shrink:0;
+    background: var(--accent-bg); color:var(--accent); border:0.5px solid var(--accent);
+    padding:3px 10px; border-radius:var(--radius-full); font-size:.66rem; font-weight:600;
+    letter-spacing:.05em; white-space:nowrap;
   }
   .prog-preview-btn {
-    display:inline-block; font-size:.75rem; color:var(--accent); cursor:pointer;
-    text-decoration:underline; margin-top:4px;
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:.75rem; color:var(--accent); cursor:pointer;
+    text-decoration:underline; margin-top:2px;
   }
   .prog-preview-btn:hover { color: var(--accent-hover); }
+  .prog-locked-cta {
+    display:block; width:100%; text-align:center;
+    background: var(--accent-bg); border:0.5px solid var(--accent); color:var(--accent);
+    padding:8px 10px; border-radius:var(--radius-md); font-size:.78rem; font-weight:500;
+    text-decoration:none; margin-top:6px;
+  }
 
   /* ── Preview modal ── */
   .preview-overlay {
@@ -266,26 +284,29 @@
       <p class="onboard-step-sub">Étape 4 sur 4 · Voici ce qu'on te recommande</p>
     </div>
 
+    <div class="prog-list">
     <template x-for="p in orderedPrograms" :key="p.id">
       <div class="prog-card"
-           :class="{ sel: form.programme_id === p.id, 'reco-card': recommended[0] === p.id }"
-           @click="form.programme_id = p.id">
-        <span class="badge-reco label-icon" x-show="recommended[0] === p.id"><svg class="icon icon-sm icon-gold"><use href="/static/img/icons.svg#sparkle"/></svg>Recommandé pour toi</span>
+           :class="{ sel: form.programme_id === p.id, 'reco-card': recommended[0] === p.id, 'locked': p.locked }"
+           @click="p.locked ? null : (form.programme_id = p.id)">
+        <div class="prog-card-head">
+          <h3 class="prog-title">
+            <span x-text="p.icon"></span>
+            <span x-text="p.title"></span>
+          </h3>
+          <span class="badge-reco" x-show="!p.locked && recommended[0] === p.id">★ Reco</span>
+          <span class="badge-pro-inline" x-show="p.locked">PRO</span>
+        </div>
 
-        <h3 class="prog-title">
-          <span x-text="p.icon"></span>
-          <span x-text="p.title"></span>
-        </h3>
         <div class="prog-explanation" x-text="p.explanation" x-show="p.explanation"></div>
+        <div class="prog-desc" x-text="p.description" x-show="p.description"></div>
 
         <div class="prog-meta">
-          <span class="prog-meta-item">
-            <span x-text="p.freq + 'x'"></span>/sem
-          </span>
+          <span class="prog-meta-item"><span x-text="p.freq"></span>x/sem</span>
           <span class="prog-meta-item" x-text="p.duration"></span>
           <span class="prog-meta-item prog-stars"
                 x-text="'★'.repeat(p.difficulty) + '☆'.repeat(3 - p.difficulty)"></span>
-          <span class="prog-meta-item" x-text="p.nb_seances + ' séance(s)'"></span>
+          <span class="prog-meta-item"><span x-text="p.nb_seances"></span> séance(s)</span>
         </div>
 
         <div class="prog-muscles">
@@ -296,16 +317,19 @@
                 x-text="'+' + (p.muscles.length - 6)"></span>
         </div>
 
-        <span class="prog-preview-btn label-icon" @click.stop="openPreview(p)">Voir le détail des séances<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></span>
+        <span class="prog-preview-btn" x-show="!p.locked" @click.stop="openPreview(p)">Voir le détail des séances →</span>
+        <a class="prog-locked-cta" x-show="p.locked" href="/premium" @click.stop>Débloquer avec PRO</a>
       </div>
     </template>
 
     <div class="prog-card custom"
          :class="{ sel: form.programme_id === 'custom' }"
          @click="form.programme_id = 'custom'">
-      <h3 class="prog-title label-icon"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</h3>
-      <div class="prog-sub">Je sais ce que je veux faire</div>
-      <div class="prog-desc">Tu seras amené directement dans l'éditeur de programme après l'onboarding.</div>
+      <div class="prog-card-head">
+        <h3 class="prog-title"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</h3>
+      </div>
+      <div class="prog-desc">Tu seras amené directement dans l'éditeur pour construire ton programme à zéro.</div>
+    </div>
     </div>
 
     <form method="post" action="{{ url_for('onboarding.submit') }}">

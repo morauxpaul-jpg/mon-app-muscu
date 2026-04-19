@@ -196,8 +196,9 @@
     <select x-model="catalogPick" class="field" @change="catalogSeance=''">
       <option value="">— Choisis un programme —</option>
       {% for p in catalog_programs %}
-        <option value="{{ p.id }}">{{ p.title }}</option>
+        {% if not p.locked %}<option value="{{ p.id }}">{{ p.title }}</option>{% endif %}
       {% endfor %}
+      {% if not is_vip %}<option value="" disabled>── D'autres programmes sont réservés aux membres PRO ──</option>{% endif %}
     </select>
     <template x-for="p in catalogPrograms" :key="p.id">
       <div x-show="catalogPick === p.id">
@@ -343,6 +344,9 @@
               <div style="font-size:0.78rem; color:var(--text-2);">{{ p.subtitle }}</div>
             </div>
             <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+              {% if p.pro %}
+                <span class="badge-pro">PRO</span>
+              {% endif %}
               <span x-show="applyId === '{{ p.id }}'" x-cloak class="label-icon" style="font-size:10px; padding:2px 8px; border-radius:10px; background:var(--accent-bg); color:var(--accent); border:0.5px solid var(--accent);">
                 <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Suggéré
               </span>
@@ -376,6 +380,11 @@
             {% endfor %}
           </div>
 
+          {% if p.locked %}
+            <a href="/premium" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px; display:flex;">
+              <svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Débloquer avec PRO
+            </a>
+          {% else %}
           <form method="post" action="/programme/change-program" style="margin-top:10px;"
                 x-data="{ c:false }">
             <input type="hidden" name="programme_id" value="{{ p.id }}">
@@ -390,6 +399,7 @@
               <button type="submit" class="btn btn-danger">Confirmer</button>
             </div>
           </form>
+          {% endif %}
         </div>
       {% endfor %}
 

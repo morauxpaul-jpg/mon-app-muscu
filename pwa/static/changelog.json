@@ -1,13 +1,12 @@
 {
-  "version": "v36",
-  "date": "2026-04-18",
-  "title": "v36 — App resserrée + tiers Free/PRO",
+  "version": "v37",
+  "date": "2026-04-19",
+  "title": "v37 — Catalogue enrichi + onboarding clair",
   "changes": [
-    "Séances correctement isolées par profil d'entraînement",
-    "Page Programme clarifiée : sections + outils avancés repliés",
-    "Plus d'icônes qui chargent en retard sur la page Plus",
-    "Limites Free revues : 1 programme, 1 profil, 1 jeu d'arcade",
-    "Gestion : nouvelles options PRO (historique, notifications, animations)"
+    "5 nouveaux programmes : PPL débutant, Glutes, Bras, Street workout, Sèche",
+    "Free : 5 programmes essentiels — le reste débloqué avec PRO",
+    "Onboarding : mise en page du choix de programme refaite (description + badge PRO)",
+    "Nom de l'app « Muscu Tracker » partout (plus de mention PRO dans le titre)"
   ],
   "demos": {
     "coach-history": {

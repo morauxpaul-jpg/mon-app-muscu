@@ -209,7 +209,7 @@ def programme():
         muscle_list=MUSCLE_LIST,
         seance_names=[s for s, _ in seances],
         origin_seance_names=_origin_seance_names(prog),
-        catalog_programs=catalog.list_programs(),
+        catalog_programs=catalog.list_programs(is_vip=bool(getattr(g, "is_vip", False))),
         current_program_meta=current_program_meta,
         ui_state=ui_state,
     )
@@ -620,6 +620,10 @@ def change_program():
     src = catalog.get_program(prog_id)
     if not src:
         return redirect(url_for("programme.programme"))
+
+    # Free users : bloque les programmes PRO.
+    if not bool(getattr(g, "is_vip", False)) and not catalog.is_free(prog_id):
+        return render_template("vip_wall.html", active="plus", feature="Programme PRO"), 403
 
     old = get_prog()
     built = catalog.build_program(prog_id, src["freq"])

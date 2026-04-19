@@ -578,20 +578,256 @@ CATALOG = {
             ],
         },
     },
+
+    # ╔══════════════════════════════════════════════════════════════╗
+    # ║  PROGRAMMES COMPLÉMENTAIRES                                ║
+    # ╚══════════════════════════════════════════════════════════════╝
+
+    "ppl_deb_3j": {
+        "id": "ppl_deb_3j",
+        "title": "Push / Pull / Legs Débutant — 3j",
+        "subtitle": "3 séances / semaine · push/pull/legs · salle",
+        "freq": 3,
+        "level": "débutant,intermédiaire",
+        "tags": ["débutant", "intermédiaire", "salle", "ppl"],
+        "description": "Une introduction au PPL : un jour pousser, un jour tirer, un jour jambes. Parfait pour se familiariser avec les splits avant de passer à 5/6 jours.",
+        "explanation": "PPL simplifié sur 3 jours — le split le plus populaire, version accessible",
+        "difficulty": 2,
+        "duration": "~60 min",
+        "icon": "🚀",
+        "seances": {
+            "Push (Pecs / Épaules / Triceps)": [
+                _ex("Développé couché", 4, "Pecs,Triceps", "8-10"),
+                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10-12"),
+                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "10-12"),
+                _ex("Élévations latérales", 3, "Épaules", "12-15"),
+                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+            ],
+            "Pull (Dos / Biceps)": [
+                _ex("Tractions assistées", 4, "Dos,Biceps", "8-10"),
+                _ex("Rowing barre", 4, "Dos,Biceps", "8-10"),
+                _ex("Tirage vertical", 3, "Dos,Biceps", "10-12"),
+                _ex("Face pull", 3, "Épaules,Dos", "15"),
+                _ex("Curl biceps", 3, "Biceps", "10-12"),
+            ],
+            "Legs (Jambes)": [
+                _ex("Squat", 4, "Quadriceps,Fessiers", "8-10"),
+                _ex("Soulevé de terre roumain", 3, "Ischio-jambiers,Fessiers", "8-10"),
+                _ex("Presse à cuisses", 3, "Quadriceps,Fessiers", "12"),
+                _ex("Leg curl", 3, "Ischio-jambiers", "12"),
+                _ex("Mollets debout", 4, "Mollets", "15"),
+            ],
+        },
+    },
+
+    "glutes_focus_4j": {
+        "id": "glutes_focus_4j",
+        "title": "Spécial Fessiers / Glutes — 4j",
+        "subtitle": "4 séances / semaine · fessiers · salle",
+        "freq": 4,
+        "level": "intermédiaire",
+        "tags": ["intermédiaire", "salle", "fessiers", "jambes"],
+        "description": "Programme orienté développement des fessiers avec 2 séances Glutes et 2 séances upper-body pour équilibrer. Volume adapté pour maximiser l'hypertrophie.",
+        "explanation": "Double dose de fessiers + haut du corps — volume ciblé glutes",
+        "difficulty": 2,
+        "duration": "~60 min",
+        "icon": "🍑",
+        "seances": {
+            "Glutes A": [
+                _ex("Hip thrust", 4, "Fessiers,Ischio-jambiers", "10-12"),
+                _ex("Squat bulgare", 4, "Quadriceps,Fessiers", "10"),
+                _ex("Soulevé de terre roumain", 3, "Ischio-jambiers,Fessiers", "10-12"),
+                _ex("Abductions hanches", 3, "Abducteurs,Fessiers", "15"),
+                _ex("Kickback poulie", 3, "Fessiers", "12"),
+            ],
+            "Glutes B": [
+                _ex("Squat", 4, "Quadriceps,Fessiers", "8-10"),
+                _ex("Fentes marchées", 3, "Quadriceps,Fessiers", "10"),
+                _ex("Pont fessiers une jambe", 3, "Fessiers", "12"),
+                _ex("Good morning", 3, "Ischio-jambiers,Fessiers", "10-12"),
+                _ex("Mollets assis", 4, "Mollets", "15"),
+            ],
+            "Upper push": [
+                _ex("Développé couché", 4, "Pecs,Triceps", "8-10"),
+                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "10"),
+                _ex("Élévations latérales", 4, "Épaules", "12-15"),
+                _ex("Dips machine", 3, "Triceps,Pecs", "10-12"),
+            ],
+            "Upper pull": [
+                _ex("Tirage vertical", 4, "Dos,Biceps", "10-12"),
+                _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
+                _ex("Face pull", 3, "Épaules,Dos", "15"),
+                _ex("Curl haltères", 3, "Biceps", "10-12"),
+            ],
+        },
+    },
+
+    "bras_spe_4j": {
+        "id": "bras_spe_4j",
+        "title": "Spécialisation Bras — 4j",
+        "subtitle": "4 séances / semaine · bras · salle",
+        "freq": 4,
+        "level": "intermédiaire,avancé",
+        "tags": ["intermédiaire", "avancé", "salle", "bras"],
+        "description": "Pour ceux qui veulent des bras massifs : 2 journées upper-body classiques + 2 journées dédiées biceps/triceps avec volume élevé.",
+        "explanation": "2 journées spécifiques bras + haut du corps — spécialisation pure",
+        "difficulty": 3,
+        "duration": "~55 min",
+        "icon": "💪",
+        "seances": {
+            "Upper A (Push)": [
+                _ex("Développé couché", 4, "Pecs,Triceps", "8"),
+                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10"),
+                _ex("Développé militaire", 3, "Épaules,Triceps", "8"),
+                _ex("Élévations latérales", 3, "Épaules", "12-15"),
+            ],
+            "Upper B (Pull)": [
+                _ex("Tractions", 4, "Dos,Biceps", "8-10"),
+                _ex("Rowing barre", 4, "Dos,Biceps", "8"),
+                _ex("Tirage horizontal", 3, "Dos", "10-12"),
+                _ex("Shrug barre", 3, "Trapèzes", "12"),
+            ],
+            "Bras volume A": [
+                _ex("Curl barre EZ", 4, "Biceps", "8-10"),
+                _ex("Extensions triceps poulie", 4, "Triceps", "10-12"),
+                _ex("Curl incliné haltères", 3, "Biceps", "10-12"),
+                _ex("Dips lestés", 3, "Triceps,Pecs", "8-10"),
+                _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
+                _ex("Extensions triceps haltère", 3, "Triceps", "12"),
+            ],
+            "Bras volume B": [
+                _ex("Curl pupitre", 4, "Biceps", "10"),
+                _ex("Barre au front", 4, "Triceps", "10"),
+                _ex("Curl poulie basse", 3, "Biceps", "12"),
+                _ex("Kickback triceps", 3, "Triceps", "12"),
+                _ex("Curl concentration", 3, "Biceps", "12"),
+                _ex("Corde triceps poulie", 3, "Triceps", "15"),
+            ],
+        },
+    },
+
+    "pdc_avance_4j": {
+        "id": "pdc_avance_4j",
+        "title": "Street Workout Avancé — Poids du corps",
+        "subtitle": "4 séances / semaine · poids du corps · avancé",
+        "freq": 4,
+        "level": "avancé",
+        "tags": ["avancé", "aucun", "pdc", "street"],
+        "description": "Programme poids du corps avancé avec progressions vers muscle-up, handstand push-up et pistol squat. Pour ceux qui veulent devenir très forts sans matériel.",
+        "explanation": "Progressions vers muscle-up / handstand / pistol — niveau street workout",
+        "difficulty": 3,
+        "duration": "~50 min",
+        "icon": "🤸",
+        "seances": {
+            "Push avancé": [
+                _ex("Pompes arc-en-ciel", 4, "Pecs,Triceps", "6-8"),
+                _ex("Pompes en équilibre mur", 4, "Épaules,Triceps", "5-8"),
+                _ex("Pompes explosives", 3, "Pecs,Triceps", "5"),
+                _ex("Dips barre lestés", 3, "Triceps,Pecs", "8-10"),
+                _ex("Extensions triceps mur", 3, "Triceps", "10"),
+            ],
+            "Pull avancé": [
+                _ex("Tractions lestées", 4, "Dos,Biceps", "6-8"),
+                _ex("Tractions commando", 3, "Dos,Biceps", "8-10"),
+                _ex("Rowing australien pieds surélevés", 4, "Dos", "10-12"),
+                _ex("Tractions tempo 3-1-3", 3, "Dos,Biceps", "5-6"),
+                _ex("Curl australien", 3, "Biceps", "10"),
+            ],
+            "Legs avancé": [
+                _ex("Pistol squat assisté", 4, "Quadriceps,Fessiers", "6-8"),
+                _ex("Squat sauté", 4, "Quadriceps,Fessiers", "8"),
+                _ex("Fentes bulgares", 3, "Quadriceps,Fessiers", "10"),
+                _ex("Pont fessiers une jambe", 3, "Fessiers,Ischio-jambiers", "10-12"),
+                _ex("Mollets une jambe", 4, "Mollets", "15"),
+            ],
+            "Core / conditioning": [
+                _ex("L-sit progression", 4, "Abdos", "20s"),
+                _ex("Dragon flag négatifs", 3, "Abdos", "5-6"),
+                _ex("Planche gainage", 3, "Abdos", "45s"),
+                _ex("Mountain climbers", 3, "Abdos,Quadriceps", "30"),
+                _ex("Burpees", 3, "Pecs,Quadriceps,Épaules", "15"),
+            ],
+        },
+    },
+
+    "seche_muscu_5j": {
+        "id": "seche_muscu_5j",
+        "title": "Sèche Musculation — 5j",
+        "subtitle": "5 séances / semaine · sèche · salle",
+        "freq": 5,
+        "level": "intermédiaire,avancé",
+        "tags": ["intermédiaire", "avancé", "salle", "sèche"],
+        "description": "Programme orienté sèche : split 5 jours avec volume élevé et finishers cardio en fin de séance pour brûler un max de calories tout en préservant la masse.",
+        "explanation": "Split 5j + finishers cardio — préserve le muscle en déficit calorique",
+        "difficulty": 3,
+        "duration": "~55 min",
+        "icon": "🔥",
+        "seances": {
+            "Pecs / Triceps": [
+                _ex("Développé incliné haltères", 4, "Pecs,Épaules", "10-12"),
+                _ex("Développé couché", 4, "Pecs,Triceps", "8-10"),
+                _ex("Écarté poulie", 3, "Pecs", "12-15"),
+                _ex("Extensions triceps poulie", 4, "Triceps", "12"),
+                _ex("Barre au front", 3, "Triceps", "12"),
+            ],
+            "Dos / Biceps": [
+                _ex("Tirage vertical", 4, "Dos,Biceps", "10-12"),
+                _ex("Rowing barre", 4, "Dos,Biceps", "8-10"),
+                _ex("Tirage horizontal", 3, "Dos", "12"),
+                _ex("Curl barre EZ", 4, "Biceps", "10-12"),
+                _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
+            ],
+            "Jambes": [
+                _ex("Squat", 4, "Quadriceps,Fessiers", "8-10"),
+                _ex("Presse à cuisses", 4, "Quadriceps,Fessiers", "12"),
+                _ex("Soulevé de terre roumain", 3, "Ischio-jambiers,Fessiers", "10"),
+                _ex("Leg extension", 3, "Quadriceps", "15"),
+                _ex("Mollets debout", 4, "Mollets", "15"),
+            ],
+            "Épaules / Abdos": [
+                _ex("Développé militaire", 4, "Épaules,Triceps", "10"),
+                _ex("Élévations latérales", 4, "Épaules", "15"),
+                _ex("Face pull", 3, "Épaules,Dos", "15"),
+                _ex("Crunch lesté", 4, "Abdos", "15"),
+                _ex("Relevés de jambes", 3, "Abdos", "15"),
+            ],
+            "Full / Finisher": [
+                _ex("Deadlift", 3, "Dos,Ischio-jambiers,Fessiers", "8"),
+                _ex("Fentes marchées", 3, "Quadriceps,Fessiers", "12"),
+                _ex("Tractions", 3, "Dos,Biceps", "max"),
+                _ex("Burpees", 4, "Pecs,Quadriceps,Épaules", "15"),
+                _ex("Mountain climbers", 3, "Abdos,Quadriceps", "45s"),
+            ],
+        },
+    },
+}
+
+
+# ── Tier Free / PRO ────────────────────────────────────────────────
+# Programmes gratuits : les bases essentielles.
+# Les autres programmes sont verrouillés et nécessitent un abonnement PRO.
+FREE_PROGRAMS = {
+    "fb_deb_3j",
+    "fb_deb_maison_3j",
+    "fb_pdc_3j",
+    "upper_lower_4j",
+    "ppl_deb_3j",
 }
 
 
 # ── Ordre d'affichage dans l'onboarding ──────────────────────────────
 CATALOG_ORDER = [
-    # Débutant
+    # Débutant (Free)
     "fb_deb_3j", "fb_deb_maison_3j", "fb_pdc_3j",
-    # Intermédiaire
-    "upper_lower_4j", "upper_lower_maison_4j", "ppl_6j", "ppl_5j",
-    # Avancé
-    "ppl_avance_6j", "upper_lower_avance_5j",
-    # Perte de poids
-    "circuit_salle_3j", "circuit_maison_3j", "hiit_muscu_4j",
-    # Force
+    # Intermédiaire — le PPL 3j et l'Upper/Lower 4j sont Free
+    "ppl_deb_3j", "upper_lower_4j", "upper_lower_maison_4j", "ppl_5j", "ppl_6j",
+    # Avancé (PRO)
+    "ppl_avance_6j", "upper_lower_avance_5j", "pdc_avance_4j",
+    # Perte de poids / sèche (PRO sauf circuits)
+    "circuit_salle_3j", "circuit_maison_3j", "hiit_muscu_4j", "seche_muscu_5j",
+    # Spécialisations (PRO)
+    "glutes_focus_4j", "bras_spe_4j",
+    # Force (5x5 Free, athlé PRO)
     "force_5x5_3j", "force_athle_4j",
 ]
 
@@ -613,11 +849,21 @@ def unique_muscles_for(prog_id: str) -> list[str]:
     return seen
 
 
-def list_programs() -> list[dict]:
-    """Liste publique des programmes (métadonnées + preview séances)."""
+def is_free(prog_id: str) -> bool:
+    """Un programme est Free s'il figure dans FREE_PROGRAMS."""
+    return prog_id in FREE_PROGRAMS
+
+
+def list_programs(is_vip: bool = True) -> list[dict]:
+    """Liste publique des programmes (métadonnées + preview séances).
+
+    Si ``is_vip`` est False, les programmes hors FREE_PROGRAMS sont retournés
+    avec ``locked=True`` ; l'UI se charge de les afficher en mode verrouillé.
+    """
     out = []
     for pid in CATALOG_ORDER:
         p = CATALOG[pid]
+        locked = (not is_vip) and (pid not in FREE_PROGRAMS)
         seances_preview = []
         for sname, exos in p["seances"].items():
             seances_preview.append({
@@ -641,6 +887,8 @@ def list_programs() -> list[dict]:
             "muscles": unique_muscles_for(pid),
             "nb_seances": len(p["seances"]),
             "seances_preview": seances_preview,
+            "locked": locked,
+            "pro": pid not in FREE_PROGRAMS,
         })
     return out
 
@@ -650,9 +898,12 @@ def get_program(prog_id: str) -> dict | None:
 
 
 # ── Recommandation ───────────────────────────────────────────────────
-def recommend(niveau: str, frequence: int, equipement: str) -> list[str]:
+def recommend(niveau: str, frequence: int, equipement: str, is_vip: bool = True) -> list[str]:
     """Retourne la liste des IDs programmes recommandés (3 à 4 éléments),
-    dans l'ordre de pertinence. Le premier = recommandation principale."""
+    dans l'ordre de pertinence. Le premier = recommandation principale.
+
+    Pour les non-VIP, seuls les programmes Free sont recommandés.
+    """
     niveau = (niveau or "").strip().lower()
     equipement = (equipement or "").strip().lower()
     freq = int(frequence or 3)
@@ -719,6 +970,14 @@ def recommend(niveau: str, frequence: int, equipement: str) -> list[str]:
     else:
         for fb in ("fb_deb_3j", "upper_lower_4j", "ppl_6j", "force_5x5_3j"):
             if len(recs) >= 4:
+                break
+            _add_if_missing(recs, fb)
+
+    # Non-VIP : on ne recommande que des programmes Free.
+    if not is_vip:
+        recs = [r for r in recs if r in FREE_PROGRAMS]
+        for fb in ("fb_deb_3j", "ppl_deb_3j", "upper_lower_4j", "fb_deb_maison_3j", "fb_pdc_3j"):
+            if len(recs) >= 3:
                 break
             _add_if_missing(recs, fb)
 
