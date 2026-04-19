@@ -8,7 +8,7 @@ from flask import Blueprint, render_template
 from datetime import date as _date, datetime as _datetime
 
 from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
-from core.dates import now_paris, today_paris, today_paris_str, monday_of, DAYS_FR, MONTHS_FR
+from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 
 bp = Blueprint("accueil", __name__)
@@ -137,12 +137,16 @@ def _compute_badges(hist, prog, profile, planning_map, streak):
     return final, new_unlocked
 
 
+MAKEUP_WINDOW_DAYS = 3  # tolérance : séance du lundi faite mardi/merc/jeu = OK
+
+
 def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
     """Statut d'une journée — porté de _day_status() app.py 1751-1784."""
     d_str = day_date.strftime("%Y-%m-%d")
     day_rows = [r for r in hist_rows if r["Date"] == d_str]
     day_name_fr = DAYS_FR[day_date.weekday()]
     is_rest = day_name_fr in planning_map and not planning_map.get(day_name_fr, "")
+    planned_seance = planning_map.get(day_name_fr, "") if day_name_fr in planning_map else ""
 
     real = [r for r in day_rows if _is_real_perf(r)]
     if real:
@@ -174,6 +178,29 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
     # antérieurs à l'inscription (l'user n'avait pas encore l'app).
     if joined_date and day_date < joined_date:
         return {"status": "upcoming", "title": "Repos", "badge": "—", "color": "#6b7280"}
+
+    # Tolérance rattrapage : un jour passé avec séance planifiée n'est pas
+    # « manqué » si cette séance a été effectivement faite dans les
+    # MAKEUP_WINDOW_DAYS jours qui suivent (et qui ne sont pas eux-mêmes
+    # des jours où cette séance était planifiée).
+    if day_date < today and planned_seance:
+        for off in range(1, MAKEUP_WINDOW_DAYS + 1):
+            d2 = day_date + timedelta(days=off)
+            if d2 > today:
+                break
+            d2_name_fr = DAYS_FR[d2.weekday()]
+            if planning_map.get(d2_name_fr) == planned_seance:
+                continue  # jour où la même séance est re-planifiée → pas un rattrapage
+            d2_iso = d2.strftime("%Y-%m-%d")
+            d2_rows = [r for r in hist_rows if r["Date"] == d2_iso]
+            d2_done = any(
+                r for r in d2_rows
+                if _is_real_perf(r) and r.get("Séance") == planned_seance
+            )
+            if d2_done:
+                return {"status": "done", "title": planned_seance,
+                        "badge": "RATTRAPÉE", "color": "#5bbd8a", "makeup": True}
+
     if day_date < today:
         return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#d45a5a"}
     if day_date == today:
@@ -205,7 +232,9 @@ def index():
     hist, prog_seances = _normalize_hist(hist, prog)
     planning_map = prog.get("_planning", {})
 
-    today = today_paris()
+    # « Journée logique » : entre minuit et 04h, on reste sur la veille
+    # pour ne pas sanctionner les séances faites « tard hier soir ».
+    today = logical_today_paris()
     now = now_paris()
     day_name = DAYS_FR[today.weekday()]
     date_str = f"{today.day} {MONTHS_FR[today.month - 1]} {today.year}"
@@ -269,6 +298,22 @@ def index():
             r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0)
         )
     )
+    # Si la séance du jour a été rattrapée récemment, on ne considère pas
+    # le streak en danger (le jour est affiché comme RATTRAPÉE).
+    if today_seance and not today_done:
+        for off in range(1, MAKEUP_WINDOW_DAYS + 1):
+            d_prev = today - timedelta(days=off)
+            d_prev_name = DAYS_FR[d_prev.weekday()]
+            if planning_map.get(d_prev_name) == today_seance:
+                d_prev_iso = d_prev.strftime("%Y-%m-%d")
+                d_prev_done = any(
+                    r for r in hist
+                    if r["Date"] == d_prev_iso and r.get("Séance") == today_seance
+                    and (r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0))
+                )
+                if d_prev_done:
+                    today_done = True  # déjà couvert par un rattrapage récent
+                    break
     streak_danger = bool(today_seance and not today_done and today.weekday() < 5)
 
     # Prochaine séance — premier jour (aujourd'hui inclus) avec un planning
@@ -289,6 +334,24 @@ def index():
         )
         if d_done:
             continue
+        # Tolérance : si cette séance a été rattrapée sur un jour précédent
+        # (dans la fenêtre), on la considère couverte.
+        if offset == 0:
+            covered = False
+            for off_prev in range(1, MAKEUP_WINDOW_DAYS + 1):
+                d_prev = d - timedelta(days=off_prev)
+                d_prev_name = DAYS_FR[d_prev.weekday()]
+                if planning_map.get(d_prev_name) == seance_name:
+                    d_prev_iso = d_prev.strftime("%Y-%m-%d")
+                    if any(
+                        r for r in hist
+                        if r["Date"] == d_prev_iso and r.get("Séance") == seance_name
+                        and (r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0))
+                    ):
+                        covered = True
+                        break
+            if covered:
+                continue
         if offset == 0:
             relative = "Aujourd'hui"
         elif offset == 1:

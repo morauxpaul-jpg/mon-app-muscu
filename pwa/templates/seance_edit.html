@@ -680,7 +680,6 @@
         <button type="button" onclick="setTimerDuration(120)">2:00</button>
         <button type="button" onclick="setTimerDuration(180)">3:00</button>
       </div>
-      <button type="button" class="rest-timer-bar-skip" id="timer-sound-toggle" onclick="toggleTimerSound()" aria-label="Son on/off" style="margin-right:4px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#bell"/></svg></button>
       <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()" aria-label="Passer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
     </div>
   </div>
@@ -968,46 +967,6 @@
     }
   }
 
-  // ── Préférence son timer (localStorage) ──
-  function _timerSoundEnabled() {
-    try { return localStorage.getItem('timer_sound_enabled') !== '0'; } catch(e) { return true; }
-  }
-  function _refreshTimerSoundBtn() {
-    var btn = document.getElementById('timer-sound-toggle');
-    if (!btn) return;
-    var on = _timerSoundEnabled();
-    btn.style.opacity = on ? '1' : '0.4';
-    btn.title = on ? 'Son activé' : 'Son coupé';
-  }
-  function toggleTimerSound() {
-    var on = _timerSoundEnabled();
-    try { localStorage.setItem('timer_sound_enabled', on ? '0' : '1'); } catch(e) {}
-    _refreshTimerSoundBtn();
-  }
-  document.addEventListener('DOMContentLoaded', _refreshTimerSoundBtn);
-
-  // ── Bip sonore via Web Audio API (3 bips doux sinus 660Hz) ──
-  function _playTimerBeep() {
-    if (!_timerSoundEnabled()) return;
-    try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.18, 0.36].forEach(function(delay) {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.frequency.value = 660;
-        osc.type = 'sine';
-        var t0 = ctx.currentTime + delay;
-        gain.gain.setValueAtTime(0.0001, t0);
-        gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(t0);
-        osc.stop(t0 + 0.1);
-      });
-    } catch(e) {}
-  }
-
   // ── Notification via SW ou fallback classique ──
   // Ne pas envoyer si l'app est au premier plan (l'utilisateur voit déjà le chrono).
   function _sendTimerNotification() {
@@ -1034,7 +993,6 @@
     var bar = document.getElementById('rest-timer');
     bar.classList.add('timer-done');
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
-    _playTimerBeep();
     _sendTimerNotification();
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     document.title = 'GO ! — Muscu Tracker';

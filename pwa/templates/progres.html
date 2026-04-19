@@ -339,9 +339,9 @@
           margin: { l: 40, r: 10, t: 10, b: 30 },
           paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
           font: { color: '#6b7280', size: 10 },
-          xaxis: { title: 'Semaine', gridcolor: '#2a2d36' },
-          yaxis: { title: 'Poids (kg)', gridcolor: '#2a2d36' }
-        }, { displayModeBar: false, responsive: true });
+          xaxis: { title: 'Semaine', gridcolor: '#2a2d36', fixedrange: true },
+          yaxis: { title: 'Poids (kg)', gridcolor: '#2a2d36', fixedrange: true }
+        }, { displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false });
       </script>
     {% endif %}
   </div>

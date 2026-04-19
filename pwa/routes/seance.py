@@ -13,7 +13,7 @@ from core.data import (
     get_hist, get_prog, clear_user_cache,
     replace_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
 )
-from core.dates import today_paris, today_paris_str, now_paris, DAYS_FR, MONTHS_FR
+from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
 from core.exercises_data import get_exercise_info
@@ -328,8 +328,14 @@ def seance():
     auto_rest_timer = _settings.get("auto_rest_timer", True)
     auto_prefill_weight = _settings.get("auto_prefill_weight", True)
 
-    date_iso = request.args.get("date") or today_paris_str()
-    target_date = _parse_date(date_iso) or today_paris()
+    # « Aujourd'hui logique » : avant 04h du matin, on considère encore
+    # la journée précédente — la séance faite « tard hier soir » est ainsi
+    # rangée au bon jour.
+    logical_today = logical_today_paris()
+    logical_today_str = logical_today.strftime("%Y-%m-%d")
+
+    date_iso = request.args.get("date") or logical_today_str
+    target_date = _parse_date(date_iso) or logical_today
     date_iso = target_date.strftime("%Y-%m-%d")
     s_act = _iso_week(target_date)
     s_display = _display_week(target_date, prog, hist)
@@ -337,13 +343,13 @@ def seance():
 
     mode = request.args.get("mode")   # "prefaite" | "libre" | None
     name = request.args.get("name")   # nom séance (prefaite) ou libre
-    today = today_paris()
+    today = logical_today
 
     done_name = _find_done_session(date_iso, hist)
 
     # ── Vue choix (pas de mode choisi) ────────────────────────────
     if not mode:
-        if date_iso == today_paris_str() and not done_name:
+        if date_iso == logical_today_str and not done_name:
             titre = "Quelle séance aujourd'hui ?"
             subtitle_text, subtitle_color = "", ""
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
@@ -392,6 +398,65 @@ def seance():
                 label_uncl = "Non classé" if groups else "Mes séances"
                 groups.append({"name": label_uncl, "seances": unclassified})
 
+        # ── Séances de rattrapage : séances planifiées des 7 derniers
+        # jours qui n'ont pas été faites (ni sur leur jour, ni reportées).
+        makeup_suggestions = []
+        if date_iso == logical_today_str:
+            planning_map = prog.get("_planning", {})
+            seance_names_set = set(prog_seances.keys())
+            # Séances déjà faites sur une date donnée (par nom).
+            done_by_date = {}
+            for r in hist:
+                if _is_real_perf(r) and r.get("Date") and r.get("Séance"):
+                    done_by_date.setdefault(r["Date"], set()).add(r["Séance"])
+            # Pour chaque nom de séance, collecte toutes les dates où elle
+            # a été faite (sert à détecter un rattrapage déjà effectué).
+            done_dates_by_seance = {}
+            for d_iso, names in done_by_date.items():
+                for n in names:
+                    done_dates_by_seance.setdefault(n, set()).add(d_iso)
+
+            for offset in range(7, 0, -1):
+                d = logical_today - timedelta(days=offset)
+                d_name_fr = DAYS_FR[d.weekday()]
+                planned = planning_map.get(d_name_fr, "")
+                if not planned or planned not in seance_names_set:
+                    continue
+                d_iso = d.strftime("%Y-%m-%d")
+                # Déjà faite ce jour-là ?
+                if planned in done_by_date.get(d_iso, set()):
+                    continue
+                # Déjà rattrapée entre d+1 et aujourd'hui ?
+                rattrape = False
+                for off2 in range(1, offset + 1):
+                    d2 = d + timedelta(days=off2)
+                    d2_iso = d2.strftime("%Y-%m-%d")
+                    # Un jour où cette même séance était déjà planifiée
+                    # ne compte pas comme rattrapage.
+                    d2_name_fr = DAYS_FR[d2.weekday()]
+                    if planning_map.get(d2_name_fr) == planned:
+                        continue
+                    if planned in done_by_date.get(d2_iso, set()):
+                        rattrape = True
+                        break
+                if rattrape:
+                    continue
+                # Marquée manquée explicitement ?
+                marked_missed = any(
+                    r for r in hist
+                    if r.get("Date") == d_iso
+                    and r.get("Exercice") == "SESSION"
+                    and "MANQUÉE" in (r.get("Remarque") or "")
+                )
+                if marked_missed:
+                    continue
+                makeup_suggestions.append({
+                    "seance": planned,
+                    "date_iso": d_iso,
+                    "day_label": f"{d_name_fr} {d.day:02d}/{d.month:02d}",
+                    "offset": offset,
+                })
+
         return render_template(
             "seance_choix.html",
             active="seance",
@@ -406,6 +471,7 @@ def seance():
             planning=prog.get("_planning", {}),
             jours_map=prog.get("_jours", {}),
             prog_groups=groups,
+            makeup_suggestions=makeup_suggestions,
         )
 
     # ── Vue édition : mode prefaite ───────────────────────────────

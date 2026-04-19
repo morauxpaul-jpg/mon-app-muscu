@@ -1,12 +1,13 @@
 {
-  "version": "v37",
+  "version": "v38",
   "date": "2026-04-19",
-  "title": "v37 — Catalogue enrichi + onboarding clair",
+  "title": "v38 — Moins de friction : chrono silencieux & calendrier tolérant",
   "changes": [
-    "5 nouveaux programmes : PPL débutant, Glutes, Bras, Street workout, Sèche",
-    "Free : 5 programmes essentiels — le reste débloqué avec PRO",
-    "Onboarding : mise en page du choix de programme refaite (description + badge PRO)",
-    "Nom de l'app « Muscu Tracker » partout (plus de mention PRO dans le titre)"
+    "Chrono de repos sans son — plus discret, notification visuelle + vibration conservées",
+    "Graphique Zoom mouvement verrouillé : plus de pan accidentel au toucher",
+    "Calendrier tolérant : séance du lundi faite mardi = validée (pas marquée manquée)",
+    "Pré-04h : une séance logguée à 1h du matin est rangée sur la veille",
+    "Onglet Séance : proposition des séances à rattraper des 7 derniers jours"
   ],
   "demos": {
     "coach-history": {
