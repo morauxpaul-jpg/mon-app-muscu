@@ -13,7 +13,7 @@ from flask import (
     Blueprint, render_template, request, redirect, url_for, send_file, jsonify, g
 )
 
-from core.data import get_prog, save_prog
+from core.data import get_prog, save_prog, get_onboarding
 from core.dates import DAYS_FR
 from core.muscu import auto_muscles
 from core import catalog
@@ -626,7 +626,15 @@ def change_program():
         return render_template("vip_wall.html", active="plus", feature="Programme PRO"), 403
 
     old = get_prog()
-    built = catalog.build_program(prog_id, src["freq"])
+    # Respecte la fréquence configurée par l'utilisateur (onboarding) plutôt
+    # que celle par défaut du catalogue. Sinon un user qui a choisi 2 j/sem
+    # se retrouve avec 3 ou 4 séances.
+    onb = get_onboarding() or {}
+    try:
+        user_freq = int(onb.get("frequence") or src["freq"])
+    except (TypeError, ValueError):
+        user_freq = int(src["freq"])
+    built = catalog.build_program(prog_id, user_freq)
 
     if mode == "merge":
         # Garde les séances existantes, ajoute celles du nouveau qui n'existent pas

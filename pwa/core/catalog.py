@@ -1012,9 +1012,25 @@ def build_program(prog_id: str, frequence: int, equipment: list[str] | None = No
     if "banc_inclinable" in effective_equipment:
         effective_equipment.add("banc_plat")
 
+    # Cohérence avec la fréquence demandée par l'utilisateur :
+    #   - si user_freq <= séances dispo : on tronque la liste pour avoir
+    #     exactement user_freq séances distinctes ET user_freq jours planifiés
+    #     (corrige le bug : 2 j/sem → 2 séances, pas 3) ;
+    #   - si user_freq > séances dispo (programmes cyclés type PPL 5j avec
+    #     Push/Pull/Legs sur 5 jours) : on garde toutes les séances du
+    #     catalogue et on cycle sur user_freq jours.
+    catalog_seance_names = list(src["seances"].keys())
+    freq_eff = int(frequence or src["freq"])
+    freq_eff = max(2, min(6, freq_eff))
+    if freq_eff <= len(catalog_seance_names):
+        seance_names = catalog_seance_names[:freq_eff]
+    else:
+        seance_names = catalog_seance_names
+
     prog: dict = {}
     # Copie des séances (retire le _reps_hint qui reste côté catalogue)
-    for seance_name, exos in src["seances"].items():
+    for seance_name in seance_names:
+        exos = src["seances"][seance_name]
         built_exos = []
         for e in exos:
             name = e["name"]
@@ -1028,8 +1044,6 @@ def build_program(prog_id: str, frequence: int, equipment: list[str] | None = No
             built_exos.append({"name": name, "sets": sets, "muscle": muscle})
         prog[seance_name] = built_exos
 
-    seance_names = list(src["seances"].keys())
-    freq_eff = int(frequence or src["freq"])
     prog["_planning"] = planning_for(freq_eff, seance_names)
     prog["_origin"] = prog_id
     return deepcopy(prog)
