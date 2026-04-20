@@ -1172,6 +1172,55 @@ def check_equipment(exercise_name, user_equipment):
     return all(eq in user_equipment for eq in required)
 
 
+# ── Exercices isométriques / chronométrés ──────────────────────────────
+# nom → durée cible par défaut (en secondes). La détection est aussi
+# exposée par detect_isometric() ci-dessous (heuristique sur le nom).
+ISOMETRIC_EXERCISES = {
+    "Gainage":               45,
+    "Planche":               45,
+    "Planche gainage":       45,
+    "Gainage latéral":       30,
+    "Wall sit":              60,
+    "L-sit progression":     20,
+    "Dragon flag négatifs":  30,
+    "Mountain climbers":     30,
+    "Jump squats":           30,
+    "Fentes sautées":        30,
+    "High knees":            30,
+    "Superman":              30,
+    "Burpees":               30,
+}
+
+# Mots-clés / racines qui caractérisent un exercice chronométré, utilisé
+# en fallback heuristique quand le nom ne matche pas exactement le tableau.
+_ISO_KEYWORDS = (
+    "gainage", "planche", "wall sit", "l-sit", "dragon flag",
+    "mountain climbers", "jump squats", "fentes sautées", "fentes sauté",
+    "high knees", "superman", "isométrique",
+)
+
+
+def detect_isometric(exercise_name):
+    """Renvoie ``(is_iso: bool, target_seconds: int|None)``.
+
+    On considère qu'un exercice est isométrique/chronométré si :
+    - son nom est dans ``ISOMETRIC_EXERCISES`` ; ou
+    - son nom (normalisé en minuscules) contient un des mots-clés iso.
+    """
+    if not exercise_name:
+        return False, None
+    if exercise_name in ISOMETRIC_EXERCISES:
+        return True, ISOMETRIC_EXERCISES[exercise_name]
+    n = exercise_name.lower()
+    for key, seconds in ISOMETRIC_EXERCISES.items():
+        if key.lower() in n:
+            return True, seconds
+    for k in _ISO_KEYWORDS:
+        if k in n:
+            return True, 30
+    return False, None
+
+
 def get_substitution(exercise_name):
     """Retourne le nom de l'exercice de substitution, ou None."""
     sub = EXERCISE_SUBSTITUTIONS.get(exercise_name)

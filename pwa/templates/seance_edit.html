@@ -297,38 +297,74 @@
           {% endfor %}
         {% endif %}
 
-        {# ── Table éditable des séries ─── #}
-        <table class="sets-table">
-          <thead>
-            <tr>
-              <th>Sér.</th>
-              <th>Reps</th>
-              <th x-show="showWeight">Poids</th>
-              <th>Remarque</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <template x-for="(s, i) in sets" :key="i">
-              <tr>
-                <td x-text="i + 1"></td>
-                <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @input="onSetFilled(i)"></td>
-                <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
-                <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
-                <td>
-                  <button type="button" class="mini-btn" @click="removeSet(i)" title="Retirer">×</button>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+        {# ── Chrono isométrique (gainage, planche, wall sit...) ── #}
+        <template x-if="isIso">
+          <div class="iso-chrono">
+            <div class="iso-chrono-head">
+              <span class="iso-chrono-series">Série <span x-text="isoNextSeries()"></span> / <span x-text="sets.length"></span></span>
+              <span class="iso-chrono-target">cible <span x-text="targetSeconds"></span> s</span>
+            </div>
+            <div class="iso-chrono-display" x-text="formatIsoTime(isoRemaining)"></div>
+            <div class="iso-chrono-progress">
+              <div class="iso-chrono-progress-fill" :style="'width:' + isoProgressPct() + '%'"></div>
+            </div>
+            <div class="iso-chrono-controls">
+              <button type="button" class="btn primary" x-show="!isoRunning && isoRemaining === targetSeconds" @click="isoStart()">▶ Start</button>
+              <button type="button" class="btn primary" x-show="!isoRunning && isoRemaining !== targetSeconds && isoRemaining > 0" @click="isoStart()">▶ Reprendre</button>
+              <button type="button" class="btn" x-show="isoRunning" @click="isoPause()">⏸ Pause</button>
+              <button type="button" class="btn" @click="isoReset()">↺ Reset</button>
+            </div>
+            <ul class="iso-sets-done">
+              <template x-for="(s, i) in sets" :key="i">
+                <li :class="{ done: Number(s.reps) > 0 }">
+                  <span>Série <span x-text="i+1"></span></span>
+                  <span x-text="Number(s.reps) > 0 ? s.reps + ' s' : '—'"></span>
+                </li>
+              </template>
+            </ul>
+            <div class="iso-chrono-row-actions">
+              <button type="button" class="btn label-icon" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
+              <button type="button" class="btn" @click="isoClearLast()" x-show="sets.some(s => Number(s.reps) > 0)">Effacer la dernière</button>
+            </div>
+          </div>
+        </template>
 
-        <button type="button" class="btn label-icon" style="width:100%; margin-top:6px; justify-content:center;" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
-        <button type="button" @click="clearWeights()"
-                title="Efface les poids pré-remplis de la dernière séance"
-                style="background:none; border:none; color:var(--text-mute); font-size:0.72rem; padding:4px 0; margin-top:2px; cursor:pointer; text-decoration:underline;">
-          Réinitialiser les poids
-        </button>
+        {# ── Table éditable des séries (mode classique) ─── #}
+        <template x-if="!isIso">
+          <div>
+            <table class="sets-table">
+              <thead>
+                <tr>
+                  <th>Sér.</th>
+                  <th>Reps</th>
+                  <th x-show="showWeight">Poids</th>
+                  <th>Remarque</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(s, i) in sets" :key="i">
+                  <tr>
+                    <td x-text="i + 1"></td>
+                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @input="onSetFilled(i)"></td>
+                    <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
+                    <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
+                    <td>
+                      <button type="button" class="mini-btn" @click="removeSet(i)" title="Retirer">×</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+
+            <button type="button" class="btn label-icon" style="width:100%; margin-top:6px; justify-content:center;" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
+            <button type="button" @click="clearWeights()"
+                    title="Efface les poids pré-remplis de la dernière séance"
+                    style="background:none; border:none; color:var(--text-mute); font-size:0.72rem; padding:4px 0; margin-top:2px; cursor:pointer; text-decoration:underline;">
+              Réinitialiser les poids
+            </button>
+          </div>
+        </template>
 
         <div class="exo-actions">
           <form method="post" action="/seance/save-exo"
@@ -1152,6 +1188,15 @@
           remarque: s.remarque || ""
         };
       }),
+
+      // ── Isométrique (gainage, planche, wall sit, etc.) ──
+      isIso: !!data.is_isometric,
+      targetSeconds: Number(data.target_seconds) || 30,
+      isoRunning: false,
+      isoEndTime: 0,
+      isoRemaining: Number(data.target_seconds) || 30,
+      _isoInterval: null,
+
       init: function() {
         // Restore draft if page was left without saving
         try {
@@ -1166,6 +1211,8 @@
         var self = this;
         this.$watch('sets', function() { self._saveDraft(); });
         this.$watch('variant', function() { self._saveDraft(); });
+        // Résumé iso : si pas de `isoRemaining` cohérent, remettre à la cible
+        if (this.isIso) this.isoRemaining = this.targetSeconds;
       },
       _saveDraft: function() {
         try {
@@ -1204,6 +1251,89 @@
         // Clear draft on save + démarre le chrono (spec : Valider déclenche le repos)
         try { localStorage.removeItem(draftKey); } catch(e) {}
         this.startRestTimer();
+      },
+
+      // ── Contrôles du chrono isométrique ──
+      formatIsoTime: function (sec) {
+        var s = Math.max(0, Math.ceil(Number(sec) || 0));
+        var m = Math.floor(s / 60);
+        var r = s % 60;
+        return m + ':' + (r < 10 ? '0' : '') + r;
+      },
+      isoProgressPct: function () {
+        if (!this.targetSeconds) return 0;
+        var done = this.targetSeconds - this.isoRemaining;
+        return Math.min(100, Math.max(0, (done / this.targetSeconds) * 100));
+      },
+      isoNextSeries: function () {
+        for (var i = 0; i < this.sets.length; i++) {
+          if (!(Number(this.sets[i].reps) > 0)) return i + 1;
+        }
+        return this.sets.length + 1;
+      },
+      isoTick: function () {
+        var rem = Math.max(0, Math.ceil((this.isoEndTime - Date.now()) / 1000));
+        this.isoRemaining = rem;
+        if (rem <= 0) {
+          clearInterval(this._isoInterval);
+          this._isoInterval = null;
+          this.isoRunning = false;
+          this.isoFinished();
+        }
+      },
+      isoStart: function () {
+        if (this.isoRunning) return;
+        _markSessionActive();
+        var rem = (this.isoRemaining > 0 && this.isoRemaining <= this.targetSeconds)
+          ? this.isoRemaining : this.targetSeconds;
+        this.isoEndTime = Date.now() + rem * 1000;
+        this.isoRunning = true;
+        var self = this;
+        clearInterval(this._isoInterval);
+        this._isoInterval = setInterval(function () { self.isoTick(); }, 250);
+      },
+      isoPause: function () {
+        if (!this.isoRunning) return;
+        this.isoRemaining = Math.max(0, Math.ceil((this.isoEndTime - Date.now()) / 1000));
+        clearInterval(this._isoInterval);
+        this._isoInterval = null;
+        this.isoRunning = false;
+      },
+      isoReset: function () {
+        clearInterval(this._isoInterval);
+        this._isoInterval = null;
+        this.isoRunning = false;
+        this.isoRemaining = this.targetSeconds;
+        this.isoEndTime = 0;
+      },
+      isoFinished: function () {
+        // Bip + vibration (même système que le chrono de repos)
+        if (typeof _playTimerBeep === 'function') _playTimerBeep();
+        if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch(e) {} }
+        // Log auto : on remplit la première série vide avec la durée cible.
+        var logged = false;
+        for (var i = 0; i < this.sets.length; i++) {
+          if (!(Number(this.sets[i].reps) > 0)) {
+            this.sets[i].reps = this.targetSeconds;
+            if (!this.sets[i].poids) this.sets[i].poids = 0;
+            logged = true;
+            break;
+          }
+        }
+        // Toutes les séries déjà validées → ajoute une série supplémentaire.
+        if (!logged) {
+          this.sets.push({ reps: this.targetSeconds, poids: 0, remarque: "" });
+        }
+        this.isoRemaining = this.targetSeconds;
+      },
+      isoClearLast: function () {
+        for (var i = this.sets.length - 1; i >= 0; i--) {
+          if (Number(this.sets[i].reps) > 0) {
+            this.sets[i].reps = '';
+            this.sets[i].poids = '';
+            return;
+          }
+        }
       }
     };
   }

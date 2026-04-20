@@ -16,7 +16,7 @@ from core.data import (
 from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
-from core.exercises_data import get_exercise_info, filter_exos_by_equipment
+from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
 
 bp = Blueprint("seance", __name__)
@@ -290,6 +290,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
     info = dict(info)
     info["one_rm"] = float(record.get("one_rm") or 0) if isinstance(record, dict) else 0
 
+    is_iso, target_sec = detect_isometric(base)
+
     return {
         "base": base,
         "muscle": muscle,
@@ -298,8 +300,10 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         "is_extra": is_extra,
         "variant": var,
         "exo_final": exo_final,
-        "is_bw": is_bw,
+        "is_bw": is_bw or is_iso,  # iso : pas de poids par défaut
         "is_bw_base": base in BW_EXOS,
+        "is_isometric": is_iso,
+        "target_seconds": target_sec or 0,
         "completed": completed,
         "record": record,
         "prev_weeks": prev_weeks,

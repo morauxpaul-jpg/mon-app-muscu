@@ -1,2 +1,95 @@
-/* Timer CSS — vide : le chrono plein écran a été retiré.
+/* Timer CSS — chrono isométrique (gainage, planche, wall sit, etc.).
    Le chrono de repos utilise la barre fixe (.rest-timer-bar) dans components.css. */
+
+.iso-chrono {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3, 10px);
+  padding: var(--sp-3, 12px);
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-md, 12px);
+}
+
+.iso-chrono-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.iso-chrono-series { font-weight: 600; color: var(--text-1); }
+.iso-chrono-target { color: var(--text-3); }
+
+.iso-chrono-display {
+  text-align: center;
+  font-size: 3.2rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  padding: var(--sp-2, 8px) 0;
+}
+
+.iso-chrono-progress {
+  height: 4px;
+  background: var(--bg-input, rgba(255,255,255,0.06));
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.iso-chrono-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.25s linear;
+}
+
+.iso-chrono-controls {
+  display: flex;
+  gap: var(--sp-2, 8px);
+  justify-content: center;
+}
+
+.iso-chrono-controls .btn {
+  min-width: 110px;
+  justify-content: center;
+}
+
+.iso-sets-done {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.iso-sets-done li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  color: var(--text-3);
+  background: var(--bg-input, rgba(255,255,255,0.03));
+  border-radius: var(--radius-sm, 6px);
+}
+
+.iso-sets-done li.done {
+  color: var(--success, #5bbd8a);
+  background: var(--success-bg, rgba(91,189,138,0.08));
+}
+
+.iso-chrono-row-actions {
+  display: flex;
+  gap: var(--sp-2, 8px);
+}
+
+.iso-chrono-row-actions .btn {
+  flex: 1;
+  justify-content: center;
+  font-size: 0.78rem;
+}
