@@ -402,8 +402,9 @@ def seance():
                 label_uncl = "Non classé" if groups else "Mes séances"
                 groups.append({"name": label_uncl, "seances": unclassified})
 
-        # ── Séances de rattrapage : séances planifiées des 7 derniers
-        # jours qui n'ont pas été faites (ni sur leur jour, ni reportées).
+        # ── Séance de rattrapage : uniquement la séance de la VEILLE si
+        # elle était planifiée, pas faite, et pas marquée comme manquée.
+        # (Choix produit : au-delà d'un jour, on n'incite plus à rattraper.)
         makeup_suggestions = []
         if date_iso == logical_today_str:
             planning_map = prog.get("_planning", {})
@@ -420,7 +421,7 @@ def seance():
                 for n in names:
                     done_dates_by_seance.setdefault(n, set()).add(d_iso)
 
-            for offset in range(7, 0, -1):
+            for offset in (1,):  # veille uniquement
                 d = logical_today - timedelta(days=offset)
                 d_name_fr = DAYS_FR[d.weekday()]
                 planned = planning_map.get(d_name_fr, "")
