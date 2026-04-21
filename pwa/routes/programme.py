@@ -118,9 +118,28 @@ def _ensure_profiles(prog):
     return profiles, active
 
 
+def _sort_seances_by_planning(names, planning):
+    """Trie les noms de séances par jour de la semaine (lun→dim).
+    Les séances sans jour assigné vont en fin de liste."""
+    day_index = {d: i for i, d in enumerate(DAYS_FR)}
+    seance_day = {}
+    for day, sname in (planning or {}).items():
+        if sname and sname not in seance_day:
+            seance_day[sname] = day_index.get(day, 99)
+    return sorted(names, key=lambda s: (seance_day.get(s, 999), s))
+
+
 def _seance_items(prog):
-    """Liste ordonnée des séances du programme (exclut les clés techniques _*)."""
-    return [(k, v) for k, v in prog.items() if not k.startswith("_")]
+    """Liste ordonnée des séances du programme, triées par jour planifié."""
+    planning = prog.get("_planning") or {}
+    items = [(k, v) for k, v in prog.items() if not k.startswith("_")]
+    day_index = {d: i for i, d in enumerate(DAYS_FR)}
+    seance_day = {}
+    for day, sname in planning.items():
+        if sname and sname not in seance_day:
+            seance_day[sname] = day_index.get(day, 99)
+    items.sort(key=lambda kv: (seance_day.get(kv[0], 999), kv[0]))
+    return items
 
 
 def _origin_seance_names(prog):

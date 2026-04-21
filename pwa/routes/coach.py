@@ -49,11 +49,16 @@ SYSTEM_PROMPT_TMPL = (
     "{catalog_list}\n\n"
     "## CONTEXTE UTILISATEUR\n"
     "- Prénom : {prenom}\n"
+    "- Âge : {age}\n"
+    "- Poids : {poids}\n"
+    "- Taille : {taille}\n"
     "- Niveau : {niveau}\n"
     "- Objectif : {objectif}\n"
-    "- Équipement : {equipement}\n"
-    "- Programme actuel : {programme_resume}\n"
-    "- 5 dernières séances : {dernieres_seances}\n\n"
+    "- Équipement : {equipement}\n\n"
+    "## PROGRAMME ACTUEL\n"
+    "{programme_detail}\n\n"
+    "## 14 DERNIÈRES SÉANCES\n"
+    "{dernieres_seances}\n\n"
     "## RÈGLES DE FORMULATION\n"
     "- Utilise du markdown : **gras**, listes à puce, titres avec ##.\n"
     "- Quand tu mentionnes un programme du catalogue, fais-en un lien cliquable "
@@ -89,45 +94,70 @@ def _catalog_list_for_prompt():
     return "\n".join(lines) or "(vide)"
 
 
-def _programme_resume(prog):
-    seances = {k: v for k, v in (prog or {}).items() if not k.startswith("_")}
+def _programme_detail(prog):
+    """Programme actuel avec jours assignés et exercices détaillés."""
+    if not prog:
+        return "Aucun programme défini."
+    seances = {k: v for k, v in prog.items() if not k.startswith("_")}
     if not seances:
-        return "aucun programme défini"
-    parts = []
-    for name, exos in seances.items():
-        exo_names = [e.get("name") or "" for e in (exos or [])][:6]
-        parts.append(f"{name} ({', '.join(exo_names)})")
-    return " | ".join(parts)
+        return "Aucun programme défini."
+    planning = prog.get("_planning") or {}
+    day_to_seance = {v: k for k, v in planning.items() if v}
+    seance_to_days = {}
+    for day, sname in planning.items():
+        if sname:
+            seance_to_days.setdefault(sname, []).append(day)
+    name = prog.get("_name") or "Programme personnalisé"
+    lines = [f"Nom : {name}"]
+    for sname, exos in seances.items():
+        days = seance_to_days.get(sname, [])
+        day_str = ", ".join(days) if days else "non planifiée"
+        exo_details = []
+        for e in (exos or [])[:8]:
+            ename = e.get("name") or "?"
+            sets = e.get("sets") or 3
+            exo_details.append(f"  - {ename} ({sets} séries)")
+        lines.append(f"\n{sname} ({day_str}) :")
+        lines.extend(exo_details if exo_details else ["  (aucun exercice)"])
+    return "\n".join(lines)
 
 
 def _dernieres_seances(hist):
-    """5 dernières séances résumées (date, séance, volume)."""
+    """14 dernières séances avec exercices et séries, triées date desc."""
     if not hist:
-        return "aucune séance enregistrée"
+        return "Aucune séance enregistrée."
     by_date_seance = {}
     for r in hist:
         d = r.get("Date") or ""
         s = r.get("Séance") or ""
-        if not d or s == "" or r.get("Exercice") == "SESSION":
+        exo = r.get("Exercice") or ""
+        if not d or s == "" or exo == "SESSION":
             continue
         key = (d, s)
-        entry = by_date_seance.setdefault(key, {"sets": 0, "vol": 0})
+        entry = by_date_seance.setdefault(key, {"exos": {}, "vol": 0})
         try:
             reps = int(r.get("Reps") or 0)
             poids = float(r.get("Poids") or 0)
         except (TypeError, ValueError):
             reps, poids = 0, 0
         if reps > 0:
-            entry["sets"] += 1
+            exo_entry = entry["exos"].setdefault(exo, {"sets": 0, "best": 0})
+            exo_entry["sets"] += 1
+            if poids > exo_entry["best"]:
+                exo_entry["best"] = poids
             entry["vol"] += int(reps * poids)
     if not by_date_seance:
-        return "aucune séance récente"
-    # tri par date desc
-    items = sorted(by_date_seance.items(), key=lambda kv: kv[0][0], reverse=True)[:5]
-    return " ; ".join(
-        f"{d} {s} ({e['sets']} séries, vol {e['vol']}kg)"
-        for (d, s), e in items
-    )
+        return "Aucune séance récente."
+    items = sorted(by_date_seance.items(), key=lambda kv: kv[0][0], reverse=True)[:14]
+    lines = []
+    for (d, s), e in items:
+        exo_parts = []
+        for ename, edata in list(e["exos"].items())[:6]:
+            best = f" @{edata['best']:g}kg" if edata["best"] > 0 else ""
+            exo_parts.append(f"{ename} {edata['sets']}s{best}")
+        exo_str = ", ".join(exo_parts)
+        lines.append(f"- {d} · {s} (vol {e['vol']}kg) : {exo_str}")
+    return "\n".join(lines)
 
 
 def _check_and_bump_quota(profile):
@@ -264,13 +294,22 @@ def ask():
     equipement = onboarding.get("equipement") or "non précisé"
     if isinstance(equipement, list):
         equipement = ", ".join(str(x) for x in equipement) or "non précisé"
+    age = onboarding.get("age") or profile.get("age")
+    age_str = f"{age} ans" if age else "non précisé"
+    poids = profile.get("poids_kg")
+    poids_str = f"{poids} kg" if poids else "non précisé"
+    taille = profile.get("taille_cm")
+    taille_str = f"{taille} cm" if taille else "non précisé"
 
     system_prompt = SYSTEM_PROMPT_TMPL.format(
         prenom=prenom,
+        age=age_str,
+        poids=poids_str,
+        taille=taille_str,
         niveau=niveau,
         objectif=objectif,
         equipement=equipement,
-        programme_resume=_programme_resume(prog),
+        programme_detail=_programme_detail(prog),
         dernieres_seances=_dernieres_seances(hist),
         catalog_list=_catalog_list_for_prompt(),
     )

@@ -79,16 +79,18 @@
 
     <div class="coach-footer">
       <form class="coach-input" @submit.prevent="send(draft)">
-        <input
-          type="text"
-          class="field"
+        <textarea
+          class="field coach-textarea"
           placeholder="Pose ta question…"
           x-model="draft"
           :disabled="typing || quotaLeft <= 0"
           maxlength="1500"
           autocomplete="off"
-        >
-        <button type="submit" class="btn primary" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
+          rows="1"
+          @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight, 120)+'px'"
+          @keydown.enter.exact.prevent="if(draft.trim() && !typing && quotaLeft > 0) send(draft)"
+        ></textarea>
+        <button type="submit" class="btn primary coach-send-btn" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>
         </button>
       </form>
@@ -371,14 +373,37 @@
     .coach-input {
       display: flex;
       gap: 6px;
-      align-items: stretch;
+      align-items: flex-end;
     }
-    .coach-input .field {
+    .coach-textarea {
       flex: 1;
       margin: 0;
+      resize: none;
+      overflow-y: auto;
+      line-height: 1.4;
+      min-height: 42px;
+      max-height: 120px;
+      padding: 10px 13px;
+      background: var(--bg-elevated);
+      border: 1px solid #2a2d36;
+      border-radius: 12px;
+      color: var(--text-1);
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .coach-input .btn {
+    .coach-textarea:focus {
+      outline: none;
+      border-color: #5b9bd5;
+      box-shadow: 0 0 0 2px rgba(91,155,213,0.25);
+    }
+    .coach-textarea::placeholder {
+      color: var(--text-3);
+    }
+    .coach-send-btn {
       padding: 0 14px;
+      min-height: 42px;
+      align-self: flex-end;
     }
     .coach-quota {
       text-align: center;

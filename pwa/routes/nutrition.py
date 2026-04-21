@@ -7,11 +7,11 @@
 - Table Supabase `nutrition` : un repas par ligne (date, meal_type, macros, note)
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from core.data import get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition
-from core.dates import today_paris_str
+from core.data import get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition, sum_nutrition_range
+from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -153,6 +153,34 @@ def index():
                     "pct": _pct(totals["fat"], macros_g["fat"])},
     }
 
+    # Semaine : lun→dim de la semaine contenant date_iso
+    try:
+        selected_date = datetime.strptime(date_iso, "%Y-%m-%d").date()
+    except ValueError:
+        selected_date = today_paris()
+    monday = selected_date - timedelta(days=selected_date.weekday())
+    sunday = monday + timedelta(days=6)
+    today_iso = today_paris_str()
+    try:
+        week_totals = sum_nutrition_range(monday.isoformat(), sunday.isoformat())
+    except Exception as e:
+        logger.error("nutrition week_totals FAILED: %s", e)
+        week_totals = {}
+    week_days = []
+    for i in range(7):
+        d = monday + timedelta(days=i)
+        d_iso = d.isoformat()
+        cals = (week_totals.get(d_iso) or {}).get("calories", 0)
+        week_days.append({
+            "date_iso": d_iso,
+            "day_label": DAYS_FR[i][:3],
+            "day_num": d.day,
+            "calories": cals,
+            "is_selected": d_iso == date_iso,
+            "is_today": d_iso == today_iso,
+            "is_future": d_iso > today_iso,
+        })
+
     return render_template(
         "nutrition.html",
         active="plus",
@@ -168,6 +196,7 @@ def index():
         cal_pct=cal_pct,
         macros_progress=macros_progress,
         nutrition_ready=nutrition_ready,
+        week_days=week_days,
     )
 
 

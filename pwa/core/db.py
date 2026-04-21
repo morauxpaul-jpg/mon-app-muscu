@@ -546,3 +546,25 @@ def sum_nutrition_day(user_id: str, date_str: str) -> dict:
         out["carbs"] += int(r.get("carbs") or 0)
         out["fat"] += int(r.get("fat") or 0)
     return out
+
+
+def sum_nutrition_range(user_id: str, date_from: str, date_to: str) -> dict:
+    """Totaux nutrition par jour sur une plage de dates. Retourne {date_str: {calories, protein, carbs, fat}}."""
+    client = get_client()
+    resp = (
+        client.table("nutrition")
+        .select("date, calories, protein, carbs, fat")
+        .eq("user_id", user_id)
+        .gte("date", date_from)
+        .lte("date", date_to)
+        .execute()
+    )
+    by_date = {}
+    for r in (resp.data or []):
+        d = r.get("date") or ""
+        entry = by_date.setdefault(d, {"calories": 0, "protein": 0, "carbs": 0, "fat": 0})
+        entry["calories"] += int(r.get("calories") or 0)
+        entry["protein"] += int(r.get("protein") or 0)
+        entry["carbs"] += int(r.get("carbs") or 0)
+        entry["fat"] += int(r.get("fat") or 0)
+    return by_date

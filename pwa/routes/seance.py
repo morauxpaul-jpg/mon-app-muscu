@@ -385,13 +385,20 @@ def seance():
                     pg["profile_id"] = fallback_pid
             active_programmes = [p for p in programmes if isinstance(p, dict) and p.get("profile_id") == active_profile]
         prog_by_id = {p["id"]: p["name"] for p in active_programmes if isinstance(p, dict) and p.get("id")}
-        seance_order = list(prog_seances.keys())
+        _planning = prog.get("_planning") or {}
+        _day_idx = {d: i for i, d in enumerate(DAYS_FR)}
+        _s_day = {}
+        for _d, _sn in _planning.items():
+            if _sn and _sn not in _s_day:
+                _s_day[_sn] = _day_idx.get(_d, 99)
+        _sort_key = lambda s: (_s_day.get(s, 999), s)
+        seance_order = sorted(prog_seances.keys(), key=_sort_key)
         groups = []
         for p in active_programmes:
             pid = p.get("id") if isinstance(p, dict) else None
             if not pid:
                 continue
-            snames = [s for s in seance_order if seance_prog.get(s) == pid]
+            snames = sorted([s for s in seance_order if seance_prog.get(s) == pid], key=_sort_key)
             if snames:
                 groups.append({"name": p.get("name") or "Programme", "seances": snames})
         # Séances orphelines : n'apparaissent que si le profil actif n'est pas
@@ -471,7 +478,7 @@ def seance():
             subtitle_text=subtitle_text,
             subtitle_color=subtitle_color,
             done_name=done_name,
-            seance_names=list(prog_seances.keys()),
+            seance_names=sorted(prog_seances.keys(), key=_sort_key),
             prog_seances=prog_seances,
             planning=prog.get("_planning", {}),
             jours_map=prog.get("_jours", {}),

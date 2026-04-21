@@ -102,6 +102,10 @@ def sum_nutrition_day(date_str):
     return db.sum_nutrition_day(_uid(), date_str)
 
 
+def sum_nutrition_range(date_from, date_to):
+    return db.sum_nutrition_range(_uid(), date_from, date_to)
+
+
 # ── Coach IA (historique) ───────────────────────────────────────────────
 def list_coach_messages(limit=50):
     return db.list_coach_messages(_uid(), limit)
