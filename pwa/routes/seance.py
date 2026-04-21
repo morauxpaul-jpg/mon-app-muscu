@@ -833,7 +833,7 @@ def remove_extra():
 @limiter.limit("20 per minute")
 def add_cardio():
     """Ajoute un bloc cardio à la séance muscu en cours (même Séance + Date)."""
-    from routes.cardio import ACTIVITES_MAP, RPE_LABELS, _estimate_calories
+    from routes.cardio import ACTIVITES_MAP, RPE_LABELS, _estimate_calories, _adjust_met_for_incline
     from core.data import get_profile
     f = request.form
     date_str = f["date"]
@@ -867,6 +867,12 @@ def add_cardio():
         rpe = ""
     note = (f.get("note") or "").strip()[:80]
 
+    try:
+        incline_pct = max(0, min(30, float(f.get("incline") or 0)))
+    except (ValueError, TypeError):
+        incline_pct = 0
+    met = _adjust_met_for_incline(met, activite, incline_pct)
+
     if cal_saisie > 0:
         calories = cal_saisie
     else:
@@ -876,6 +882,7 @@ def add_cardio():
 
     parts = []
     if calories > 0: parts.append(f"Cal:{calories}")
+    if incline_pct > 0: parts.append(f"Incl:{incline_pct:g}%")
     if vitesse > 0: parts.append(f"Vit:{vitesse:g}")
     if rpe: parts.append(f"RPE:{rpe}")
     if note: parts.append(note)

@@ -42,12 +42,26 @@
       <input type="number" inputmode="numeric" min="0" name="duree_min" class="field" x-model.number="dureeMin" placeholder="ex. 30">
     </div>
 
-    <!-- Distance + FC + Intensité -->
+    <!-- Distance + Inclinaison + FC + Intensité -->
     <div class="card">
       <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#activity"/></svg>PERFORMANCE</div>
 
       <label class="field-label">Distance (km, optionnel)</label>
       <input type="text" inputmode="decimal" name="distance_km" class="field" x-model="distanceKm" placeholder="ex. 5.2">
+
+      <template x-if="activite === 'Course' || activite === 'Marche'">
+        <div style="margin-top: 2px;">
+          <label class="field-label">Inclinaison (<span x-text="incline"></span>%)</label>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.75rem; color:var(--text-3);">0%</span>
+            <input type="range" name="incline" min="0" max="20" step="0.5" x-model.number="incline" style="flex:1; accent-color: var(--accent);">
+            <span style="font-size:0.75rem; color:var(--text-3);">20%</span>
+          </div>
+          <div style="text-align:center; font-size:0.72rem; color:var(--text-dim); margin-top:2px;">
+            MET ajusté : <strong x-text="adjustedMet().toFixed(1)" style="color:var(--accent);"></strong>
+          </div>
+        </div>
+      </template>
 
       <label class="field-label">Fréquence cardiaque moyenne (bpm, optionnel)</label>
       <input type="number" inputmode="numeric" name="fc_moy" class="field" x-model.number="fcMoy" placeholder="ex. 145">
@@ -82,6 +96,10 @@
         <div class="summary-item" x-show="distanceKm">
           <div class="summary-label">Distance</div>
           <div class="summary-value" x-text="distanceKm + ' km'"></div>
+        </div>
+        <div class="summary-item" x-show="incline > 0 && (activite === 'Course' || activite === 'Marche')">
+          <div class="summary-label">Inclinaison</div>
+          <div class="summary-value" x-text="incline + '%'"></div>
         </div>
         <div class="summary-item">
           <div class="summary-label">Calories</div>
@@ -197,6 +215,7 @@
       "Course": 10.0, "Vélo": 7.5, "Rameur": 7.0, "Natation": 8.0,
       "Corde": 11.0, "HIIT": 9.0, "Marche": 3.5, "Elliptique": 6.5, "Autre": 6.0
     };
+    const INCLINE_BONUS = { "Course": 0.5, "Marche": 0.35 };
     const POIDS_KG = parseFloat({{ poids_kg|tojson }}) || 70;
 
     function cardioForm() {
@@ -208,6 +227,7 @@
         rpe: "",
         calories: "",
         note: "",
+        incline: 0,
         running: false,
         elapsed: 0,  // secondes
         startedAt: 0,
@@ -293,8 +313,13 @@
           if (h > 0) return pad(h) + ":" + pad(m) + ":" + pad(s);
           return pad(m) + ":" + pad(s);
         },
+        adjustedMet() {
+          var base = MET[this.activite] || 6.0;
+          var bonus = INCLINE_BONUS[this.activite] || 0;
+          return base + (this.incline * bonus);
+        },
         estimatedCal() {
-          const met = MET[this.activite] || 6.0;
+          const met = this.adjustedMet();
           const mn = parseInt(this.dureeMin) || 0;
           if (mn <= 0) return 0;
           return Math.round(met * POIDS_KG * (mn / 60));

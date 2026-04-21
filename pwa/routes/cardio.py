@@ -67,6 +67,20 @@ def _iso_week(d):
     return d.isocalendar().week
 
 
+INCLINE_MET_BONUS = {
+    "Marche": 0.35,
+    "Course": 0.5,
+}
+
+
+def _adjust_met_for_incline(met, activite, incline_pct):
+    """Ajuste le MET en fonction de l'inclinaison (%) pour marche/course."""
+    bonus = INCLINE_MET_BONUS.get(activite, 0)
+    if bonus and incline_pct > 0:
+        return met + (incline_pct * bonus)
+    return met
+
+
 def _estimate_calories(met, minutes, poids_kg):
     """Formule standard : kcal = MET × poids(kg) × temps(h)."""
     if not poids_kg or poids_kg <= 0:
@@ -125,6 +139,12 @@ def save():
     if rpe not in RPE_LABELS:
         rpe = ""
 
+    try:
+        incline_pct = max(0, min(30, float(f.get("incline") or 0)))
+    except (ValueError, TypeError):
+        incline_pct = 0
+    met = _adjust_met_for_incline(met, activite, incline_pct)
+
     # Calories : soit saisies, soit estimées
     try:
         cal_saisie = int(float(f.get("calories") or 0))
@@ -146,6 +166,8 @@ def save():
         remarque_parts.append(f"FC:{fc_moy}")
     if calories > 0:
         remarque_parts.append(f"Cal:{calories}")
+    if incline_pct > 0:
+        remarque_parts.append(f"Incl:{incline_pct:g}%")
     if rpe:
         remarque_parts.append(f"RPE:{rpe}")
     if note:

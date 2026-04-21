@@ -637,6 +637,10 @@
           <input type="number" inputmode="decimal" :step="units().distStep" min="0" name="distance_km" x-model="distance" class="cell-input" style="width:100%;" placeholder="0">
         </div>
       </div>
+      <div x-show="activite === 'Course' || activite === 'Marche'" style="margin-top:8px;">
+        <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Inclinaison (<span x-text="incline"></span>%)</label>
+        <input type="range" name="incline" min="0" max="20" step="0.5" x-model.number="incline" style="width:100%; accent-color: var(--accent);">
+      </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div>
           <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().vitLabel || 'Vitesse'"></label>
@@ -683,6 +687,7 @@
         distance: "",
         vitesse: "",
         calories: "",
+        incline: 0,
         units: function () { return UNITS[this.activite] || UNITS["Autre"]; },
         autoVitesse: function () {
           var d = parseFloat(this.distance), t = parseFloat(this.duree);
