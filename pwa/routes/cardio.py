@@ -51,7 +51,7 @@ def sum_cardio_km(cardio_rows):
         float(r.get("Poids") or 0)
         for r in cardio_rows
         if _activity_of(r) in KM_BASED_ACTIVITES
-    ), 1)
+    ), 2)
 
 RPE_LABELS = ["Facile", "Modéré", "Intense"]
 

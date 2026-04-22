@@ -241,7 +241,7 @@ def _build_cardio_stats(cardio_rows, start_monday):
         "values": values,
         "max_val": max_val,
         "longest_run_min": longest_run_min,
-        "biggest_distance": round(biggest_distance, 1),
+        "biggest_distance": round(biggest_distance, 2),
         "longest_session_min": longest_session_min,
         "repartition": repartition,
     }

@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v67-2026-04-22-coach-prog-nutrition";
+const CACHE_VERSION = "v68-2026-04-22-equipment-fix";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -48,37 +48,11 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// ── Message : permet au client de forcer skipWaiting + notifications ─
-let _scheduledTimerId = null;
+// ── Message : permet au client de forcer skipWaiting ─
 
 self.addEventListener("message", (event) => {
   const data = event.data;
   if (data === "SKIP_WAITING") self.skipWaiting();
-  if (data && data.type === "SHOW_NOTIFICATION") {
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/static/icon-192.png",
-      tag: data.tag || "muscu-reminder",
-      badge: "/static/icon-192.png",
-    });
-  }
-  if (data && data.type === "SCHEDULE_TIMER") {
-    if (_scheduledTimerId) { clearTimeout(_scheduledTimerId); _scheduledTimerId = null; }
-    _scheduledTimerId = setTimeout(() => {
-      self.registration.showNotification(data.title || "Repos terminé !", {
-        body: data.body || "C'est reparti — série suivante",
-        icon: "/static/icon-192.png",
-        badge: "/static/icon-192.png",
-        tag: "rest-timer",
-        vibrate: [200, 100, 200],
-        requireInteraction: false,
-      });
-      _scheduledTimerId = null;
-    }, Math.max(0, data.delay || 0));
-  }
-  if (data && data.type === "CANCEL_TIMER") {
-    if (_scheduledTimerId) { clearTimeout(_scheduledTimerId); _scheduledTimerId = null; }
-  }
 });
 
 // ── Notification click : ouvre l'app ─────────────────────────────

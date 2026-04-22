@@ -5,7 +5,7 @@ Logique portée depuis app.py lignes 1555-1722 (choix_seance) et 2048-2676 (ma s
 import json
 import logging
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, abort
+from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify
 
 logger = logging.getLogger(__name__)
 
@@ -949,3 +949,52 @@ def finish():
         from core.data import save_prog
         save_prog(prog)
     return redirect(url_for("accueil.index"))
+
+
+@bp.route("/seance/api/variant-history", methods=["POST"])
+def api_variant_history():
+    """Retourne l'historique (last_sets, record, prev_weeks) pour un exo+variante."""
+    data = request.get_json(silent=True) or {}
+    exo_base = data.get("exo_base", "")
+    variant = data.get("variant", "Standard")
+    seance = data.get("seance", "")
+    s_act = int(data.get("s_act", 0))
+    week_offset = int(data.get("week_offset", 0))
+
+    hist = get_hist()
+    prog = get_prog()
+    hist, _ = _normalize_hist(hist, prog)
+
+    exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
+    is_bw = exo_base in BW_EXOS and variant != "Lesté"
+
+    last_sets = _last_session_sets(hist, exo_final, seance, s_act)
+    record = _best_record(hist, exo_final, is_bw)
+    prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
+
+    last_summary = ""
+    if last_sets:
+        last_summary = ", ".join(f"{s['poids']:g}kg × {s['reps']}" for s in last_sets)
+
+    pw_display = []
+    for pw in prev_weeks:
+        rows_out = []
+        for r in pw.get("rows", []):
+            rows_out.append({
+                "serie": r.get("Série", 0),
+                "reps": r.get("Reps", 0),
+                "poids": float(r.get("Poids", 0)),
+                "remarque": r.get("Remarque", ""),
+            })
+        pw_display.append({
+            "week": pw["week"] - week_offset,
+            "missed": pw.get("missed", False),
+            "rows": rows_out,
+        })
+
+    return jsonify({
+        "last_sets": last_sets,
+        "last_summary": last_summary,
+        "record": record,
+        "prev_weeks": pw_display,
+    })

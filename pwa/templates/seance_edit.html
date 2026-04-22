@@ -249,53 +249,58 @@
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
             {% if exo.completed %} · <svg class="icon icon-sm icon-success" aria-label="complété"><use href="/static/img/icons.svg#check-circle"/></svg>{% endif %}
           </div>
-          {# ── Historique inline (Feature 2) ── #}
-          {% if exo.last_summary %}
-            <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : {{ exo.last_summary }}</div>
-          {% elif not exo.completed %}
+          {# ── Historique inline (Feature 2) — Alpine-driven for variant reactivity ── #}
+          <template x-if="lastSummary">
+            <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : <span x-text="lastSummary"></span></div>
+          </template>
+          <template x-if="!lastSummary && !{{ 'true' if exo.completed else 'false' }}">
             <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
-          {% endif %}
+          </template>
         </div>
         <div class="exo-toggle" @click="open = !open" style="cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;" x-text="open ? '−' : '+'"></div>
       </div>
 
       <div class="exo-body" x-show="open" x-transition.duration.200ms>
 
-        {% if exo.record %}
+        <template x-if="record">
           <div class="record-line label-icon">
             <svg class="icon icon-sm icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>
-            {% if exo.is_bw %}
-              Record : <b>{{ exo.record.reps }} reps</b>
-            {% else %}
-              Record : <b>{{ '%g'|format(exo.record.weight) }}kg</b>
+            <template x-if="isBw">
+              <span>Record : <b x-text="record.reps + ' reps'"></b></span>
+            </template>
+            <template x-if="!isBw">
+              <span>Record : <b x-text="record.weight + 'kg'"></b>
               <svg class="icon icon-sm icon-accent" style="margin-left:4px;"><use href="/static/img/icons.svg#zap"/></svg>
-              1RM : <b>{{ exo.record.one_rm }}kg</b>
-            {% endif %}
+              1RM : <b x-text="record.one_rm + 'kg'"></b></span>
+            </template>
           </div>
-        {% endif %}
+        </template>
 
         <label class="field-label">Équipement</label>
         <select class="field" x-model="variant">
           {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
         </select>
 
-        {% if exo.prev_weeks %}
-          {% for pw in exo.prev_weeks %}
-            {% if pw.missed %}
-              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week - week_offset }} — <svg class="icon icon-sm icon-danger" style="margin-left:4px;"><use href="/static/img/icons.svg#flag"/></svg><span style="color:var(--danger);">SÉANCE MANQUÉE</span></div>
-            {% else %}
-              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine {{ pw.week - week_offset }}</div>
-              <table class="prev-table">
-                <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
-                <tbody>
-                {% for r in pw.rows %}
-                  <tr><td>{{ r.Série }}</td><td>{{ r.Reps }}</td><td>{{ '%g'|format(r.Poids) }}</td><td>{{ r.Remarque }}</td></tr>
-                {% endfor %}
-                </tbody>
-              </table>
-            {% endif %}
-          {% endfor %}
-        {% endif %}
+        <template x-for="pw in prevWeeks" :key="pw.week">
+          <div>
+            <template x-if="pw.missed">
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span> — <svg class="icon icon-sm icon-danger" style="margin-left:4px;"><use href="/static/img/icons.svg#flag"/></svg><span style="color:var(--danger);">SÉANCE MANQUÉE</span></div>
+            </template>
+            <template x-if="!pw.missed">
+              <div>
+                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span></div>
+                <table class="prev-table">
+                  <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
+                  <tbody>
+                    <template x-for="r in pw.rows" :key="r.serie">
+                      <tr><td x-text="r.serie"></td><td x-text="r.reps"></td><td x-text="r.poids"></td><td x-text="r.remarque"></td></tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </div>
+        </template>
 
         {# ── Chrono isométrique (gainage, planche, wall sit...) ── #}
         <template x-if="isIso">
@@ -644,7 +649,7 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div>
           <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().vitLabel || 'Vitesse'"></label>
-          <input type="number" inputmode="decimal" step="0.1" min="0" name="vitesse" x-model="vitesse" class="cell-input" style="width:100%;" :placeholder="autoVitesse()">
+          <input type="number" inputmode="decimal" step="0.01" min="0" name="vitesse" x-model="vitesse" class="cell-input" style="width:100%;" :placeholder="autoVitesse()">
         </div>
         <div>
           <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Calories (kcal)</label>
@@ -669,16 +674,16 @@
   <script>
     function cardioBlock() {
       var UNITS = {
-        "Course":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
-        "Vélo":                { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
-        "Rameur":              { distLabel: "Distance (km)",    vitLabel: "Allure (min/500m)", distStep: "0.1" },
-        "Natation":            { distLabel: "Distance (km)",    vitLabel: "Vitesse (m/min)", distStep: "0.1" },
+        "Course":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
+        "Vélo":                { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
+        "Rameur":              { distLabel: "Distance (km)",    vitLabel: "Allure (min/500m)", distStep: "0.01" },
+        "Natation":            { distLabel: "Distance (km)",    vitLabel: "Vitesse (m/min)", distStep: "0.01" },
         "Corde":               { distLabel: "Nombre de sauts",  vitLabel: "Sauts/min",       distStep: "1" },
         "HIIT":                { distLabel: "Rounds",           vitLabel: "",                distStep: "1" },
-        "Marche":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
-        "Elliptique":          { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+        "Marche":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
+        "Elliptique":          { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
         "Montée d'escaliers":  { distLabel: "Étages (ou marches)", vitLabel: "Marches/min",  distStep: "1" },
-        "Autre":               { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.1" },
+        "Autre":               { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
       };
       return {
         open: false,
@@ -693,7 +698,7 @@
           var d = parseFloat(this.distance), t = parseFloat(this.duree);
           if (!d || !t) return "";
           var u = this.units();
-          if (u.vitLabel.indexOf("km/h") >= 0) return (d / (t / 60)).toFixed(1);
+          if (u.vitLabel.indexOf("km/h") >= 0) return (d / (t / 60)).toFixed(2);
           if (u.vitLabel.indexOf("m/min") >= 0) return ((d * 1000) / t).toFixed(0);
           if (u.vitLabel.indexOf("/min") >= 0) return (d / t).toFixed(0);
           return "";
@@ -955,12 +960,6 @@
   var _timerFinished = false; // évite un double déclenchement (setInterval + visibilitychange)
   var _originalTitle = document.title;
 
-  function _postTimerMsg(msg) {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      try { navigator.serviceWorker.controller.postMessage(msg); } catch(e) {}
-    }
-  }
-
   function startTimer(seconds) {
     _timerTotal = seconds || _timerTotal;
     _timerEndTime = Date.now() + _timerTotal * 1000;
@@ -972,17 +971,6 @@
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS';
     updateTimerDisplay();
     highlightPreset(_timerTotal);
-    // Demande la permission de notif au premier lancement du chrono
-    if ('Notification' in window && Notification.permission === 'default') {
-      try { Notification.requestPermission(); } catch(e) {}
-    }
-    // Planifie la notif SW (alarme fiable même si l'onglet est fermé)
-    _postTimerMsg({
-      type: 'SCHEDULE_TIMER',
-      delay: _timerTotal * 1000,
-      title: 'Repos terminé !',
-      body: "C'est reparti — série suivante"
-    });
     clearInterval(_timerInterval);
     _timerInterval = setInterval(tickTimer, 1000);
   }
@@ -1008,28 +996,6 @@
     // Titre d'onglet : décompte visible sur l'écran de verrouillage / preview PWA
     if (r > 0) {
       document.title = 'Repos ' + txt + ' — Muscu Tracker';
-    }
-  }
-
-  // ── Notification via SW ou fallback classique ──
-  // Ne pas envoyer si l'app est au premier plan (l'utilisateur voit déjà le chrono).
-  function _sendTimerNotification() {
-    if (document.visibilityState === 'visible' && document.hasFocus()) return;
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready.then(function(registration) {
-        registration.showNotification("Repos terminé !", {
-          body: "C'est reparti \ud83d\udcaa",
-          icon: "/pwa/static/icons/icon-192.png",
-          tag: "timer-end",
-          requireInteraction: false
-        });
-      }).catch(function() {
-        // Fallback sur Notification classique
-        try { new Notification("Repos terminé !", { body: "C'est reparti \ud83d\udcaa", tag: "timer-end" }); } catch(e) {}
-      });
-    } else {
-      try { new Notification("Repos terminé !", { body: "C'est reparti \ud83d\udcaa", tag: "timer-end" }); } catch(e) {}
     }
   }
 
@@ -1059,7 +1025,6 @@
     bar.classList.add('timer-done');
     document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
     _playTimerBeep();
-    _sendTimerNotification();
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     document.title = 'GO ! — Muscu Tracker';
     _timerEndTime = 0;
@@ -1075,7 +1040,6 @@
     _timerFinished = false;
     document.title = _originalTitle;
     document.getElementById('rest-timer').style.display = 'none';
-    _postTimerMsg({ type: 'CANCEL_TIMER' });
   }
 
   function setTimerDuration(sec) {
@@ -1182,6 +1146,7 @@
       open: !data.completed,
       exoInfo: data.info || {},
       variant: data.variant,
+      _initialVariant: data.variant,
       isBw: data.is_bw || false,
       isBwBase: data.is_bw_base || false,
       get showWeight() { return !this.isBwBase || this.variant === 'Lesté'; },
@@ -1191,6 +1156,18 @@
           reps: (s.reps != null && s.reps !== '') ? s.reps : '',
           poids: (s.poids != null && s.poids !== '') ? s.poids : '',
           remarque: s.remarque || ""
+        };
+      }),
+
+      lastSummary: data.last_summary || '',
+      record: data.record || null,
+      prevWeeks: (data.prev_weeks || []).map(function(pw) {
+        return {
+          week: pw.week - (Number('{{ week_offset }}') || 0),
+          missed: pw.missed || false,
+          rows: (pw.rows || []).map(function(r) {
+            return { serie: r['Série'] || 0, reps: r.Reps || 0, poids: r.Poids || 0, remarque: r.Remarque || '' };
+          })
         };
       }),
 
@@ -1215,9 +1192,47 @@
         // Auto-save on changes via $watch
         var self = this;
         this.$watch('sets', function() { self._saveDraft(); });
-        this.$watch('variant', function() { self._saveDraft(); });
+        this.$watch('variant', function(val) {
+          self._saveDraft();
+          self._fetchVariantHistory(val);
+        });
+        // Fetch initial history if draft restored a different variant
+        if (this.variant !== this._initialVariant) {
+          this._fetchVariantHistory(this.variant);
+        }
         // Résumé iso : si pas de `isoRemaining` cohérent, remettre à la cible
         if (this.isIso) this.isoRemaining = this.targetSeconds;
+      },
+
+      _fetchVariantHistory: function(newVariant) {
+        var self = this;
+        fetch('/seance/api/variant-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            exo_base: data.base,
+            variant: newVariant,
+            seance: '{{ seance_name }}',
+            s_act: Number('{{ s_act }}'),
+            week_offset: Number('{{ week_offset }}')
+          })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          self.lastSummary = d.last_summary || '';
+          self.record = d.record || null;
+          self.prevWeeks = (d.prev_weeks || []).map(function(pw) {
+            return { week: pw.week, missed: pw.missed, rows: pw.rows || [] };
+          });
+          if (d.last_sets && d.last_sets.length && !data.completed) {
+            for (var i = 0; i < self.sets.length; i++) {
+              if (!self.sets[i].reps && i < d.last_sets.length) {
+                self.sets[i].poids = d.last_sets[i].poids;
+              }
+            }
+          }
+        })
+        .catch(function() {});
       },
       _saveDraft: function() {
         try {
