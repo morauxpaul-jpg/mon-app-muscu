@@ -35,6 +35,9 @@ def get_client() -> Client:
     if _client is None:
         url = _env("SUPABASE_URL")
         key = _env("SUPABASE_SERVICE_ROLE_KEY")
+        all_keys = [k for k in os.environ if "SUPA" in k.upper()]
+        logger.info("get_client() SUPABASE_URL present=%s (len=%d), KEY present=%s, env keys matching SUPA: %s",
+                     bool(url), len(url), bool(key), all_keys)
         if not url or not key:
             raise RuntimeError(
                 "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants dans l'environnement."
