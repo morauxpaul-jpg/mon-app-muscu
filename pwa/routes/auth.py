@@ -29,10 +29,17 @@ bp = Blueprint("auth", __name__)
 
 def _env(name: str) -> str:
     """Lit une env var et nettoie espaces + quotes parasites (Railway copie
-    parfois des valeurs entourées de guillemets)."""
+    parfois des valeurs entourées de guillemets ou des noms avec espaces)."""
     v = os.getenv(name, "") or ""
     v = v.strip().strip('"').strip("'").lstrip("=").strip()
-    return v
+    if v:
+        return v
+    for k, val in os.environ.items():
+        if k.strip() == name:
+            v = val.strip().strip('"').strip("'").lstrip("=").strip()
+            if v:
+                return v
+    return ""
 
 
 def _public_config() -> dict:
