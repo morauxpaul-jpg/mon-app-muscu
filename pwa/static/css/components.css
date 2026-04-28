@@ -1,5 +1,5 @@
 /* Composants — cartes, nav, layout, page-specific.
-   Tokens dans tokens.css. Design plat, pas de glow/gradient. */
+   Tokens dans tokens.css. Glass overrides dans glass.css. */
 
 .app {
   max-width: 640px;

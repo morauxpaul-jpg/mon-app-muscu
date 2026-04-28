@@ -1,0 +1,377 @@
+/* Muscu Tracker PRO — Liquid Glass (Apple-style).
+   Chargé APRES components.css dans base.html. */
+
+/* ── Glass Card utility ── */
+.glass-card {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 0.5px solid var(--border-glass);
+  border-radius: var(--radius-glass);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 var(--border-glass-bright);
+  transition: background 0.2s ease;
+}
+.glass-card:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-glass-bright);
+}
+
+/* ── Apply glass to existing card-like components ── */
+.card,
+.stat-card,
+.prog-card,
+.prog-exo-row,
+.recup-card,
+.vol-container,
+.detail-metric,
+.seance-progress,
+.finish-celebration .finish-stat,
+.rest-timer,
+.iso-chrono {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 0.5px solid var(--border-glass);
+  border-radius: var(--radius-glass);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 var(--border-glass-bright);
+}
+
+.exo-card {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 0.5px solid var(--border-glass);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-glass) var(--radius-glass) 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 var(--border-glass-bright);
+}
+
+.prog-section {
+  background: var(--bg-glass);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 0.5px solid var(--border-glass);
+  border-radius: var(--radius-glass);
+}
+
+/* ── Topbar glass ── */
+.topbar {
+  background: rgba(10,12,18,0.7);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border-bottom: 0.5px solid var(--border-glass);
+}
+
+/* ── Modal glass ── */
+.modal-box, .modal {
+  background: var(--bg-glass-elevated);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border: 0.5px solid var(--border-glass);
+  border-radius: var(--radius-glass);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 var(--border-glass-bright);
+}
+
+/* ── Boutons primaires (Liquid Glass) ── */
+button.primary, .btn.primary,
+.btn-primary {
+  background: linear-gradient(135deg, rgba(91,155,213,0.35), rgba(91,155,213,0.15));
+  border: 0.5px solid rgba(91,155,213,0.5);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  box-shadow: var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-weight: 500;
+}
+button.primary:hover, .btn.primary:hover,
+.btn-primary:hover {
+  background: linear-gradient(135deg, rgba(91,155,213,0.50), rgba(91,155,213,0.25));
+  border-color: rgba(91,155,213,0.65);
+  box-shadow: 0 0 32px rgba(91,155,213,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+button.violet, .btn.violet {
+  background: linear-gradient(135deg, rgba(91,155,213,0.35), rgba(91,155,213,0.15));
+  border: 0.5px solid rgba(91,155,213,0.5);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  box-shadow: var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Boutons secondaires / ghost glass */
+button, .btn {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid var(--border-glass);
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 0 var(--border-glass-bright);
+}
+button:hover, .btn:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: var(--border-glass-bright);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.08);
+  border: 0.5px solid var(--border-glass);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border-radius: var(--radius-pill);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, rgba(91,189,138,0.35), rgba(91,189,138,0.15));
+  border: 0.5px solid rgba(91,189,138,0.5);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  box-shadow: var(--glow-success), inset 0 1px 0 rgba(255,255,255,0.15);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-weight: 500;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.btn-icon {
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid var(--border-glass);
+  box-shadow: inset 0 1px 0 var(--border-glass-bright);
+}
+
+.icon-btn {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid var(--border-glass);
+  box-shadow: inset 0 1px 0 var(--border-glass-bright);
+}
+
+.btn.btn-danger,
+button.btn-danger {
+  background: rgba(212,90,90,0.15);
+  border-color: rgba(212,90,90,0.5);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.mini-btn {
+  background: rgba(212,90,90,0.15);
+  border: 0.5px solid rgba(212,90,90,0.5);
+  border-radius: var(--radius-sm);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+}
+
+/* ── Bottom navigation (Liquid Glass) ── */
+.bottom-nav {
+  background: rgba(10,12,18,0.7);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  border-top: 0.5px solid var(--border-glass);
+}
+.bottom-nav a.active,
+.nav-item.active {
+  color: var(--accent);
+}
+.bottom-nav a.active .nav-icon,
+.bottom-nav a.active .icon {
+  background: rgba(91,155,213,0.2);
+  border-radius: 12px;
+  padding: 6px 14px;
+  box-sizing: content-box;
+}
+
+/* ── Inputs / Selects (Liquid Glass) ── */
+.input, input[type="text"], input[type="number"], input[type="email"],
+input[type="password"], input[type="search"], input[type="tel"],
+input[type="url"], textarea, select {
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid var(--border-glass);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border-radius: 12px;
+}
+.input:focus, input:focus, textarea:focus, select:focus {
+  border-color: rgba(91,155,213,0.6);
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.15);
+}
+
+.cell-input {
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid var(--border-glass);
+  border-radius: 8px;
+}
+.cell-input:focus {
+  border-color: rgba(91,155,213,0.6);
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.15);
+}
+
+.field {
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid var(--border-glass);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border-radius: 12px;
+}
+
+/* ── Badges / Tags (Liquid Glass) ── */
+.badge {
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid var(--border-glass);
+  border-radius: var(--radius-pill);
+}
+.badge-success {
+  background: rgba(91,189,138,0.20);
+  border-color: rgba(91,189,138,0.3);
+  color: var(--success);
+}
+.badge-warning {
+  background: rgba(212,148,74,0.20);
+  border-color: rgba(212,148,74,0.3);
+  color: var(--warning);
+}
+.badge-danger {
+  background: rgba(212,90,90,0.20);
+  border-color: rgba(212,90,90,0.3);
+  color: var(--danger);
+}
+.badge-info {
+  background: rgba(91,155,213,0.20);
+  border-color: rgba(91,155,213,0.3);
+  color: var(--accent);
+}
+.badge-neutral {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--border-glass);
+  color: var(--text-2);
+}
+
+.stub .tag {
+  background: rgba(91,155,213,0.12);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid rgba(91,155,213,0.3);
+  border-radius: var(--radius-pill);
+}
+
+/* Muscle check pills */
+.muscle-check {
+  background: rgba(255,255,255,0.06);
+  border: 0.5px solid var(--border-glass);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+}
+.muscle-check:has(input:checked) {
+  background: rgba(91,155,213,0.20);
+  border-color: rgba(91,155,213,0.5);
+}
+
+/* ── Rest timer presets (glass pills) ── */
+.rest-timer-presets button {
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+}
+.rest-timer-presets button.active {
+  background: rgba(91,155,213,0.20);
+  border-color: rgba(91,155,213,0.5);
+}
+
+/* ── Rest timer overlay glass ── */
+.rest-timer-overlay {
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: var(--blur-glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+}
+
+/* ── Logo PRO badge glass ── */
+.app-logo .pro {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid var(--border-glass);
+}
+
+/* ── Save pill glass ── */
+.save-pill {
+  background: rgba(91,155,213,0.15) !important;
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 0.5px solid rgba(91,155,213,0.3) !important;
+}
+
+/* ── Skeleton glass ── */
+.skeleton {
+  background: rgba(255,255,255,0.06);
+}
+
+/* ── XP bar glass ── */
+.xp-bar-bg {
+  background: rgba(255,255,255,0.06);
+}
+
+/* ── Settings items ── */
+.settings-item {
+  border-bottom: 0.5px solid var(--border-glass);
+}
+
+/* ── Day cells glass ── */
+.day-done   { background: rgba(91,189,138,0.15); }
+.day-missed { background: rgba(212,90,90,0.15); }
+.day-today  { background: rgba(91,155,213,0.15); border: 1px solid rgba(91,155,213,0.3); }
+.day-future { background: rgba(255,255,255,0.06); }
+
+/* ── Tables glass borders ── */
+.prev-table th,
+.prev-table td {
+  border-bottom: 0.5px solid var(--border-glass);
+}
+
+/* ── Series check glass ── */
+.series-check.done {
+  background: rgba(91,189,138,0.15);
+  border-color: var(--success);
+}
+
+/* ── Glass appear animation ── */
+@keyframes glass-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .glass-card,
+  .card,
+  .stat-card,
+  .exo-card,
+  .prog-card,
+  .detail-metric,
+  .vol-container,
+  .modal-box,
+  .modal {
+    animation: glass-appear 0.3s ease;
+  }
+}

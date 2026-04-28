@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111318">
+  <meta name="theme-color" content="#0a0c12">
   <title>Connexion · Muscu Tracker</title>
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/icons.css">
+  <link rel="stylesheet" href="/static/css/glass.css">
   <style>
     .login-wrap {
       min-height: 100vh;
@@ -27,12 +28,15 @@
     .google-btn {
       display: inline-flex; align-items: center; gap: 10px;
       padding: 12px 22px; font-size: 1rem; font-weight: 500;
-      border-radius: var(--radius-md); cursor: pointer;
-      background: var(--accent);
-      border: none; color: #fff;
-      transition: background var(--ease-fast);
+      border-radius: var(--radius-pill); cursor: pointer;
+      background: linear-gradient(135deg, rgba(91,155,213,0.35), rgba(91,155,213,0.15));
+      border: 0.5px solid rgba(91,155,213,0.5); color: #fff;
+      backdrop-filter: var(--blur-light);
+      -webkit-backdrop-filter: var(--blur-light);
+      box-shadow: var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
+      transition: background var(--ease-fast), box-shadow var(--ease-fast);
     }
-    .google-btn:hover { background: var(--accent-hover); }
+    .google-btn:hover { background: linear-gradient(135deg, rgba(91,155,213,0.50), rgba(91,155,213,0.25)); box-shadow: 0 0 32px rgba(91,155,213,0.35), inset 0 1px 0 rgba(255,255,255,0.2); }
     .err { color: var(--danger); margin-top: 14px; font-size: 0.85rem; }
   </style>
 </head>

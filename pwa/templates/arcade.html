@@ -70,9 +70,9 @@
 
 <script>
 const PAL = {
-  bg:      '#111318',
-  surface: '#1a1d24',
-  border:  '#2a2d36',
+  bg:      '#0a0c12',
+  surface: 'rgba(255,255,255,0.06)',
+  border:  'rgba(255,255,255,0.12)',
   text:    '#e8e9ed',
   text2:   '#9ca3af',
   accent:  '#5b9bd5',
@@ -114,7 +114,7 @@ function drawBox(ctx, x, y, w, h, color) {
 }
 
 function drawOverlay(ctx, W, H, title, score, record, hint) {
-  ctx.fillStyle = 'rgba(17,19,24,0.85)';
+  ctx.fillStyle = 'rgba(10,12,18,0.85)';
   ctx.fillRect(0, 0, W, H);
   const bx = W/2 - 130, by = 200, bw = 260, bh = 200;
   ctx.fillStyle = PAL.surface;

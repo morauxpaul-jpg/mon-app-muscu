@@ -1,6 +1,6 @@
-/* Muscu Tracker PRO — base dark minimal.
+/* Muscu Tracker PRO — Liquid Glass dark theme.
    Tokens dans tokens.css (importé avant ce fichier).
-   Pas de glow, pas de néon, pas de gradient décoratif — cartes plates. */
+   Glass effects dans glass.css (importé après components.css). */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111318">
+  <meta name="theme-color" content="#0a0c12">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Muscu Tracker — Suivi musculation intelligent</title>
@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/icons.css">
+  <link rel="stylesheet" href="/static/css/glass.css">
   <style>
     body { overflow-x:hidden; background: var(--bg-base); }
     .landing { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:32px 20px 48px; }
@@ -52,15 +53,30 @@
     .landing-feat h3 { margin:0 0 2px; font-size:var(--text-base); color:var(--text-1); font-weight:500; }
     .landing-feat p { margin:0; font-size:var(--text-sm); color:var(--text-2); line-height:1.4; }
 
+    .landing-feat {
+      backdrop-filter: var(--blur-glass);
+      -webkit-backdrop-filter: var(--blur-glass);
+      border-radius: var(--radius-glass);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 var(--border-glass-bright);
+    }
+    .landing-feat-ic {
+      background: rgba(91,155,213,0.12);
+      border-color: var(--border-glass);
+      backdrop-filter: var(--blur-light);
+      -webkit-backdrop-filter: var(--blur-light);
+    }
     .landing-cta {
       display:inline-flex; align-items:center; gap:10px;
       padding:14px 28px; font-size:1rem; font-weight:500;
-      border-radius:var(--radius-md); cursor:pointer; text-decoration:none;
-      background: var(--accent);
-      border:none; color:#fff;
-      transition: background var(--ease-fast), transform var(--ease-fast);
+      border-radius:var(--radius-pill); cursor:pointer; text-decoration:none;
+      background: linear-gradient(135deg, rgba(91,155,213,0.35), rgba(91,155,213,0.15));
+      border:0.5px solid rgba(91,155,213,0.5); color:#fff;
+      backdrop-filter: var(--blur-light);
+      -webkit-backdrop-filter: var(--blur-light);
+      box-shadow: var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
+      transition: background var(--ease-fast), transform var(--ease-fast), box-shadow var(--ease-fast);
     }
-    .landing-cta:hover { background: var(--accent-hover); }
+    .landing-cta:hover { background: linear-gradient(135deg, rgba(91,155,213,0.50), rgba(91,155,213,0.25)); box-shadow: 0 0 32px rgba(91,155,213,0.35), inset 0 1px 0 rgba(255,255,255,0.2); }
     .landing-cta:active { transform:scale(0.97); }
 
     .landing-social {
@@ -81,19 +97,19 @@
     </div>
 
     <svg class="landing-mockup" viewBox="0 0 280 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="4" y="4" width="272" height="392" rx="28" fill="#1a1d24" stroke="#2a2d36"/>
+      <rect x="4" y="4" width="272" height="392" rx="28" fill="#0e1018" stroke="rgba(255,255,255,0.12)"/>
       <rect x="22" y="26" width="90" height="10" rx="5" fill="#5b9bd5" opacity="0.7"/>
       <rect x="22" y="44" width="140" height="22" rx="6" fill="#e8e9ed" opacity="0.9"/>
-      <rect x="22" y="82" width="236" height="68" rx="14" fill="#22252e" stroke="#2a2d36"/>
+      <rect x="22" y="82" width="236" height="68" rx="20" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
       <text x="40" y="112" fill="#9ca3af" font-size="12" font-weight="500" font-family="sans-serif">SEMAINE 14</text>
       <text x="40" y="134" fill="#e8e9ed" font-size="20" font-weight="500" font-family="sans-serif">3/4 séances</text>
-      <rect x="22" y="168" width="110" height="68" rx="14" fill="#1a3328" stroke="#2a2d36"/>
+      <rect x="22" y="168" width="110" height="68" rx="20" fill="rgba(91,189,138,0.12)" stroke="rgba(255,255,255,0.12)"/>
       <text x="34" y="194" fill="#9ca3af" font-size="10" font-weight="500" font-family="sans-serif">VOLUME</text>
       <text x="34" y="222" fill="#5bbd8a" font-size="20" font-weight="500" font-family="sans-serif">24.8k</text>
-      <rect x="148" y="168" width="110" height="68" rx="14" fill="#332a1a" stroke="#2a2d36"/>
+      <rect x="148" y="168" width="110" height="68" rx="20" fill="rgba(212,148,74,0.12)" stroke="rgba(255,255,255,0.12)"/>
       <text x="160" y="194" fill="#9ca3af" font-size="10" font-weight="500" font-family="sans-serif">STREAK</text>
       <text x="160" y="222" fill="#d4944a" font-size="20" font-weight="500" font-family="sans-serif">5 sem.</text>
-      <rect x="22" y="254" width="236" height="120" rx="14" fill="#22252e" stroke="#2a2d36"/>
+      <rect x="22" y="254" width="236" height="120" rx="20" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
       <rect x="40"  y="340" width="24" height="24" rx="3" fill="#5b9bd5" opacity="0.6"/>
       <rect x="72"  y="320" width="24" height="44" rx="3" fill="#5b9bd5" opacity="0.65"/>
       <rect x="104" y="300" width="24" height="64" rx="3" fill="#5b9bd5" opacity="0.7"/>
