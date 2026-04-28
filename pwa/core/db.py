@@ -22,7 +22,15 @@ logger = logging.getLogger(__name__)
 
 def _env(name: str) -> str:
     v = os.getenv(name, "") or ""
-    return v.strip().strip('"').strip("'").lstrip("=").strip()
+    v = v.strip().strip('"').strip("'").lstrip("=").strip()
+    if v:
+        return v
+    for k, val in os.environ.items():
+        if k.strip() == name:
+            v = val.strip().strip('"').strip("'").lstrip("=").strip()
+            if v:
+                return v
+    return ""
 
 
 _client: Optional[Client] = None
