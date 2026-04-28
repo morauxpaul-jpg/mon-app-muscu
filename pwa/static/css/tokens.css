@@ -4,27 +4,28 @@
 
 :root {
   /* Backgrounds */
-  --bg-base: #0a0c12;
+  --bg-base: #07090f;
   --bg-surface: rgba(255,255,255,0.06);
   --bg-elevated: rgba(255,255,255,0.10);
-  --bg-overlay: rgba(0, 0, 0, 0.6);
-  --bg-glass: rgba(255,255,255,0.06);
-  --bg-glass-elevated: rgba(255,255,255,0.10);
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+  --bg-glass: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
+  --bg-glass-elevated: rgba(16,18,28,0.75);
   --bg-glass-hover: rgba(255,255,255,0.14);
 
   /* Blur */
-  --blur-glass: blur(24px) saturate(180%);
-  --blur-light: blur(12px) saturate(140%);
+  --blur-glass: blur(32px) saturate(200%) brightness(1.05);
+  --blur-light: blur(16px) saturate(160%);
+  --blur-heavy: blur(48px) saturate(200%);
 
   /* Bordures */
-  --border-default: rgba(255,255,255,0.12);
-  --border-hover: rgba(255,255,255,0.22);
-  --border-glass: rgba(255,255,255,0.12);
-  --border-glass-bright: rgba(255,255,255,0.22);
+  --border-default: rgba(255,255,255,0.15);
+  --border-hover: rgba(255,255,255,0.28);
+  --border-glass: rgba(255,255,255,0.15);
+  --border-glass-bright: rgba(255,255,255,0.28);
 
   /* Glows */
-  --glow-blue: 0 0 24px rgba(91,155,213,0.25);
-  --glow-success: 0 0 24px rgba(91,189,138,0.20);
+  --glow-blue: 0 4px 16px rgba(91,155,213,0.20);
+  --glow-success: 0 4px 16px rgba(91,189,138,0.18);
 
   /* Texte (4 niveaux) */
   --text-1: #e8e9ed;
@@ -59,7 +60,7 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-full: 9999px;
-  --radius-glass: 20px;
+  --radius-glass: 22px;
   --radius-pill: 999px;
 
   /* Espacement */
