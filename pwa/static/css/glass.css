@@ -1,9 +1,8 @@
-/* Muscu Tracker PRO — Liquid Glass v2 (Apple WWDC 2025).
-   Chargé APRÈS components.css dans base.html.
-   Surfaces translucides, flou réel, réfractions, profondeur. */
+/* Muscu Tracker PRO — Liquid Glass v3 (optimisé fluidité mobile).
+   Chargé APRÈS components.css dans base.html. */
 
 /* ═══════════════════════════════════════════
-   1. FOND GLOBAL — ambiance lumineuse profonde
+   1. FOND GLOBAL
    ═══════════════════════════════════════════ */
 body {
   background: #07090f;
@@ -11,11 +10,10 @@ body {
     radial-gradient(ellipse 80% 60% at 20% 10%, rgba(91,155,213,0.12) 0%, transparent 60%),
     radial-gradient(ellipse 60% 80% at 80% 90%, rgba(91,189,138,0.08) 0%, transparent 60%),
     radial-gradient(ellipse 40% 40% at 60% 40%, rgba(120,80,220,0.06) 0%, transparent 50%);
-  background-attachment: fixed;
 }
 
 /* ═══════════════════════════════════════════
-   2. MIXIN GLASS — propriétés partagées
+   2. GLASS CARDS — blur allégé, ombres simplifiées
    ═══════════════════════════════════════════ */
 .glass,
 .card,
@@ -33,57 +31,52 @@ body {
 .prog-section,
 .podium-item {
   background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
-  backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
-  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255,255,255,0.15);
   border-top-color: rgba(255,255,255,0.28);
   border-left-color: rgba(255,255,255,0.20);
   border-radius: var(--radius-glass);
   box-shadow:
-    0 2px 4px rgba(0,0,0,0.05),
-    0 8px 24px rgba(0,0,0,0.30),
-    0 32px 64px rgba(0,0,0,0.20),
-    inset 0 1px 0 rgba(255,255,255,0.20),
-    inset 0 -1px 0 rgba(0,0,0,0.15);
+    0 8px 32px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+  will-change: transform;
 }
 
-/* Exo-card — garder le border-left accent */
 .exo-card {
   background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
-  backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
-  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255,255,255,0.15);
   border-top-color: rgba(255,255,255,0.28);
   border-left: 3px solid var(--accent);
   border-radius: 0 var(--radius-glass) var(--radius-glass) 0;
   box-shadow:
-    0 2px 4px rgba(0,0,0,0.05),
-    0 8px 24px rgba(0,0,0,0.30),
-    0 32px 64px rgba(0,0,0,0.20),
-    inset 0 1px 0 rgba(255,255,255,0.20),
-    inset 0 -1px 0 rgba(0,0,0,0.15);
+    0 8px 32px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+  will-change: transform;
 }
 
 /* ═══════════════════════════════════════════
    3. TOPBAR
    ═══════════════════════════════════════════ */
 .topbar {
-  background: rgba(10,12,20,0.55);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: rgba(10,12,20,0.60);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-bottom: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 /* ═══════════════════════════════════════════
    4. BOTTOM NAV
    ═══════════════════════════════════════════ */
 .bottom-nav {
-  background: rgba(10,12,20,0.55);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: rgba(10,12,20,0.60);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-top: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 -8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
 }
 .bottom-nav a.active,
 .nav-item.active {
@@ -92,44 +85,38 @@ body {
 .bottom-nav a.active .nav-icon,
 .bottom-nav a.active .icon {
   background: rgba(91,155,213,0.25);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(91,155,213,0.35);
   border-radius: var(--radius-pill);
   padding: 6px 16px;
   box-sizing: content-box;
-  box-shadow: 0 0 16px rgba(91,155,213,0.20);
+  box-shadow: 0 0 12px rgba(91,155,213,0.18);
 }
 
 /* ═══════════════════════════════════════════
-   5. BOUTONS
+   5. BOUTONS — sans backdrop-filter (perf)
    ═══════════════════════════════════════════ */
 button, .btn {
   background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.12);
   border-top-color: rgba(255,255,255,0.20);
   border-radius: var(--radius-pill);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 button:hover, .btn:hover {
   background: rgba(255,255,255,0.14);
   border-color: rgba(255,255,255,0.22);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.16);
 }
 button:active, .btn:active {
   transform: scale(0.97);
-  transition: all 0.1s ease;
+  transition: transform 0.08s ease;
 }
 
 button.primary, .btn.primary,
 .btn-primary {
   background: linear-gradient(135deg, rgba(91,155,213,0.40), rgba(91,155,213,0.18));
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(91,155,213,0.45);
   border-top-color: rgba(91,155,213,0.65);
   border-radius: var(--radius-pill);
@@ -141,8 +128,8 @@ button.primary:hover, .btn.primary:hover,
 .btn-primary:hover {
   background: linear-gradient(135deg, rgba(91,155,213,0.55), rgba(91,155,213,0.28));
   border-color: rgba(91,155,213,0.65);
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 8px 28px rgba(91,155,213,0.35), inset 0 1px 0 rgba(255,255,255,0.22);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(91,155,213,0.30), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 
 button.violet, .btn.violet {
@@ -159,8 +146,6 @@ button.violet, .btn.violet {
   background: linear-gradient(135deg, rgba(48,209,88,0.35), rgba(48,209,88,0.15));
   border: 1px solid rgba(48,209,88,0.45);
   border-top-color: rgba(48,209,88,0.65);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   box-shadow: 0 4px 16px rgba(48,209,88,0.18), inset 0 1px 0 rgba(255,255,255,0.18);
   border-radius: var(--radius-pill);
   color: #e8e9ed;
@@ -168,15 +153,13 @@ button.violet, .btn.violet {
 }
 .btn-success:hover {
   background: linear-gradient(135deg, rgba(48,209,88,0.50), rgba(48,209,88,0.25));
-  box-shadow: 0 8px 28px rgba(48,209,88,0.30), inset 0 1px 0 rgba(255,255,255,0.22);
+  box-shadow: 0 6px 24px rgba(48,209,88,0.25), inset 0 1px 0 rgba(255,255,255,0.20);
 }
 
 .btn-secondary {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
   border-top-color: rgba(255,255,255,0.20);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border-radius: var(--radius-pill);
 }
 
@@ -184,8 +167,6 @@ button.violet, .btn.violet {
   background: transparent;
   border: none;
   box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 .btn-ghost:hover {
   background: rgba(255,255,255,0.08);
@@ -196,16 +177,12 @@ button.violet, .btn.violet {
 .btn-icon {
   border-radius: var(--radius-md);
   background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .icon-btn {
   background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
 }
@@ -216,8 +193,6 @@ button.btn-danger {
   border: 1px solid rgba(255,69,58,0.40);
   border-top-color: rgba(255,69,58,0.55);
   color: #ff6961;
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
@@ -226,75 +201,67 @@ button.btn-danger {
   border: 1px solid rgba(255,69,58,0.35);
   color: #ff6961;
   border-radius: var(--radius-sm);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ═══════════════════════════════════════════
-   6. INPUTS / SELECTS
+   6. INPUTS / SELECTS — sans backdrop-filter (perf)
    ═══════════════════════════════════════════ */
 .input, input[type="text"], input[type="number"], input[type="email"],
 input[type="password"], input[type="search"], input[type="tel"],
 input[type="url"], textarea, select {
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 14px;
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.20);
-  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.18);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input:focus, input:focus, textarea:focus, select:focus {
   border-color: rgba(91,155,213,0.55);
-  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 8px rgba(0,0,0,0.20);
-  background: rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 6px rgba(0,0,0,0.18);
+  background: rgba(255,255,255,0.07);
 }
 
 .cell-input {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 8px;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.12);
 }
 .cell-input:focus {
   border-color: rgba(91,155,213,0.55);
-  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 4px rgba(0,0,0,0.12);
 }
 
 .field {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-radius: 14px;
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.20);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.18);
 }
 
 /* ═══════════════════════════════════════════
-   7. MODALS
+   7. MODALS — blur uniquement ici (rarement ouvert)
    ═══════════════════════════════════════════ */
 .modal-box, .modal {
-  background: rgba(16,18,28,0.75);
-  backdrop-filter: blur(48px) saturate(200%);
-  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  background: rgba(16,18,28,0.80);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid rgba(255,255,255,0.12);
   border-top-color: rgba(255,255,255,0.22);
   border-radius: var(--radius-glass);
-  box-shadow: 0 -4px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.14);
+  box-shadow: 0 8px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14);
 }
 
 .modal-overlay, .modal-backdrop {
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.50);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
 /* ═══════════════════════════════════════════
-   8. BADGES / TAGS
+   8. BADGES / TAGS — sans backdrop-filter (perf)
    ═══════════════════════════════════════════ */
 .badge {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--radius-pill);
   font-weight: 600;
@@ -329,8 +296,6 @@ input[type="url"], textarea, select {
 
 .stub .tag {
   background: rgba(91,155,213,0.15);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(91,155,213,0.35);
   border-radius: var(--radius-pill);
 }
@@ -341,8 +306,6 @@ input[type="url"], textarea, select {
 .muscle-check {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 .muscle-check:has(input:checked) {
   background: rgba(91,155,213,0.22);
@@ -352,46 +315,40 @@ input[type="url"], textarea, select {
 .rest-timer-presets button {
   border-radius: var(--radius-pill);
   background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.12);
 }
 .rest-timer-presets button.active {
   background: rgba(91,155,213,0.22);
   border-color: rgba(91,155,213,0.45);
-  box-shadow: 0 0 16px rgba(91,155,213,0.20);
+  box-shadow: 0 0 12px rgba(91,155,213,0.18);
 }
 
 .rest-timer-overlay {
   background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .app-logo .pro {
   background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.15);
 }
 
 .save-pill {
   background: rgba(91,155,213,0.18) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(91,155,213,0.35) !important;
 }
 
 .skeleton {
   background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.8s ease-in-out infinite;
   border-radius: var(--radius-glass);
 }
 
 .xp-bar-bg {
   background: rgba(255,255,255,0.06);
-  box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
 }
 
 .settings-item {
@@ -411,19 +368,17 @@ input[type="url"], textarea, select {
 .series-check.done {
   background: rgba(48,209,88,0.18);
   border-color: var(--success);
-  box-shadow: 0 0 8px rgba(48,209,88,0.15);
+  box-shadow: 0 0 6px rgba(48,209,88,0.12);
 }
 
 .locked::after {
   background: rgba(7, 9, 15, 0.5);
 }
 
-/* Progres page — view buttons + calendar cells + podium */
+/* Progres page */
 .vbtn {
   background: rgba(255,255,255,0.06) !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 .vbtn.active {
   border-color: rgba(91,155,213,0.45) !important;
@@ -432,8 +387,6 @@ input[type="url"], textarea, select {
 .cal-nav {
   background: rgba(255,255,255,0.06) !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 .cal-cell.done { background: rgba(48,209,88,0.18); }
 .cal-cell.missed { background: rgba(255,69,58,0.18); }
@@ -447,45 +400,42 @@ input[type="url"], textarea, select {
 .coach-textarea {
   background: rgba(255,255,255,0.05) !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.20);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.18);
 }
 .coach-textarea:focus {
   border-color: rgba(91,155,213,0.55) !important;
-  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 8px rgba(0,0,0,0.20) !important;
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 6px rgba(0,0,0,0.18) !important;
 }
 
 /* ═══════════════════════════════════════════
    10. OVERLAYS & PANNEAUX FLOTTANTS
    ═══════════════════════════════════════════ */
-
-/* Exercice info modal (séance detail) */
 .exo-info-modal {
   background: rgba(0,0,0,0.50) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
 }
 .exo-info-box {
-  background: rgba(16,18,28,0.80) !important;
-  backdrop-filter: blur(48px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(48px) saturate(200%) !important;
+  background: rgba(16,18,28,0.85) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
   border: 1px solid rgba(255,255,255,0.15) !important;
   border-radius: var(--radius-glass) !important;
-  box-shadow: 0 8px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5) !important;
 }
 .exo-info-close {
   background: linear-gradient(135deg, rgba(91,155,213,0.40), rgba(91,155,213,0.18)) !important;
   border: 1px solid rgba(91,155,213,0.45) !important;
   border-radius: var(--radius-pill) !important;
-  box-shadow: 0 4px 16px rgba(91,155,213,0.20) !important;
+  box-shadow: 0 4px 12px rgba(91,155,213,0.18) !important;
 }
 
-/* Rest timer bar (chrono fixe en bas) */
 .rest-timer-bar {
-  background: rgba(10,12,20,0.70) !important;
-  backdrop-filter: blur(40px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  background: rgba(10,12,20,0.75) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-top: 1px solid rgba(255,255,255,0.10) !important;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.4) !important;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.3) !important;
 }
 .rest-timer-bar-presets button {
   background: rgba(255,255,255,0.08) !important;
@@ -498,15 +448,11 @@ input[type="url"], textarea, select {
   color: #e8e9ed !important;
 }
 
-/* Exo info button */
 .exo-info-btn {
   background: rgba(255,255,255,0.08) !important;
   border: 1px solid rgba(255,255,255,0.15) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
-/* Tabs info exercice */
 .exo-info-tab {
   background: none !important;
   border: none !important;
@@ -515,18 +461,17 @@ input[type="url"], textarea, select {
   -webkit-backdrop-filter: none !important;
 }
 
-/* Onboarding preview */
 .preview-overlay {
   background: rgba(0,0,0,0.50) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
 }
 .preview-panel {
-  background: rgba(16,18,28,0.80) !important;
-  backdrop-filter: blur(48px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(48px) saturate(200%) !important;
+  background: rgba(16,18,28,0.85) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
   border: 1px solid rgba(255,255,255,0.15) !important;
-  box-shadow: 0 -8px 48px rgba(0,0,0,0.6) !important;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.5) !important;
 }
 
 /* ═══════════════════════════════════════════
@@ -535,7 +480,7 @@ input[type="url"], textarea, select {
 h1, h2, h3 {
   font-weight: 600;
   letter-spacing: -0.02em;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.35);
 }
 
 .stat-label,
@@ -550,11 +495,11 @@ h1, h2, h3 {
 }
 
 /* ═══════════════════════════════════════════
-   11. ANIMATIONS
+   12. ANIMATIONS — légères, sans filter
    ═══════════════════════════════════════════ */
 @keyframes glass-in {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); filter: blur(4px); }
-  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes shimmer {
@@ -563,17 +508,22 @@ h1, h2, h3 {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .glass,
-  .glass-card,
   .card,
   .stat-card,
   .exo-card,
   .prog-card,
   .detail-metric,
-  .vol-container,
-  .modal-box,
-  .modal,
   .next-session-card {
-    animation: glass-in 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+    animation: glass-in 0.25s ease both;
   }
+}
+
+/* ═══════════════════════════════════════════
+   13. GPU HINTS — composition accélérée
+   ═══════════════════════════════════════════ */
+.bottom-nav,
+.topbar,
+.rest-timer-bar {
+  will-change: backdrop-filter;
+  transform: translateZ(0);
 }
