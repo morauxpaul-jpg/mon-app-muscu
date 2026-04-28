@@ -19,8 +19,8 @@
     .body-svg {
       width: 200px; max-width: 65vw;
       height: auto;
-      --body-fill: #22252e;
-      --body-stroke: #2a2d36;
+      --body-fill: rgba(255,255,255,0.06);
+      --body-stroke: rgba(255,255,255,0.12);
     }
     .body-svg .body-neutral polygon { opacity: 0.9; }
     .body-svg .zone { cursor: pointer; transition: transform 0.2s; transform-origin: center; transform-box: fill-box; }
@@ -339,8 +339,8 @@
           margin: { l: 40, r: 10, t: 10, b: 30 },
           paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
           font: { color: '#6b7280', size: 10 },
-          xaxis: { title: 'Semaine', gridcolor: '#2a2d36', fixedrange: true },
-          yaxis: { title: 'Poids (kg)', gridcolor: '#2a2d36', fixedrange: true }
+          xaxis: { title: 'Semaine', gridcolor: 'rgba(255,255,255,0.08)', fixedrange: true },
+          yaxis: { title: 'Poids (kg)', gridcolor: 'rgba(255,255,255,0.08)', fixedrange: true }
         }, { displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false });
       </script>
     {% endif %}
@@ -409,8 +409,8 @@
           margin: { l: 40, r: 10, t: 10, b: 28 },
           paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
           font: { color: '#6b7280', size: 9 },
-          xaxis: { gridcolor: '#2a2d36' },
-          yaxis: { gridcolor: '#2a2d36' }
+          xaxis: { gridcolor: 'rgba(255,255,255,0.08)' },
+          yaxis: { gridcolor: 'rgba(255,255,255,0.08)' }
         }, { displayModeBar: false, responsive: true });
       } else {
         document.getElementById('md-chart').innerHTML = '';

@@ -483,7 +483,7 @@
 
       {# Modale bibliothèque inline #}
       <div x-show="showLib" x-transition style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); padding:16px;" @click.self="showLib = false">
-        <div style="background:#0B1428; border:2px solid var(--accent); border-radius:14px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain;" @click.stop>
+        <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(91,155,213,0.45); border-radius:22px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain; box-shadow:0 8px 48px rgba(0,0,0,0.6);" @click.stop>
           <h4 style="color:var(--accent); margin:0 0 10px;">Bibliothèque d'exercices</h4>
           <input type="text" x-model="libSearch" class="field" placeholder="Rechercher..." style="margin-bottom:8px;">
           <select class="field" x-model="libFilter" style="margin-bottom:10px;">
@@ -839,8 +839,8 @@
     var allMuscles = data[side] || {};
     var neutralPolys = data[side + '_neutral'] || [];
     var accent = '#FF9F0A';
-    var dim = '#22384f';
-    var stroke = '#2a4466';
+    var dim = 'rgba(255,255,255,0.06)';
+    var stroke = 'rgba(255,255,255,0.12)';
 
     var svg = '<svg viewBox="0 0 100 220" width="100" class="mini-body-svg" xmlns="http://www.w3.org/2000/svg">';
     // Silhouette neutre (tête, cou, etc.)

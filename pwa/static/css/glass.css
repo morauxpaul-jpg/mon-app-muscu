@@ -15,38 +15,9 @@ body {
 }
 
 /* ═══════════════════════════════════════════
-   2. CLASSE .glass — surface de verre dépoli
+   2. MIXIN GLASS — propriétés partagées
    ═══════════════════════════════════════════ */
-.glass {
-  background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
-  backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
-  -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-top-color: rgba(255,255,255,0.28);
-  border-left-color: rgba(255,255,255,0.20);
-  border-radius: var(--radius-glass);
-  box-shadow:
-    0 2px 4px rgba(0,0,0,0.05),
-    0 8px 24px rgba(0,0,0,0.30),
-    0 32px 64px rgba(0,0,0,0.20),
-    inset 0 1px 0 rgba(255,255,255,0.20),
-    inset 0 -1px 0 rgba(0,0,0,0.15);
-  position: relative;
-  overflow: hidden;
-}
-.glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%, rgba(255,255,255,0.03) 100%);
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ═══════════════════════════════════════════
-   3. APPLIQUER GLASS aux composants existants
-   ═══════════════════════════════════════════ */
+.glass,
 .card,
 .stat-card,
 .prog-card,
@@ -59,7 +30,8 @@ body {
 .rest-timer,
 .iso-chrono,
 .next-session-card,
-.prog-section {
+.prog-section,
+.podium-item {
   background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
   backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
   -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.05);
@@ -73,25 +45,6 @@ body {
     0 32px 64px rgba(0,0,0,0.20),
     inset 0 1px 0 rgba(255,255,255,0.20),
     inset 0 -1px 0 rgba(0,0,0,0.15);
-  position: relative;
-  overflow: hidden;
-}
-.card::before,
-.stat-card::before,
-.prog-card::before,
-.detail-metric::before,
-.seance-progress::before,
-.finish-celebration .finish-stat::before,
-.rest-timer::before,
-.iso-chrono::before,
-.next-session-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%, rgba(255,255,255,0.03) 100%);
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
 }
 
 /* Exo-card — garder le border-left accent */
@@ -109,21 +62,10 @@ body {
     0 32px 64px rgba(0,0,0,0.20),
     inset 0 1px 0 rgba(255,255,255,0.20),
     inset 0 -1px 0 rgba(0,0,0,0.15);
-  position: relative;
-  overflow: hidden;
-}
-.exo-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
 }
 
 /* ═══════════════════════════════════════════
-   4. TOPBAR — barre glass translucide
+   3. TOPBAR
    ═══════════════════════════════════════════ */
 .topbar {
   background: rgba(10,12,20,0.55);
@@ -134,7 +76,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════
-   5. BOTTOM NAV — barre flottante
+   4. BOTTOM NAV
    ═══════════════════════════════════════════ */
 .bottom-nav {
   background: rgba(10,12,20,0.55);
@@ -160,7 +102,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════
-   6. BOUTONS — pills glass avec glow
+   5. BOUTONS
    ═══════════════════════════════════════════ */
 button, .btn {
   background: rgba(255,255,255,0.08);
@@ -214,19 +156,19 @@ button.violet, .btn.violet {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, rgba(91,189,138,0.40), rgba(91,189,138,0.18));
-  border: 1px solid rgba(91,189,138,0.45);
-  border-top-color: rgba(91,189,138,0.65);
+  background: linear-gradient(135deg, rgba(48,209,88,0.35), rgba(48,209,88,0.15));
+  border: 1px solid rgba(48,209,88,0.45);
+  border-top-color: rgba(48,209,88,0.65);
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
-  box-shadow: 0 4px 16px rgba(91,189,138,0.20), inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: 0 4px 16px rgba(48,209,88,0.18), inset 0 1px 0 rgba(255,255,255,0.18);
   border-radius: var(--radius-pill);
   color: #e8e9ed;
   font-weight: 500;
 }
 .btn-success:hover {
-  background: linear-gradient(135deg, rgba(91,189,138,0.55), rgba(91,189,138,0.28));
-  box-shadow: 0 8px 28px rgba(91,189,138,0.35), inset 0 1px 0 rgba(255,255,255,0.22);
+  background: linear-gradient(135deg, rgba(48,209,88,0.50), rgba(48,209,88,0.25));
+  box-shadow: 0 8px 28px rgba(48,209,88,0.30), inset 0 1px 0 rgba(255,255,255,0.22);
 }
 
 .btn-secondary {
@@ -270,26 +212,26 @@ button.violet, .btn.violet {
 
 .btn.btn-danger,
 button.btn-danger {
-  background: linear-gradient(135deg, rgba(212,90,90,0.30), rgba(212,90,90,0.12));
-  border: 1px solid rgba(212,90,90,0.45);
-  border-top-color: rgba(212,90,90,0.60);
-  color: #e07878;
+  background: linear-gradient(135deg, rgba(255,69,58,0.25), rgba(255,69,58,0.10));
+  border: 1px solid rgba(255,69,58,0.40);
+  border-top-color: rgba(255,69,58,0.55);
+  color: #ff6961;
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
 .mini-btn {
-  background: rgba(212,90,90,0.18);
-  border: 1px solid rgba(212,90,90,0.35);
-  color: #e07878;
+  background: rgba(255,69,58,0.15);
+  border: 1px solid rgba(255,69,58,0.35);
+  color: #ff6961;
   border-radius: var(--radius-sm);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
 /* ═══════════════════════════════════════════
-   7. INPUTS / SELECTS — champs en verre
+   6. INPUTS / SELECTS
    ═══════════════════════════════════════════ */
 .input, input[type="text"], input[type="number"], input[type="email"],
 input[type="password"], input[type="search"], input[type="tel"],
@@ -329,7 +271,7 @@ input[type="url"], textarea, select {
 }
 
 /* ═══════════════════════════════════════════
-   8. MODALS — sheet flottante
+   7. MODALS
    ═══════════════════════════════════════════ */
 .modal-box, .modal {
   background: rgba(16,18,28,0.75);
@@ -348,7 +290,7 @@ input[type="url"], textarea, select {
 }
 
 /* ═══════════════════════════════════════════
-   9. BADGES / TAGS — glass sémantique
+   8. BADGES / TAGS
    ═══════════════════════════════════════════ */
 .badge {
   backdrop-filter: blur(8px);
@@ -360,19 +302,19 @@ input[type="url"], textarea, select {
   background: rgba(255,255,255,0.08);
 }
 .badge-success {
-  background: rgba(91,189,138,0.18);
-  border-color: rgba(91,189,138,0.35);
-  color: #7dd4a8;
+  background: rgba(48,209,88,0.18);
+  border-color: rgba(48,209,88,0.35);
+  color: #30d158;
 }
 .badge-warning {
-  background: rgba(212,148,74,0.18);
-  border-color: rgba(212,148,74,0.35);
-  color: #e0a86a;
+  background: rgba(255,159,10,0.18);
+  border-color: rgba(255,159,10,0.35);
+  color: #ff9f0a;
 }
 .badge-danger {
-  background: rgba(212,90,90,0.18);
-  border-color: rgba(212,90,90,0.35);
-  color: #e07878;
+  background: rgba(255,69,58,0.18);
+  border-color: rgba(255,69,58,0.35);
+  color: #ff6961;
 }
 .badge-info {
   background: rgba(91,155,213,0.18);
@@ -394,10 +336,8 @@ input[type="url"], textarea, select {
 }
 
 /* ═══════════════════════════════════════════
-   10. COMPOSANTS DIVERS
+   9. COMPOSANTS DIVERS
    ═══════════════════════════════════════════ */
-
-/* Muscle check pills */
 .muscle-check {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
@@ -409,7 +349,6 @@ input[type="url"], textarea, select {
   border-color: rgba(91,155,213,0.45);
 }
 
-/* Rest timer presets */
 .rest-timer-presets button {
   border-radius: var(--radius-pill);
   background: rgba(255,255,255,0.08);
@@ -423,14 +362,12 @@ input[type="url"], textarea, select {
   box-shadow: 0 0 16px rgba(91,155,213,0.20);
 }
 
-/* Rest timer overlay */
 .rest-timer-overlay {
   background: rgba(0,0,0,0.45);
   backdrop-filter: blur(32px) saturate(180%);
   -webkit-backdrop-filter: blur(32px) saturate(180%);
 }
 
-/* Logo PRO badge */
 .app-logo .pro {
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(12px);
@@ -438,7 +375,6 @@ input[type="url"], textarea, select {
   border: 1px solid rgba(255,255,255,0.15);
 }
 
-/* Save pill */
 .save-pill {
   background: rgba(91,155,213,0.18) !important;
   backdrop-filter: blur(12px);
@@ -446,7 +382,6 @@ input[type="url"], textarea, select {
   border: 1px solid rgba(91,155,213,0.35) !important;
 }
 
-/* Skeleton — shimmer glass */
 .skeleton {
   background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
   background-size: 200% 100%;
@@ -454,43 +389,73 @@ input[type="url"], textarea, select {
   border-radius: var(--radius-glass);
 }
 
-/* XP bar */
 .xp-bar-bg {
   background: rgba(255,255,255,0.06);
   box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
 }
 
-/* Settings items */
 .settings-item {
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Day cells */
-.day-done   { background: rgba(91,189,138,0.18); }
-.day-missed { background: rgba(212,90,90,0.18); }
+.day-done   { background: rgba(48,209,88,0.18); }
+.day-missed { background: rgba(255,69,58,0.18); }
 .day-today  { background: rgba(91,155,213,0.18); border: 1px solid rgba(91,155,213,0.35); }
 .day-future { background: rgba(255,255,255,0.05); }
 
-/* Tables */
 .prev-table th,
 .prev-table td {
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Series check */
 .series-check.done {
-  background: rgba(91,189,138,0.18);
+  background: rgba(48,209,88,0.18);
   border-color: var(--success);
-  box-shadow: 0 0 8px rgba(91,189,138,0.15);
+  box-shadow: 0 0 8px rgba(48,209,88,0.15);
 }
 
-/* Locked overlay */
 .locked::after {
   background: rgba(7, 9, 15, 0.5);
 }
 
+/* Progres page — view buttons + calendar cells + podium */
+.vbtn {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.vbtn.active {
+  border-color: rgba(91,155,213,0.45) !important;
+  background: rgba(91,155,213,0.18) !important;
+}
+.cal-nav {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.cal-cell.done { background: rgba(48,209,88,0.18); }
+.cal-cell.missed { background: rgba(255,69,58,0.18); }
+.cal-cell.upcoming { background: rgba(91,155,213,0.15); }
+.cal-cell.rest { background: rgba(255,255,255,0.04); }
+.podium-gold   { background: rgba(255,214,10,0.12) !important; border-color: rgba(255,214,10,0.30) !important; }
+.podium-silver { background: rgba(174,180,190,0.10) !important; border-color: rgba(174,180,190,0.25) !important; }
+.podium-bronze { background: rgba(196,134,84,0.10) !important;  border-color: rgba(196,134,84,0.25) !important; }
+
+/* Coach textarea */
+.coach-textarea {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.20);
+}
+.coach-textarea:focus {
+  border-color: rgba(91,155,213,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.12), inset 0 2px 8px rgba(0,0,0,0.20) !important;
+}
+
 /* ═══════════════════════════════════════════
-   11. TYPOGRAPHIE — hiérarchie Liquid Glass
+   10. TYPOGRAPHIE
    ═══════════════════════════════════════════ */
 h1, h2, h3 {
   font-weight: 600;
@@ -510,7 +475,7 @@ h1, h2, h3 {
 }
 
 /* ═══════════════════════════════════════════
-   12. ANIMATIONS — fluides et profondes
+   11. ANIMATIONS
    ═══════════════════════════════════════════ */
 @keyframes glass-in {
   from { opacity: 0; transform: translateY(12px) scale(0.98); filter: blur(4px); }
