@@ -25,9 +25,6 @@ def _env(name: str) -> str:
     return v.strip().strip('"').strip("'").lstrip("=").strip()
 
 
-_SUPABASE_URL = _env("SUPABASE_URL")
-_SUPABASE_SERVICE_KEY = _env("SUPABASE_SERVICE_ROLE_KEY")
-
 _client: Optional[Client] = None
 
 
@@ -36,11 +33,13 @@ def get_client() -> Client:
     ⚠️ bypass RLS : tous les appels DOIVENT filtrer explicitement par user_id."""
     global _client
     if _client is None:
-        if not _SUPABASE_URL or not _SUPABASE_SERVICE_KEY:
+        url = _env("SUPABASE_URL")
+        key = _env("SUPABASE_SERVICE_ROLE_KEY")
+        if not url or not key:
             raise RuntimeError(
                 "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants dans l'environnement."
             )
-        _client = create_client(_SUPABASE_URL, _SUPABASE_SERVICE_KEY)
+        _client = create_client(url, key)
     return _client
 
 
