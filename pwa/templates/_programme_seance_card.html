@@ -113,7 +113,7 @@
       {# Modale bibliothèque #}
       <div x-show="showLibrary" x-transition
            x-init="$watch('showLibrary', v => { if(v) document.body.appendChild($el); })"
-           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:var(--bg-overlay); padding:16px;" @click.self="showLibrary = false">
+           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:16px;" @click.self="showLibrary = false">
         <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(255,255,255,0.15); border-radius:22px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain; box-shadow:0 8px 48px rgba(0,0,0,0.6);" @click.stop>
           <h4 style="color:var(--text-1); margin:0 0 10px;">Bibliothèque d'exercices</h4>
           <input type="text" x-model="libSearch" class="field" placeholder="Rechercher un exercice..." style="margin-bottom:8px;">
