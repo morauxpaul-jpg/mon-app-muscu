@@ -105,7 +105,7 @@
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;" @click="open = !open">
           <svg class="icon icon-sm icon-violet"><use href="/static/img/icons.svg#folder"/></svg>
           <span class="prog-name" x-text="pg.name"></span>
-          <span style="font-size:11px; color:#5a7a9a;" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
+          <span style="font-size:11px; color:var(--text-3);" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
           <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
         </div>
       </div>
@@ -169,7 +169,7 @@
         <div style="display:flex; align-items:center; gap:8px; flex:1;">
           <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>
           <span class="prog-name" style="color:var(--text-dim);">Non classé</span>
-          <span style="font-size:11px; color:#5a7a9a;" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
+          <span style="font-size:11px; color:var(--text-3);" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
           <div class="exo-toggle" style="margin-left:auto;" x-text="open ? '−' : '+'"></div>
         </div>
       </div>

@@ -79,8 +79,8 @@
 }
 
 .iso-sets-done li.done {
-  color: var(--success, #5bbd8a);
-  background: var(--success-bg, rgba(91,189,138,0.08));
+  color: var(--success, #34c759);
+  background: var(--success-bg, rgba(52,199,89,0.12));
 }
 
 .iso-chrono-row-actions {

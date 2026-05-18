@@ -333,12 +333,12 @@
           x: {{ zoom.chart_x|tojson }},
           y: {{ zoom.chart_y|tojson }},
           mode: 'lines+markers',
-          line: { color: '#5b9bd5', width: 2 },
-          marker: { color: '#5b9bd5', size: 6 },
+          line: { color: '#78c8ff', width: 2 },
+          marker: { color: '#78c8ff', size: 6 },
         }], {
           margin: { l: 40, r: 10, t: 10, b: 30 },
           paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-          font: { color: '#6b7280', size: 10 },
+          font: { color: 'rgba(255,255,255,0.35)', size: 10 },
           xaxis: { title: 'Semaine', gridcolor: 'rgba(255,255,255,0.08)', fixedrange: true },
           yaxis: { title: 'Poids (kg)', gridcolor: 'rgba(255,255,255,0.08)', fixedrange: true }
         }, { displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false });
@@ -403,12 +403,12 @@
           x: d.evo.map(e => e.w),
           y: d.evo.map(e => e.r),
           mode: 'lines+markers',
-          line: { color: '#5b9bd5', width: 2 },
-          marker: { color: '#5b9bd5', size: 6 },
+          line: { color: '#78c8ff', width: 2 },
+          marker: { color: '#78c8ff', size: 6 },
         }], {
           margin: { l: 40, r: 10, t: 10, b: 28 },
           paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-          font: { color: '#6b7280', size: 9 },
+          font: { color: 'rgba(255,255,255,0.35)', size: 9 },
           xaxis: { gridcolor: 'rgba(255,255,255,0.08)' },
           yaxis: { gridcolor: 'rgba(255,255,255,0.08)' }
         }, { displayModeBar: false, responsive: true });
@@ -433,9 +433,9 @@
       {% for v in vol_values %}
         {% set bar_h = (v / vol_max * 110) if vol_max > 0 else 0 %}
         {% set x = loop.index0 * 50 + 8 %}
-        <rect class="vol-bar" x="{{ x }}" y="{{ 130 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#5b9bd5" opacity="0.7"/>
-        <text x="{{ x + 17 }}" y="{{ 125 - bar_h }}" text-anchor="middle" fill="#9ca3af" font-size="9" font-weight="500">{{ (v / 1000)|round(1) }}k</text>
-        <text x="{{ x + 17 }}" y="148" text-anchor="middle" fill="#5a7a9a" font-size="9">{{ vol_labels[loop.index0] }}</text>
+        <rect class="vol-bar" x="{{ x }}" y="{{ 130 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#78c8ff" opacity="0.7"/>
+        <text x="{{ x + 17 }}" y="{{ 125 - bar_h }}" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="9" font-weight="500">{{ (v / 1000)|round(1) }}k</text>
+        <text x="{{ x + 17 }}" y="148" text-anchor="middle" fill="rgba(255,255,255,0.30)" font-size="9">{{ vol_labels[loop.index0] }}</text>
       {% endfor %}
     </svg>
   </div>
@@ -467,9 +467,9 @@
         {% for v in cardio['values'] %}
           {% set bar_h = (v / cardio.max_val * 90) if cardio.max_val > 0 else 0 %}
           {% set x = loop.index0 * 50 + 8 %}
-          <rect x="{{ x }}" y="{{ 110 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#d4944a" opacity="0.7"/>
-          <text x="{{ x + 17 }}" y="{{ 105 - bar_h }}" text-anchor="middle" fill="#d4944a" font-size="9" font-weight="600">{{ v }}</text>
-          <text x="{{ x + 17 }}" y="128" text-anchor="middle" fill="#6b7280" font-size="9">{{ cardio.labels[loop.index0] }}</text>
+          <rect x="{{ x }}" y="{{ 110 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#ff9f0a" opacity="0.7"/>
+          <text x="{{ x + 17 }}" y="{{ 105 - bar_h }}" text-anchor="middle" fill="#ff9f0a" font-size="9" font-weight="600">{{ v }}</text>
+          <text x="{{ x + 17 }}" y="128" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="9">{{ cardio.labels[loop.index0] }}</text>
         {% endfor %}
       </svg>
     {% endif %}

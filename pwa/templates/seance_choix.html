@@ -71,18 +71,18 @@
   </script>
 
   {% if makeup_suggestions %}
-    <div class="card" style="border-color:#d4944a; background:rgba(212,148,74,0.08);">
-      <div class="label-icon" style="color:#d4944a; font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
-        <svg class="icon icon-sm" style="color:#d4944a;"><use href="/static/img/icons.svg#clock"/></svg>SÉANCE À RATTRAPER
+    <div class="card" style="border-color:var(--warning); background:var(--warning-bg);">
+      <div class="label-icon" style="color:var(--warning); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+        <svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#clock"/></svg>SÉANCE À RATTRAPER
       </div>
       <div style="font-size:0.82rem; color:var(--text-2); margin-bottom:12px;">
         Tu n'as pas fait {{ 'cette séance' if makeup_suggestions|length == 1 else 'ces séances' }} récemment — clique pour {{ 'la' if makeup_suggestions|length == 1 else 'les' }} rattraper maintenant.
       </div>
       {% for m in makeup_suggestions %}
-        <div class="seance-choice-row" style="border-color:#d4944a;">
+        <div class="seance-choice-row" style="border-color:var(--warning);">
           <div>
             <div class="seance-name">{{ m.seance }}</div>
-            <div class="seance-meta" style="color:#d4944a;">Planifiée {{ m.day_label }}</div>
+            <div class="seance-meta" style="color:var(--warning);">Planifiée {{ m.day_label }}</div>
           </div>
           <a href="/seance?mode=prefaite&name={{ m.seance|urlencode }}&date={{ date_iso }}" class="btn primary label-icon" style="display:inline-flex;">Rattraper<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
         </div>

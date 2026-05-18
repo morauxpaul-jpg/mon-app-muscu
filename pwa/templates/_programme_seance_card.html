@@ -9,7 +9,7 @@
   <div class="exo-head" @click="open = !open">
     <div class="exo-title" x-text="sname"></div>
     <div style="display:flex; align-items:center; gap:8px;">
-      <span style="font-size:11px; color:#5a7a9a;" x-text="(prog[sname] || []).length + ' exos'"></span>
+      <span style="font-size:11px; color:var(--text-3);" x-text="(prog[sname] || []).length + ' exos'"></span>
       <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
     </div>
   </div>

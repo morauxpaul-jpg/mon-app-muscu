@@ -1,7 +1,7 @@
-/* Icônes SVG — usage :
-     <svg class="icon"><use href="/static/img/icons.svg#home"/></svg>
-   Les icônes héritent de currentColor, se dimensionnent avec width/height CSS
-   (défaut 1em). Les variantes .icon-sm/md/lg donnent des tailles fixes. */
+/* ═══════════════════════════════════════════════════════
+   MUSCU — Icons SVG
+   Usage : <svg class="icon"><use href="/static/img/icons.svg#home"/></svg>
+   ═══════════════════════════════════════════════════════ */
 
 .icon {
   display: inline-block;
@@ -10,6 +10,7 @@
   vertical-align: -0.125em;
   fill: none;
   stroke: currentColor;
+  stroke-width: 1.6;
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -28,7 +29,6 @@
 .icon-bronze  { color: var(--bronze); }
 .icon-mute    { color: var(--text-2); }
 
-/* Bouton-icon : cercle tactile, 40px min pour a11y */
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -36,16 +36,15 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  border: 0.5px solid var(--border-default);
+  border: 1px solid var(--border-default);
   background: var(--bg-elevated);
   color: var(--text-1);
   cursor: pointer;
-  transition: transform 90ms ease, border-color 150ms ease, background 150ms ease;
+  transition: transform 80ms ease, border-color var(--ease-fast), background var(--ease-fast);
 }
-.icon-btn:active { transform: scale(0.94); }
+.icon-btn:active { transform: scale(0.92); }
 .icon-btn:hover  { border-color: var(--border-hover); }
 
-/* Puce verticale remplaçant les emojis devant les titres d'exercice */
 .exo-bullet {
   display: inline-block;
   width: 3px;
@@ -56,7 +55,6 @@
   margin-right: 8px;
 }
 
-/* Badge-icon inline (petits pictos contextuels devant un label) */
 .label-icon {
   display: inline-flex;
   align-items: center;
