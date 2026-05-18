@@ -28,6 +28,63 @@
     </form>
   </div>
 
+  {# ── Section : Banque d'exercices ─────────── #}
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>BANQUE D'EXERCICES</h2>
+
+  {% if request.args.get('exo') == 'ok' %}
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice ajouté à ta banque.</div>
+  {% endif %}
+  {% if request.args.get('exo') == 'duplicate' %}
+    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Cet exercice existe déjà dans ta banque.</div>
+  {% endif %}
+  {% if request.args.get('exo') == 'deleted' %}
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice supprimé.</div>
+  {% endif %}
+
+  <div class="card" x-data="{ open: false }">
+    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>Ajouter un exercice personnalisé</span>
+      <span x-text="open ? '−' : '+'"></span>
+    </h3>
+    <form method="post" action="/gestion/exercice/ajouter" x-show="open" x-transition.duration.200ms>
+      <label class="field-label">Nom de l'exercice</label>
+      <input type="text" name="name" class="field" required placeholder="Ex : Hip Thrust barre">
+      <label class="field-label">Groupe musculaire</label>
+      <select name="muscle" class="field">
+        {% for m in muscle_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+      <label class="field-label">Profil d'entraînement</label>
+      <select name="profil" class="field">
+        {% for p in profil_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter à la banque</button>
+    </form>
+  </div>
+
+  {% if custom_exercises %}
+  <div class="card">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Mes exercices personnalisés ({{ custom_exercises|length }})</h3>
+    {% for exo in custom_exercises %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %}">
+        <div>
+          <div style="font-size:0.9rem; font-weight:500; color:var(--text-1);">{{ exo.name }}</div>
+          <div style="font-size:0.75rem; color:var(--text-dim);">{{ exo.muscle }} · {{ exo.profil|default('Les deux') }}</div>
+        </div>
+        <form method="post" action="/gestion/exercice/supprimer" x-data="{ c: false }">
+          <input type="hidden" name="index" value="{{ loop.index0 }}">
+          <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" x-show="!c" @click="c=true">
+            <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>
+          </button>
+          <div x-show="c" x-cloak style="display:flex; gap:4px;">
+            <button type="button" class="btn" style="padding:4px 8px; font-size:0.7rem;" @click="c=false">Non</button>
+            <button type="submit" class="btn btn-danger" style="padding:4px 8px; font-size:0.7rem;">Oui</button>
+          </div>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {# ── Section : Tutoriels ─────────────────── #}
   <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>TUTORIELS</h2>
 

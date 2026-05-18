@@ -431,16 +431,48 @@
   {% endfor %}
 
   {# ── Ajouter un exercice (fermé par défaut) ─────────────────────────── #}
-  <div class="card" x-data="{ open: false, tab: 'prog', muscle: 'Tous' }">
+  <div class="card" x-data="{ open: false, tab: '{% if custom_exercises %}custom{% else %}prog{% endif %}', muscle: 'Tous' }">
     <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>Ajouter un exercice</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
-    <div style="display:flex; gap:6px; margin-bottom:10px;">
-      <button type="button" class="btn" :class="{ primary: tab==='prog' }" @click="tab='prog'">Depuis mes programmes</button>
+    <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+      {% if custom_exercises %}
+      <button type="button" class="btn" :class="{ primary: tab==='custom' }" @click="tab='custom'">Mes exos</button>
+      {% endif %}
+      <button type="button" class="btn" :class="{ primary: tab==='prog' }" @click="tab='prog'">Programmes</button>
       <button type="button" class="btn" :class="{ primary: tab==='new' }" @click="tab='new'">Nouvel exercice</button>
     </div>
+
+    {% if custom_exercises %}
+    <div x-show="tab==='custom'">
+      <label class="field-label">Filtrer par muscle</label>
+      <select class="field" x-model="muscle">
+        <option value="Tous">Tous</option>
+        {% for m in muscle_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+      {% for e in custom_exercises %}
+        <div class="seance-choice-row"
+             x-show="muscle === 'Tous' || '{{ e.muscle|default('') }}'.includes(muscle)">
+          <div>
+            <div class="seance-name">{{ e.name }}</div>
+            <div class="seance-meta">{{ e.muscle|default('') }} · {{ e.profil|default('Les deux') }}</div>
+          </div>
+          <form method="post" action="/seance/add-extra">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="exo_name" value="{{ e.name }}">
+            <input type="hidden" name="muscle" value="{{ e.muscle|default('Autre') }}">
+            <input type="hidden" name="sets_count" value="3">
+            <button type="submit" class="btn">+ Ajouter</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <div x-show="tab==='prog'">
       <label class="field-label">Filtrer par muscle</label>
@@ -1141,7 +1173,7 @@
 
   // ── Exercise block (Alpine component) ─────────────────────────
   function exoBlock(index, data) {
-    var draftKey = DRAFT_PREFIX + data.base;
+    var draftKey = DRAFT_PREFIX + data.base + '_' + (data.exo_index != null ? data.exo_index : index);
     return {
       open: !data.completed,
       exoInfo: data.info || {},

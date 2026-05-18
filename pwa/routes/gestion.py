@@ -10,7 +10,12 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
 
 from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
+from core.muscu import auto_muscles
 from core.limiter import limiter
+
+MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
+               "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
+PROFIL_OPTIONS = ["Maison", "Salle", "Les deux"]
 bp = Blueprint("gestion", __name__)
 
 DEFAULT_SETTINGS = {
@@ -45,6 +50,7 @@ def gestion():
     nb_exos = sum(len(prog[k]) for k in prog if not k.startswith("_"))
     nb_hist = len(hist)
     nb_archive = len(prog.get("_archive", []))
+    custom_exercises = prog.get("_custom_exercises", [])
 
     return render_template(
         "gestion.html",
@@ -54,6 +60,9 @@ def gestion():
         nb_exos=nb_exos,
         nb_hist=nb_hist,
         nb_archive=nb_archive,
+        custom_exercises=custom_exercises,
+        muscle_list=MUSCLE_LIST,
+        profil_options=PROFIL_OPTIONS,
     )
 
 
@@ -62,6 +71,46 @@ def redo_onboarding():
     """Force l'user à refaire l'onboarding (sans rien effacer)."""
     session.pop("onboarded", None)
     return redirect(url_for("onboarding.index"))
+
+
+@bp.route("/gestion/exercice/ajouter", methods=["POST"])
+@limiter.limit("20 per minute")
+def add_custom_exercise():
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        return redirect(url_for("gestion.gestion"))
+    muscle = (request.form.get("muscle") or "").strip()
+    if not muscle:
+        muscle = auto_muscles(name) or "Autre"
+    profil = request.form.get("profil") or "Les deux"
+    if profil not in PROFIL_OPTIONS:
+        profil = "Les deux"
+    prog = get_prog()
+    customs = prog.setdefault("_custom_exercises", [])
+    if any(e["name"].lower() == name.lower() for e in customs):
+        return redirect(url_for("gestion.gestion") + "?exo=duplicate")
+    customs.append({"name": name, "muscle": muscle, "profil": profil})
+    save_prog(prog)
+    return redirect(url_for("gestion.gestion") + "?exo=ok")
+
+
+@bp.route("/gestion/exercice/supprimer", methods=["POST"])
+@limiter.limit("20 per minute")
+def delete_custom_exercise():
+    idx = request.form.get("index")
+    if idx is None:
+        return redirect(url_for("gestion.gestion"))
+    try:
+        idx = int(idx)
+    except (ValueError, TypeError):
+        return redirect(url_for("gestion.gestion"))
+    prog = get_prog()
+    customs = prog.get("_custom_exercises", [])
+    if 0 <= idx < len(customs):
+        customs.pop(idx)
+        prog["_custom_exercises"] = customs
+        save_prog(prog)
+    return redirect(url_for("gestion.gestion") + "?exo=deleted")
 
 
 @bp.route("/gestion/settings", methods=["POST"])

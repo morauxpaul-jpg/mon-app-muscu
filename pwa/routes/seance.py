@@ -124,17 +124,40 @@ def _exo_completed(curr_rows):
     return has_data or has_skip
 
 
+def _match_base_variant(exercice, exo_base):
+    """True si `exercice` est le base name exact ou une variante parenthésée."""
+    return exercice == exo_base or exercice.startswith(exo_base + " (")
+
+
+def _extract_variant(exercice):
+    if "(" in exercice:
+        v = exercice.split("(")[1].replace(")", "").strip()
+        return v if v in VARIANTS else "Standard"
+    return "Standard"
+
+
 def _last_variant(hist, seance, exo_base):
     """Dernière variante utilisée pour cet exo dans cette séance."""
     matches = [r for r in hist
-               if r["Séance"] == seance and exo_base in r["Exercice"]]
+               if r["Séance"] == seance and _match_base_variant(r["Exercice"], exo_base)]
     if not matches:
         return "Standard"
-    last = matches[-1]["Exercice"]
-    if "(" in last:
-        v = last.split("(")[1].replace(")", "").strip()
-        return v if v in VARIANTS else "Standard"
-    return "Standard"
+    return _extract_variant(matches[-1]["Exercice"])
+
+
+def _all_used_variants(hist, seance, exo_base):
+    """Toutes les variantes distinctes utilisées pour ce base name dans cette séance,
+    dans l'ordre d'apparition (dernière en premier pour la plus récente)."""
+    matches = [r for r in hist
+               if r["Séance"] == seance and _match_base_variant(r["Exercice"], exo_base)]
+    seen = set()
+    variants = []
+    for r in reversed(matches):
+        v = _extract_variant(r["Exercice"])
+        if v not in seen:
+            seen.add(v)
+            variants.append(v)
+    return variants
 
 
 def _best_record(hist, exo_final, is_bw):
@@ -220,14 +243,15 @@ def _last_session_sets(hist, exo_final, seance, s_act):
     return [{"reps": int(r["Reps"]), "poids": float(r["Poids"])} for r in last]
 
 
-def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_weight=True):
+def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_weight=True,
+                       forced_variant=None, exo_index=0):
     """Construit le dict passé au template pour un exercice."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
     muscle = exo_obj.get("muscle", "Autre")
     rest_seconds = int(exo_obj.get("rest_seconds", 90))
 
-    var = _last_variant(hist, seance, base)
+    var = forced_variant if forced_variant is not None else _last_variant(hist, seance, base)
     exo_final = f"{base} ({var})" if var != "Standard" else base
     is_bw = base in BW_EXOS and var != "Lesté"
 
@@ -298,6 +322,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         "p_sets": p_sets,
         "rest_seconds": rest_seconds,
         "is_extra": is_extra,
+        "exo_index": exo_index,
         "variant": var,
         "exo_final": exo_final,
         "is_bw": is_bw or is_iso,  # iso : pas de poids par défaut
@@ -311,6 +336,34 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         "last_summary": last_summary,
         "info": info,
     }
+
+
+def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight):
+    """Construit les contextes pour tous les exercices d'une séance, en
+    assignant des variantes distinctes quand le même base name apparaît
+    plusieurs fois (ex : 'Développé incliné' en Haltères ET en Barre)."""
+    from collections import Counter
+    bases = [e["name"] for e, _ in all_exos]
+    base_counts = Counter(bases)
+    base_variant_iters = {}
+    for base_name, count in base_counts.items():
+        if count > 1:
+            used = _all_used_variants(hist, seance_name, base_name)
+            while len(used) < count:
+                used.append("Standard")
+            base_variant_iters[base_name] = iter(used)
+
+    out = []
+    for idx, (e, is_extra) in enumerate(all_exos):
+        forced = None
+        it = base_variant_iters.get(e["name"])
+        if it is not None:
+            forced = next(it, "Standard")
+        out.append(_build_exo_context(
+            hist, e, seance_name, s_act, is_extra=is_extra,
+            prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
+        ))
+    return out
 
 
 # ────────────────────────────────────────────────────────────────
@@ -507,9 +560,7 @@ def seance():
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
-        exos_ctx = [_build_exo_context(hist, e, name, s_act, is_extra=is_extra,
-                                       prefill_weight=auto_prefill_weight)
-                    for e, is_extra in all_exos]
+        exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, auto_prefill_weight)
 
         # Volume
         vol_curr = sum(r["Poids"] * r["Reps"] for r in hist
@@ -548,6 +599,7 @@ def seance():
             vol_ratio=vol_ratio,
             vol_overload=(vol_curr >= vol_prev and vol_prev > 0),
             all_prog_exos=list(all_prog_exos.values()),
+            custom_exercises=prog.get("_custom_exercises", []),
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
@@ -559,9 +611,8 @@ def seance():
     if mode == "libre":
         libre_name = name or "Séance Libre"
         libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
-        exos_ctx = [_build_exo_context(hist, e, libre_name, s_act, is_extra=False,
-                                       prefill_weight=auto_prefill_weight)
-                    for e in libre_exos]
+        all_exos = [(e, False) for e in libre_exos]
+        exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, auto_prefill_weight)
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])
         exos_total = len(exos_ctx)
@@ -588,6 +639,7 @@ def seance():
             recup=_recup_status(hist, s_act),
             vol_curr=0, vol_prev=0, vol_ratio=0, vol_overload=False,
             all_prog_exos=list(all_prog_exos.values()),
+            custom_exercises=prog.get("_custom_exercises", []),
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
