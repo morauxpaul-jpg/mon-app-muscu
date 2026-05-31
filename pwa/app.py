@@ -142,6 +142,17 @@ def _require_login():
     return None
 
 
+@app.after_request
+def _security_headers(response):
+    """Durcissement défensif (additif, sans CSP pour ne pas casser les scripts
+    inline). Anti-clickjacking, anti-MIME-sniffing, referrer & permissions."""
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+    return response
+
+
 @app.context_processor
 def _inject_user():
     # is_premium : exposé à tous les templates pour gater des features (Coach
