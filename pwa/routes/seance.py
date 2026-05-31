@@ -111,9 +111,18 @@ def _find_done_session(date_iso, hist):
     return max(counts.items(), key=lambda kv: len(kv[1]))[0]
 
 
+def _norm(s):
+    """Normalise un nom (exercice/séance) pour comparer l'historique de façon
+    tolérante à la casse et aux espaces parasites. Côté LECTURE uniquement :
+    le stockage garde le nom tel que saisi. Résout les ruptures d'historique
+    type « Développé incliné barre » vs « developpé incliné barre »."""
+    return (s or "").strip().casefold()
+
+
 def _exo_curr_rows(hist, semaine, seance, exercice):
     return [r for r in hist
-            if r["Semaine"] == semaine and r["Séance"] == seance and r["Exercice"] == exercice]
+            if r["Semaine"] == semaine and _norm(r["Séance"]) == _norm(seance)
+            and _norm(r["Exercice"]) == _norm(exercice)]
 
 
 def _exo_completed(curr_rows):
@@ -125,8 +134,10 @@ def _exo_completed(curr_rows):
 
 
 def _match_base_variant(exercice, exo_base):
-    """True si `exercice` est le base name exact ou une variante parenthésée."""
-    return exercice == exo_base or exercice.startswith(exo_base + " (")
+    """True si `exercice` est le base name exact ou une variante parenthésée.
+    Comparaison insensible à la casse/espaces."""
+    ne, nb = _norm(exercice), _norm(exo_base)
+    return ne == nb or ne.startswith(nb + " (")
 
 
 def _extract_variant(exercice):
@@ -139,7 +150,7 @@ def _extract_variant(exercice):
 def _last_variant(hist, seance, exo_base):
     """Dernière variante utilisée pour cet exo dans cette séance."""
     matches = [r for r in hist
-               if r["Séance"] == seance and _match_base_variant(r["Exercice"], exo_base)]
+               if _norm(r["Séance"]) == _norm(seance) and _match_base_variant(r["Exercice"], exo_base)]
     if not matches:
         return "Standard"
     return _extract_variant(matches[-1]["Exercice"])
@@ -149,7 +160,7 @@ def _all_used_variants(hist, seance, exo_base):
     """Toutes les variantes distinctes utilisées pour ce base name dans cette séance,
     dans l'ordre d'apparition (dernière en premier pour la plus récente)."""
     matches = [r for r in hist
-               if r["Séance"] == seance and _match_base_variant(r["Exercice"], exo_base)]
+               if _norm(r["Séance"]) == _norm(seance) and _match_base_variant(r["Exercice"], exo_base)]
     seen = set()
     variants = []
     for r in reversed(matches):
@@ -162,7 +173,7 @@ def _all_used_variants(hist, seance, exo_base):
 
 def _best_record(hist, exo_final, is_bw):
     """Renvoie {best_weight, best_1rm, best_reps} pour la variante exacte."""
-    matches = [r for r in hist if r["Exercice"] == exo_final and r["Reps"] > 0]
+    matches = [r for r in hist if _norm(r["Exercice"]) == _norm(exo_final) and r["Reps"] > 0]
     if not matches:
         return None
     if is_bw:
@@ -174,12 +185,12 @@ def _best_record(hist, exo_final, is_bw):
 
 def _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2):
     """Semaines précédentes avec leurs séries, + semaines manquées."""
-    f_h = [r for r in hist if r["Exercice"] == exo_final and r["Séance"] == seance]
+    f_h = [r for r in hist if _norm(r["Exercice"]) == _norm(exo_final) and _norm(r["Séance"]) == _norm(seance)]
     hist_weeks_all = sorted({r["Semaine"] for r in f_h if r["Semaine"] < s_act})
     hist_weeks = [w for w in hist_weeks_all
                   if any(r["Semaine"] == w and r["Poids"] > 0 for r in f_h)]
     missed = {r["Semaine"] for r in hist
-              if r["Séance"] == seance and r["Exercice"] == "SESSION" and r["Semaine"] < s_act}
+              if _norm(r["Séance"]) == _norm(seance) and r["Exercice"] == "SESSION" and r["Semaine"] < s_act}
 
     if not hist_weeks:
         return []
@@ -228,12 +239,12 @@ def _last_session_sets(hist, exo_final, seance, s_act):
     sous forme de liste de dicts {reps, poids}. Utilisé pour le pré-remplissage
     des poids et l'affichage inline 'Dernière fois'."""
     matches = [r for r in hist
-               if r["Exercice"] == exo_final and r["Séance"] == seance
+               if _norm(r["Exercice"]) == _norm(exo_final) and _norm(r["Séance"]) == _norm(seance)
                and r["Semaine"] < s_act and r["Poids"] > 0]
     if not matches:
         # Chercher dans toutes les séances si pas trouvé dans la même séance
         matches = [r for r in hist
-                   if r["Exercice"] == exo_final
+                   if _norm(r["Exercice"]) == _norm(exo_final)
                    and r["Semaine"] < s_act and r["Poids"] > 0]
     if not matches:
         return []
@@ -378,22 +389,30 @@ def _reconstruct_history_exos(hist, seance_name, s_act, covered_finals, start_in
     Rendus en cartes normales (`is_extra=False`) : éditables et effaçables via le
     `reset-exo` existant, sans casser l'indexation du formulaire `remove-extra`
     (qui suppose les extras live en dernier bloc contigu)."""
+    # covered_finals est fourni déjà normalisé (casefold). On dédoublonne et
+    # compare aussi en normalisé pour ne pas afficher deux fois le même exo
+    # écrit avec une casse différente.
     seen = set()
     ordered_finals = []
     meta = {}
     for r in hist:
-        if r.get("Séance") != seance_name or r.get("Semaine") != s_act:
+        if _norm(r.get("Séance")) != _norm(seance_name) or r.get("Semaine") != s_act:
             continue
         exo_final = (r.get("Exercice") or "").strip()
         if not exo_final or exo_final == "SESSION" or exo_final.startswith("CARDIO:"):
             continue
-        if exo_final in covered_finals:
+        nf = _norm(exo_final)
+        if nf in covered_finals:
             continue
-        if exo_final not in seen:
-            seen.add(exo_final)
-            ordered_finals.append(exo_final)
+        if nf not in seen:
+            seen.add(nf)
+            ordered_finals.append(exo_final)  # garde la casse de la 1ère occurrence
             meta[exo_final] = {"muscle": r.get("Muscle") or "", "count": 0}
-        meta[exo_final]["count"] += 1
+        # Compte toutes les séries de la même variante (toutes casses)
+        for k in meta:
+            if _norm(k) == nf:
+                meta[k]["count"] += 1
+                break
 
     out = []
     for i, exo_final in enumerate(ordered_finals):
@@ -606,7 +625,7 @@ def seance():
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).
-        covered = {e["exo_final"] for e in exos_ctx}
+        covered = {_norm(e["exo_final"]) for e in exos_ctx}
         recon = _reconstruct_history_exos(hist, name, s_act, covered, len(exos_ctx))
         if recon:
             n_extras = len(extras)
@@ -671,7 +690,7 @@ def seance():
 
         # Reconstruit depuis l'historique : le brouillon libre est effacé au
         # finish, donc une séance libre passée n'a plus que son historique.
-        covered = {e["exo_final"] for e in exos_ctx}
+        covered = {_norm(e["exo_final"]) for e in exos_ctx}
         exos_ctx = exos_ctx + _reconstruct_history_exos(hist, libre_name, s_act, covered, len(exos_ctx))
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])
