@@ -203,6 +203,7 @@
 .day-missed { background: var(--danger-bg);  color: var(--danger); }
 .day-today  { background: var(--accent-bg);  color: var(--accent); border: 1px solid rgba(120,200,255,0.2); }
 .day-future { background: rgba(255,255,255,0.03); color: var(--text-disabled); }
+.day-makeup { background: var(--bg-elevated); color: var(--text-3); }
 
 /* ── Prochaine séance ── */
 .next-session-card {

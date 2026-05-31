@@ -69,7 +69,10 @@
     .cal-cell.missed { background: var(--danger-bg); color: var(--danger); }
     .cal-cell.upcoming { background: var(--accent-bg); color: var(--accent); }
     .cal-cell.rest { background: var(--bg-elevated); color:var(--text-disabled); }
+    .cal-cell.makeup { background: var(--bg-elevated); color: var(--text-3); }
     .cal-cell.is-today { border: 1px solid var(--accent); }
+    a.cal-cell { text-decoration:none; cursor:pointer; }
+    a.cal-cell:active { transform: scale(0.94); }
     .cal-rate { text-align:center; font-size:.85rem; margin-top:8px; color: var(--text-2); }
     .cal-rate b { color: var(--accent); }
 
@@ -102,7 +105,7 @@
       {% for week in cal_weeks %}
         {% for cell in week %}
           {% if cell %}
-            <div class="cal-cell {{ cell.status }}{% if cell.is_today %} is-today{% endif %}">{{ cell.day }}</div>
+            <a href="/seance?date={{ cell.date_iso }}" class="cal-cell {{ cell.status }}{% if cell.is_today %} is-today{% endif %}" title="{{ cell.date_iso }}">{{ cell.day }}</a>
           {% else %}
             <div class="cal-cell empty"></div>
           {% endif %}
@@ -110,6 +113,13 @@
       {% endfor %}
     </div>
     <div class="cal-rate">Assiduité : <b>{{ cal_rate }}%</b> des séances prévues</div>
+    <div class="cal-legend" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:8px; font-size:.7rem; color:var(--text-3);">
+      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--success); vertical-align:middle; margin-right:4px;"></span>Faite</span>
+      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--danger); vertical-align:middle; margin-right:4px;"></span>Manquée</span>
+      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--text-3); vertical-align:middle; margin-right:4px;"></span>Rattrapée</span>
+      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--accent); vertical-align:middle; margin-right:4px;"></span>À venir</span>
+    </div>
+    <div style="text-align:center; font-size:.7rem; color:var(--text-3); margin-top:4px;">Touche un jour pour voir la séance.</div>
   </div>
 
   {% if not has_data %}

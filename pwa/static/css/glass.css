@@ -360,6 +360,7 @@ input[type="url"], textarea, select {
 .day-missed { background: rgba(255,69,58,0.12); }
 .day-today  { background: rgba(120,200,255,0.12); border: 1px solid rgba(120,200,255,0.20); }
 .day-future { background: rgba(255,255,255,0.03); }
+.day-makeup { background: rgba(255,255,255,0.05); }
 
 .prev-table th,
 .prev-table td {
