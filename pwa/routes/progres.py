@@ -35,6 +35,25 @@ MUSCLES = {
 }
 FILTER_MUSCLES = list(MUSCLES.keys())
 
+MAKEUP_WINDOW_DAYS = 3  # même tolérance que l'accueil (routes/accueil.py)
+
+
+def _was_made_up(planned, d, today, planning_map, done_dates_by_seance, window=MAKEUP_WINDOW_DAYS):
+    """True si la séance `planned` planifiée le jour `d` (passé, non faite ce
+    jour-là) a été rattrapée dans les `window` jours suivants — sur un jour qui
+    n'est pas lui-même planifié pour cette même séance. Réplique la logique de
+    routes/accueil.py:_day_status pour cohérence accueil ↔ calendrier."""
+    for off in range(1, window + 1):
+        d2 = d + timedelta(days=off)
+        if d2 > today:
+            break
+        d2_name_fr = DAYS_FR[d2.weekday()]
+        if planning_map.get(d2_name_fr) == planned:
+            continue  # jour où la même séance est re-planifiée → pas un rattrapage
+        if planned in done_dates_by_seance.get(d2.isoformat(), set()):
+            return True
+    return False
+
 
 def _get_col(pct):
     if pct == 0:
@@ -450,6 +469,7 @@ def progres():
         floor_date = None
     hist_dates_done = set()
     hist_dates_missed = set()
+    done_dates_by_seance = {}  # date_iso -> set(noms de séances faites) pour le rattrapage
     for r in hist:
         d = r.get("Date", "")
         if not d:
@@ -458,6 +478,9 @@ def progres():
             hist_dates_missed.add(d)
         elif r["Poids"] > 0 or r["Reps"] > 0:
             hist_dates_done.add(d)
+            sn = r.get("Séance") or ""
+            if sn:
+                done_dates_by_seance.setdefault(d, set()).add(sn)
     # Les séances cardio (stockées hors de `hist` désormais) comptent aussi
     # comme des jours "done" dans le calendrier.
     for r in cardio_rows:
@@ -489,7 +512,15 @@ def progres():
             # Avant la création du compte : pas de "manquée".
             status = "rest"
         elif is_training_day:
-            status = "missed"
+            # Rattrapage : la séance planifiée a-t-elle été faite dans les
+            # jours suivants ? Si oui → neutre "makeup" (gris), comptée comme
+            # faite (pas pénalisant), au lieu de "missed" (rouge).
+            planned = planning_map.get(day_name_fr, "")
+            if planned and _was_made_up(planned, d, today, planning_map, done_dates_by_seance):
+                status = "makeup"
+                done_count += 1
+            else:
+                status = "missed"
         else:
             status = "rest"
 
@@ -501,6 +532,7 @@ def progres():
             "weekday": d.weekday(),
             "status": status,
             "is_today": d == today,
+            "date_iso": d_str,
         })
 
     # Build weeks (Mon=0 to Sun=6)

@@ -35,6 +35,8 @@
           {% set cell_class = 'day-missed' %}
         {% elif d.status == 'today' %}
           {% set cell_class = 'day-today' %}
+        {% elif d.status == 'makeup' %}
+          {% set cell_class = 'day-makeup' %}
         {% else %}
           {% set cell_class = 'day-future' %}
         {% endif %}

@@ -366,6 +366,48 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight):
     return out
 
 
+def _reconstruct_history_exos(hist, seance_name, s_act, covered_finals, start_index):
+    """Reconstruit les exercices présents dans l'historique d'une (séance, semaine)
+    mais absents de la liste déjà affichée (programme + extras live).
+
+    Indispensable pour consulter une vieille séance : les exos ajoutés à la volée
+    (extras) sont effacés du brouillon au `finish()`, et un exo retiré/renommé du
+    programme disparaîtrait sinon — alors que leurs séries restent dans `history`.
+    L'historique est la source de vérité de ce qui a réellement été fait.
+
+    Rendus en cartes normales (`is_extra=False`) : éditables et effaçables via le
+    `reset-exo` existant, sans casser l'indexation du formulaire `remove-extra`
+    (qui suppose les extras live en dernier bloc contigu)."""
+    seen = set()
+    ordered_finals = []
+    meta = {}
+    for r in hist:
+        if r.get("Séance") != seance_name or r.get("Semaine") != s_act:
+            continue
+        exo_final = (r.get("Exercice") or "").strip()
+        if not exo_final or exo_final == "SESSION" or exo_final.startswith("CARDIO:"):
+            continue
+        if exo_final in covered_finals:
+            continue
+        if exo_final not in seen:
+            seen.add(exo_final)
+            ordered_finals.append(exo_final)
+            meta[exo_final] = {"muscle": r.get("Muscle") or "", "count": 0}
+        meta[exo_final]["count"] += 1
+
+    out = []
+    for i, exo_final in enumerate(ordered_finals):
+        base = get_base_name(exo_final)
+        variant = _extract_variant(exo_final)
+        muscle = meta[exo_final]["muscle"] or auto_muscles(base) or "Autre"
+        exo_obj = {"name": base, "muscle": muscle, "sets": max(1, meta[exo_final]["count"])}
+        out.append(_build_exo_context(
+            hist, exo_obj, seance_name, s_act, is_extra=False,
+            prefill_weight=False, forced_variant=variant, exo_index=start_index + i,
+        ))
+    return out
+
+
 # ────────────────────────────────────────────────────────────────
 # Vue principale : choix ou édition
 # ────────────────────────────────────────────────────────────────
@@ -562,6 +604,19 @@ def seance():
 
         exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, auto_prefill_weight)
 
+        # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
+        # de la liste (extras effacés au finish, exo retiré du programme…).
+        covered = {e["exo_final"] for e in exos_ctx}
+        recon = _reconstruct_history_exos(hist, name, s_act, covered, len(exos_ctx))
+        if recon:
+            n_extras = len(extras)
+            if n_extras:
+                # Les extras live doivent rester le dernier bloc contigu
+                # (indexation du formulaire remove-extra).
+                exos_ctx = exos_ctx[:-n_extras] + recon + exos_ctx[-n_extras:]
+            else:
+                exos_ctx = exos_ctx + recon
+
         # Volume
         vol_curr = sum(r["Poids"] * r["Reps"] for r in hist
                        if r["Séance"] == name and r["Semaine"] == s_act)
@@ -613,6 +668,11 @@ def seance():
         libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
         all_exos = [(e, False) for e in libre_exos]
         exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, auto_prefill_weight)
+
+        # Reconstruit depuis l'historique : le brouillon libre est effacé au
+        # finish, donc une séance libre passée n'a plus que son historique.
+        covered = {e["exo_final"] for e in exos_ctx}
+        exos_ctx = exos_ctx + _reconstruct_history_exos(hist, libre_name, s_act, covered, len(exos_ctx))
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])
         exos_total = len(exos_ctx)

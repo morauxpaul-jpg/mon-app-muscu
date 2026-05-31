@@ -198,8 +198,12 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
                 if _is_real_perf(r) and r.get("Séance") == planned_seance
             )
             if d2_done:
-                return {"status": "done", "title": planned_seance,
-                        "badge": "RATTRAPÉE", "color": "#34c759", "makeup": True}
+                # Jour rattrapé : neutre (gris), pas vert. Seul le jour réellement
+                # entraîné est vert. Le streak n'est pas pénalisé car la détection
+                # de rattrapage (today_done / next_session) reste basée sur l'historique.
+                d2_label = DAYS_FR[d2.weekday()][:3].capitalize()
+                return {"status": "makeup", "title": planned_seance,
+                        "badge": f"RATTRAPÉE {d2_label}", "color": "#6b7280", "makeup": True}
 
     if day_date < today:
         return {"status": "missed", "title": "Manquée", "badge": "MANQUÉE", "color": "#ff453a"}
