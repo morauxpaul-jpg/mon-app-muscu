@@ -10,7 +10,7 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
 
 from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
-from core.muscu import auto_muscles
+from core.muscu import auto_muscles, get_base_name
 from core.limiter import limiter
 
 MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
@@ -52,6 +52,20 @@ def gestion():
     nb_archive = len(prog.get("_archive", []))
     custom_exercises = prog.get("_custom_exercises", [])
 
+    # Noms d'exercices distincts présents dans l'historique (hors marqueurs
+    # SESSION / cardio), avec le nombre de séries enregistrées pour chacun.
+    # Sert à l'outil « Renommer un exercice dans l'historique ».
+    exo_counts = {}
+    for r in hist:
+        ex = (r.get("Exercice") or "").strip()
+        if not ex or ex == "SESSION" or ex.startswith("CARDIO:"):
+            continue
+        exo_counts[ex] = exo_counts.get(ex, 0) + 1
+    hist_exercises = [
+        {"name": name, "count": cnt}
+        for name, cnt in sorted(exo_counts.items(), key=lambda kv: kv[0].lower())
+    ]
+
     return render_template(
         "gestion.html",
         active="plus",
@@ -61,6 +75,7 @@ def gestion():
         nb_hist=nb_hist,
         nb_archive=nb_archive,
         custom_exercises=custom_exercises,
+        hist_exercises=hist_exercises,
         muscle_list=MUSCLE_LIST,
         profil_options=PROFIL_OPTIONS,
     )
@@ -111,6 +126,38 @@ def delete_custom_exercise():
         prog["_custom_exercises"] = customs
         save_prog(prog)
     return redirect(url_for("gestion.gestion") + "?exo=deleted")
+
+
+@bp.route("/gestion/exercice/renommer", methods=["POST"])
+@limiter.limit("10 per minute")
+def rename_exercise_history():
+    """Renomme un exercice dans TOUT l'historique (match exact sur le nom).
+
+    Usage typique : j'ai loggé « Développé incliné (Barre) » alors que je
+    faisais en réalité du décliné — je renomme rétroactivement toutes ces
+    séries en « Développé décliné (Barre) ». Le match étant exact, les autres
+    variantes (ex. « Développé incliné » standard / haltères) restent intactes.
+    """
+    old = (request.form.get("old_name") or "").strip()
+    new = (request.form.get("new_name") or "").strip()
+    if not old or not new or old == new:
+        return redirect(url_for("gestion.gestion") + "?rename=noop")
+
+    hist = get_hist()
+    new_muscle = auto_muscles(get_base_name(new))
+    count = 0
+    for r in hist:
+        if (r.get("Exercice") or "").strip() == old:
+            r["Exercice"] = new
+            # Recalcule le muscle d'après le nouveau nom (sinon on garde l'ancien).
+            if new_muscle:
+                r["Muscle"] = new_muscle
+            count += 1
+
+    if count:
+        save_hist(hist)
+        return redirect(url_for("gestion.gestion") + f"?rename=ok&n={count}")
+    return redirect(url_for("gestion.gestion") + "?rename=none")
 
 
 @bp.route("/gestion/settings", methods=["POST"])

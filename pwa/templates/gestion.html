@@ -40,6 +40,12 @@
   {% if request.args.get('exo') == 'deleted' %}
     <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice supprimé.</div>
   {% endif %}
+  {% if request.args.get('rename') == 'ok' %}
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice renommé dans l'historique ({{ request.args.get('n', '?') }} série(s) mise(s) à jour).</div>
+  {% endif %}
+  {% if request.args.get('rename') == 'none' %}
+    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucune série trouvée pour cet exercice — rien n'a changé.</div>
+  {% endif %}
 
   <div class="card" x-data="{ open: false }">
     <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
@@ -82,6 +88,45 @@
         </form>
       </div>
     {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if hist_exercises %}
+  <div class="card" x-data="{ open: false, oldName: '', newName: '', confirm: false,
+        count() { const e = ({{ hist_exercises|tojson }}).find(x => x.name === this.oldName); return e ? e.count : 0; } }">
+    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Renommer un exercice (historique)</span>
+      <span x-text="open ? '−' : '+'"></span>
+    </h3>
+    <div x-show="open" x-transition.duration.200ms>
+      <p style="font-size:0.85rem; color:var(--text-dim);">Corrige rétroactivement un exercice mal nommé dans toutes tes séances passées (ex : tu as loggé « Développé incliné (Barre) » mais tu faisais du décliné). Le renommage est <b>exact</b> : les autres variantes (incliné standard, haltères…) ne sont pas touchées.</p>
+      <form method="post" action="/gestion/exercice/renommer">
+        <label class="field-label">Exercice à corriger</label>
+        <select name="old_name" class="field" x-model="oldName" required>
+          <option value="" disabled selected>Choisir un exercice…</option>
+          {% for exo in hist_exercises %}<option value="{{ exo.name }}">{{ exo.name }} ({{ exo.count }} série{{ 's' if exo.count > 1 else '' }})</option>{% endfor %}
+        </select>
+        <label class="field-label">Nouveau nom</label>
+        <input type="text" name="new_name" class="field" x-model="newName" required placeholder="Ex : Développé décliné (Barre)" list="hist-exo-names">
+        <datalist id="hist-exo-names">
+          {% for exo in hist_exercises %}<option value="{{ exo.name }}">{% endfor %}
+        </datalist>
+        <template x-if="oldName && newName && oldName !== newName">
+          <p style="font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+            <span x-text="count()"></span> série(s) de « <span x-text="oldName"></span> » deviendront « <span x-text="newName"></span> ».
+          </p>
+        </template>
+        <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+                x-show="!confirm" @click="confirm = true"
+                :disabled="!oldName || !newName || oldName === newName">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Renommer dans tout l'historique
+        </button>
+        <div x-show="confirm" x-cloak style="display:flex; gap:8px; margin-top:10px;">
+          <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
+          <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
+        </div>
+      </form>
+    </div>
   </div>
   {% endif %}
 

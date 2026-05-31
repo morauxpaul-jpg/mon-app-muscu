@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v73-2026-05-18-exo-bank-variant-fix";
+const CACHE_VERSION = "v74-2026-05-31-rename-exo-history";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
