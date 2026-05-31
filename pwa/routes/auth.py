@@ -20,7 +20,7 @@ import logging
 import os
 
 import jwt
-from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify, abort
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +132,12 @@ def logout():
 
 @bp.route("/auth/debug")
 def debug_env():
-    """Route temporaire : montre si les env vars sont bien lues côté serveur.
-    Ne révèle PAS les valeurs, uniquement présence + longueur + préfixe URL."""
+    """Diagnostic de config (présence/longueur des env vars, jamais les valeurs).
+    Réservé aux admins (ADMIN_EMAILS) — 404 sinon pour ne rien divulguer."""
+    email = (session.get("email") or "").strip().lower()
+    admins = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
+    if not email or email not in admins:
+        abort(404)
     url = _env("SUPABASE_URL")
     anon = _env("SUPABASE_ANON_KEY")
     jwt_s = _env("SUPABASE_JWT_SECRET")

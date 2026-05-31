@@ -46,7 +46,16 @@ limiter.init_app(app)
 
 # Secret_key : obligatoire pour signer le cookie de session Flask. Doit être
 # défini en prod via la variable d'env FLASK_SECRET_KEY sur Railway.
-app.secret_key = os.getenv("FLASK_SECRET_KEY") or "dev-insecure-change-me"
+_flask_secret = os.getenv("FLASK_SECRET_KEY")
+if not _flask_secret:
+    # En prod (2 workers gunicorn) une clé éphémère différente par worker
+    # casse les sessions de façon aléatoire. On log fort sans empêcher le
+    # boot (utile en dev local).
+    logger.critical(
+        "FLASK_SECRET_KEY absente — sessions instables en prod multi-worker. "
+        "Définis-la dans les variables d'environnement Railway."
+    )
+app.secret_key = _flask_secret or "dev-insecure-change-me"
 app.permanent_session_lifetime = timedelta(days=30)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -138,14 +147,10 @@ def _inject_user():
     # is_premium : exposé à tous les templates pour gater des features (Coach
     # IA, export, stats avancées…). Pour l'instant tout le monde est free,
     # donc is_premium = False — mais l'infra est prête.
-    premium = False
+    # is_vip est déjà résolu et caché en session par le before_request — on le
+    # réutilise au lieu de refaire un get_profile() en DB à chaque rendu de page.
     uid = session.get("user_id")
-    if uid:
-        try:
-            profile = core_db.get_profile(uid) or {}
-            premium = (profile.get("tier") or "free").strip().lower() == "vip"
-        except Exception:
-            premium = False
+    premium = bool(uid) and bool(session.get("is_vip", False))
     email = (session.get("email") or "").strip().lower()
     admin_emails = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
     return {

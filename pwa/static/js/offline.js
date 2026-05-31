@@ -179,6 +179,34 @@
     });
   }
 
+  // ── Purge du cache à la déconnexion ───────────────────────
+  // Sur un appareil partagé, les pages perso (/accueil, /seance) restent
+  // dans le Cache Storage du SW après logout. On les efface avant de partir,
+  // + la file offline et les clés de session locales.
+  function purgeOnLogout() {
+    try {
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.filter(function (k) { return k.indexOf("muscu-pwa-") === 0; })
+              .forEach(function (k) { caches.delete(k); });
+        });
+      }
+    } catch (e) {}
+    try {
+      localStorage.removeItem(QUEUE_KEY);
+      localStorage.removeItem("active_session");
+      localStorage.removeItem("pending_changelog");
+    } catch (e) {}
+  }
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!form || (form.getAttribute("action") || "") !== "/logout") return;
+    // On laisse le POST partir mais on purge d'abord (synchrone pour localStorage,
+    // best-effort pour le cache async qui aura le temps de s'exécuter).
+    purgeOnLogout();
+  }, true);
+
   // ── Init ──────────────────────────────────────────────────
   window.addEventListener("online", updateStatus);
   window.addEventListener("offline", updateStatus);
