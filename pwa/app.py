@@ -190,6 +190,12 @@ def plus():
     return render_template("plus.html", active="plus")
 
 
+@app.route("/plaques")
+def plaques():
+    # Calculateur de disques — 100% client-side, aucune donnée.
+    return render_template("plaques.html", active="plus")
+
+
 # ────────────────────────────────────────────────────────────────
 # Manifest et service worker servis depuis la racine pour scope /
 # ────────────────────────────────────────────────────────────────

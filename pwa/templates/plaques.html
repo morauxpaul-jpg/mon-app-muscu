@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Calcul de plaques · Muscu Tracker{% endblock %}
+
+{% block head_extra %}
+<style>
+  .plaque-tool { display:flex; flex-direction:column; gap:14px; }
+  .bar-btns { display:flex; gap:6px; flex-wrap:wrap; }
+  .bar-btn { flex:1; min-width:64px; padding:8px; border-radius:var(--radius-sm);
+             border:0.5px solid var(--border-default); background:var(--bg-elevated);
+             color:var(--text-2); font-size:0.82rem; cursor:pointer; }
+  .bar-btn.active { background:var(--accent); color:#fff; border-color:transparent; }
+  .plaque-result { text-align:center; }
+  .plaque-total { font-size:1.4rem; font-weight:600; color:var(--text-1); }
+  .plaque-sub { font-size:0.78rem; color:var(--text-3); margin-top:2px; }
+  /* Représentation de la barre */
+  .barbell { display:flex; align-items:center; justify-content:center; gap:2px;
+             margin:14px 0; min-height:90px; flex-wrap:nowrap; overflow-x:auto; padding:6px 0; }
+  .bar-rod { width:46px; height:6px; background:var(--text-3); flex-shrink:0; }
+  .disc { border-radius:3px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+          color:#fff; font-size:0.6rem; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+  .plaque-rows { display:flex; flex-direction:column; gap:6px; }
+  .plaque-row { display:flex; align-items:center; justify-content:space-between;
+                padding:8px 12px; background:var(--bg-elevated); border-radius:var(--radius-sm); }
+  .plaque-swatch { width:14px; height:14px; border-radius:3px; display:inline-block;
+                   vertical-align:middle; margin-right:8px; border:0.5px solid rgba(255,255,255,0.2); }
+  .plaque-warn { color:var(--warning); font-size:0.82rem; text-align:center; }
+  .plaque-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(72px,1fr)); gap:6px; }
+  .plaque-chip { padding:6px; border-radius:var(--radius-sm); border:0.5px solid var(--border-default);
+                 background:var(--bg-elevated); color:var(--text-3); font-size:0.78rem; cursor:pointer; }
+  .plaque-chip.on { color:var(--text-1); border-color:var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+  <a href="/seance" class="btn label-icon" style="display:inline-flex; margin-bottom:12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>Calcul de plaques</h1>
+  <p style="font-size:0.85rem; color:var(--text-dim); margin-top:-4px;">Combien de disques mettre de chaque côté pour atteindre ton poids cible.</p>
+
+  <div class="card plaque-tool"
+       x-data="plaqueCalc()" x-init="init()">
+
+    <div>
+      <label class="field-label">Poids de la barre</label>
+      <div class="bar-btns">
+        <template x-for="b in barOptions" :key="b">
+          <button type="button" class="bar-btn" :class="{ active: bar === b }" @click="bar = b" x-text="b + ' kg'"></button>
+        </template>
+      </div>
+    </div>
+
+    <div>
+      <label class="field-label">Poids cible (total)</label>
+      <input type="number" inputmode="decimal" min="0" step="0.5" class="field"
+             x-model.number="target" placeholder="Ex : 80">
+    </div>
+
+    <div>
+      <label class="field-label">Disques disponibles (par côté)</label>
+      <div class="plaque-grid">
+        <template x-for="p in allPlates" :key="p">
+          <button type="button" class="plaque-chip" :class="{ on: enabled.includes(p) }"
+                  @click="toggle(p)" x-text="p + ' kg'"></button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Représentation visuelle -->
+    <div class="barbell">
+      <div class="bar-rod"></div>
+      <template x-for="(d, i) in discs" :key="i">
+        <div class="disc"
+             :style="`width:${d.w}px; height:${d.h}px; background:${d.color};`"
+             x-text="d.label"></div>
+      </template>
+      <div class="bar-rod"></div>
+    </div>
+
+    <div class="plaque-result">
+      <div class="plaque-total" x-text="resultText"></div>
+      <div class="plaque-sub" x-show="perSide >= 0" x-text="`${perSide.toFixed(2).replace(/\\.00$/,'')} kg par côté`"></div>
+    </div>
+
+    <div class="plaque-rows" x-show="breakdown.length">
+      <template x-for="row in breakdown" :key="row.plate">
+        <div class="plaque-row">
+          <span><span class="plaque-swatch" :style="`background:${row.color}`"></span><span x-text="row.plate + ' kg'"></span></span>
+          <b x-text="'× ' + row.count"></b>
+        </div>
+      </template>
+    </div>
+
+    <div class="plaque-warn" x-show="remainder > 0.001"
+         x-text="`Pas atteignable exactement avec ces disques — reste ${remainder.toFixed(2).replace(/\\.00$/,'')} kg par côté.`"></div>
+    <div class="plaque-warn" x-show="perSide < 0">La cible est inférieure au poids de la barre.</div>
+  </div>
+
+  <div class="card" style="font-size:0.78rem; color:var(--text-dim);">
+    Astuce : les couleurs suivent le standard (rouge 25, bleu 20, jaune 15, vert 10, blanc 5…). Désactive un disque que tu n'as pas en salle.
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function plaqueCalc() {
+    return {
+      barOptions: [20, 15, 10, 0],
+      allPlates: [25, 20, 15, 10, 5, 2.5, 1.25, 1, 0.5],
+      colors: {
+        25: '#d92b2b', 20: '#2b6fd9', 15: '#e0a92b', 10: '#2faf4f',
+        5: '#e8e8e8', 2.5: '#1c1c1c', 1.25: '#9aa3ad', 1: '#6b7280', 0.5: '#4b5563'
+      },
+      bar: 20,
+      target: 60,
+      enabled: [25, 20, 15, 10, 5, 2.5, 1.25],
+      init() {
+        try {
+          var saved = JSON.parse(localStorage.getItem('plaque_prefs') || '{}');
+          if (typeof saved.bar === 'number') this.bar = saved.bar;
+          if (Array.isArray(saved.enabled) && saved.enabled.length) this.enabled = saved.enabled;
+        } catch (e) {}
+        this.$watch('bar', () => this.save());
+        this.$watch('enabled', () => this.save());
+      },
+      save() {
+        try { localStorage.setItem('plaque_prefs', JSON.stringify({ bar: this.bar, enabled: this.enabled })); } catch (e) {}
+      },
+      toggle(p) {
+        var i = this.enabled.indexOf(p);
+        if (i === -1) this.enabled = this.enabled.concat([p]);
+        else this.enabled = this.enabled.filter(x => x !== p);
+      },
+      get perSide() {
+        var t = parseFloat(this.target) || 0;
+        return (t - this.bar) / 2;
+      },
+      get _calc() {
+        var remaining = this.perSide;
+        var rows = [];
+        if (remaining < 0) return { rows: [], remainder: 0 };
+        var plates = this.allPlates.filter(p => this.enabled.includes(p)).sort((a, b) => b - a);
+        for (var k = 0; k < plates.length; k++) {
+          var p = plates[k];
+          var n = Math.floor((remaining + 1e-6) / p);
+          if (n > 0) {
+            rows.push({ plate: p, count: n, color: this.colors[p] || '#888' });
+            remaining -= n * p;
+          }
+        }
+        return { rows: rows, remainder: Math.max(0, remaining) };
+      },
+      get breakdown() { return this._calc.rows; },
+      get remainder() { return this._calc.remainder; },
+      get discs() {
+        var out = [];
+        this._calc.rows.forEach(r => {
+          for (var i = 0; i < r.count; i++) {
+            // taille visuelle proportionnelle au poids
+            var w = Math.max(10, Math.min(26, 8 + r.plate));
+            var h = Math.max(34, Math.min(86, 30 + r.plate * 2.2));
+            out.push({ w: w, h: h, color: r.color, label: r.plate });
+          }
+        });
+        return out;
+      },
+      get resultText() {
+        if (this.perSide < 0) return '—';
+        var loaded = this.bar + this._calc.rows.reduce((s, r) => s + r.plate * r.count * 2, 0);
+        return loaded.toFixed(2).replace(/\.00$/, '') + ' kg';
+      },
+    };
+  }
+</script>
+{% endblock %}
