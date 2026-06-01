@@ -65,6 +65,24 @@
       </div>
     </div>
 
+    <div>
+      <label class="muscle-check" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-2);">
+        <input type="checkbox" x-model="limitMode">
+        <span>Je limite mon stock de disques (matériel maison)</span>
+      </label>
+      <div x-show="limitMode" x-transition.duration.150ms style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+        <div style="font-size:0.72rem; color:var(--text-3);">Combien de disques de chaque tu possèdes <b>par côté</b> (vide = illimité) :</div>
+        <template x-for="p in allPlates.filter(x => enabled.includes(x))" :key="'q'+p">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <span style="font-size:0.82rem; color:var(--text-2);"><span class="plaque-swatch" :style="`background:${colors[p] || '#888'}`"></span><span x-text="p + ' kg'"></span></span>
+            <input type="number" inputmode="numeric" min="0" step="1" placeholder="∞"
+                   style="width:80px; text-align:center;" class="field"
+                   :value="counts[p] ?? ''" @input="setCount(p, $event.target.value)">
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- Représentation visuelle -->
     <div class="barbell">
       <div class="bar-rod"></div>
@@ -78,7 +96,7 @@
 
     <div class="plaque-result">
       <div class="plaque-total" x-text="resultText"></div>
-      <div class="plaque-sub" x-show="perSide >= 0" x-text="`${perSide.toFixed(2).replace(/\\.00$/,'')} kg par côté`"></div>
+      <div class="plaque-sub" x-show="perSide >= 0" x-text="`${perSide.toFixed(2).replace(/\.00$/,'')} kg par côté`"></div>
     </div>
 
     <div class="plaque-rows" x-show="breakdown.length">
@@ -91,7 +109,7 @@
     </div>
 
     <div class="plaque-warn" x-show="remainder > 0.001"
-         x-text="`Pas atteignable exactement avec ces disques — reste ${remainder.toFixed(2).replace(/\\.00$/,'')} kg par côté.`"></div>
+         x-text="`Pas atteignable exactement avec ces disques — reste ${remainder.toFixed(2).replace(/\.00$/,'')} kg par côté.`"></div>
     <div class="plaque-warn" x-show="perSide < 0">La cible est inférieure au poids de la barre.</div>
   </div>
 
@@ -113,22 +131,43 @@
       bar: 20,
       target: 60,
       enabled: [25, 20, 15, 10, 5, 2.5, 1.25],
+      limitMode: false,
+      counts: {},  // { plate: nombre dispo par côté } ; absent/null = illimité
       init() {
         try {
           var saved = JSON.parse(localStorage.getItem('plaque_prefs') || '{}');
           if (typeof saved.bar === 'number') this.bar = saved.bar;
           if (Array.isArray(saved.enabled) && saved.enabled.length) this.enabled = saved.enabled;
+          if (saved.counts && typeof saved.counts === 'object') this.counts = saved.counts;
+          if (typeof saved.limitMode === 'boolean') this.limitMode = saved.limitMode;
         } catch (e) {}
         this.$watch('bar', () => this.save());
         this.$watch('enabled', () => this.save());
+        this.$watch('counts', () => this.save());
+        this.$watch('limitMode', () => this.save());
       },
       save() {
-        try { localStorage.setItem('plaque_prefs', JSON.stringify({ bar: this.bar, enabled: this.enabled })); } catch (e) {}
+        try { localStorage.setItem('plaque_prefs', JSON.stringify({
+          bar: this.bar, enabled: this.enabled, counts: this.counts, limitMode: this.limitMode
+        })); } catch (e) {}
       },
       toggle(p) {
         var i = this.enabled.indexOf(p);
         if (i === -1) this.enabled = this.enabled.concat([p]);
         else this.enabled = this.enabled.filter(x => x !== p);
+      },
+      setCount(p, val) {
+        var v = String(val).trim();
+        // copie pour déclencher la réactivité du $watch
+        var next = Object.assign({}, this.counts);
+        if (v === '' || isNaN(parseInt(v, 10)) || parseInt(v, 10) < 0) delete next[p];
+        else next[p] = parseInt(v, 10);
+        this.counts = next;
+      },
+      avail(p) {
+        if (!this.limitMode) return Infinity;
+        var c = this.counts[p];
+        return (c === undefined || c === null || c === '') ? Infinity : c;
       },
       get perSide() {
         var t = parseFloat(this.target) || 0;
@@ -142,6 +181,7 @@
         for (var k = 0; k < plates.length; k++) {
           var p = plates[k];
           var n = Math.floor((remaining + 1e-6) / p);
+          n = Math.min(n, this.avail(p));  // respecte le stock dispo par côté
           if (n > 0) {
             rows.push({ plate: p, count: n, color: this.colors[p] || '#888' });
             remaining -= n * p;
