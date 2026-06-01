@@ -14,7 +14,11 @@ import os
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-_storage_uri = (os.getenv("REDIS_URL") or "").strip() or "memory://"
+# On n'active Redis que si la valeur ressemble à une vraie URL Redis. Toute
+# autre valeur (vide, placeholder, typo) retombe sur memory:// → impossible de
+# casser le démarrage avec une variable mal renseignée.
+_raw_redis = (os.getenv("REDIS_URL") or "").strip().strip('"').strip("'")
+_storage_uri = _raw_redis if _raw_redis.startswith(("redis://", "rediss://")) else "memory://"
 
 limiter = Limiter(
     key_func=get_remote_address,
