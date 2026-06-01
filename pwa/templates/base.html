@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Muscu Tracker">
+  <meta name="csrf-token" content="{{ csrf_token|default('') }}">
   <title>{% block title %}Muscu Tracker{% endblock %}</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
@@ -20,6 +21,45 @@
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/tutorial.css">
   <script defer src="/static/js/alpine.min.js"></script>
+  <script>
+  // ── Protection CSRF côté client (s'exécute avant offline.js / Alpine) ──
+  // Injecte le token dans tous les form POST + l'en-tête X-CSRFToken sur les
+  // fetch same-origin mutants. Aucun template à modifier individuellement.
+  (function () {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    var token = m ? (m.getAttribute('content') || '') : '';
+    if (!token) return;
+    // 1) Formulaires POST : injecte un champ caché _csrf à la soumission.
+    document.addEventListener('submit', function (e) {
+      var f = e.target;
+      if (!f || (f.method || '').toLowerCase() !== 'post') return;
+      if (!f.querySelector('input[name="_csrf"]')) {
+        var i = document.createElement('input');
+        i.type = 'hidden'; i.name = '_csrf'; i.value = token;
+        f.appendChild(i);
+      }
+    }, true);
+    // 2) fetch() same-origin mutant : ajoute l'en-tête X-CSRFToken.
+    var _fetch = window.fetch;
+    if (_fetch) {
+      window.fetch = function (input, init) {
+        init = init || {};
+        var method = (init.method
+          || (input && typeof input !== 'string' && input.method)
+          || 'GET').toUpperCase();
+        var url = (typeof input === 'string') ? input : (input && input.url) || '';
+        var sameOrigin = url.indexOf('http') !== 0 || url.indexOf(window.location.origin) === 0;
+        if (sameOrigin && ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) !== -1) {
+          var h = new Headers(init.headers
+            || (input && typeof input !== 'string' && input.headers) || {});
+          if (!h.has('X-CSRFToken')) h.set('X-CSRFToken', token);
+          init.headers = h;
+        }
+        return _fetch.call(this, input, init);
+      };
+    }
+  })();
+  </script>
   {% block head_extra %}{% endblock %}
 </head>
 <body>

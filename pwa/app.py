@@ -8,9 +8,10 @@ ce `user_id` dans `flask.g`.
 """
 import logging
 import os
+import secrets
 from datetime import timedelta
 
-from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request
+from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request, abort
 
 from core.limiter import limiter
 
@@ -142,6 +143,58 @@ def _require_login():
     return None
 
 
+# ────────────────────────────────────────────────────────────────
+# Protection CSRF — token par session, auto-injecté côté client.
+# Kill-switch : poser CSRF_DISABLED=1 dans l'env désactive tout (filet de
+# sécurité si un cas non prévu bloquait des actions en prod).
+# ────────────────────────────────────────────────────────────────
+_CSRF_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# /auth/session = handshake de login (pas encore de session Flask, déjà protégé
+# par la vérification du JWT Supabase). Exempté.
+_CSRF_EXEMPT_PATHS = {"/auth/session"}
+
+
+def _csrf_enabled() -> bool:
+    return os.getenv("CSRF_DISABLED", "").strip().lower() not in ("1", "true", "yes", "on")
+
+
+def _get_or_create_csrf() -> str:
+    tok = session.get("_csrf")
+    if not tok:
+        tok = secrets.token_urlsafe(32)
+        session["_csrf"] = tok
+    return tok
+
+
+@app.before_request
+def _csrf_protect():
+    if not _csrf_enabled():
+        return None
+    if request.method not in _CSRF_METHODS:
+        return None
+    path = request.path or "/"
+    if path.startswith("/static/") or path in _CSRF_EXEMPT_PATHS:
+        return None
+    # Les requêtes non authentifiées mutantes sont soit exemptées (login),
+    # soit déjà bloquées par l'auth gate — pas de token à vérifier ici.
+    if not session.get("user_id"):
+        return None
+    expected = session.get("_csrf")
+    if not expected:
+        # Session antérieure au déploiement CSRF : on initialise sans bloquer
+        # cette première action (évite de verrouiller un user déjà connecté).
+        _get_or_create_csrf()
+        return None
+    sent = (request.form.get("_csrf")
+            or request.headers.get("X-CSRFToken")
+            or request.headers.get("X-CSRF-Token")
+            or "")
+    if not sent or not secrets.compare_digest(str(sent), str(expected)):
+        logger.warning("CSRF refusé sur %s (sent=%s)", path, bool(sent))
+        abort(400)
+    return None
+
+
 @app.after_request
 def _security_headers(response):
     """Durcissement défensif (additif, sans CSP pour ne pas casser les scripts
@@ -170,6 +223,7 @@ def _inject_user():
         "is_premium": premium,
         "is_vip": premium,
         "is_admin": bool(email) and email in admin_emails,
+        "csrf_token": _get_or_create_csrf() if uid else "",
     }
 
 
@@ -214,6 +268,15 @@ def service_worker():
 # ────────────────────────────────────────────────────────────────
 # Error handlers globaux — jamais de trace Flask blanche pour l'user.
 # ────────────────────────────────────────────────────────────────
+@app.errorhandler(400)
+def handle_400(e):
+    return render_template(
+        "error.html",
+        code=400,
+        message="Requête invalide ou expirée (jeton de sécurité). Recharge la page et réessaie.",
+    ), 400
+
+
 @app.errorhandler(404)
 def handle_404(e):
     return render_template(
