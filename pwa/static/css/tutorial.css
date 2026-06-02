@@ -1,126 +1,153 @@
-/* Tutorial overlay - spotlight style */
+/* ──────────────────────────────────────────────────────────────
+   Tutoriel — spotlight + bulle. Aligné sur le design system de l'app
+   (tokens, glass, boutons). Moteur : static/js/tuto-engine.js
+   ────────────────────────────────────────────────────────────── */
+
 #tuto-overlay {
   position: fixed;
   inset: 0;
   z-index: 9998;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 #tuto-overlay.visible { opacity: 1; pointer-events: auto; }
 
+/* Voile sombre découpé autour de la cible */
 #tuto-mask {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  transition: clip-path 0.35s ease;
+  background: rgba(5, 8, 16, 0.82);
+  -webkit-backdrop-filter: blur(1.5px);
+  backdrop-filter: blur(1.5px);
+  transition: clip-path 0.3s ease;
   pointer-events: auto;
 }
 
+/* Halo autour de l'élément mis en avant */
 #tuto-spot {
   position: absolute;
   border: 2px solid var(--accent);
-  border-radius: 12px;
-  box-shadow: 0 0 20px var(--accent), 0 0 40px rgba(88, 204, 255, 0.4);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 0 0 3px rgba(120, 200, 255, 0.18),
+              0 0 22px rgba(120, 200, 255, 0.45);
   pointer-events: none;
-  transition: all 0.35s ease;
+  transition: all 0.3s ease;
 }
 #tuto-spot.hidden { opacity: 0; }
+#tuto-spot::after {
+  /* pulsation discrète pour attirer l'œil */
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--accent);
+  animation: tutoPulse 1.8s ease-out infinite;
+}
+@keyframes tutoPulse {
+  0%   { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.06); }
+}
 
+/* Bulle d'explication — reprend le style "glass" des cartes de l'app */
 #tuto-bubble {
   position: absolute;
-  max-width: 320px;
-  width: calc(100vw - 32px);
-  background: rgba(11,20,40,0.85);
-  backdrop-filter: var(--blur-glass);
-  -webkit-backdrop-filter: var(--blur-glass);
-  border: 2px solid var(--accent);
-  border-radius: var(--radius-glass);
-  padding: 16px 18px 14px;
-  color: #fff;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(88, 204, 255, 0.3);
+  max-width: 340px;
+  width: calc(100vw - 24px);
+  background: var(--bg-surface, rgba(16, 18, 28, 0.92));
+  background-image: linear-gradient(180deg, rgba(120,200,255,0.06), transparent 60%);
+  -webkit-backdrop-filter: saturate(160%) blur(20px);
+  backdrop-filter: saturate(160%) blur(20px);
+  border: 1px solid var(--border-default, rgba(255,255,255,0.12));
+  border-top: 2px solid var(--accent);
+  border-radius: var(--radius-lg, 18px);
+  padding: 18px 16px 14px;
+  color: var(--text-1, #fff);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   pointer-events: auto;
-  transition: all 0.35s ease;
-  animation: tutoFadeIn 0.4s ease;
+  transition: left 0.28s ease, top 0.28s ease;
+  animation: tutoBubbleIn 0.3s ease;
 }
-@keyframes tutoFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+@keyframes tutoBubbleIn {
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 #tuto-bubble h4 {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
-  color: var(--accent);
-  padding-right: 56px;
+  margin: 0 0 8px;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-1, #fff);
+  padding-right: 64px;
+  letter-spacing: 0.2px;
 }
 #tuto-bubble p {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 0.9rem;
-  line-height: 1.4;
-  color: #E0EAF5;
+  line-height: 1.5;
+  color: var(--text-2, #c8d2e0);
 }
 
+/* Bouton "Passer" — discret, même langage que les boutons app */
 #tuto-skip {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
-  color: #aab;
-  font-size: 0.82rem;
+  top: 10px;
+  right: 10px;
+  background: var(--bg-elevated, rgba(255,255,255,0.06));
+  border: 1px solid var(--border-default, rgba(255,255,255,0.12));
+  border-radius: var(--radius-pill, 999px);
+  color: var(--text-3, #9aa6b6);
+  font-size: 0.75rem;
   cursor: pointer;
-  padding: 6px 10px;
-  min-width: 36px;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
+  padding: 5px 10px;
+  line-height: 1;
+  transition: color 0.15s ease, background 0.15s ease;
 }
-#tuto-skip:hover, #tuto-skip:active { color: #fff; background: rgba(255,255,255,0.15); }
+#tuto-skip:hover, #tuto-skip:active {
+  color: var(--text-1, #fff);
+  background: rgba(255,255,255,0.14);
+}
 
 .tuto-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 10px;
 }
-.tuto-dots {
-  display: flex;
-  gap: 5px;
-  flex: 1;
-}
+.tuto-dots { display: flex; gap: 6px; flex: 1; }
 .tuto-dot {
-  width: 7px;
-  height: 7px;
+  width: 7px; height: 7px;
   border-radius: 50%;
-  background: #2a3a55;
+  background: var(--border-strong, #2a3a55);
+  transition: background 0.2s ease, transform 0.2s ease;
 }
-.tuto-dot.active { background: var(--accent); }
+.tuto-dot.active {
+  background: var(--accent);
+  transform: scale(1.25);
+}
 
-.tuto-btns { display: flex; gap: 6px; }
+.tuto-btns { display: flex; gap: 8px; }
 .tuto-btn {
-  background: transparent;
-  border: 1px solid #2a3a55;
-  color: #cfd8e3;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.82rem;
+  background: var(--bg-elevated, rgba(255,255,255,0.06));
+  border: 1px solid var(--border-default, rgba(255,255,255,0.14));
+  color: var(--text-2, #cfd8e3);
+  padding: 8px 14px;
+  border-radius: var(--radius-md, 10px);
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
   font-family: inherit;
+  transition: all 0.15s ease;
 }
-.tuto-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text-1); }
-.tuto-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.tuto-btn:hover { border-color: var(--accent); color: var(--text-1, #fff); }
 .tuto-btn.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  font-weight: 500;
 }
+.tuto-btn.primary:hover { filter: brightness(1.08); }
 
+/* Bulle centrée (intro / fin) */
 #tuto-bubble.center {
   left: 50% !important;
   top: 50% !important;
@@ -128,3 +155,10 @@
   text-align: center;
 }
 #tuto-bubble.center h4 { padding-right: 0; }
+#tuto-bubble.center .tuto-actions { justify-content: center; }
+#tuto-bubble.center .tuto-dots { flex: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  #tuto-spot::after { animation: none; }
+  #tuto-bubble { animation: none; }
+}
