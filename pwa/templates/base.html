@@ -64,6 +64,7 @@
 </head>
 <body>
   {% include "_icons.html" ignore missing %}
+  <a href="#main-content" class="skip-link">Aller au contenu</a>
   {% if is_authenticated %}
   <div class="topbar">
     <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg>{{ current_user_email }}{% if is_vip %}<span class="badge-pro" style="margin-left:8px;">PRO</span>{% endif %}</span>
@@ -73,15 +74,15 @@
   </div>
   {% endif %}
 
-  <main class="app page-fade">
+  <main id="main-content" class="app page-fade">
     {% block content %}{% endblock %}
   </main>
 
-  <nav class="bottom-nav" data-tuto="welcome">
-    <a href="/accueil" data-tuto="dashboard" class="{% if active == 'accueil' %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#home"/></svg>Accueil</a>
-    <a href="/seance"  data-tuto="seance"    class="{% if active == 'seance'  %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#dumbbell"/></svg>Séance</a>
-    <a href="/progres" data-tuto="progres"   class="{% if active == 'progres' %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#chart-line"/></svg>Progrès</a>
-    <a href="/plus"    data-tuto="plus"      class="{% if active == 'plus'    %}active{% endif %}"><svg class="icon nav-icon"><use href="/static/img/icons.svg#grid"/></svg>Plus</a>
+  <nav class="bottom-nav" data-tuto="welcome" aria-label="Navigation principale">
+    <a href="/accueil" data-tuto="dashboard" class="{% if active == 'accueil' %}active{% endif %}" {% if active == 'accueil' %}aria-current="page"{% endif %}><svg class="icon nav-icon" aria-hidden="true"><use href="/static/img/icons.svg#home"/></svg>Accueil</a>
+    <a href="/seance"  data-tuto="seance"    class="{% if active == 'seance'  %}active{% endif %}" {% if active == 'seance' %}aria-current="page"{% endif %}><svg class="icon nav-icon" aria-hidden="true"><use href="/static/img/icons.svg#dumbbell"/></svg>Séance</a>
+    <a href="/progres" data-tuto="progres"   class="{% if active == 'progres' %}active{% endif %}" {% if active == 'progres' %}aria-current="page"{% endif %}><svg class="icon nav-icon" aria-hidden="true"><use href="/static/img/icons.svg#chart-line"/></svg>Progrès</a>
+    <a href="/plus"    data-tuto="plus"      class="{% if active == 'plus'    %}active{% endif %}" {% if active == 'plus' %}aria-current="page"{% endif %}><svg class="icon nav-icon" aria-hidden="true"><use href="/static/img/icons.svg#grid"/></svg>Plus</a>
   </nav>
 
   <script src="/static/js/sw-register.js"></script>
