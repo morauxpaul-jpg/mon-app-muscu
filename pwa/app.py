@@ -195,44 +195,68 @@ def _csrf_protect():
     return None
 
 
-# Content-Security-Policy.
-# L'app utilise massivement du style inline (~700), des handlers onclick et des
-# blocs <script> inline → 'unsafe-inline'/'unsafe-eval' sont nécessaires pour
-# ne rien casser. On verrouille en revanche les directives à fort impact et
-# faible risque : default/connect en self, frame-ancestors (anti-clickjacking),
-# base-uri, form-action, object-src none. Plotly (CDN) est autorisé en script.
+# Content-Security-Policy — stratégie en deux couches (décidée après audit du
+# code : ~700 styles inline, handlers onclick, scripts inline, + dépendances
+# externes Google Fonts, jsDelivr/Supabase sur le login, Plotly).
 #
-# Déploiement prudent : par défaut en **Report-Only** (n'bloque RIEN, signale
-# seulement). Passe CSP_ENFORCE=1 pour activer le blocage quand on est sûr.
-# CSP_DISABLED=1 retire l'en-tête entièrement.
-_CSP = (
-    "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plot.ly; "
-    "style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data: blob:; "
-    "font-src 'self' data:; "
-    "connect-src 'self' https://cdn.plot.ly; "
+# Couche 1 — TOUJOURS bloquante (_CSP_ENFORCED) : uniquement les directives
+#   prouvées sans impact sur les ressources réellement chargées. Elles ne
+#   gouvernent ni les scripts, ni les styles, ni les CDN → impossible de casser
+#   l'app, tout en bloquant clickjacking, injection de <base>, exfiltration de
+#   formulaire vers un tiers, et plugins.
+# Couche 2 — Report-Only (_CSP_REPORT) : politique complète, corrigée avec les
+#   vraies dépendances (jsDelivr pour supabase-js, Google Fonts, Plotly, le
+#   domaine Supabase pour connect-src). N'bloque rien ; sert de base pour un
+#   futur durcissement total via CSP_ENFORCE=1. CSP_DISABLED=1 retire tout.
+_CSP_ENFORCED = (
     "frame-ancestors 'self'; "
     "base-uri 'self'; "
-    "form-action 'self'; "
+    "form-action 'self' https://accounts.google.com; "
     "object-src 'none'"
 )
+
+
+def _csp_report_policy() -> str:
+    # Domaine Supabase autorisé en connect-src (auth/OAuth) — lu depuis l'env.
+    supa = ""
+    try:
+        supa = core_db._env("SUPABASE_URL")
+    except Exception:
+        supa = ""
+    connect_extra = f" {supa}" if supa else ""
+    return (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plot.ly https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self' data: blob:; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        f"connect-src 'self' https://cdn.plot.ly https://cdn.jsdelivr.net{connect_extra}; "
+        "frame-ancestors 'self'; "
+        "base-uri 'self'; "
+        "form-action 'self' https://accounts.google.com; "
+        "object-src 'none'"
+    )
 
 
 @app.after_request
 def _security_headers(response):
     """Durcissement défensif. Anti-clickjacking, anti-MIME-sniffing, referrer,
-    permissions, et CSP (report-only par défaut)."""
+    permissions, et CSP (couche bloquante sûre + couche report-only complète)."""
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
 
-    csp_off = os.getenv("CSP_DISABLED", "").strip().lower() in ("1", "true", "yes", "on")
-    if not csp_off:
-        enforce = os.getenv("CSP_ENFORCE", "").strip().lower() in ("1", "true", "yes", "on")
-        header = "Content-Security-Policy" if enforce else "Content-Security-Policy-Report-Only"
-        response.headers.setdefault(header, _CSP)
+    if os.getenv("CSP_DISABLED", "").strip().lower() in ("1", "true", "yes", "on"):
+        return response
+
+    if os.getenv("CSP_ENFORCE", "").strip().lower() in ("1", "true", "yes", "on"):
+        # Durcissement total demandé explicitement : politique complète bloquante.
+        response.headers.setdefault("Content-Security-Policy", _csp_report_policy())
+    else:
+        # Par défaut : couche sûre bloquante + politique complète en observation.
+        response.headers.setdefault("Content-Security-Policy", _CSP_ENFORCED)
+        response.headers.setdefault("Content-Security-Policy-Report-Only", _csp_report_policy())
     return response
 
 
