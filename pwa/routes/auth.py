@@ -143,6 +143,13 @@ def debug_env():
     jwt_s = _env("SUPABASE_JWT_SECRET")
     svc = _env("SUPABASE_SERVICE_ROLE_KEY")
     fsk = _env("FLASK_SECRET_KEY")
+    # Backend du rate-limiter : 'redis' si REDIS_URL est une vraie URL résolue,
+    # sinon 'memory'. On n'expose JAMAIS l'URL (mot de passe) — juste le type.
+    try:
+        from core.limiter import _storage_uri as _rl
+        rl_backend = "redis" if str(_rl).startswith(("redis://", "rediss://")) else "memory"
+    except Exception:
+        rl_backend = "unknown"
     return jsonify({
         "SUPABASE_URL_present": bool(url),
         "SUPABASE_URL_prefix": url[:30] if url else "",
@@ -154,4 +161,6 @@ def debug_env():
         "SUPABASE_SERVICE_ROLE_KEY_present": bool(svc),
         "SUPABASE_SERVICE_ROLE_KEY_len": len(svc),
         "FLASK_SECRET_KEY_present": bool(fsk),
+        "RATE_LIMIT_BACKEND": rl_backend,
+        "REDIS_URL_present": bool(_env("REDIS_URL")),
     })
