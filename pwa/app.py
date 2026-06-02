@@ -195,14 +195,44 @@ def _csrf_protect():
     return None
 
 
+# Content-Security-Policy.
+# L'app utilise massivement du style inline (~700), des handlers onclick et des
+# blocs <script> inline → 'unsafe-inline'/'unsafe-eval' sont nécessaires pour
+# ne rien casser. On verrouille en revanche les directives à fort impact et
+# faible risque : default/connect en self, frame-ancestors (anti-clickjacking),
+# base-uri, form-action, object-src none. Plotly (CDN) est autorisé en script.
+#
+# Déploiement prudent : par défaut en **Report-Only** (n'bloque RIEN, signale
+# seulement). Passe CSP_ENFORCE=1 pour activer le blocage quand on est sûr.
+# CSP_DISABLED=1 retire l'en-tête entièrement.
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plot.ly; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "font-src 'self' data:; "
+    "connect-src 'self' https://cdn.plot.ly; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "object-src 'none'"
+)
+
+
 @app.after_request
 def _security_headers(response):
-    """Durcissement défensif (additif, sans CSP pour ne pas casser les scripts
-    inline). Anti-clickjacking, anti-MIME-sniffing, referrer & permissions."""
+    """Durcissement défensif. Anti-clickjacking, anti-MIME-sniffing, referrer,
+    permissions, et CSP (report-only par défaut)."""
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+
+    csp_off = os.getenv("CSP_DISABLED", "").strip().lower() in ("1", "true", "yes", "on")
+    if not csp_off:
+        enforce = os.getenv("CSP_ENFORCE", "").strip().lower() in ("1", "true", "yes", "on")
+        header = "Content-Security-Policy" if enforce else "Content-Security-Policy-Report-Only"
+        response.headers.setdefault(header, _CSP)
     return response
 
 
