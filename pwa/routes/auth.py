@@ -134,6 +134,9 @@ def logout():
 def debug_env():
     """Diagnostic de config (présence/longueur des env vars, jamais les valeurs).
     Réservé aux admins (ADMIN_EMAILS) — 404 sinon pour ne rien divulguer."""
+    # Désactivé par défaut (diagnostic terminé). Réactivable via DEBUG_ENDPOINT=1.
+    if os.getenv("DEBUG_ENDPOINT", "").strip().lower() not in ("1", "true", "yes", "on"):
+        abort(404)
     email = (session.get("email") or "").strip().lower()
     admins = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
     if not email or email not in admins:

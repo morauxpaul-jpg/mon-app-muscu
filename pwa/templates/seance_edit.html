@@ -343,6 +343,7 @@
                   <th>Sér.</th>
                   <th>Reps</th>
                   <th x-show="showWeight">Poids</th>
+                  <th title="Difficulté ressentie (RPE 6 = facile, 10 = échec)">RPE</th>
                   <th>Remarque</th>
                   <th></th>
                 </tr>
@@ -353,6 +354,14 @@
                     <td x-text="i + 1"></td>
                     <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @input="onSetFilled(i)"></td>
                     <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
+                    <td>
+                      <select x-model="s.rpe" class="cell-input" style="padding:6px 2px;">
+                        <option value="">—</option>
+                        <template x-for="r in rpeOptions" :key="r">
+                          <option :value="r" x-text="r"></option>
+                        </template>
+                      </select>
+                    </td>
                     <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                     <td>
                       <button type="button" class="mini-btn" @click="removeSet(i)" title="Retirer">×</button>
@@ -383,7 +392,7 @@
             <input type="hidden" name="muscle" value="{{ exo.muscle }}">
             <input type="hidden" name="is_bw" :value="showWeight ? '0' : '1'">
             <input type="hidden" name="variant" :value="variant">
-            <input type="hidden" name="sets_json" :value="JSON.stringify(sets)">
+            <input type="hidden" name="sets_json" :value="serializedSets()">
             <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer</button>
           </form>
           <form method="post" action="/seance/skip-exo"
@@ -1183,13 +1192,31 @@
       isBwBase: data.is_bw_base || false,
       get showWeight() { return !this.isBwBase || this.variant === 'Lesté'; },
       restSeconds: data.rest_seconds || 90,
+      rpeOptions: ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10'],
       sets: (data.sets || []).map(function (s) {
+        // Décode un éventuel token @RPE8 du champ remarque (stockage sans
+        // changement de schéma) → champ rpe séparé + remarque nettoyée.
+        var rawRem = s.remarque || "";
+        var rpe = "";
+        var m = rawRem.match(/@RPE(\d+(?:\.5)?)/i);
+        if (m) { rpe = m[1]; rawRem = rawRem.replace(/\s*@RPE\d+(?:\.5)?\s*/i, ' ').trim(); }
         return {
           reps: (s.reps != null && s.reps !== '') ? s.reps : '',
           poids: (s.poids != null && s.poids !== '') ? s.poids : '',
-          remarque: s.remarque || ""
+          remarque: rawRem,
+          rpe: rpe
         };
       }),
+
+      // Réencode le RPE dans remarque (@RPE8) pour l'envoi au serveur — garde
+      // le schéma history intact (Reps/Poids/Remarque). Lu par le champ caché.
+      serializedSets: function () {
+        return JSON.stringify(this.sets.map(function (s) {
+          var rem = (s.remarque || "").trim();
+          if (s.rpe) rem = (rem ? rem + ' ' : '') + '@RPE' + s.rpe;
+          return { reps: s.reps, poids: s.poids, remarque: rem };
+        }));
+      },
 
       lastSummary: data.last_summary || '',
       record: data.record || null,
@@ -1198,7 +1225,9 @@
           week: pw.week - (Number('{{ week_offset }}') || 0),
           missed: pw.missed || false,
           rows: (pw.rows || []).map(function(r) {
-            return { serie: r['Série'] || 0, reps: r.Reps || 0, poids: r.Poids || 0, remarque: r.Remarque || '' };
+            // Transforme le token @RPE8 en suffixe lisible "RPE 8" pour l'affichage.
+            var rem = (r.Remarque || '').replace(/@RPE(\d+(?:\.5)?)/i, 'RPE $1').trim();
+            return { serie: r['Série'] || 0, reps: r.Reps || 0, poids: r.Poids || 0, remarque: rem };
           })
         };
       }),
@@ -1272,7 +1301,7 @@
         } catch(e) {}
       },
       addSet: function () {
-        this.sets.push({ reps: '', poids: '', remarque: "" });
+        this.sets.push({ reps: '', poids: '', remarque: "", rpe: '' });
       },
       removeSet: function (i) {
         if (this.sets.length > 1) this.sets.splice(i, 1);
@@ -1374,7 +1403,7 @@
         }
         // Toutes les séries déjà validées → ajoute une série supplémentaire.
         if (!logged) {
-          this.sets.push({ reps: this.targetSeconds, poids: 0, remarque: "" });
+          this.sets.push({ reps: this.targetSeconds, poids: 0, remarque: "", rpe: '' });
         }
         this.isoRemaining = this.targetSeconds;
       },
