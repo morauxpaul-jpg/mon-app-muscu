@@ -97,6 +97,8 @@
   padding: 0;
   line-height: 1;
 }
+.exo-chrono-btn { color: var(--accent); }
+.exo-chrono-btn .icon { width: 13px; height: 13px; }
 .exo-info-modal {
   position: fixed;
   inset: 0;
@@ -164,12 +166,6 @@
     <div class="seance-label">SÉANCE · SEMAINE {{ s_display }}</div>
     <div class="seance-title">{{ seance_name }}</div>
   </div>
-
-  {# ── Bouton chrono manuel ─────────────────────────────────── #}
-  <button type="button" class="btn label-icon" style="font-size:0.78rem; padding:6px 12px; margin-bottom:10px;"
-          data-tuto-seance="chrono"
-          onclick="startTimer(parseInt(localStorage.getItem('restTimerDefault')) || 90)"
-          title="Lancer le chrono de repos manuellement"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>Chrono</button>
 
   {# ── Barre de progression (Feature 5) ─────────────────────── #}
   {% if exos %}
@@ -244,6 +240,8 @@
         <div>
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)" title="Info exercice">?</button>
+              <button type="button" class="exo-info-btn exo-chrono-btn" data-tuto-seance="chrono"
+                      @click.stop="manualRestTimer()" title="Lancer le chrono de repos"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg></button>
           </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
@@ -1370,6 +1368,11 @@
         if (!AUTO_REST_TIMER) return;
         // Pas de garde "barre déjà visible" : chaque nouvelle série relance le
         // repos depuis le début (startTimer réinitialise proprement l'interval).
+        var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
+        startTimer(dur);
+      },
+      // Lancement manuel via le bouton chrono de l'exo (ignore le réglage auto).
+      manualRestTimer: function () {
         var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
         startTimer(dur);
       },
