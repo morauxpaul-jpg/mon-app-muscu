@@ -58,36 +58,29 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>FAQ &amp; confidentialité</h1>
 
   <div class="card">
-    <p class="faq-intro">Tout ce que tu veux savoir sur tes données, la sécurité et le fonctionnement de l'app. Une question manque ? <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Question%20FAQ" style="color:var(--accent);">Écris-moi</a>.</p>
+    <p class="faq-intro">Les réponses aux questions les plus courantes. Une question manque ? <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Question%20FAQ" style="color:var(--accent);">Écris-moi</a>.</p>
 
     {# ── Confidentialité ─────────────────────────────── #}
-    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#lock"/></svg>Confidentialité &amp; données</div>
+    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#lock"/></svg>Mes données</div>
 
     <details class="faq-item">
-      <summary>Où sont stockées mes données ?</summary>
+      <summary>Où vont mes données ?</summary>
       <div class="faq-answer">
-        <p>Tes données (programme, historique de séances, profil, nutrition, messages au coach) sont enregistrées dans une base de données <strong>PostgreSQL hébergée chez Supabase</strong>, et l'application tourne sur <strong>Railway</strong>.</p>
-        <p>Chaque compte est <strong>cloisonné</strong> : tu n'as accès qu'à tes propres données, identifiées par ton compte Google. Personne d'autre ne peut les consulter.</p>
+        <p>Tes séances, ton programme et ton profil sont enregistrés en ligne, de façon sécurisée, et reliés à ton compte. <strong>Toi seul peux y accéder.</strong></p>
       </div>
     </details>
 
     <details class="faq-item">
       <summary>Mes données sont-elles vendues ou utilisées pour de la pub ?</summary>
       <div class="faq-answer">
-        <p><strong>Non.</strong> Tes données ne sont ni vendues, ni louées, ni partagées avec des annonceurs. Il n'y a aucun tracker publicitaire dans l'app.</p>
-        <p>Elles servent uniquement à faire fonctionner tes séances, ta progression et ton coach.</p>
+        <p><strong>Non.</strong> Tes données ne sont jamais vendues ni partagées. Il n'y a aucune publicité et aucun pisteur dans l'app — elles servent uniquement à faire fonctionner tes séances et ta progression.</p>
       </div>
     </details>
 
     <details class="faq-item">
-      <summary>Qu'est-ce qui reste stocké sur mon téléphone ?</summary>
+      <summary>Qu'est-ce qui reste sur mon téléphone ?</summary>
       <div class="faq-answer">
-        <p>Certaines choses restent en local (dans le navigateur, jamais envoyées à un serveur) :</p>
-        <ul>
-          <li>Les <strong>brouillons de saisie</strong> d'une séance en cours (pour ne rien perdre si tu quittes la page).</li>
-          <li>Tes <strong>records arcade</strong> et tes <strong>préférences</strong> (durée du chrono, réglages d'affichage).</li>
-        </ul>
-        <p>Vider le cache du navigateur efface ces éléments locaux — mais pas tes séances enregistrées, qui sont au chaud côté serveur.</p>
+        <p>Quelques petites choses restent en local sur ton appareil : ta saisie en cours (pour ne rien perdre si tu quittes la page), tes records arcade et tes préférences. Le reste est enregistré en ligne, en sécurité.</p>
       </div>
     </details>
 
@@ -97,29 +90,14 @@
     <details class="faq-item">
       <summary>Comment je me connecte ? Mon mot de passe est-il en sécurité ?</summary>
       <div class="faq-answer">
-        <p>La connexion se fait via <strong>Google (OAuth)</strong>. L'application <strong>ne voit jamais ton mot de passe Google</strong> : c'est Google qui t'authentifie et nous renvoie simplement une confirmation.</p>
-        <p>Ta session est gardée par un <strong>cookie signé</strong>, inaccessible au JavaScript (HTTPOnly), transmis uniquement en HTTPS et valable 30 jours.</p>
+        <p>Tu te connectes avec ton <strong>compte Google</strong>. L'app ne voit jamais ton mot de passe : c'est Google qui vérifie que c'est bien toi. Ta connexion reste active 30 jours.</p>
       </div>
     </details>
 
     <details class="faq-item">
-      <summary>Quelles protections de sécurité sont en place ?</summary>
+      <summary>L'app est-elle bien protégée ?</summary>
       <div class="faq-answer">
-        <p>L'app applique plusieurs couches de durcissement :</p>
-        <ul>
-          <li><strong>HTTPS</strong> partout : tout transite chiffré entre ton téléphone et le serveur.</li>
-          <li>Cookies de session <strong>HTTPOnly + Secure + SameSite</strong>.</li>
-          <li><strong>Content-Security-Policy</strong> + protection anti-clickjacking (X-Frame-Options), anti-MIME-sniffing, Referrer-Policy stricte.</li>
-          <li><strong>Permissions-Policy</strong> qui bloque caméra, micro et géolocalisation.</li>
-          <li><strong>Limitation de débit</strong> (rate limiting) pour bloquer les abus automatisés.</li>
-        </ul>
-      </div>
-    </details>
-
-    <details class="faq-item">
-      <summary>L'app peut-elle accéder à ma caméra, mon micro ou ma position ?</summary>
-      <div class="faq-answer">
-        <p><strong>Non.</strong> Ces accès sont explicitement bloqués au niveau du navigateur via la Permissions-Policy. La seule permission optionnelle demandée est celle des <strong>notifications</strong>, que tu peux refuser ou révoquer à tout moment.</p>
+        <p>Oui. Tout passe par une connexion <strong>chiffrée</strong>, ton accès est protégé, et l'app ne peut pas toucher à ta <strong>caméra, ton micro ni ta position</strong>. La seule chose qu'elle peut te demander, ce sont les notifications — que tu restes libre d'accepter ou de refuser.</p>
       </div>
     </details>
 
@@ -127,17 +105,16 @@
     <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA</div>
 
     <details class="faq-item">
-      <summary>Comment fonctionne le coach IA et que voit-il ?</summary>
+      <summary>Qui peut utiliser le coach IA ?</summary>
       <div class="faq-answer">
-        <p>Le coach est propulsé par <strong>Claude (Anthropic)</strong>. Quand tu poses une question, ton message — accompagné d'un peu de contexte sur ta séance — est envoyé à l'API d'Anthropic pour générer la réponse.</p>
-        <p>Conformément aux conditions de l'API Anthropic, <strong>tes échanges ne sont pas utilisés pour entraîner leurs modèles</strong>. La conversation est conservée côté app pour que le coach garde le fil de la discussion.</p>
+        <p>Le coach IA est <strong>réservé aux membres Premium</strong>. Chaque jour, tu peux lui envoyer jusqu'à <strong>10 messages</strong>.</p>
       </div>
     </details>
 
     <details class="faq-item">
-      <summary>Y a-t-il une limite d'utilisation du coach ?</summary>
+      <summary>Que voit le coach IA ?</summary>
       <div class="faq-answer">
-        <p>En version gratuite : <strong>10 messages par jour</strong>. En <strong>Premium</strong>, le coach est illimité.</p>
+        <p>Le coach est une intelligence artificielle. Quand tu lui écris, ta question et un résumé de tes séances lui sont transmis pour qu'il te réponde de façon personnalisée. <strong>Tes échanges ne servent pas à entraîner l'IA.</strong></p>
       </div>
     </details>
 
@@ -145,21 +122,17 @@
     <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Mon compte</div>
 
     <details class="faq-item">
-      <summary>Comment supprimer mes données ou mon compte ?</summary>
+      <summary>Comment effacer mes données ou mon compte ?</summary>
       <div class="faq-answer">
-        <p>Depuis <a href="/gestion">Gestion</a> tu peux :</p>
-        <ul>
-          <li><strong>Réinitialiser l'historique</strong> : repartir de la semaine 1 (tes meilleurs records restent archivés).</li>
-          <li><strong>Tout remettre à zéro</strong> : effacer définitivement historique, archive et records.</li>
-        </ul>
-        <p>Pour une <strong>suppression complète du compte</strong> et de toutes les données associées, écris à <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Suppression%20de%20compte">moraux.paul@gmail.com</a>.</p>
+        <p>Depuis <a href="/gestion">Gestion</a>, tu peux remettre ton historique à zéro ou tout effacer.</p>
+        <p>Pour supprimer complètement ton compte, écris à <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Suppression%20de%20compte">moraux.paul@gmail.com</a>.</p>
       </div>
     </details>
 
     <details class="faq-item">
-      <summary>Puis-je exporter mes données ?</summary>
+      <summary>Puis-je récupérer mes données ?</summary>
       <div class="faq-answer">
-        <p>Oui. Les membres <strong>Premium</strong> peuvent exporter <strong>toutes</strong> leurs données (programme + historique + archives) en JSON depuis <a href="/gestion">Gestion</a>, et les réimporter. Tu peux aussi exporter uniquement ton programme depuis la page <a href="/programme">Programme</a>.</p>
+        <p>Oui. Les membres <strong>Premium</strong> peuvent exporter toutes leurs données dans un fichier depuis <a href="/gestion">Gestion</a> (et les réimporter). Tu peux aussi exporter ton programme depuis <a href="/programme">Programme</a>.</p>
       </div>
     </details>
 
@@ -167,23 +140,23 @@
     <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>Divers</div>
 
     <details class="faq-item">
-      <summary>L'app marche-t-elle hors-ligne ?</summary>
+      <summary>Est-ce que ça marche sans connexion ?</summary>
       <div class="faq-answer">
-        <p>C'est une <strong>PWA</strong> : les pages déjà consultées restent accessibles hors connexion grâce au cache, et tes saisies en cours sont gardées en local. En revanche, <strong>l'enregistrement définitif d'une séance nécessite une connexion</strong> pour synchroniser avec le serveur.</p>
+        <p>En partie : les pages déjà ouvertes restent consultables et ta saisie est gardée. Mais pour <strong>enregistrer définitivement une séance</strong>, il te faut une connexion internet.</p>
       </div>
     </details>
 
     <details class="faq-item">
-      <summary>Les notifications, comment ça marche ?</summary>
+      <summary>Comment marchent les notifications ?</summary>
       <div class="faq-answer">
-        <p>Les rappels (jour de séance, fin du chrono de repos) sont des <strong>notifications locales</strong> gérées par ton navigateur / la PWA. Aucune donnée n'est envoyée à un service de push tiers. Tu peux les activer ou désactiver depuis <a href="/gestion">Gestion</a>.</p>
+        <p>Les rappels (jour de séance, fin du chrono de repos) s'affichent directement sur ton téléphone. Tu peux les activer ou les désactiver depuis <a href="/gestion">Gestion</a>.</p>
       </div>
     </details>
 
     <details class="faq-item">
-      <summary>J'ai trouvé un bug ou j'ai une suggestion.</summary>
+      <summary>J'ai trouvé un bug ou j'ai une idée.</summary>
       <div class="faq-answer">
-        <p>Super, ça aide à améliorer l'app ! Écris à <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Retour">moraux.paul@gmail.com</a> en décrivant ce que tu as observé.</p>
+        <p>Génial, ça aide à améliorer l'app ! Écris à <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Retour">moraux.paul@gmail.com</a>.</p>
       </div>
     </details>
   </div>
