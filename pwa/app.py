@@ -304,6 +304,12 @@ def plaques():
     return render_template("plaques.html", active="plus")
 
 
+@app.route("/faq")
+def faq():
+    # FAQ statique : confidentialité, sécurité, données, IA…
+    return render_template("faq.html", active="plus")
+
+
 # ────────────────────────────────────────────────────────────────
 # Manifest et service worker servis depuis la racine pour scope /
 # ────────────────────────────────────────────────────────────────

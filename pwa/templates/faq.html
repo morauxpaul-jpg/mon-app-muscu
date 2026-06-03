@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}FAQ &amp; confidentialité · Muscu Tracker{% endblock %}
+
+{% block head_extra %}
+<style>
+  .faq-intro { font-size:0.85rem; color:var(--text-2); line-height:1.5; margin:0 0 14px; }
+  .faq-group-title {
+    font-size:0.72rem; letter-spacing:1px; font-weight:600;
+    color:var(--accent); text-transform:uppercase;
+    margin:18px 0 8px; display:flex; align-items:center; gap:6px;
+  }
+  details.faq-item {
+    background: var(--bg-surface);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  details.faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 14px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after {
+    content: "+";
+    color: var(--text-3);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  details.faq-item[open] summary::after { content: "−"; color: var(--accent); }
+  details.faq-item[open] summary { color: var(--accent); }
+  .faq-answer {
+    padding: 0 14px 14px;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    color: var(--text-2);
+  }
+  .faq-answer p { margin: 0 0 8px; }
+  .faq-answer p:last-child { margin-bottom: 0; }
+  .faq-answer ul { margin: 6px 0 8px; padding-left: 18px; }
+  .faq-answer li { margin-bottom: 4px; }
+  .faq-answer a { color: var(--accent); }
+  .faq-answer strong { color: var(--text-1); }
+</style>
+{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>FAQ &amp; confidentialité</h1>
+
+  <div class="card">
+    <p class="faq-intro">Tout ce que tu veux savoir sur tes données, la sécurité et le fonctionnement de l'app. Une question manque ? <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Question%20FAQ" style="color:var(--accent);">Écris-moi</a>.</p>
+
+    {# ── Confidentialité ─────────────────────────────── #}
+    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#lock"/></svg>Confidentialité &amp; données</div>
+
+    <details class="faq-item">
+      <summary>Où sont stockées mes données ?</summary>
+      <div class="faq-answer">
+        <p>Tes données (programme, historique de séances, profil, nutrition, messages au coach) sont enregistrées dans une base de données <strong>PostgreSQL hébergée chez Supabase</strong>, et l'application tourne sur <strong>Railway</strong>.</p>
+        <p>Chaque compte est <strong>cloisonné</strong> : tu n'as accès qu'à tes propres données, identifiées par ton compte Google. Personne d'autre ne peut les consulter.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Mes données sont-elles vendues ou utilisées pour de la pub ?</summary>
+      <div class="faq-answer">
+        <p><strong>Non.</strong> Tes données ne sont ni vendues, ni louées, ni partagées avec des annonceurs. Il n'y a aucun tracker publicitaire dans l'app.</p>
+        <p>Elles servent uniquement à faire fonctionner tes séances, ta progression et ton coach.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Qu'est-ce qui reste stocké sur mon téléphone ?</summary>
+      <div class="faq-answer">
+        <p>Certaines choses restent en local (dans le navigateur, jamais envoyées à un serveur) :</p>
+        <ul>
+          <li>Les <strong>brouillons de saisie</strong> d'une séance en cours (pour ne rien perdre si tu quittes la page).</li>
+          <li>Tes <strong>records arcade</strong> et tes <strong>préférences</strong> (durée du chrono, réglages d'affichage).</li>
+        </ul>
+        <p>Vider le cache du navigateur efface ces éléments locaux — mais pas tes séances enregistrées, qui sont au chaud côté serveur.</p>
+      </div>
+    </details>
+
+    {# ── Sécurité ────────────────────────────────────── #}
+    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Sécurité</div>
+
+    <details class="faq-item">
+      <summary>Comment je me connecte ? Mon mot de passe est-il en sécurité ?</summary>
+      <div class="faq-answer">
+        <p>La connexion se fait via <strong>Google (OAuth)</strong>. L'application <strong>ne voit jamais ton mot de passe Google</strong> : c'est Google qui t'authentifie et nous renvoie simplement une confirmation.</p>
+        <p>Ta session est gardée par un <strong>cookie signé</strong>, inaccessible au JavaScript (HTTPOnly), transmis uniquement en HTTPS et valable 30 jours.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Quelles protections de sécurité sont en place ?</summary>
+      <div class="faq-answer">
+        <p>L'app applique plusieurs couches de durcissement :</p>
+        <ul>
+          <li><strong>HTTPS</strong> partout : tout transite chiffré entre ton téléphone et le serveur.</li>
+          <li>Cookies de session <strong>HTTPOnly + Secure + SameSite</strong>.</li>
+          <li><strong>Content-Security-Policy</strong> + protection anti-clickjacking (X-Frame-Options), anti-MIME-sniffing, Referrer-Policy stricte.</li>
+          <li><strong>Permissions-Policy</strong> qui bloque caméra, micro et géolocalisation.</li>
+          <li><strong>Limitation de débit</strong> (rate limiting) pour bloquer les abus automatisés.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>L'app peut-elle accéder à ma caméra, mon micro ou ma position ?</summary>
+      <div class="faq-answer">
+        <p><strong>Non.</strong> Ces accès sont explicitement bloqués au niveau du navigateur via la Permissions-Policy. La seule permission optionnelle demandée est celle des <strong>notifications</strong>, que tu peux refuser ou révoquer à tout moment.</p>
+      </div>
+    </details>
+
+    {# ── Coach IA ────────────────────────────────────── #}
+    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA</div>
+
+    <details class="faq-item">
+      <summary>Comment fonctionne le coach IA et que voit-il ?</summary>
+      <div class="faq-answer">
+        <p>Le coach est propulsé par <strong>Claude (Anthropic)</strong>. Quand tu poses une question, ton message — accompagné d'un peu de contexte sur ta séance — est envoyé à l'API d'Anthropic pour générer la réponse.</p>
+        <p>Conformément aux conditions de l'API Anthropic, <strong>tes échanges ne sont pas utilisés pour entraîner leurs modèles</strong>. La conversation est conservée côté app pour que le coach garde le fil de la discussion.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Y a-t-il une limite d'utilisation du coach ?</summary>
+      <div class="faq-answer">
+        <p>En version gratuite : <strong>10 messages par jour</strong>. En <strong>Premium</strong>, le coach est illimité.</p>
+      </div>
+    </details>
+
+    {# ── Compte & données ────────────────────────────── #}
+    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Mon compte</div>
+
+    <details class="faq-item">
+      <summary>Comment supprimer mes données ou mon compte ?</summary>
+      <div class="faq-answer">
+        <p>Depuis <a href="/gestion">Gestion</a> tu peux :</p>
+        <ul>
+          <li><strong>Réinitialiser l'historique</strong> : repartir de la semaine 1 (tes meilleurs records restent archivés).</li>
+          <li><strong>Tout remettre à zéro</strong> : effacer définitivement historique, archive et records.</li>
+        </ul>
+        <p>Pour une <strong>suppression complète du compte</strong> et de toutes les données associées, écris à <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Suppression%20de%20compte">moraux.paul@gmail.com</a>.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Puis-je exporter mes données ?</summary>
+      <div class="faq-answer">
+        <p>Oui. Les membres <strong>Premium</strong> peuvent exporter <strong>toutes</strong> leurs données (programme + historique + archives) en JSON depuis <a href="/gestion">Gestion</a>, et les réimporter. Tu peux aussi exporter uniquement ton programme depuis la page <a href="/programme">Programme</a>.</p>
+      </div>
+    </details>
+
+    {# ── Divers ──────────────────────────────────────── #}
+    <div class="faq-group-title"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>Divers</div>
+
+    <details class="faq-item">
+      <summary>L'app marche-t-elle hors-ligne ?</summary>
+      <div class="faq-answer">
+        <p>C'est une <strong>PWA</strong> : les pages déjà consultées restent accessibles hors connexion grâce au cache, et tes saisies en cours sont gardées en local. En revanche, <strong>l'enregistrement définitif d'une séance nécessite une connexion</strong> pour synchroniser avec le serveur.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Les notifications, comment ça marche ?</summary>
+      <div class="faq-answer">
+        <p>Les rappels (jour de séance, fin du chrono de repos) sont des <strong>notifications locales</strong> gérées par ton navigateur / la PWA. Aucune donnée n'est envoyée à un service de push tiers. Tu peux les activer ou désactiver depuis <a href="/gestion">Gestion</a>.</p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>J'ai trouvé un bug ou j'ai une suggestion.</summary>
+      <div class="faq-answer">
+        <p>Super, ça aide à améliorer l'app ! Écris à <a href="mailto:moraux.paul@gmail.com?subject=Muscu%20Tracker%20—%20Retour">moraux.paul@gmail.com</a> en décrivant ce que tu as observé.</p>
+      </div>
+    </details>
+  </div>
+{% endblock %}
