@@ -24,6 +24,7 @@ DEFAULT_SETTINGS = {
     "theme_animations": True,
     "auto_rest_timer": True,
     "auto_prefill_weight": True,
+    "show_rpe": True,
     "show_previous_weeks": 2,
     "notifications": False,
 }
@@ -168,6 +169,7 @@ def update_settings():
     s["auto_collapse"] = request.form.get("auto_collapse") == "on"
     s["show_1rm"] = request.form.get("show_1rm") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
+    s["show_rpe"] = request.form.get("show_rpe") == "on"
     # Options VIP : en Free on force à off quoi qu'il arrive.
     if is_vip:
         s["theme_animations"] = request.form.get("theme_animations") == "on"

@@ -445,6 +445,7 @@ def seance():
     _settings = prog.get("_settings", {})
     auto_rest_timer = _settings.get("auto_rest_timer", True)
     auto_prefill_weight = _settings.get("auto_prefill_weight", True)
+    show_rpe = _settings.get("show_rpe", True)
 
     # « Aujourd'hui logique » : avant 04h du matin, on considère encore
     # la journée précédente — la séance faite « tard hier soir » est ainsi
@@ -677,6 +678,7 @@ def seance():
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
+            show_rpe=show_rpe,
             cardio_done=_build_cardio_done(hist, name, date_iso),
             body_polygons=get_body_polygons(),
         )
@@ -722,6 +724,7 @@ def seance():
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
+            show_rpe=show_rpe,
             cardio_done=_build_cardio_done(hist, libre_name, date_iso),
             body_polygons=get_body_polygons(),
         )

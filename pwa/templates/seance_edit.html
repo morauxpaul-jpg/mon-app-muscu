@@ -341,7 +341,7 @@
                   <th>Sér.</th>
                   <th>Reps</th>
                   <th x-show="showWeight">Poids</th>
-                  <th title="Difficulté ressentie (RPE 6 = facile, 10 = échec)">RPE</th>
+                  {% if show_rpe %}<th title="Difficulté ressentie (RPE 6 = facile, 10 = échec)">RPE</th>{% endif %}
                   <th>Remarque</th>
                   <th></th>
                 </tr>
@@ -352,6 +352,7 @@
                     <td x-text="i + 1"></td>
                     <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @change="onSetFilled(i)"></td>
                     <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @change="onSetFilled(i)"></td>
+                    {% if show_rpe %}
                     <td>
                       <select x-model="s.rpe" class="cell-input" style="padding:6px 2px;">
                         <option value="">—</option>
@@ -360,6 +361,7 @@
                         </template>
                       </select>
                     </td>
+                    {% endif %}
                     <td><input type="text" x-model="s.remarque" class="cell-input" placeholder="—"></td>
                     <td>
                       <button type="button" class="mini-btn" @click="removeSet(i)" title="Retirer">×</button>

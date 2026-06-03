@@ -92,8 +92,9 @@
   {% endif %}
 
   {% if hist_exercises %}
+  <script>window.HIST_EXERCISES = {{ hist_exercises|tojson }};</script>
   <div class="card" x-data="{ open: false, oldName: '', newName: '', confirm: false,
-        count() { const e = ({{ hist_exercises|tojson }}).find(x => x.name === this.oldName); return e ? e.count : 0; } }">
+        count() { const e = (window.HIST_EXERCISES || []).find(x => x.name === this.oldName); return e ? e.count : 0; } }">
     <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Renommer un exercice (historique)</span>
       <span x-text="open ? '−' : '+'"></span>
@@ -165,6 +166,10 @@
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
         <span>Chrono de repos automatique entre les séries</span>
+      </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="show_rpe" {% if settings.show_rpe %}checked{% endif %}>
+        <span>Afficher la colonne RPE (difficulté ressentie)</span>
       </label>
       <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
         <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
