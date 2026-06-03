@@ -138,10 +138,25 @@ function drawOverlay(ctx, W, H, title, score, record, hint) {
 
   const GRAVITY = isMobile ? 0.25 : 0.35;
   const LIFT = isMobile ? -5.8 : -6.8;
-  const GAP = isMobile ? 190 : 170;
+  const GAP_START = isMobile ? 190 : 170;
+  const GAP_MIN   = isMobile ? 115 : 100;
   const BASE_SPEED = isMobile ? 2.0 : 2.6;
-  const SPAWN_INTERVAL = isMobile ? 110 : 95;
+  const SPEED_MAX  = isMobile ? 5.4 : 6.6;
+  const SPAWN_START = isMobile ? 110 : 95;
+  const SPAWN_MIN   = isMobile ? 74 : 62;
   const MAX_DT = 33;
+
+  // Difficulté exponentielle : la vitesse grimpe ~7 %/point, l'écart entre les
+  // barres se resserre ~3 %/point et les barres arrivent de plus en plus serrées.
+  // Le tout borné pour rester jouable. Résultat : ça devient dur bien plus vite
+  // (avant, ramp quasi-plat → parties interminables).
+  function difficulty(score) {
+    return {
+      speed: Math.min(SPEED_MAX,  BASE_SPEED  * Math.pow(1.07, score)),
+      gap:   Math.max(GAP_MIN,    GAP_START   * Math.pow(0.972, score)),
+      spawn: Math.max(SPAWN_MIN,  SPAWN_START * Math.pow(0.975, score)),
+    };
+  }
 
   let bell, bars, spawnAccum, score, over, started;
   let flapRequested = false;
@@ -150,7 +165,7 @@ function drawOverlay(ctx, W, H, title, score, record, hint) {
 
   function reset() {
     bell = { x: 80, y: H/2, vy: 0, r: 18 };
-    bars = []; spawnAccum = SPAWN_INTERVAL; score = 0;
+    bars = []; spawnAccum = SPAWN_START; score = 0;
     over = false; started = false;
     flapRequested = false;
     lastTime = 0;
@@ -165,11 +180,11 @@ function drawOverlay(ctx, W, H, title, score, record, hint) {
     ctx.fillRect(x - 14, y - 3, 28, 6);
   }
 
-  function spawn() {
-    const minTop = 60;
-    const maxTop = H - GAP - 60;
+  function spawn(gap) {
+    const minTop = 50;
+    const maxTop = H - gap - 50;
     const topH = Math.floor(Math.random() * (maxTop - minTop)) + minTop;
-    bars.push({ x: W, topH, gap: GAP, passed: false });
+    bars.push({ x: W, topH, gap, passed: false });
   }
 
   function step(now) {
@@ -191,9 +206,10 @@ function drawOverlay(ctx, W, H, title, score, record, hint) {
       bell.vy += GRAVITY * dt;
       bell.y += bell.vy * dt;
 
-      const speed = (BASE_SPEED + Math.floor(score / 5) * 0.15) * dt;
+      const diff = difficulty(score);
+      const speed = diff.speed * dt;
       spawnAccum += dt;
-      if (spawnAccum >= SPAWN_INTERVAL) { spawn(); spawnAccum = 0; }
+      if (spawnAccum >= diff.spawn) { spawn(diff.gap); spawnAccum = 0; }
 
       for (let i = bars.length - 1; i >= 0; i--) {
         const b = bars[i];
@@ -308,7 +324,9 @@ function drawOverlay(ctx, W, H, title, score, record, hint) {
         snake.unshift(head);
         if (head.x === food.x && head.y === food.y) {
           score += foodKind === 'protein' ? 3 : 1;
-          speed = Math.min(20, speed + 0.2);
+          // Montée exponentielle (~4 %/point) bornée : le serpent accélère
+          // bien plus vite qu'avant (où c'était +0.2 linéaire = trop long).
+          speed = Math.min(24, (isMobile ? 9 : 11) * Math.pow(1.04, score));
           placeFood();
         } else {
           snake.pop();
@@ -426,9 +444,11 @@ function drawOverlay(ctx, W, H, title, score, record, hint) {
     drawGrid(ctx, W, H);
 
     if (started && !over) {
-      const speed = baseSpeed + score / 40;
-      const interval = Math.max(35, 65 - Math.floor(score / 5));
-      if (frame % interval === 0 && drops.length < 20) spawnDrop();
+      // Difficulté exponentielle : les disques tombent ~2.5 %/point plus vite
+      // et arrivent de plus en plus serrés (avant : score/40 = montée trop lente).
+      const speed = Math.min(isMobile ? 7.5 : 9.5, baseSpeed * Math.pow(1.025, score));
+      const interval = Math.max(16, Math.round(62 * Math.pow(0.978, score)));
+      if (frame % interval === 0 && drops.length < 24) spawnDrop();
 
       for (let i = drops.length - 1; i >= 0; i--) {
         const d = drops[i];
