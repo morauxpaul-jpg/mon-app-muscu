@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v80-2026-06-01-tuto-rework";
+const CACHE_VERSION = "v81-2026-06-03-timer-notif";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -50,11 +50,81 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// ── Message : permet au client de forcer skipWaiting ─
+// ── Chrono de repos : notification planifiée côté SW ──────────────
+// Le client poste { type: 'SCHEDULE_TIMER', delay, title, body } au début
+// du repos. On arme un setTimeout dans le SW et on garde la promesse vivante
+// via event.waitUntil pour que le SW ne soit pas tué pendant l'attente.
+// À l'échéance : on n'affiche la notif QUE si aucune fenêtre n'est au premier
+// plan (sinon la page gère elle-même le bip + l'affichage de la barre).
+let _restTimeout = null;
+let _restResolve = null;
 
+function _clearRestTimer() {
+  if (_restTimeout) {
+    clearTimeout(_restTimeout);
+    _restTimeout = null;
+  }
+  if (_restResolve) {
+    // Résout la promesse waitUntil en attente pour libérer le SW proprement.
+    _restResolve();
+    _restResolve = null;
+  }
+}
+
+// ── Message : skipWaiting + planification du chrono de repos ──
 self.addEventListener("message", (event) => {
   const data = event.data;
-  if (data === "SKIP_WAITING") self.skipWaiting();
+  if (data === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+  if (!data || typeof data !== "object") return;
+
+  if (data.type === "CANCEL_TIMER") {
+    _clearRestTimer();
+    return;
+  }
+
+  if (data.type === "SCHEDULE_TIMER") {
+    _clearRestTimer();
+    const delay = Math.max(0, Number(data.delay) || 0);
+    const title = data.title || "Repos terminé !";
+    const body = data.body || "C'est reparti — série suivante";
+
+    event.waitUntil(
+      new Promise((resolve) => {
+        _restResolve = resolve;
+        _restTimeout = setTimeout(() => {
+          _restTimeout = null;
+          _restResolve = null;
+          self.clients
+            .matchAll({ type: "window", includeUncontrolled: true })
+            .then((clients) => {
+              // App au premier plan → la page gère (bip + barre). Pas de notif.
+              const visible = clients.some(
+                (c) => c.visibilityState === "visible"
+              );
+              if (visible) {
+                resolve();
+                return;
+              }
+              return self.registration
+                .showNotification(title, {
+                  body: body,
+                  icon: "/static/icon-192.png",
+                  badge: "/static/icon-192.png",
+                  tag: "rest-timer",
+                  renotify: true,
+                  vibrate: [200, 100, 200],
+                })
+                .then(resolve)
+                .catch(resolve);
+            })
+            .catch(resolve);
+        }, delay);
+      })
+    );
+  }
 });
 
 // ── Notification click : ouvre l'app ─────────────────────────────

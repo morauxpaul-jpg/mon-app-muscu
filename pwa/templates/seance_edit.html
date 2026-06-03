@@ -352,8 +352,8 @@
                 <template x-for="(s, i) in sets" :key="i">
                   <tr>
                     <td x-text="i + 1"></td>
-                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @input="onSetFilled(i)"></td>
-                    <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @input="onSetFilled(i)"></td>
+                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @change="onSetFilled(i)"></td>
+                    <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @change="onSetFilled(i)"></td>
                     <td>
                       <select x-model="s.rpe" class="cell-input" style="padding:6px 2px;">
                         <option value="">—</option>
@@ -1001,6 +1001,41 @@
   var _timerFinished = false; // évite un double déclenchement (setInterval + visibilitychange)
   var _originalTitle = document.title;
 
+  // Poste un message au service worker (planifie/annule la notif de fin de
+  // repos). On vise le controller actif ; fallback sur .ready si pas encore prêt.
+  function _postTimerMsg(msg) {
+    try {
+      if (!('serviceWorker' in navigator)) return;
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(msg);
+      } else {
+        navigator.serviceWorker.ready.then(function (reg) {
+          if (reg && reg.active) reg.active.postMessage(msg);
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  // Demande la permission notifications si pas encore tranchée — au moment où
+  // l'utilisateur lance un chrono (contexte clair) plutôt qu'au hasard.
+  function _ensureNotifPermission() {
+    try {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'default') Notification.requestPermission();
+    } catch (e) {}
+  }
+
+  // Planifie la notif de fin de repos via le SW (couvre le cas app en arrière-plan).
+  function _scheduleTimerNotif() {
+    _postTimerMsg({ type: 'CANCEL_TIMER' });
+    _postTimerMsg({
+      type: 'SCHEDULE_TIMER',
+      delay: _timerTotal * 1000,
+      title: 'Repos terminé !',
+      body: "C'est reparti — série suivante"
+    });
+  }
+
   function startTimer(seconds) {
     _timerTotal = seconds || _timerTotal;
     _timerEndTime = Date.now() + _timerTotal * 1000;
@@ -1014,6 +1049,8 @@
     highlightPreset(_timerTotal);
     clearInterval(_timerInterval);
     _timerInterval = setInterval(tickTimer, 1000);
+    _ensureNotifPermission();
+    _scheduleTimerNotif();
   }
 
   function tickTimer() {
@@ -1069,6 +1106,9 @@
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     document.title = 'GO ! — Muscu Tracker';
     _timerEndTime = 0;
+    // L'app est au premier plan (on vient de biper) → la notif SW n'a plus
+    // lieu d'être : on l'annule pour éviter un doublon si elle n'a pas tiré.
+    _postTimerMsg({ type: 'CANCEL_TIMER' });
     setTimeout(function() {
       if (bar.style.display !== 'none') skipTimer();
     }, 3000);
@@ -1081,6 +1121,7 @@
     _timerFinished = false;
     document.title = _originalTitle;
     document.getElementById('rest-timer').style.display = 'none';
+    _postTimerMsg({ type: 'CANCEL_TIMER' });
   }
 
   function setTimerDuration(sec) {
@@ -1091,16 +1132,10 @@
     _timerFinished = false;
     updateTimerDisplay();
     highlightPreset(sec);
-    // Re-planifie la notif avec la nouvelle durée
-    _postTimerMsg({ type: 'CANCEL_TIMER' });
-    _postTimerMsg({
-      type: 'SCHEDULE_TIMER',
-      delay: sec * 1000,
-      title: 'Repos terminé !',
-      body: "C'est reparti — série suivante"
-    });
     clearInterval(_timerInterval);
     _timerInterval = setInterval(tickTimer, 1000);
+    // Re-planifie la notif avec la nouvelle durée
+    _scheduleTimerNotif();
   }
 
   // Quand l'onglet revient au premier plan, recalcule le reste à partir
@@ -1240,6 +1275,11 @@
       isoRemaining: Number(data.target_seconds) || 30,
       _isoInterval: null,
 
+      // Indices des séries ayant déjà déclenché le chrono de repos. Volontairement
+      // HORS de `sets` pour ne pas être sérialisé dans le draft (sinon le flag
+      // survivrait au reload et bloquerait le redéclenchement).
+      _firedSets: [],
+
       init: function() {
         // Restore draft if page was left without saving
         try {
@@ -1312,19 +1352,24 @@
       onSetFilled: function (i) {
         // Marque la séance comme active dès le premier input rempli
         _markSessionActive();
-        // Chrono auto : se lance dès que la SÉRIE ACTUELLE est remplie
+        // Chrono auto : se lance dès que les REPS de la série sont saisies.
+        // On ne dépend PAS du poids : tantôt il est pré-rempli (séance
+        // précédente), tantôt vide — le signal fiable que la série est faite,
+        // c'est le nombre de reps. (@change = à la sortie du champ, pas en
+        // pleine frappe.)
         if (!AUTO_REST_TIMER) return;
         var cur = this.sets[i];
-        if (!cur || cur._timerFired) return;
-        var repsOk = cur.reps && Number(cur.reps) > 0;
-        var poidsOk = !this.showWeight || (cur.poids && Number(cur.poids) > 0);
-        if (!repsOk || !poidsOk) return;
-        cur._timerFired = true;
+        if (!cur) return;
+        var repsOk = cur.reps !== '' && cur.reps != null && Number(cur.reps) > 0;
+        if (!repsOk) return;
+        if (this._firedSets.indexOf(i) >= 0) return; // déjà lancé pour cette série
+        this._firedSets.push(i);
         this.startRestTimer();
       },
       startRestTimer: function () {
         if (!AUTO_REST_TIMER) return;
-        if (document.getElementById('rest-timer').style.display !== 'none') return;
+        // Pas de garde "barre déjà visible" : chaque nouvelle série relance le
+        // repos depuis le début (startTimer réinitialise proprement l'interval).
         var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
         startTimer(dur);
       },
