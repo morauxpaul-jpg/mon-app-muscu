@@ -511,7 +511,7 @@
     </div>
 
     <form method="post" action="/seance/add-extra" x-show="tab==='new'"
-          x-data="{ showLib: false, libFilter: 'Tous', libSearch: '' }">
+          x-data="{ newName: '', newMuscle: 'Pecs', newSets: 3, showLib: false, libFilter: 'Tous', libSearch: '' }">
       <input type="hidden" name="mode" value="{{ mode }}">
       <input type="hidden" name="name" value="{{ seance_name }}">
       <input type="hidden" name="date" value="{{ date_iso }}">
@@ -523,7 +523,9 @@
       </button>
 
       {# Modale bibliothèque inline #}
-      <div x-show="showLib" x-transition style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:16px;" @click.self="showLib = false">
+      <div x-show="showLib" x-transition
+           x-init="$watch('showLib', v => { if(v) document.body.appendChild($el); })"
+           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:16px;" @click.self="showLib = false">
         <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(120,200,255,0.20); border-radius:22px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain; box-shadow:0 8px 48px rgba(0,0,0,0.6);" @click.stop>
           <h4 style="color:var(--accent); margin:0 0 10px;">Bibliothèque d'exercices</h4>
           <input type="text" x-model="libSearch" class="field" placeholder="Rechercher..." style="margin-bottom:8px;">
@@ -546,7 +548,7 @@
                         <div style="font-size:0.7rem; color:var(--text-dim);" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
                       </div>
                       <button type="button" class="btn mini" style="white-space:nowrap;"
-                              @click="var form = $el.closest('form'); form.querySelector('[name=exo_name]').value = ex.name; form.querySelector('[name=muscle]').value = (typeof LIBRARY_TO_MUSCLE !== 'undefined' ? LIBRARY_TO_MUSCLE[grp] : 'Autre') || 'Autre'; form.querySelector('[name=sets_count]').value = ex.defaultSets; showLib = false;">+ Ajouter</button>
+                              @click="newName = ex.name; newMuscle = (typeof LIBRARY_TO_MUSCLE !== 'undefined' ? LIBRARY_TO_MUSCLE[grp] : 'Autre') || 'Autre'; newSets = ex.defaultSets; showLib = false;">+ Ajouter</button>
                     </div>
                   </template>
                 </div>
@@ -558,13 +560,13 @@
       </div>
 
       <label class="field-label">Nom de l'exercice</label>
-      <input type="text" name="exo_name" class="field" required>
+      <input type="text" name="exo_name" class="field" required x-model="newName">
       <label class="field-label">Muscle principal</label>
-      <select name="muscle" class="field">
+      <select name="muscle" class="field" x-model="newMuscle">
         {% for m in muscle_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
       </select>
       <label class="field-label">Nombre de séries</label>
-      <input type="number" name="sets_count" min="1" max="10" value="3" class="field">
+      <input type="number" name="sets_count" min="1" max="10" class="field" x-model.number="newSets">
       <button type="submit" class="btn primary label-icon" style="width:100%; margin-top:10px; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cet exercice</button>
     </form>
     </div>
