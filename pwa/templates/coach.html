@@ -2,15 +2,6 @@
 {% block title %}Coach IA · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom: 10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
-
-  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA</h1>
-
-  <div class="coach-disclaimer">
-    <svg class="icon icon-sm" style="flex-shrink:0;"><use href="/static/img/icons.svg#info"/></svg>
-    <span>Cet assistant est un outil d'aide — il ne remplace pas un coach certifié ni un avis médical.</span>
-  </div>
-
   <script>
     window.__coachInit = {
       quotaRemaining: {{ quota_remaining }},
@@ -18,24 +9,77 @@
       suggestions: {{ suggestions | tojson }},
       prenom: {{ prenom | tojson }},
       messages: {{ messages | tojson }},
+      conversations: {{ conversations | tojson }},
+      activeConversation: {{ active_conversation | tojson }},
       prefill: {{ prefill | tojson }}
     };
   </script>
 
-  <div
-    class="coach-chat"
-    x-data="coachChat()"
-    x-init="init()"
-  >
+  <div class="coach-chat" x-data="coachChat()" x-init="init()">
+
+    {# ── Sidebar conversations (drawer) ─────────────────────────── #}
+    <div class="coach-drawer-overlay" x-show="drawerOpen" x-transition.opacity.200ms
+         @click="drawerOpen = false" x-cloak></div>
+    <aside class="coach-drawer" :class="{ open: drawerOpen }" x-cloak>
+      <div class="coach-drawer-head">
+        <span>Conversations</span>
+        <button type="button" class="coach-icon-btn" @click="drawerOpen = false" aria-label="Fermer">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg>
+        </button>
+      </div>
+      <button type="button" class="coach-newchat-btn label-icon" @click="newChat()">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Nouveau chat
+      </button>
+      <div class="coach-conv-list">
+        <template x-if="conversations.length === 0">
+          <div class="coach-conv-empty">Aucune conversation pour l'instant.</div>
+        </template>
+        <template x-for="c in conversations" :key="c.id">
+          <div class="coach-conv-item" :class="{ active: c.id === conversationId }">
+            <a class="coach-conv-link" :href="'/coach?c=' + c.id" x-text="c.title || 'Sans titre'"></a>
+            <template x-if="confirmDel !== c.id">
+              <button type="button" class="coach-conv-del" @click.prevent.stop="confirmDel = c.id" aria-label="Supprimer">
+                <svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>
+              </button>
+            </template>
+            <template x-if="confirmDel === c.id">
+              <span class="coach-conv-confirm">
+                <button type="button" class="coach-conv-del" @click.prevent.stop="confirmDel = null" aria-label="Annuler">↩</button>
+                <button type="button" class="coach-conv-del danger" @click.prevent.stop="deleteConversation(c.id)" aria-label="Confirmer">✓</button>
+              </span>
+            </template>
+          </div>
+        </template>
+      </div>
+    </aside>
+
+    {# ── En-tête chat ───────────────────────────────────────────── #}
+    <div class="coach-header">
+      <button type="button" class="coach-icon-btn" @click="drawerOpen = true" aria-label="Conversations">
+        <svg class="icon icon-md"><use href="/static/img/icons.svg#menu"/></svg>
+      </button>
+      <div class="coach-header-title label-icon">
+        <svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA
+      </div>
+      <button type="button" class="coach-icon-btn" @click="newChat()" aria-label="Nouveau chat" title="Nouveau chat">
+        <svg class="icon icon-md"><use href="/static/img/icons.svg#plus-circle"/></svg>
+      </button>
+    </div>
+
+    <div class="coach-disclaimer">
+      <svg class="icon icon-sm" style="flex-shrink:0;"><use href="/static/img/icons.svg#info"/></svg>
+      <span>Cet assistant est un outil d'aide — il ne remplace pas un coach certifié ni un avis médical.</span>
+    </div>
+
     <div class="coach-messages" x-ref="scroll">
-      <!-- Message d'accueil -->
-      <div class="msg msg-bot">
+      <!-- Message d'accueil (chat vide seulement) -->
+      <div class="msg msg-bot" x-show="messages.length === 0">
         <div class="msg-bubble">
           Salut <strong x-text="prenom"></strong> ! Je suis ton coach IA. Pose-moi une question sur ton entraînement, ta nutrition, ou ta progression.
         </div>
       </div>
 
-      <!-- Suggestions (affichées seulement au premier message) -->
+      <!-- Suggestions (affichées seulement sur un chat vide) -->
       <template x-if="messages.length === 0">
         <div class="coach-suggestions">
           <template x-for="s in suggestions" :key="s">
@@ -67,14 +111,6 @@
       <div class="msg msg-bot" x-show="errorMsg" x-cloak>
         <div class="msg-bubble msg-error" x-text="errorMsg"></div>
       </div>
-
-      <!-- Bouton effacer (si historique non vide) -->
-      <div x-show="messages.length > 0" style="text-align:center; margin-top:14px;">
-        <button type="button" class="btn mini label-icon coach-clear-btn" @click="askClear()" style="color:var(--text-dim); font-size:0.75rem;">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>
-          Effacer l'historique
-        </button>
-      </div>
     </div>
 
     <div class="coach-footer">
@@ -100,20 +136,6 @@
     </div>
   </div>
 
-  <!-- Modal de confirmation "effacer" -->
-  <div id="coach-clear-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:200; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(255,69,58,0.35); border-radius:22px; padding:18px; max-width:320px; width:100%; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-      <div style="font-weight:700; color:#FF8F85; margin-bottom:8px;">Effacer tout l'historique ?</div>
-      <div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:14px;">Tous tes échanges avec le coach seront supprimés. Cette action est définitive.</div>
-      <div style="display:flex; gap:8px;">
-        <button type="button" class="btn btn-cancel" style="flex:1;" onclick="document.getElementById('coach-clear-modal').style.display='none'">Annuler</button>
-        <form method="post" action="/coach/clear" style="flex:1; margin:0;">
-          <button type="submit" class="btn" style="width:100%; background:rgba(255,69,58,0.2); border-color:rgba(255,69,58,0.5); color:#FF8F85;">Effacer</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <script>
     function coachChat() {
       var cfg = window.__coachInit || {};
@@ -121,6 +143,12 @@
         messages: (cfg.messages || []).map(function (m) {
           return { role: m.role, content: m.content, created_at: m.created_at || null };
         }),
+        conversations: (cfg.conversations || []).map(function (c) {
+          return { id: c.id, title: c.title, updated_at: c.updated_at || null };
+        }),
+        conversationId: cfg.activeConversation || null,
+        drawerOpen: false,
+        confirmDel: null,
         draft: cfg.prefill || '',
         typing: false,
         errorMsg: '',
@@ -129,18 +157,36 @@
         suggestions: cfg.suggestions || [],
         prenom: cfg.prenom || 'athlète',
         init() {
-          // Le scroll réel se fait sur la fenêtre (coach-messages n'est pas
-          // overflow:auto) — on attend le layout puis on pousse en bas.
           this.$nextTick(() => requestAnimationFrame(() => this.scrollDown()));
           setTimeout(() => this.scrollDown(), 120);
           setTimeout(() => this.scrollDown(), 400);
           window.addEventListener('load', () => this.scrollDown(), { once: true });
         },
-        askClear() {
-          document.getElementById('coach-clear-modal').style.display = 'flex';
+        newChat() {
+          // Démarre un chat vide sans recharger (la conversation sera créée
+          // côté serveur au 1er message).
+          this.messages = [];
+          this.conversationId = null;
+          this.errorMsg = '';
+          this.draft = '';
+          this.drawerOpen = false;
+          this.confirmDel = null;
+          try { history.replaceState({}, '', '/coach'); } catch (e) {}
+          this.$nextTick(() => this.scrollDown());
+        },
+        async deleteConversation(id) {
+          this.confirmDel = null;
+          try {
+            await fetch('/coach/conversation/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ conversation_id: id }),
+            });
+          } catch (e) {}
+          this.conversations = this.conversations.filter(function (c) { return c.id !== id; });
+          if (this.conversationId === id) this.newChat();
         },
         groupedMessages() {
-          // Regroupe par jour civil local (Aujourd'hui / Hier / JJ mois).
           var MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
           var today = new Date(); today.setHours(0,0,0,0);
           var yesterday = new Date(today.getTime() - 86400000);
@@ -166,18 +212,13 @@
           return groups;
         },
         renderMd(text) {
-          // Escape HTML puis applique un markdown minimal : headers, **bold**,
-          // *italic*, `code`, listes à puce et retours ligne.
           if (!text) return '';
           var esc = String(text)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          // Headers en début de ligne (avant les autres transfos qui touchent *)
           esc = esc.replace(/^###\s+(.+)$/gm, '<h5 class="md-h">$1</h5>');
           esc = esc.replace(/^##\s+(.+)$/gm, '<h4 class="md-h">$1</h4>');
           esc = esc.replace(/^#\s+(.+)$/gm, '<h3 class="md-h">$1</h3>');
-          // Code inline avec backticks
           esc = esc.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-          // Liens markdown [texte](url) — whitelist : URL interne (/...) ou http(s)
           esc = esc.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, function (_m, txt, url) {
             var safe = /^(https?:\/\/|\/)[^\s"'<>]*$/.test(url);
             if (!safe) return txt;
@@ -185,22 +226,16 @@
             var attrs = ext ? ' target="_blank" rel="noopener"' : '';
             return '<a class="coach-link" href="' + url + '"' + attrs + '>' + txt + '</a>';
           });
-          // Bold **…**
           esc = esc.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-          // Italic *…* (après bold pour ne pas entrer en conflit)
           esc = esc.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
-          // Listes à puce : lignes commençant par - ou *
           esc = esc.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>');
           esc = esc.replace(/(<li>.*<\/li>(?:\n|$))+/g, function(m) { return '<ul>' + m.replace(/\n/g, '') + '</ul>'; });
-          // Retours à la ligne (sauf à l'intérieur des headers/listes/blocs déjà transformés)
           esc = esc.replace(/\n/g, '<br>');
-          // Nettoie les <br> parasites avant/après les blocs
           esc = esc.replace(/<br>\s*(<\/?(?:h[3-5]|ul|li)[^>]*>)/g, '$1');
           esc = esc.replace(/(<\/(?:h[3-5]|ul|li)>)\s*<br>/g, '$1');
           return esc;
         },
         scrollDown() {
-          // coach-messages n'a pas d'overflow — on scrolle la fenêtre.
           var h = Math.max(
             document.body.scrollHeight,
             document.documentElement.scrollHeight
@@ -222,7 +257,7 @@
             const resp = await fetch('/coach/ask', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: msg }),
+              body: JSON.stringify({ message: msg, conversation_id: this.conversationId }),
             });
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok) {
@@ -231,6 +266,19 @@
             } else {
               this.messages.push({ role: 'assistant', content: data.reply || '', created_at: new Date().toISOString() });
               if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
+              // Nouvelle conversation créée côté serveur : on l'ajoute à la
+              // sidebar et on mémorise son id pour la suite du fil.
+              if (data.conversation_id) {
+                if (data.new_conversation && !this.conversations.some(c => c.id === data.conversation_id)) {
+                  this.conversations.unshift({
+                    id: data.conversation_id,
+                    title: data.conversation_title || 'Nouvelle conversation',
+                    updated_at: new Date().toISOString(),
+                  });
+                  try { history.replaceState({}, '', '/coach?c=' + data.conversation_id); } catch (e) {}
+                }
+                this.conversationId = data.conversation_id;
+              }
             }
           } catch (e) {
             this.errorMsg = 'Réseau indisponible.';
@@ -244,6 +292,38 @@
   </script>
 
   <style>
+    .coach-header {
+      position: sticky;
+      top: 0;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 2px;
+      background: var(--bg-base);
+    }
+    .coach-header-title {
+      flex: 1;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-1);
+      justify-content: center;
+    }
+    .coach-icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      border: 0.5px solid var(--border-default);
+      border-radius: 10px;
+      color: var(--text-1);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .coach-icon-btn:active { background: var(--bg-elevated); }
     .coach-disclaimer {
       display: flex;
       align-items: center;
@@ -257,14 +337,124 @@
       margin-bottom: 14px;
       line-height: 1.4;
     }
+
+    /* ── Drawer conversations ── */
+    .coach-drawer-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 290;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .coach-drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 300;
+      width: 80%;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(16,18,28,0.92);
+      backdrop-filter: blur(36px) saturate(180%);
+      -webkit-backdrop-filter: blur(36px) saturate(180%);
+      border-right: 0.5px solid var(--border-default);
+      box-shadow: 8px 0 40px rgba(0,0,0,0.5);
+      transform: translateX(-105%);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+    }
+    .coach-drawer.open { transform: translateX(0); }
+    .coach-drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      padding: 0 4px 10px;
+    }
+    .coach-newchat-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 11px;
+      background: var(--accent-bg);
+      border: 0.5px solid var(--accent);
+      border-radius: 12px;
+      color: var(--accent);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .coach-newchat-btn:active { background: var(--accent-bg-hover); }
+    .coach-conv-list {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .coach-conv-empty {
+      color: var(--text-3);
+      font-size: 0.82rem;
+      text-align: center;
+      padding: 20px 8px;
+    }
+    .coach-conv-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 10px;
+      transition: background 0.12s;
+    }
+    .coach-conv-item.active { background: var(--accent-bg); }
+    .coach-conv-item:not(.active):active { background: var(--bg-surface); }
+    .coach-conv-link {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 10px;
+      color: var(--text-1);
+      font-size: 0.86rem;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .coach-conv-item.active .coach-conv-link { color: var(--accent); font-weight: 500; }
+    .coach-conv-del {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      margin-right: 4px;
+      background: none;
+      border: none;
+      color: var(--text-3);
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    .coach-conv-del.danger { color: var(--danger); }
+    .coach-conv-confirm { display: flex; gap: 2px; }
+
+    /* ── Chat ── */
     .coach-chat {
       display: flex;
       flex-direction: column;
       gap: 8px;
       position: relative;
-      /* Laisse de la place pour coach-footer qui est fixed en bas de
-         l'écran (hauteur estimée 72px). */
-      padding-bottom: 72px;
+      padding-bottom: 80px;
     }
     .coach-messages {
       flex: 1;
@@ -353,9 +543,6 @@
     .coach-suggestion:hover {
       background: var(--accent-bg-hover);
     }
-    /* Footer groupé (input + compteur) posé en fixed juste au-dessus de
-       la bottom-nav. Plus simple et plus fiable que deux sticky
-       indépendants qui se croisaient. */
     .coach-footer {
       position: fixed;
       left: 0; right: 0;
@@ -453,7 +640,6 @@
     .msg-bubble h4.md-h { font-size: 0.95rem; color: var(--text-1); }
     .msg-bubble h5.md-h { font-size: 0.88rem; color: var(--accent); }
     .msg-bubble .md-h:first-child { margin-top: 0; }
-    /* Espacement entre les bulles à l'intérieur d'un groupe de date */
     .msg-group {
       display: flex;
       flex-direction: column;

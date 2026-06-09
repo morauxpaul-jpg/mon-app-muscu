@@ -13,6 +13,8 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from core.data import (
     get_prog, get_hist, get_profile, save_profile, get_onboarding,
     list_coach_messages, insert_coach_message, clear_coach_messages,
+    list_coach_conversations, create_coach_conversation,
+    touch_coach_conversation, delete_coach_conversation,
 )
 from core.dates import today_paris_str
 from core.db import _env
@@ -205,6 +207,14 @@ def _quota_remaining(profile):
     return max(0, DAILY_QUOTA - q_count)
 
 
+def _title_from_message(msg: str) -> str:
+    """Titre court d'une conversation à partir du 1er message."""
+    t = " ".join((msg or "").split())
+    if not t:
+        return "Nouvelle conversation"
+    return (t[:40].rstrip() + "…") if len(t) > 40 else t
+
+
 @bp.route("/coach")
 def index():
     if not getattr(g, "is_vip", False):
@@ -215,11 +225,23 @@ def index():
     except Exception as e:
         logger.error("/coach load profile/onboarding FAILED: %s", e)
         profile, onboarding = {}, {}
+    # Liste des conversations pour la sidebar (drawer).
     try:
-        messages = list_coach_messages(50) or []
+        conversations = list_coach_conversations(50) or []
     except Exception as e:
-        logger.error("/coach load history FAILED: %s", e)
-        messages = []
+        logger.error("/coach load conversations FAILED: %s", e)
+        conversations = []
+    # ?c=<id> reprend une conversation ; sinon, nouveau chat vide par défaut.
+    conv_id = (request.args.get("c") or "").strip()
+    messages = []
+    active_conversation = None
+    if conv_id and any(str(c.get("id")) == conv_id for c in conversations):
+        active_conversation = conv_id
+        try:
+            messages = list_coach_messages(conversation_id=conv_id, limit=100) or []
+        except Exception as e:
+            logger.error("/coach load conv messages FAILED: %s", e)
+            messages = []
     prenom = (onboarding.get("prenom") or profile.get("prenom") or "").strip()
     remaining = _quota_remaining(profile)
     prefill = (request.args.get("q") or "").strip()[:500]
@@ -231,6 +253,8 @@ def index():
         quota_remaining=remaining,
         quota_limit=DAILY_QUOTA,
         messages=messages,
+        conversations=conversations,
+        active_conversation=active_conversation,
         prefill=prefill,
     )
 
@@ -247,6 +271,23 @@ def clear():
     return redirect(url_for("coach.index"))
 
 
+@bp.route("/coach/conversation/delete", methods=["POST"])
+@limiter.limit("20 per minute")
+def delete_conversation():
+    if not getattr(g, "is_vip", False):
+        return jsonify({"error": "réservé aux membres PRO"}), 403
+    payload = request.get_json(silent=True) or {}
+    conv_id = (payload.get("conversation_id") or "").strip()
+    if not conv_id:
+        return jsonify({"error": "conversation_id manquant"}), 400
+    try:
+        delete_coach_conversation(conv_id)
+    except Exception as e:
+        logger.error("/coach/conversation/delete FAILED: %s", e)
+        return jsonify({"error": "suppression échouée"}), 500
+    return jsonify({"ok": True})
+
+
 @bp.route("/coach/ask", methods=["POST"])
 @limiter.limit("30 per minute")
 def ask():
@@ -258,6 +299,7 @@ def ask():
         return jsonify({"error": "message vide"}), 400
     if len(message) > 1500:
         message = message[:1500]
+    conversation_id = (payload.get("conversation_id") or "").strip() or None
 
     # _env() strip les guillemets et `=` parasites souvent injectés par Railway
     api_key = _env("ANTHROPIC_API_KEY")
@@ -314,12 +356,15 @@ def ask():
         catalog_list=_catalog_list_for_prompt(),
     )
 
-    # Historique (10 derniers) envoyé comme contexte conversationnel
-    try:
-        history = list_coach_messages(10) or []
-    except Exception as e:
-        logger.error("/coach/ask history load FAILED: %s", e)
-        history = []
+    # Historique (10 derniers) de CETTE conversation comme contexte. Un
+    # nouveau chat (conversation_id absent) démarre sans contexte antérieur.
+    history = []
+    if conversation_id:
+        try:
+            history = list_coach_messages(conversation_id=conversation_id, limit=10) or []
+        except Exception as e:
+            logger.error("/coach/ask history load FAILED: %s", e)
+            history = []
     api_messages = [
         {"role": m["role"], "content": m["content"]}
         for m in history
@@ -363,16 +408,35 @@ def ask():
             user_msg = f"Erreur Anthropic ({err_type}) : {err_msg}"
         return jsonify({"error": user_msg}), 502
 
+    # Crée la conversation au 1er message réussi (titre = début du message).
+    # On le fait après l'appel API pour ne pas créer de conversation vide en
+    # cas d'échec.
+    new_conversation = False
+    conversation_title = None
+    if not conversation_id:
+        try:
+            conversation_title = _title_from_message(message)
+            conversation_id = create_coach_conversation(conversation_title)
+            new_conversation = bool(conversation_id)
+        except Exception as e:
+            logger.error("/coach/ask create conversation FAILED: %s", e)
+            conversation_id = None
+
     # Persiste le tour de conversation (user puis assistant) pour que
     # l'historique survive aux rechargements et aux autres sessions.
     try:
-        insert_coach_message("user", message)
-        insert_coach_message("assistant", reply)
+        insert_coach_message("user", message, conversation_id)
+        insert_coach_message("assistant", reply, conversation_id)
+        if conversation_id:
+            touch_coach_conversation(conversation_id)
     except Exception as e:
         logger.error("/coach/ask persist FAILED: %s", e)
 
     return jsonify({
         "reply": reply,
+        "conversation_id": conversation_id,
+        "conversation_title": conversation_title,
+        "new_conversation": new_conversation,
         "quota_remaining": max(0, limit - count_after),
         "quota_limit": limit,
     })

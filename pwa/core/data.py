@@ -106,17 +106,37 @@ def sum_nutrition_range(date_from, date_to):
     return db.sum_nutrition_range(_uid(), date_from, date_to)
 
 
-# ── Coach IA (historique) ───────────────────────────────────────────────
-def list_coach_messages(limit=50):
-    return db.list_coach_messages(_uid(), limit)
+# ── Coach IA (historique + conversations) ───────────────────────────────
+def list_coach_messages(conversation_id=None, limit=50):
+    return db.list_coach_messages(_uid(), conversation_id, limit)
 
 
-def insert_coach_message(role, content):
-    return db.insert_coach_message(_uid(), role, content)
+def insert_coach_message(role, content, conversation_id=None):
+    return db.insert_coach_message(_uid(), role, content, conversation_id)
 
 
 def clear_coach_messages():
     return db.clear_coach_messages(_uid())
+
+
+def list_coach_conversations(limit=50):
+    return db.list_coach_conversations(_uid(), limit)
+
+
+def create_coach_conversation(title="Nouvelle conversation"):
+    return db.create_coach_conversation(_uid(), title)
+
+
+def rename_coach_conversation(conversation_id, title):
+    return db.rename_coach_conversation(_uid(), conversation_id, title)
+
+
+def touch_coach_conversation(conversation_id):
+    return db.touch_coach_conversation(_uid(), conversation_id)
+
+
+def delete_coach_conversation(conversation_id):
+    return db.delete_coach_conversation(_uid(), conversation_id)
 
 
 # ── Tier (Prompt D — paywall préparé, non activé) ───────────────────────
