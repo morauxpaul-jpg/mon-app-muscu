@@ -832,6 +832,13 @@
         var tmp = lst[idx]; lst[idx] = lst[j]; lst[j] = tmp;
         this.scheduleSave();
       },
+      reorderExo(sname, from, to) {
+        var lst = this.prog[sname];
+        if (!lst || from === to || from < 0 || to < 0 || from >= lst.length || to >= lst.length) return;
+        var item = lst.splice(from, 1)[0];
+        lst.splice(to, 0, item);
+        this.scheduleSave();
+      },
       toggleMuscle(ex, muscle, checked) {
         var parts = (ex.muscle || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
         var has = parts.indexOf(muscle) >= 0;

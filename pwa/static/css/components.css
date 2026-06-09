@@ -556,10 +556,31 @@
   margin-bottom: var(--sp-sm);
 }
 .prog-exo-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 500;
   color: var(--text-1);
   font-size: var(--text-base);
   margin-bottom: 4px;
+}
+/* Poignée de réordonnancement (maintenir pour glisser) */
+.prog-exo-grip {
+  flex-shrink: 0;
+  color: var(--text-3);
+  cursor: grab;
+  touch-action: none;
+}
+.prog-exo-grip:active { cursor: grabbing; }
+/* Pendant le glisser : fantôme à l'emplacement cible + élément soulevé */
+.prog-exo-ghost {
+  opacity: 0.35;
+  background: var(--accent-bg);
+}
+.prog-exo-dragging {
+  opacity: 0.95;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+  border-color: rgba(120,200,255,0.4);
 }
 .prog-exo-actions {
   display: flex;

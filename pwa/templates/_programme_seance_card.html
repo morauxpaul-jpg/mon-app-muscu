@@ -68,10 +68,15 @@
       <button type="button" class="btn primary" @click="renameSeance(sname, newName); renaming=false">OK</button>
     </div>
 
+    <div x-sort="reorderExo(sname, $item, $position)"
+         x-sort:config="{ animation: 150, delay: 220, delayOnTouchOnly: true, filter: 'input, button, select, textarea, .muscle-dd', preventOnFilter: false, ghostClass: 'prog-exo-ghost', dragClass: 'prog-exo-dragging' }">
     <template x-for="(ex, exIdx) in prog[sname]" :key="sname + '|' + exIdx + '|' + ex.name">
-      <div class="prog-exo-row" x-data="{ confirmExoDel: false }">
+      <div class="prog-exo-row" x-sort:item="exIdx" x-data="{ confirmExoDel: false }">
         <div class="prog-exo-form">
-          <div class="prog-exo-name" x-text="ex.name"></div>
+          <div class="prog-exo-name">
+            <svg class="icon icon-sm prog-exo-grip" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg>
+            <span x-text="ex.name"></span>
+          </div>
           <div class="prog-exo-fields">
             <label class="field-label" style="margin-top:4px;">Séries</label>
             <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()">
@@ -98,8 +103,6 @@
           </div>
         </div>
         <div class="prog-exo-actions" x-show="!confirmExoDel">
-          <button type="button" class="btn mini icon-btn" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
-          <button type="button" class="btn mini icon-btn" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
           <button type="button" class="btn mini icon-btn" aria-label="Supprimer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
         </div>
         <div class="inline-confirm" x-show="confirmExoDel" x-cloak style="margin-top:8px;">
@@ -109,6 +112,7 @@
         </div>
       </div>
     </template>
+    </div>
 
     <hr style="border: 0; border-top: 0.5px solid var(--border-subtle); margin: 14px 0;">
 
