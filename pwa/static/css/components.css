@@ -522,6 +522,32 @@
   color: var(--accent);
 }
 
+/* Menu déroulant muscles — collapsé montre la sélection, déplié les chips */
+.muscle-dd { position: relative; margin: 4px 0; }
+.muscle-dd-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+.muscle-dd-trigger .icon { flex-shrink: 0; transition: transform var(--ease-fast); }
+.muscle-dd-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.muscle-dd-value.is-empty { color: var(--text-3); }
+.muscle-dd-panel {
+  margin-top: 6px;
+  padding: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
 .prog-exo-row {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
@@ -539,12 +565,18 @@
   display: flex;
   gap: 6px;
   margin-top: var(--sp-sm);
+  justify-content: flex-end;
 }
 .prog-exo-actions form { flex: 1; }
 .btn.mini {
   padding: 6px 8px;
   font-size: var(--text-sm);
   width: 100%;
+}
+/* Boutons d'action icône seule (Monter / Descendre / Supprimer) — compacts */
+.btn.mini.icon-btn {
+  width: auto;
+  padding: 7px 10px;
 }
 
 .prog-card {

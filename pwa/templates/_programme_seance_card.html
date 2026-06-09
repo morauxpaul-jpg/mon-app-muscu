@@ -76,22 +76,31 @@
             <label class="field-label" style="margin-top:4px;">Séries</label>
             <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()">
             <label class="field-label">Muscle(s)</label>
-            <div class="muscle-checks">
-              {% for m in muscle_list %}
-                <label class="muscle-check">
-                  <input type="checkbox" value="{{ m }}"
-                         :checked="(ex.muscle || '').split(',').map(s => s.trim()).includes('{{ m }}')"
-                         @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
-                  <span>{{ m }}</span>
-                </label>
-              {% endfor %}
+            <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
+              <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">
+                <span class="muscle-dd-value" :class="{ 'is-empty': !(ex.muscle && ex.muscle.trim()) }"
+                      x-text="(ex.muscle && ex.muscle.trim()) ? ex.muscle : 'Auto-détection'"></span>
+                <svg class="icon icon-sm" :style="openM ? 'transform:rotate(180deg)' : ''"><use href="/static/img/icons.svg#arrow-down"/></svg>
+              </button>
+              <div class="muscle-dd-panel" x-show="openM" x-transition x-cloak>
+                <div class="muscle-checks">
+                  {% for m in muscle_list %}
+                    <label class="muscle-check">
+                      <input type="checkbox" value="{{ m }}"
+                             :checked="(ex.muscle || '').split(',').map(s => s.trim()).includes('{{ m }}')"
+                             @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
+                      <span>{{ m }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
             </div>
           </div>
         </div>
         <div class="prog-exo-actions" x-show="!confirmExoDel">
-          <button type="button" class="btn mini label-icon" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
-          <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
-          <button type="button" class="btn mini label-icon" aria-label="Supprimer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
+          <button type="button" class="btn mini icon-btn" aria-label="Monter" @click="moveExo(sname, exIdx, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
+          <button type="button" class="btn mini icon-btn" aria-label="Descendre" @click="moveExo(sname, exIdx, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
+          <button type="button" class="btn mini icon-btn" aria-label="Supprimer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
         </div>
         <div class="inline-confirm" x-show="confirmExoDel" x-cloak style="margin-top:8px;">
           <span class="confirm-label">Supprimer <span x-text="ex.name"></span> ?</span>
@@ -155,16 +164,26 @@
       <label class="field-label">Séries</label>
       <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15">
       <label class="field-label">Muscle(s) — vide = auto-détection</label>
-      <div class="muscle-checks new-exo-muscles">
-        {% for m in muscle_list %}
-          <label class="muscle-check">
-            <input type="checkbox" value="{{ m }}" @change="$event.target.checked ? newExo.muscles.push('{{ m }}') : newExo.muscles.splice(newExo.muscles.indexOf('{{ m }}'), 1)">
-            <span>{{ m }}</span>
-          </label>
-        {% endfor %}
+      <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
+        <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">
+          <span class="muscle-dd-value" :class="{ 'is-empty': !newExo.muscles.length }"
+                x-text="newExo.muscles.length ? newExo.muscles.join(', ') : 'Auto-détection'"></span>
+          <svg class="icon icon-sm" :style="openM ? 'transform:rotate(180deg)' : ''"><use href="/static/img/icons.svg#arrow-down"/></svg>
+        </button>
+        <div class="muscle-dd-panel" x-show="openM" x-transition x-cloak>
+          <div class="muscle-checks">
+            {% for m in muscle_list %}
+              <label class="muscle-check">
+                <input type="checkbox" value="{{ m }}" :checked="newExo.muscles.includes('{{ m }}')"
+                       @change="$event.target.checked ? newExo.muscles.push('{{ m }}') : newExo.muscles.splice(newExo.muscles.indexOf('{{ m }}'), 1)">
+                <span>{{ m }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
       </div>
       <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"
-              @click="addExo(sname, newExo); newExo = { name: '', sets: 3, muscles: [] }; $el.parentElement.querySelectorAll('.new-exo-muscles input[type=\'checkbox\']').forEach(c => c.checked = false)">
+              @click="addExo(sname, newExo); newExo = { name: '', sets: 3, muscles: [] }">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
       </button>
     </div>
