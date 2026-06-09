@@ -9,6 +9,7 @@ ce `user_id` dans `flask.g`.
 import logging
 import os
 import secrets
+import time
 from datetime import timedelta
 
 from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request, abort
@@ -58,6 +59,9 @@ if not _flask_secret:
     )
 app.secret_key = _flask_secret or "dev-insecure-change-me"
 app.permanent_session_lifetime = timedelta(days=30)
+# Revalidation du tier VIP depuis la base (cf. before_request). Court pour
+# propager rapidement un passage VIP fait par l'admin, sans marteler la DB.
+VIP_CACHE_TTL = 120  # secondes
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -99,16 +103,22 @@ def _require_login():
     g.email = session.get("email", "")
 
     # Phase 5 : statut VIP disponible partout via g.is_vip. Lu depuis
-    # profiles.tier ∈ {'free','vip'}. Mis en cache session (invalidation
-    # explicite dans /admin/set-tier).
+    # profiles.tier ∈ {'free','vip'}. Mis en cache session avec un TTL court :
+    # la session est un cookie 30 j, donc sans revalidation un user promu VIP
+    # par l'admin resterait « free » jusqu'à reconnexion. On re-lit la base
+    # toutes les VIP_CACHE_TTL s pour propager les changements de tier.
     cached_vip = session.get("is_vip")
-    if cached_vip is None:
+    checked_at = session.get("is_vip_ts", 0)
+    if cached_vip is None or (time.time() - checked_at) > VIP_CACHE_TTL:
         try:
             profile = core_db.get_profile(user_id) or {}
             cached_vip = (profile.get("tier") or "free").strip().lower() == "vip"
         except Exception:
-            cached_vip = False
+            # En cas d'erreur DB transitoire, on garde la valeur connue plutôt
+            # que de rétrograder à tort en free.
+            cached_vip = bool(cached_vip) if cached_vip is not None else False
         session["is_vip"] = cached_vip
+        session["is_vip_ts"] = time.time()
     g.is_vip = bool(cached_vip)
 
     # Phase 4 : gate onboarding. Les routes /onboarding/* et /logout sont
