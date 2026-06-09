@@ -276,12 +276,30 @@
     </form>
   </div>
 
+  <div class="card" style="border-color: rgba(255,69,58,0.5);">
+    <h3 class="label-icon" style="color: var(--danger);"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#user"/></svg>Supprimer mon compte</h3>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Supprime <strong>définitivement</strong> ton compte et toutes tes données (historique, programme, profil, nutrition, conversations coach). Aucune récupération possible. Pense à <a href="/gestion/export" style="color:var(--violet);">exporter tes données</a> avant si tu veux les garder.</p>
+    <form method="post" action="/gestion/delete-account" x-data="{ c:false }">
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="confirm" value="yes" required>
+        <span>Je comprends, mon compte et mes données seront supprimés pour toujours</span>
+      </label>
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>SUPPRIMER MON COMPTE</button>
+      <div class="inline-confirm" x-show="c" x-cloak>
+        <span class="confirm-label">Supprimer définitivement ton compte ?</span>
+        <button type="button" class="btn" @click="c=false">Annuler</button>
+        <button type="submit" class="btn btn-danger">Supprimer</button>
+      </div>
+    </form>
+  </div>
+
   {# ── Section : À propos ──────────────────── #}
   <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>À PROPOS</h2>
 
   <div class="card" style="text-align:center;">
     <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker</strong></p>
     <p style="font-size:0.8rem; color:var(--text-dim); margin:0;">PWA de suivi musculation · Données privées</p>
+    <p style="font-size:0.75rem; margin:6px 0 0;"><a href="/confidentialite" style="color:var(--text-3);">Politique de confidentialité</a> · <a href="/faq" style="color:var(--text-3);">FAQ</a></p>
   </div>
 
   <script>

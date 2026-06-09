@@ -89,9 +89,9 @@ app.register_blueprint(admin_bp)
 # ────────────────────────────────────────────────────────────────
 # Auth gate — toutes les routes sauf celles listées nécessitent user_id
 # ────────────────────────────────────────────────────────────────
-# /faq est public : les stores (Play/App Store) exigent une URL de politique
-# de confidentialité consultable sans compte.
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq"}
+# /faq et /confidentialite sont publics : les stores (Play/App Store) exigent
+# une URL de politique de confidentialité consultable sans compte.
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite"}
 
 
 @app.before_request
@@ -323,6 +323,12 @@ def plaques():
 def faq():
     # FAQ statique : confidentialité, sécurité, données, IA…
     return render_template("faq.html", active="plus")
+
+
+@app.route("/confidentialite")
+def confidentialite():
+    # Politique de confidentialité — publique (exigence stores).
+    return render_template("confidentialite.html", active="plus")
 
 
 # ────────────────────────────────────────────────────────────────

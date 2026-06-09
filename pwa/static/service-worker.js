@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v85-2026-06-10-prelaunch-hardening";
+const CACHE_VERSION = "v86-2026-06-10-account-deletion-privacy";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [

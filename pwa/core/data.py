@@ -139,6 +139,11 @@ def delete_coach_conversation(conversation_id):
     return db.delete_coach_conversation(_uid(), conversation_id)
 
 
+# ── Suppression de compte (exigence stores) ─────────────────────────────
+def delete_user_account():
+    return db.delete_user_account(_uid())
+
+
 # ── Tier (Prompt D — paywall préparé, non activé) ───────────────────────
 def is_premium() -> bool:
     """True si l'utilisateur courant est tier 'vip'. Pour l'instant tout le

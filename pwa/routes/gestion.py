@@ -5,11 +5,17 @@ Cette page regroupe : paramètres d'affichage, auto-assignation des muscles,
 reset soft, reset total, vider l'archive.
 """
 import json
+import logging
 from datetime import date
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
 
-from core.data import get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding
+from core.data import (
+    get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding,
+    delete_user_account,
+)
+
+logger = logging.getLogger(__name__)
 from core.muscu import auto_muscles, get_base_name
 from core.limiter import limiter
 
@@ -248,6 +254,26 @@ def reset_total():
     save_prog(prog)
     save_hist([])
     return redirect(url_for("gestion.gestion") + "?reset=total")
+
+
+@bp.route("/gestion/delete-account", methods=["POST"])
+@limiter.limit("3 per minute")
+def delete_account():
+    """Suppression DÉFINITIVE du compte + toutes les données (exigence des
+    stores : doit être faisable dans l'app, pas seulement par email)."""
+    if request.form.get("confirm") != "yes":
+        return redirect(url_for("gestion.gestion"))
+    try:
+        delete_user_account()
+    except Exception as e:
+        logger.error("delete-account FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
+        return render_template(
+            "error.html", code=500,
+            message="La suppression du compte a échoué. Réessaie, ou écris à "
+                    "moraux.paul@gmail.com pour une suppression manuelle.",
+        ), 500
+    session.clear()
+    return redirect("/")
 
 
 @bp.route("/gestion/export")

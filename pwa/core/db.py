@@ -621,6 +621,38 @@ def reset_user_coach_quota(user_id: str) -> None:
     client.table("profiles").upsert({"id": user_id, "coach_quota_count": 0}).execute()
 
 
+def delete_user_account(user_id: str) -> None:
+    """Suppression DÉFINITIVE d'un compte : toutes les tables + l'utilisateur
+    auth Supabase. Exigence des stores (Google Play / App Store) : la
+    suppression de compte doit être disponible dans l'app.
+
+    Ordre : données métier d'abord, auth en dernier — si la suppression auth
+    échoue, l'utilisateur peut réessayer (les données restantes seront déjà
+    parties, les deletes sont idempotents)."""
+    client = get_client()
+    # coach_conversations en premier : supprime aussi coach_messages liés
+    # (ON DELETE CASCADE) ; le delete coach_messages qui suit couvre les
+    # éventuels messages legacy sans conversation_id.
+    for table, key in (
+        ("coach_conversations", "user_id"),
+        ("coach_messages", "user_id"),
+        ("nutrition", "user_id"),
+        ("history", "user_id"),
+        ("programs", "user_id"),
+        ("onboarding", "user_id"),
+        ("profiles", "id"),
+    ):
+        try:
+            client.table(table).delete().eq(key, user_id).execute()
+        except Exception as e:
+            # Une table optionnelle absente (migration non appliquée) ne doit
+            # pas bloquer la suppression du reste.
+            logger.error("delete_user_account %s FAILED user=%s: %s", table, user_id, e)
+    clear_user_cache(user_id)
+    # Compte auth Supabase (Google OAuth) — en dernier.
+    client.auth.admin.delete_user(user_id)
+
+
 def sum_nutrition_day(user_id: str, date_str: str) -> dict:
     rows = list_nutrition(user_id, date_str)
     out = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}

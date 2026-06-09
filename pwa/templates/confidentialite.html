@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Politique de confidentialité · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="{% if is_authenticated %}/plus{% else %}/{% endif %}" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#lock"/></svg>Politique de confidentialité</h1>
+  <p style="font-size:0.78rem; color:var(--text-3); margin:4px 0 16px;">Dernière mise à jour : 10 juin 2026</p>
+
+  <div class="card privacy-card">
+    <h3>1. Qui est responsable de tes données ?</h3>
+    <p><strong>Muscu Tracker</strong> est édité par Paul Moraux. Pour toute question relative à tes données : <a href="mailto:moraux.paul@gmail.com">moraux.paul@gmail.com</a>.</p>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>2. Quelles données sont collectées ?</h3>
+    <ul>
+      <li><strong>Compte</strong> : adresse e-mail et identifiant fournis par Google lors de la connexion (l'app ne voit jamais ton mot de passe).</li>
+      <li><strong>Profil</strong> : prénom, âge, sexe, poids, taille, niveau, objectif, équipement — saisis par toi lors de l'onboarding ou dans Nutrition.</li>
+      <li><strong>Entraînement</strong> : séances, exercices, séries, poids, cardio, programme, planning.</li>
+      <li><strong>Nutrition</strong> : repas et macros que tu enregistres.</li>
+      <li><strong>Coach IA</strong> : tes messages et les réponses du coach.</li>
+    </ul>
+    <p>Aucune donnée de localisation, aucun contact, aucune photo. Pas de publicité, pas de pisteur tiers, pas d'analytics externe.</p>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>3. À quoi servent-elles ?</h3>
+    <p>Uniquement à faire fonctionner l'app : afficher tes séances et ta progression, calculer tes objectifs nutritionnels, personnaliser les réponses du coach IA. <strong>Tes données ne sont jamais vendues ni partagées à des fins publicitaires.</strong></p>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>4. Où sont-elles stockées et qui y a accès ?</h3>
+    <ul>
+      <li><strong>Supabase</strong> (base de données PostgreSQL sécurisée) : stockage de toutes tes données.</li>
+      <li><strong>Railway</strong> : hébergement du serveur de l'application.</li>
+      <li><strong>Google</strong> : uniquement pour l'authentification (Google Sign-In).</li>
+      <li><strong>Anthropic</strong> : quand tu utilises le Coach IA, ton message et ton contexte d'entraînement (programme, dernières séances, profil) sont envoyés à l'API Claude pour générer la réponse. Anthropic n'utilise pas ces données pour entraîner ses modèles.</li>
+    </ul>
+    <p>Seul toi (via ton compte) et l'administrateur de l'app (à des fins de maintenance) peuvent accéder à tes données. Les échanges sont chiffrés (HTTPS).</p>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>5. Combien de temps sont-elles conservées ?</h3>
+    <p>Tant que ton compte existe. Si tu supprimes ton compte, <strong>toutes</strong> tes données sont effacées immédiatement et définitivement.</p>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>6. Tes droits (RGPD)</h3>
+    <ul>
+      <li><strong>Accès / portabilité</strong> : exporte toutes tes données en JSON depuis <a href="/gestion">Gestion</a> (membres Premium) ou sur demande par e-mail.</li>
+      <li><strong>Rectification</strong> : modifie ton profil, ton programme et ton historique directement dans l'app.</li>
+      <li><strong>Effacement</strong> : supprime ton compte et toutes tes données depuis <a href="/gestion">Gestion → Supprimer mon compte</a>, ou par e-mail à <a href="mailto:moraux.paul@gmail.com">moraux.paul@gmail.com</a>.</li>
+      <li><strong>Réclamation</strong> : tu peux saisir la CNIL (cnil.fr) si tu estimes que tes droits ne sont pas respectés.</li>
+    </ul>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>7. Cookies</h3>
+    <p>Un seul cookie, strictement nécessaire : le cookie de session qui te garde connecté (30 jours). Aucun cookie publicitaire ou de mesure d'audience.</p>
+  </div>
+
+  <div class="card privacy-card">
+    <h3>8. Mineurs</h3>
+    <p>L'app n'est pas destinée aux moins de 15 ans. Si tu es mineur, demande l'accord d'un parent avant de créer un compte.</p>
+  </div>
+
+  <style>
+    .privacy-card h3 { margin:0 0 8px; font-size:0.95rem; color:var(--text-1); font-weight:600; }
+    .privacy-card p, .privacy-card li { font-size:0.84rem; color:var(--text-2); line-height:1.6; }
+    .privacy-card ul { padding-left:18px; margin:0 0 8px; }
+    .privacy-card a { color:var(--accent); }
+  </style>
+{% endblock %}

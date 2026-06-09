@@ -42,7 +42,7 @@ pwa/
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
 │   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas
-│   ├── coach.py                   # Chat IA (Claude Haiku 4.5), réservé VIP, quota 30 msg/jour
+│   ├── coach.py                   # Chat IA (Claude Haiku 4.5), réservé VIP, quota 15 msg/jour
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   └── admin.py                   # Stats, gestion VIP, fiche user (gated par ADMIN_EMAILS env)
 ├── templates/
@@ -110,7 +110,7 @@ pwa/
 ## Système Free / VIP
 
 - **Tier** stocké dans `profiles.tier` ∈ {`free`, `vip`}. Lu et caché en session via `g.is_vip`.
-- **Gating Free** : Coach IA (réservé VIP, 30 msg/jour), Export/Import, certains programmes du catalogue, stats avancées.
+- **Gating Free** : Coach IA (réservé VIP, 15 msg/jour), Export/Import, certains programmes du catalogue, stats avancées.
 - **Mur VIP** : `templates/partials/vip_lock.html` (inline) ou `vip_wall.html` (plein écran).
 - **Badge PRO** affiché dans la topbar pour les VIP.
 - **Admin** (`ADMIN_EMAILS` env, séparateur virgule) peut basculer manuellement le tier d'un user via `/admin/set-tier`.
@@ -138,7 +138,7 @@ pwa/
 ### Coach IA
 - Modèle : `claude-haiku-4-5-20251001`, max 500 tokens
 - Accès réservé VIP (mur `vip_wall.html` pour les free)
-- Quota VIP : 30 msg/jour (champs `profiles.coach_quota_date` + `coach_quota_count`, reset auto à chaque nouveau jour) — protège le coût API
+- Quota VIP : 15 msg/jour (champs `profiles.coach_quota_date` + `coach_quota_count`, reset auto à chaque nouveau jour) — protège le coût API
 - Historique conversation persisté dans `coach_messages`, effaçable via `/coach/clear`
 - Le system prompt inclut le profil utilisateur, le programme, et l'historique récent
 
