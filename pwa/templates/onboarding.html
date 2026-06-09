@@ -158,10 +158,12 @@
   .preview-exo-name { color:var(--text-1); flex:1; min-width:0; overflow-wrap:anywhere; }
   .preview-exo-sets { color:var(--text-3); white-space:nowrap; flex-shrink:0; }
   .preview-choose {
+    position: sticky; bottom: 0;
     width:100%; margin-top:16px; padding:13px; border:none; border-radius:var(--radius-md);
     background: var(--accent); color:#fff;
     font-weight:500; font-size:1rem; cursor:pointer;
     transition: background var(--ease-fast);
+    box-shadow: 0 -10px 18px 6px var(--bg-surface);
   }
   .preview-choose:hover { background: var(--accent-hover); }
 
@@ -314,18 +316,36 @@
   <!-- Étape 4 : choix du programme -->
   <div x-show="step === 4" x-cloak>
     <div class="card">
-      <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ton programme</h2>
-      <p class="onboard-step-sub">Étape 4 sur 4 · Voici ce qu'on te recommande</p>
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+        <div>
+          <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ton programme</h2>
+          <p class="onboard-step-sub" style="margin-bottom:0;">Touche un programme pour voir sa description et ses exercices, puis lance-toi.</p>
+        </div>
+        <button type="button" class="btn-ghost label-icon" @click="step = 3" style="flex-shrink:0;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
+      </div>
     </div>
+
+    {# Form caché — soumis directement depuis la modale détail / la carte custom #}
+    <form x-ref="onbForm" method="post" action="{{ url_for('onboarding.submit') }}" style="display:none;">
+      <input type="hidden" name="prenom"      :value="form.prenom">
+      <input type="hidden" name="age"         :value="form.age">
+      <input type="hidden" name="sexe"        :value="form.sexe">
+      <input type="hidden" name="niveau"      :value="form.niveau">
+      <input type="hidden" name="frequence"   :value="form.frequence">
+      <input type="hidden" name="objectif"    :value="form.objectif">
+      <input type="hidden" name="equipement"  :value="form.equipement">
+      <input type="hidden" name="equipment_details" :value="JSON.stringify(form.equipment_details)">
+      <input type="hidden" name="programme_id" :value="form.programme_id">
+    </form>
 
     <div class="onb-list">
     <template x-for="p in orderedPrograms" :key="p.id">
       <div class="onb-card"
-           :class="{ sel: form.programme_id === p.id, 'reco-card': recommended[0] === p.id, 'locked': p.locked }"
-           @click="p.locked ? null : (form.programme_id = p.id)">
+           :class="{ 'reco-card': isReco(p.id), 'locked': p.locked }"
+           @click="p.locked ? null : openPreview(p)">
 
-        <div class="onb-badges" x-show="(!p.locked && recommended[0] === p.id) || p.locked">
-          <span class="onb-badge-reco" x-show="!p.locked && recommended[0] === p.id">★ Reco</span>
+        <div class="onb-badges" x-show="isReco(p.id) || p.locked">
+          <span class="onb-badge-reco" x-show="isReco(p.id) && !p.locked">★ Recommandé</span>
           <span class="onb-badge-pro" x-show="p.locked">PRO</span>
         </div>
 
@@ -353,37 +373,20 @@
                 x-text="'+' + (p.muscles.length - 5)"></span>
         </div>
 
-        <button type="button" class="onb-preview-btn" x-show="!p.locked" @click.stop="openPreview(p)">Voir le détail →</button>
+        <div class="onb-preview-btn" x-show="!p.locked">Voir le détail & les exercices →</div>
         <a class="onb-locked-cta" x-show="p.locked" href="/premium" @click.stop>Débloquer avec PRO</a>
       </div>
     </template>
 
-    <div class="onb-card custom"
-         :class="{ sel: form.programme_id === 'custom' }"
-         @click="form.programme_id = 'custom'">
+    <div class="onb-card custom" @click="useProgram('custom')">
       <h3 class="onb-title">
         <svg class="icon icon-md onb-title-icon" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>
         <span class="onb-title-text">Créer mon propre programme</span>
       </h3>
       <div class="onb-desc">Tu seras amené directement dans l'éditeur pour construire ton programme à zéro.</div>
+      <div class="onb-preview-btn">Partir de zéro →</div>
     </div>
     </div>
-
-    <form method="post" action="{{ url_for('onboarding.submit') }}">
-      <input type="hidden" name="prenom"      :value="form.prenom">
-      <input type="hidden" name="age"         :value="form.age">
-      <input type="hidden" name="sexe"        :value="form.sexe">
-      <input type="hidden" name="niveau"      :value="form.niveau">
-      <input type="hidden" name="frequence"   :value="form.frequence">
-      <input type="hidden" name="objectif"    :value="form.objectif">
-      <input type="hidden" name="equipement"  :value="form.equipement">
-      <input type="hidden" name="equipment_details" :value="JSON.stringify(form.equipment_details)">
-      <input type="hidden" name="programme_id" :value="form.programme_id">
-      <div class="onboard-actions">
-        <button type="button" class="btn-ghost label-icon" @click="step = 3"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
-        <button type="submit" class="btn-next label-icon" :disabled="!form.programme_id" style="justify-content:center;">C'est parti<svg class="icon icon-sm"><use href="/static/img/icons.svg#zap"/></svg></button>
-      </div>
-    </form>
   </div>
 
   <!-- Preview modal -->
@@ -411,8 +414,8 @@
             </template>
           </div>
         </template>
-        <button class="preview-choose label-icon" style="justify-content:center;" @click="form.programme_id = previewProg.id; previewProg = null">
-          Choisir ce programme<svg class="icon icon-sm"><use href="/static/img/icons.svg#zap"/></svg>
+        <button class="preview-choose label-icon" style="justify-content:center;" @click="useProgram(previewProg.id)">
+          Utiliser ce programme<svg class="icon icon-sm"><use href="/static/img/icons.svg#zap"/></svg>
         </button>
       </div>
     </div>
@@ -478,6 +481,20 @@ function onboardingFlow() {
       this.previewProg = prog;
     },
 
+    // Les meilleurs matches (top 3) portent le badge « Recommandé ».
+    isReco(id) {
+      var i = this.recommended.indexOf(id);
+      return i >= 0 && i < 3;
+    },
+
+    // Choisit un programme et valide l'onboarding directement (pas besoin de
+    // scroller jusqu'à un bouton en bas).
+    useProgram(id) {
+      this.form.programme_id = id;
+      this.previewProg = null;
+      this.$nextTick(() => { if (this.$refs.onbForm) this.$refs.onbForm.submit(); });
+    },
+
     async goStep4() {
       try {
         const resp = await fetch("{{ url_for('onboarding.recommend') }}", {
@@ -487,20 +504,17 @@ function onboardingFlow() {
             niveau: this.form.niveau,
             frequence: this.form.frequence,
             equipement: this.form.equipement,
+            objectif: this.form.objectif,
           }),
         });
         const data = await resp.json();
         this.recommended = data.recommended || [];
-        // Réordonne : recommandé en premier
+        // Réordonne : les plus pertinents d'abord, le reste (ex. PRO) ensuite.
         const ids = new Set(this.recommended);
         const reco = CATALOG_PROGRAMS.filter(p => ids.has(p.id))
           .sort((a, b) => this.recommended.indexOf(a.id) - this.recommended.indexOf(b.id));
         const rest = CATALOG_PROGRAMS.filter(p => !ids.has(p.id));
         this.orderedPrograms = [...reco, ...rest];
-        // Pré-sélection = premier reco
-        if (!this.form.programme_id && this.recommended[0]) {
-          this.form.programme_id = this.recommended[0];
-        }
       } catch (e) {
         console.warn("recommend failed", e);
       }

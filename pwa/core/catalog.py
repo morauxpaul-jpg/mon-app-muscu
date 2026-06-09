@@ -234,6 +234,51 @@ CATALOG = {
         },
     },
 
+    "ppl_4j": {
+        "id": "ppl_4j",
+        "title": "Push / Pull / Legs / Upper 4j — Salle",
+        "subtitle": "4 séances / semaine · intermédiaire · salle",
+        "freq": 4,
+        "level": "intermédiaire",
+        "tags": ["intermédiaire", "salle", "masse", "hypertrophie"],
+        "description": "PPL condensé sur 4 jours : Push, Pull, Legs puis une séance Upper de rappel. Idéal pour faire du PPL sans monter à 5-6 séances.",
+        "explanation": "Push / Pull / Legs + une séance haut du corps — le PPL accessible en 4 jours",
+        "difficulty": 2,
+        "duration": "~65 min",
+        "icon": "🔄",
+        "seances": {
+            "Push": [
+                _ex("Développé couché", 4, "Pecs,Triceps", "8"),
+                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10"),
+                _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
+                _ex("Élévations latérales", 3, "Épaules", "15"),
+                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+            ],
+            "Pull": [
+                _ex("Tractions", 4, "Dos,Biceps", "8"),
+                _ex("Rowing barre", 4, "Dos,Biceps", "8"),
+                _ex("Tirage vertical", 3, "Dos,Biceps", "10"),
+                _ex("Face pull", 3, "Épaules,Dos", "15"),
+                _ex("Curl barre", 3, "Biceps", "10"),
+            ],
+            "Legs": [
+                _ex("Squat", 4, "Quadriceps,Fessiers", "6"),
+                _ex("Soulevé de terre roumain", 3, "Ischio-jambiers,Fessiers", "10"),
+                _ex("Presse à cuisses", 3, "Quadriceps,Fessiers", "10"),
+                _ex("Leg curl", 3, "Ischio-jambiers", "12"),
+                _ex("Mollets debout", 4, "Mollets", "15"),
+            ],
+            "Upper": [
+                _ex("Développé couché haltères", 4, "Pecs,Triceps", "10"),
+                _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
+                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "10"),
+                _ex("Tirage horizontal", 3, "Dos,Biceps", "12"),
+                _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
+            ],
+        },
+    },
+
     "ppl_6j": {
         "id": "ppl_6j",
         "title": "Push / Pull / Legs 6j — Salle",
@@ -820,7 +865,7 @@ CATALOG_ORDER = [
     # Débutant (Free)
     "fb_deb_3j", "fb_deb_maison_3j", "fb_pdc_3j",
     # Intermédiaire — le PPL 3j et l'Upper/Lower 4j sont Free
-    "ppl_deb_3j", "upper_lower_4j", "upper_lower_maison_4j", "ppl_5j", "ppl_6j",
+    "ppl_deb_3j", "upper_lower_4j", "ppl_4j", "upper_lower_maison_4j", "ppl_5j", "ppl_6j",
     # Avancé (PRO)
     "ppl_avance_6j", "upper_lower_avance_5j", "pdc_avance_4j",
     # Perte de poids / sèche (PRO sauf circuits)
@@ -898,90 +943,106 @@ def get_program(prog_id: str) -> dict | None:
 
 
 # ── Recommandation ───────────────────────────────────────────────────
-def recommend(niveau: str, frequence: int, equipement: str, is_vip: bool = True) -> list[str]:
-    """Retourne la liste des IDs programmes recommandés (3 à 4 éléments),
-    dans l'ordre de pertinence. Le premier = recommandation principale.
+_LEVEL_RANK = {
+    "débutant": 0, "debutant": 0, "novice": 0,
+    "intermédiaire": 1, "intermediaire": 1,
+    "avancé": 2, "avance": 2, "confirmé": 2, "confirme": 2,
+}
 
-    Pour les non-VIP, seuls les programmes Free sont recommandés.
+# Mots-clés (dans les tags) associés à chaque objectif d'onboarding.
+_OBJECTIF_TAGS = {
+    "force": ("force",),
+    "sèche": ("sèche", "seche", "perte de poids", "cardio", "hiit", "circuit"),
+    "seche": ("sèche", "seche", "perte de poids", "cardio", "hiit", "circuit"),
+    "prise de masse": ("masse", "hypertrophie", "volume"),
+    "forme": ("forme", "santé", "sante", "full body", "forme générale", "forme generale"),
+}
+
+
+def recommend(niveau: str, frequence: int, equipement: str,
+              objectif: str = "", is_vip: bool = True) -> list[str]:
+    """Retourne TOUS les programmes du catalogue triés par pertinence
+    (le plus adapté d'abord), en fonction des réponses d'onboarding.
+
+    Le score privilégie d'abord la fréquence demandée, puis l'équipement
+    disponible, le niveau et l'objectif. L'onboarding met en avant les
+    premiers et affiche le reste à la suite. Pour les non-VIP, seuls les
+    programmes Free sont retournés (les PRO sont gérés séparément côté UI).
     """
     niveau = (niveau or "").strip().lower()
     equipement = (equipement or "").strip().lower()
-    freq = int(frequence or 3)
+    objectif = (objectif or "").strip().lower()
+    freq = max(2, min(6, int(frequence or 3)))
 
-    is_home = equipement in ("maison", "minimal", "aucun", "élastiques", "elastiques")
     is_pdc = equipement in ("aucun", "poids du corps", "rien")
+    is_maison = equipement in ("maison", "minimal", "élastiques", "elastiques")
+    is_home_gym = equipement in ("home gym", "home", "garage")
+    user_lvl = _LEVEL_RANK.get(niveau, 0)
+    wanted_obj_tags = _OBJECTIF_TAGS.get(objectif, ())
 
-    recs: list[str] = []
+    scored: list[tuple[float, int, str]] = []
+    for idx, pid in enumerate(CATALOG_ORDER):
+        p = CATALOG.get(pid)
+        if not p:
+            continue
+        tags = [str(t).lower() for t in p.get("tags", [])]
+        pfreq = int(p.get("freq", 3))
+        plevel = _LEVEL_RANK.get((p.get("level") or "").strip().lower(), 1)
 
-    # ── Débutant ──
-    if niveau in ("débutant", "debutant", "novice"):
+        prog_pdc = any(t in tags for t in ("poids du corps", "pdc", "aucun"))
+        prog_home = prog_pdc or any(t in tags for t in ("maison", "élastiques", "elastiques"))
+        prog_salle = "salle" in tags
+
+        score = 0.0
+
+        # 1) Fréquence — critère dominant.
+        score += max(0.0, 40 - abs(pfreq - freq) * 16)
+
+        # 2) Équipement — un programme salle est impraticable sans salle.
         if is_pdc:
-            recs.append("fb_pdc_3j")
-        elif is_home:
-            recs.append("fb_deb_maison_3j")
-        else:
-            recs.append("fb_deb_3j")
+            if prog_pdc:
+                score += 25
+            elif prog_home:
+                score += 12
+            elif prog_salle:
+                score -= 60
+        elif is_maison:
+            if prog_home:
+                score += 22
+            elif prog_salle:
+                score -= 40
+        elif is_home_gym:
+            if prog_home:
+                score += 14
+            elif prog_salle:
+                score += 8  # un home gym permet déjà pas mal d'exos salle
+        else:  # salle complète
+            if prog_salle:
+                score += 16
+            elif prog_home:
+                score += 4
 
-    # ── Intermédiaire ──
-    elif niveau in ("intermédiaire", "intermediaire"):
-        if is_home:
-            recs.append("upper_lower_maison_4j")
-        elif freq >= 5:
-            recs.append("ppl_6j" if freq >= 6 else "ppl_5j")
-        else:
-            recs.append("upper_lower_4j")
+        # 3) Niveau — même niveau idéal, adjacent acceptable.
+        ldiff = abs(plevel - user_lvl)
+        score += max(0.0, 18 - ldiff * 12)
+        if ldiff >= 2:
+            score -= 6
 
-    # ── Avancé ──
-    elif niveau in ("avancé", "avance", "confirmé", "confirme"):
-        if freq >= 6:
-            recs.append("ppl_avance_6j")
-        else:
-            recs.append("upper_lower_avance_5j")
+        # 4) Objectif.
+        if wanted_obj_tags and any(any(w in t for t in tags) for w in wanted_obj_tags):
+            score += 12
 
-    # ── Fallback ──
-    else:
-        if is_home:
-            recs.append("fb_deb_maison_3j")
-        else:
-            recs.append("fb_deb_3j")
+        scored.append((score, idx, pid))
 
-    # ── Objectifs spécifiques (ajoutés en complément) ──
-    # Perte de poids
-    if is_pdc:
-        _add_if_missing(recs, "circuit_maison_3j")
-    elif is_home:
-        _add_if_missing(recs, "circuit_maison_3j")
-    else:
-        _add_if_missing(recs, "circuit_salle_3j")
-
-    # Force
-    if not is_home:
-        if freq >= 4:
-            _add_if_missing(recs, "force_athle_4j")
-        else:
-            _add_if_missing(recs, "force_5x5_3j")
-
-    # Compléter avec des fallbacks pertinents
-    if is_home:
-        for fb in ("fb_deb_maison_3j", "fb_pdc_3j", "upper_lower_maison_4j", "circuit_maison_3j"):
-            if len(recs) >= 4:
-                break
-            _add_if_missing(recs, fb)
-    else:
-        for fb in ("fb_deb_3j", "upper_lower_4j", "ppl_6j", "force_5x5_3j"):
-            if len(recs) >= 4:
-                break
-            _add_if_missing(recs, fb)
+    # Tri : meilleur score d'abord, puis ordre du catalogue à score égal.
+    scored.sort(key=lambda s: (-s[0], s[1]))
+    recs = [pid for _, _, pid in scored]
 
     # Non-VIP : on ne recommande que des programmes Free.
     if not is_vip:
         recs = [r for r in recs if r in FREE_PROGRAMS]
-        for fb in ("fb_deb_3j", "ppl_deb_3j", "upper_lower_4j", "fb_deb_maison_3j", "fb_pdc_3j"):
-            if len(recs) >= 3:
-                break
-            _add_if_missing(recs, fb)
 
-    return recs[:4]
+    return recs
 
 
 def _add_if_missing(lst: list[str], item: str):

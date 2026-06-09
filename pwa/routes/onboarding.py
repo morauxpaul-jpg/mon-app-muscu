@@ -52,6 +52,7 @@ def recommend():
         niveau=data.get("niveau", ""),
         frequence=int(data.get("frequence") or 3),
         equipement=data.get("equipement", ""),
+        objectif=data.get("objectif", ""),
         is_vip=is_vip,
     )
     return jsonify({"recommended": ids})
