@@ -366,6 +366,29 @@
 .exo-muscles { font-size: var(--text-sm); color: var(--text-3); margin-top: 2px; }
 .exo-toggle { font-size: var(--text-xl); color: var(--text-3); width: 24px; text-align: center; }
 .exo-body { padding: 0 var(--sp-lg) var(--sp-md); }
+/* Poignée de réordonnancement (maintenir pour glisser) — séance en cours */
+.exo-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin-left: -6px;
+  margin-right: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: grab;
+  touch-action: none;
+}
+.exo-drag-handle:active { cursor: grabbing; }
+.exo-card-ghost { opacity: 0.4; }
+.exo-card-dragging {
+  opacity: 0.97;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+}
 
 .record-line {
   font-size: var(--text-sm);

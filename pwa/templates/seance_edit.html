@@ -232,12 +232,19 @@
   </div>
 
   {# ── Exercices ──────────────────────────────────────────────── #}
+  <div class="seance-exo-list" x-data='seanceReorder({{ mode|tojson }}, {{ seance_name|tojson }}, {{ date_iso|tojson }})'
+       x-sort="persistOrder()"
+       x-sort:config="{ handle: '.exo-drag-handle', delay: 200, delayOnTouchOnly: true, animation: 150, ghostClass: 'exo-card-ghost', dragClass: 'exo-card-dragging' }">
   {% for exo in exos %}
     <div class="exo-card {% if exo.completed %}done{% endif %}"
          id="exo-anchor-{{ loop.index0 }}"
+         data-exo-base="{{ exo.base }}"
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
       <div class="exo-head">
-        <div>
+        <button type="button" class="exo-drag-handle" aria-label="Déplacer l'exercice" title="Maintenir pour déplacer">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg>
+        </button>
+        <div style="flex:1; min-width:0;">
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)" title="Info exercice">?</button>
               <button type="button" class="exo-info-btn exo-chrono-btn" data-tuto-seance="chrono"
@@ -431,6 +438,7 @@
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="exo_name" value="{{ exo.base }}">
             <input type="hidden" name="index" value="{{ loop.index0 - (exos|length - (exos|selectattr('is_extra')|list|length)) }}">
             <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>Retirer cet exercice</button>
           </form>
@@ -438,6 +446,7 @@
       </div>
     </div>
   {% endfor %}
+  </div>
 
   {# ── Ajouter un exercice (fermé par défaut) ─────────────────────────── #}
   <div class="card" x-data="{ open: false, tab: '{% if custom_exercises %}custom{% else %}prog{% endif %}', muscle: 'Tous' }">
@@ -715,6 +724,24 @@
   </div>
 
   <script>
+    // Réordonnancement des exos par glisser (séance en cours). On lit l'ordre
+    // courant du DOM après le drop et on le persiste ; pas de reload (les
+    // cartes sont déjà déplacées par SortableJS et gardent leur état Alpine).
+    function seanceReorder(mode, name, date) {
+      return {
+        persistOrder() {
+          var cards = this.$el.querySelectorAll(':scope > .exo-card');
+          var order = Array.prototype.map.call(cards, function (c) { return c.dataset.exoBase; })
+                                          .filter(Boolean);
+          fetch('/seance/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: mode, seance_name: name, date: date, order: order }),
+          }).catch(function () {});
+        },
+      };
+    }
+
     function cardioBlock() {
       var UNITS = {
         "Course":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },

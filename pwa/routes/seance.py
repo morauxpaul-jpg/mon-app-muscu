@@ -637,6 +637,9 @@ def seance():
             else:
                 exos_ctx = exos_ctx + recon
 
+        # Ordre personnalisé (drag dans la séance en cours)
+        exos_ctx = _apply_seance_order(prog, extras_key, exos_ctx)
+
         # Volume
         vol_curr = sum(r["Poids"] * r["Reps"] for r in hist
                        if r["Séance"] == name and r["Semaine"] == s_act)
@@ -694,6 +697,9 @@ def seance():
         # finish, donc une séance libre passée n'a plus que son historique.
         covered = {_norm(e["exo_final"]) for e in exos_ctx}
         exos_ctx = exos_ctx + _reconstruct_history_exos(hist, libre_name, s_act, covered, len(exos_ctx))
+
+        # Ordre personnalisé (drag dans la séance en cours)
+        exos_ctx = _apply_seance_order(prog, f"{libre_name}|{date_iso}", exos_ctx)
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])
         exos_total = len(exos_ctx)
@@ -807,6 +813,25 @@ def _update_libre_draft(prog_dict, key, mutate_fn):
         drafts[key] = lst
     else:
         drafts.pop(key, None)
+
+
+def _apply_seance_order(prog_dict, key, exos_ctx):
+    """Réordonne les cartes d'exos selon l'ordre personnalisé sauvegardé pour
+    cette séance+date (drag dans la séance en cours). Les exos absents de
+    l'ordre (nouveaux, reconstruits depuis l'historique) restent en fin, dans
+    leur ordre d'origine. L'ordre est stocké comme une simple liste de noms de
+    base, donc purement cosmétique : il ne touche ni au programme ni à
+    l'historique (source de vérité)."""
+    order = (prog_dict.get("_seance_order") or {}).get(key)
+    if not order:
+        return exos_ctx
+    norm_order = [_norm(n) for n in order]
+
+    def _rank(e):
+        n = _norm(e.get("base") or e.get("exo_final") or "")
+        return norm_order.index(n) if n in norm_order else len(norm_order)
+
+    return sorted(exos_ctx, key=_rank)
 
 
 @bp.route("/seance/save-exo", methods=["POST"])
@@ -946,12 +971,23 @@ def remove_extra():
     mode = f["mode"]
     seance_name = f["seance_name"]
     date_str = f["date"]
-    idx = int(f["index"])
+    # Retrait par nom (robuste au réordonnancement) ; index en repli pour
+    # compat (anciens formulaires / homonymes éventuels).
+    target_name = (f.get("exo_name") or "").strip()
+    try:
+        idx = int(f.get("index"))
+    except (TypeError, ValueError):
+        idx = None
     prog = get_prog()
     key = f"{seance_name}|{date_str}"
 
     def _remove(lst):
-        if 0 <= idx < len(lst):
+        if target_name:
+            for i, e in enumerate(lst):
+                if _norm(e.get("name") or "") == _norm(target_name):
+                    lst.pop(i)
+                    return
+        if idx is not None and 0 <= idx < len(lst):
             lst.pop(idx)
 
     if mode == "libre":
@@ -961,6 +997,30 @@ def remove_extra():
     from core.data import save_prog
     save_prog(prog)
     return _back_to_editor(f)
+
+
+@bp.route("/seance/reorder", methods=["POST"])
+@limiter.limit("60 per minute")
+def reorder_exos():
+    """Enregistre l'ordre personnalisé des exos d'une séance (drag dans la
+    séance en cours). Ordre purement cosmétique : liste de noms de base."""
+    data = request.get_json(silent=True) or {}
+    seance_name = (data.get("seance_name") or "").strip()
+    date_str = (data.get("date") or "").strip()
+    order = data.get("order")
+    if not seance_name or not isinstance(order, list):
+        return {"ok": False}, 400
+    order = [str(n).strip() for n in order if str(n).strip()][:200]
+    prog = get_prog()
+    key = f"{seance_name}|{date_str}"
+    store = prog.setdefault("_seance_order", {})
+    if order:
+        store[key] = order
+    else:
+        store.pop(key, None)
+    from core.data import save_prog
+    save_prog(prog)
+    return {"ok": True}
 
 
 @bp.route("/seance/add-cardio", methods=["POST"])
