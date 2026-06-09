@@ -343,17 +343,30 @@
       }
     });
 
-    // Notification toggle
+    // Notification toggle — feedback inline (jamais d'alert() natif)
+    function showNotifMsg(text) {
+      var label = document.getElementById('notif-toggle').closest('label');
+      var msg = document.getElementById('notif-toggle-msg');
+      if (!msg) {
+        msg = document.createElement('div');
+        msg.id = 'notif-toggle-msg';
+        msg.style.cssText = 'font-size:0.75rem;color:var(--warning);margin:4px 0 0 26px;';
+        label.insertAdjacentElement('afterend', msg);
+      }
+      msg.textContent = text;
+      clearTimeout(msg._t);
+      msg._t = setTimeout(function() { msg.remove(); }, 6000);
+    }
     function handleNotifToggle(cb) {
       if (!cb.checked) return; // unchecking = just save
       if (!('Notification' in window)) {
-        alert('Ton navigateur ne supporte pas les notifications.');
+        showNotifMsg('Ton navigateur ne supporte pas les notifications.');
         cb.checked = false;
         return;
       }
       if (Notification.permission === 'granted') return;
       if (Notification.permission === 'denied') {
-        alert('Les notifications sont bloquées. Active-les dans les paramètres de ton navigateur.');
+        showNotifMsg('Les notifications sont bloquées. Active-les dans les paramètres de ton navigateur.');
         cb.checked = false;
         return;
       }

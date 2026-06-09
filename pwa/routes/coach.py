@@ -3,8 +3,9 @@
 - /coach     : page chat (GET)
 - /coach/ask : endpoint JSON (POST) → appelle l'API Anthropic
 
-Rate limit : 20 messages/jour/user via profiles.coach_quota_date +
-profiles.coach_quota_count (reset automatique à chaque nouveau jour).
+Accès réservé VIP (vip_wall pour les free). Quota : 30 messages/jour/user
+via profiles.coach_quota_date + profiles.coach_quota_count (reset
+automatique à chaque nouveau jour) — protège le coût API Anthropic.
 """
 import logging
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("coach", __name__)
 
-DAILY_QUOTA = 10
+DAILY_QUOTA = 30  # quota VIP/jour — aligné sur la page Premium (« 30 msg/jour »)
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 500
 

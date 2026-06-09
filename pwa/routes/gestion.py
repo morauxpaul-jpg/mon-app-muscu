@@ -289,10 +289,30 @@ def import_data():
     except (json.JSONDecodeError, UnicodeDecodeError):
         return redirect(url_for("gestion.gestion") + "?import=error")
 
-    if "programme" in data:
-        save_prog(data["programme"])
-    if "historique" in data:
-        save_hist(data["historique"])
+    # Validation structurelle : un fichier malformé ne doit JAMAIS écraser
+    # les données existantes (un `programme` non-dict casserait toute l'app).
+    if not isinstance(data, dict):
+        return redirect(url_for("gestion.gestion") + "?import=error")
+    prog_in = data.get("programme")
+    hist_in = data.get("historique")
+    if prog_in is not None and not isinstance(prog_in, dict):
+        return redirect(url_for("gestion.gestion") + "?import=error")
+    if hist_in is not None:
+        if not isinstance(hist_in, list) or not all(isinstance(r, dict) for r in hist_in):
+            return redirect(url_for("gestion.gestion") + "?import=error")
+        if len(hist_in) > 100_000:
+            return redirect(url_for("gestion.gestion") + "?import=error")
+    if prog_in is None and hist_in is None:
+        return redirect(url_for("gestion.gestion") + "?import=error")
+
+    if prog_in is not None:
+        save_prog(prog_in)
+    if hist_in is not None:
+        try:
+            save_hist(hist_in)
+        except (ValueError, TypeError):
+            # Lignes aux types invalides (Reps/Poids non numériques…)
+            return redirect(url_for("gestion.gestion") + "?import=error")
 
     return redirect(url_for("gestion.gestion") + "?import=ok")
 

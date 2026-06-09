@@ -712,9 +712,12 @@ def add_exo():
 def update_exo():
     f = request.form
     seance = f["seance"]
-    idx = int(f["index"])
+    try:
+        idx = int(f["index"])
+    except (KeyError, ValueError):
+        return redirect(url_for("programme.programme"))
     prog = get_prog()
-    if seance not in prog or idx >= len(prog[seance]):
+    if seance not in prog or not (0 <= idx < len(prog[seance])):
         return redirect(url_for("programme.programme"))
     ex = prog[seance][idx]
     try:
@@ -732,7 +735,10 @@ def update_exo():
 def delete_exo():
     f = request.form
     seance = f["seance"]
-    idx = int(f["index"])
+    try:
+        idx = int(f["index"])
+    except (KeyError, ValueError):
+        return redirect(url_for("programme.programme"))
     prog = get_prog()
     if seance in prog and 0 <= idx < len(prog[seance]):
         prog[seance].pop(idx)
@@ -744,14 +750,17 @@ def delete_exo():
 def move_exo():
     f = request.form
     seance = f["seance"]
-    idx = int(f["index"])
+    try:
+        idx = int(f["index"])
+    except (KeyError, ValueError):
+        return redirect(url_for("programme.programme"))
     direction = f.get("direction", "up")
     prog = get_prog()
     if seance not in prog:
         return redirect(url_for("programme.programme"))
     lst = prog[seance]
     j = idx - 1 if direction == "up" else idx + 1
-    if 0 <= j < len(lst):
+    if 0 <= idx < len(lst) and 0 <= j < len(lst):
         lst[idx], lst[j] = lst[j], lst[idx]
         save_prog(prog)
     return redirect(url_for("programme.programme") + f"#s-{seance}")

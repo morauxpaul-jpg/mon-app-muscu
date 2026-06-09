@@ -112,7 +112,14 @@
         redirect: "follow",
       })
         .then(function (resp) {
-          if (resp.ok || resp.redirected) {
+          // Une redirection vers la landing ou le login = session expirée :
+          // la donnée n'a PAS été enregistrée — on la garde dans la file.
+          var landedOnAuth = false;
+          try {
+            var p = new URL(resp.url, window.location.origin).pathname;
+            landedOnAuth = resp.redirected && (p === "/" || p === "/login");
+          } catch (e) {}
+          if ((resp.ok || resp.redirected) && !landedOnAuth) {
             synced++;
           } else {
             remaining.push(item);

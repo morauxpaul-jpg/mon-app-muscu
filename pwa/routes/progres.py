@@ -447,6 +447,9 @@ def progres():
         cal_month, cal_year = 12, cal_year - 1
     elif cal_month > 12:
         cal_month, cal_year = 1, cal_year + 1
+    # Année hors plage raisonnable (ex: ?cy=99999) → retour au mois courant
+    if not (2000 <= cal_year <= 2100):
+        cal_year, cal_month = today.year, today.month
 
     _prog_for_cal = get_prog() or {}
     planning_map = _prog_for_cal.get("_planning", {})

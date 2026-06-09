@@ -66,6 +66,9 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=bool(os.getenv("FLASK_SECRET_KEY")),  # HTTPS-only en prod
+    # Taille max d'une requête (uploads import JSON inclus) — évite qu'un
+    # fichier énorme sature la mémoire du worker gunicorn.
+    MAX_CONTENT_LENGTH=5 * 1024 * 1024,  # 5 Mo
 )
 
 app.register_blueprint(auth_bp)
@@ -86,7 +89,9 @@ app.register_blueprint(admin_bp)
 # ────────────────────────────────────────────────────────────────
 # Auth gate — toutes les routes sauf celles listées nécessitent user_id
 # ────────────────────────────────────────────────────────────────
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js"}
+# /faq est public : les stores (Play/App Store) exigent une URL de politique
+# de confidentialité consultable sans compte.
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq"}
 
 
 @app.before_request
@@ -364,6 +369,15 @@ def handle_500(e):
         code=500,
         message="Erreur serveur. Réessaie dans quelques secondes.",
     ), 500
+
+
+@app.errorhandler(413)
+def handle_413(e):
+    return render_template(
+        "error.html",
+        code=413,
+        message="Fichier trop volumineux (5 Mo max).",
+    ), 413
 
 
 @app.errorhandler(429)

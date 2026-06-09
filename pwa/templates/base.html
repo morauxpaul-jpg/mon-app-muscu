@@ -186,20 +186,9 @@
       }
     })();
   </script>
-  <script>
-    // Demande de permission notifications (une seule fois)
-    (function() {
-      if (!('Notification' in window)) return;
-      if (Notification.permission !== 'default') return;
-      try { if (localStorage.getItem('notif_asked')) return; } catch(e) {}
-      // Attendre 5s après le chargement pour ne pas gêner
-      setTimeout(function() {
-        Notification.requestPermission().then(function() {
-          try { localStorage.setItem('notif_asked', '1'); } catch(e) {}
-        });
-      }, 5000);
-    })();
-  </script>
+  {# La permission notifications est demandée au moment où l'utilisateur
+     active le toggle dans Gestion (geste explicite) — jamais automatiquement
+     au chargement (bloqué par les navigateurs + pénalisé par les stores). #}
   {% endif %}
   {% block scripts %}{% endblock %}
 </body>
