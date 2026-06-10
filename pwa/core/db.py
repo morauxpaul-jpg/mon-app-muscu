@@ -10,6 +10,7 @@ Config : deux variables d'env requises
   - SUPABASE_URL
   - SUPABASE_SERVICE_ROLE_KEY   (jamais exposée au client)
 """
+import datetime as _dt
 import os
 import json
 import logging
@@ -18,7 +19,17 @@ from typing import Optional
 
 from supabase import create_client, Client
 
+from core.dates import continuous_week, week_range
+
 logger = logging.getLogger(__name__)
+
+
+def _continuous_week_of(date_str: str):
+    """Index de semaine continu pour une date ISO, ou None si invalide."""
+    try:
+        return continuous_week(_dt.date.fromisoformat(str(date_str)[:10]))
+    except (ValueError, TypeError):
+        return None
 
 def _env(name: str) -> str:
     v = os.getenv(name, "") or ""
@@ -99,17 +110,26 @@ def get_hist(user_id: str) -> list[dict]:
         .execute()
     )
     rows = resp.data or []
-    cleaned = [{
-        "Semaine": int(r.get("semaine") or 1),
-        "Séance": r.get("seance") or "",
-        "Exercice": r.get("exercice") or "",
-        "Série": int(r.get("serie") or 1),
-        "Reps": int(r.get("reps") or 0),
-        "Poids": float(r.get("poids") or 0),
-        "Remarque": r.get("remarque") or "",
-        "Muscle": r.get("muscle") or "",
-        "Date": str(r.get("date") or ""),
-    } for r in rows]
+    cleaned = []
+    for r in rows:
+        date_str = str(r.get("date") or "")
+        # Semaine = index CONTINU recalculé depuis la date (le n° ISO stocké
+        # recommence chaque année → collisions au-delà d'un an d'historique).
+        # Repli sur la valeur stockée pour les rares lignes sans date.
+        week = _continuous_week_of(date_str)
+        if week is None:
+            week = int(r.get("semaine") or 1)
+        cleaned.append({
+            "Semaine": week,
+            "Séance": r.get("seance") or "",
+            "Exercice": r.get("exercice") or "",
+            "Série": int(r.get("serie") or 1),
+            "Reps": int(r.get("reps") or 0),
+            "Poids": float(r.get("poids") or 0),
+            "Remarque": r.get("remarque") or "",
+            "Muscle": r.get("muscle") or "",
+            "Date": date_str,
+        })
     _cache_set(key, cleaned)
     return [dict(r) for r in cleaned]
 
@@ -206,14 +226,25 @@ def save_prog(user_id: str, prog_dict: dict):
 # Opérations ciblées (réplique de core/sheets.py)
 # ────────────────────────────────────────────────────────────
 
-def replace_exo_rows(user_id: str, semaine: int, seance: str, exercice: str, new_rows: list[dict]):
-    """Supprime les lignes d'un (semaine, séance, exercice) précis et réinsère
-    les nouvelles lignes en une seule requête. Pas de delete-all global."""
+def _week_bounds(date_str: str):
+    """(lundi, dimanche) ISO de la semaine contenant date_str.
+    Lève ValueError si la date est invalide — les appelants passent toujours
+    une date déjà validée par les routes."""
+    return week_range(_dt.date.fromisoformat(str(date_str)[:10]))
+
+
+def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
+    """Supprime les lignes d'un (semaine-de-date, séance, exercice) précis et
+    réinsère les nouvelles lignes. Le ciblage de la semaine se fait par PLAGE
+    DE DATES (lun→dim) et non par la colonne `semaine` stockée : celle-ci
+    contient des n° ISO historiques qui recommencent chaque année."""
+    monday, sunday = _week_bounds(date_str)
     client = get_client()
     (
         client.table("history").delete()
         .eq("user_id", user_id)
-        .eq("semaine", int(semaine))
+        .gte("date", monday)
+        .lte("date", sunday)
         .eq("seance", seance)
         .eq("exercice", exercice)
         .execute()
@@ -224,12 +255,14 @@ def replace_exo_rows(user_id: str, semaine: int, seance: str, exercice: str, new
     _cache_invalidate(f"hist:{user_id}")
 
 
-def delete_exo_rows(user_id: str, semaine: int, seance: str, exercice: str):
+def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str):
+    monday, sunday = _week_bounds(date_str)
     client = get_client()
     (
         client.table("history").delete()
         .eq("user_id", user_id)
-        .eq("semaine", int(semaine))
+        .gte("date", monday)
+        .lte("date", sunday)
         .eq("seance", seance)
         .eq("exercice", exercice)
         .execute()
@@ -237,12 +270,14 @@ def delete_exo_rows(user_id: str, semaine: int, seance: str, exercice: str):
     _cache_invalidate(f"hist:{user_id}")
 
 
-def delete_session_rows(user_id: str, semaine: int, seance: str):
+def delete_session_rows(user_id: str, date_str: str, seance: str):
+    monday, sunday = _week_bounds(date_str)
     client = get_client()
     (
         client.table("history").delete()
         .eq("user_id", user_id)
-        .eq("semaine", int(semaine))
+        .gte("date", monday)
+        .lte("date", sunday)
         .eq("seance", seance)
         .execute()
     )

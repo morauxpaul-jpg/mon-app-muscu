@@ -45,6 +45,13 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 # default_limits s'applique à toutes les routes ; sur-limite ajoutée avec
 # @limiter.limit(...) pour les actions sensibles dans les blueprints.
 limiter.init_app(app)
+# Trace au boot le backend du rate-limiter : "redis" = partagé entre workers
+# et persistant ; "memory" = par worker, remis à zéro à chaque déploiement.
+from core.limiter import _storage_uri as _rl_storage  # noqa: E402
+logger.info(
+    "Rate limiter backend: %s",
+    "redis (partagé)" if str(_rl_storage).startswith(("redis://", "rediss://")) else "memory (par worker)",
+)
 
 # Secret_key : obligatoire pour signer le cookie de session Flask. Doit être
 # défini en prod via la variable d'env FLASK_SECRET_KEY sur Railway.

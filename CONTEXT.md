@@ -211,6 +211,16 @@ pwa/
 }
 ```
 
+### Semaine continue (migration 2026-06-10)
+- `Semaine` est un **index continu** ancré au lundi 2024-01-01 (`core/dates.py:continuous_week`), recalculé **à la lecture** depuis `Date` dans `db.get_hist()` — la colonne `semaine` stockée (n° ISO legacy) n'est plus une source de vérité.
+- Les opérations ciblées (`replace_exo_rows`, `delete_exo_rows`, `delete_session_rows`) ciblent la semaine par **plage de dates lun→dim** dérivée du paramètre `date_str` — jamais par la colonne `semaine`.
+- Le n° affiché à l'utilisateur reste **relatif** au début du programme (`_display_week` / `_rel_week`).
+- Raison : le n° ISO recommençait chaque année → collision des données au-delà d'un an, streak/« dernière fois » cassés au Nouvel An.
+
+### Tests (pwa/tests)
+- `cd pwa && python -m pytest tests -q` — fake Supabase en mémoire (conftest), couvre passage d'année, remplacement de séries, suppression de compte, validation import.
+- Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
+
 ### Cache mémoire (core/db.py)
 - TTL : 60 secondes
 - Invalidé immédiatement après chaque `save_prog()` et `save_hist()`
@@ -232,7 +242,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v85-2026-06-10-prelaunch-hardening` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v87-2026-06-10-semaine-continue` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

@@ -243,8 +243,14 @@ def index():
     day_name = DAYS_FR[today.weekday()]
     date_str = f"{today.day} {MONTHS_FR[today.month - 1]} {today.year}"
 
-    # Semaine en cours
+    # Semaine en cours — index continu (interne, sert au filtrage des stats).
     s_act = max((r["Semaine"] for r in hist), default=1)
+    # Numéro affiché à l'utilisateur : relatif au début du programme.
+    from routes.seance import _display_week
+    try:
+        s_display = _display_week(today, prog, hist)
+    except Exception:
+        s_display = 1
 
     # Grille 7 jours (lundi -> dimanche)
     monday = monday_of(today)
@@ -439,7 +445,7 @@ def index():
         active="accueil",
         day_name=day_name.upper(),
         date_str=date_str,
-        s_act=s_act,
+        s_act=s_display,
         week=week,
         sessions_done=sessions_done,
         total_sessions=total_sessions,

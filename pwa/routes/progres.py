@@ -122,7 +122,7 @@ def _muscle_rows(df, m):
     return [r for r in df if m in (r.get("Muscle") or "")]
 
 
-def _build_muscle_data(df_p):
+def _build_muscle_data(df_p, start_monday=None):
     out = {}
     for m, info in MUSCLES.items():
         md = _muscle_rows(df_p, m)
@@ -139,10 +139,16 @@ def _build_muscle_data(df_p):
             best_w = float(best["Poids"])
             best_r = int(best["Reps"])
 
-            # 4 dernières semaines (PR hebdo = set avec le plus gros poids)
+            # 4 dernières semaines (PR hebdo = set avec le plus gros poids).
+            # Semaine RELATIVE au début du programme (S1, S2, …), dérivée de
+            # la date — cohérent avec le graphique de volume. Les lignes sans
+            # date (archive) gardent les records mais sortent du découpage hebdo.
             by_week = {}
             for r in md_valid:
-                by_week.setdefault(r["Semaine"], []).append(r)
+                w = _rel_week(r.get("Date"), start_monday)
+                if w is None:
+                    continue
+                by_week.setdefault(w, []).append(r)
             for wk in sorted(by_week.keys(), reverse=True)[:4]:
                 wk_rows = by_week[wk]
                 br = max(wk_rows, key=lambda r: r["Poids"])
@@ -366,7 +372,7 @@ def progres():
     # Pour les non-VIP on ne calcule rien — le template affiche un aperçu verrouillé.
     if is_vip:
         volume_map = _build_volume_map(hist, period_days=bm_days)
-        muscle_data = _build_muscle_data(df_p)
+        muscle_data = _build_muscle_data(df_p, start_monday)
         svg_ctx = _build_svg_context(muscle_data, volume_map)
     else:
         volume_map = {}

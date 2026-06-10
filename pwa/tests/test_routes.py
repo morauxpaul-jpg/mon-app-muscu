@@ -1,0 +1,204 @@
+"""Tests d'intégration — routes Flask sur fake Supabase.
+
+Couvre en particulier la migration « semaine continue » (2026-06) :
+le n° de semaine ISO recommençait chaque année, ce qui cassait le streak,
+le « Dernière fois » et le remplacement de séries au passage du Nouvel An.
+"""
+import datetime as dt
+import json
+
+from conftest import USER_ID, CSRF
+
+# Dates pivot autour du Nouvel An 2025→2026.
+MONDAY_W51 = dt.date(2025, 12, 15)   # lundi, ISO W51 2025
+MONDAY_W52 = dt.date(2025, 12, 22)   # lundi, ISO W52 2025
+MONDAY_W01 = dt.date(2025, 12, 29)   # lundi, ISO W1 2026
+MONDAY_W02 = dt.date(2026, 1, 5)     # lundi, ISO W2 2026
+
+assert all(d.weekday() == 0 for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01, MONDAY_W02))
+
+
+def _hist_row(fake, date, exercice="Développé couché", seance="Push",
+              serie=1, reps=8, poids=80.0, semaine=None, muscle="Pecs"):
+    """Insère une ligne history au format colonnes Supabase. `semaine` par
+    défaut = n° ISO legacy (comme les données écrites avant la migration)."""
+    fake.table("history").insert({
+        "user_id": USER_ID,
+        "semaine": semaine if semaine is not None else date.isocalendar().week,
+        "seance": seance,
+        "exercice": exercice,
+        "serie": serie,
+        "reps": reps,
+        "poids": poids,
+        "remarque": "",
+        "muscle": muscle,
+        "date": date.isoformat(),
+    }).execute()
+
+
+def _seed_prog(fake, planning=None):
+    fake.table("programs").insert({
+        "user_id": USER_ID,
+        "data": {
+            "Push": [{"name": "Développé couché", "sets": 3, "muscle": "Pecs"}],
+            "_planning": planning or {},
+            "_settings": {},
+            "_started_at": MONDAY_W51.isoformat(),
+        },
+    }).execute()
+
+
+# ── Pages publiques ──────────────────────────────────────────────
+
+def test_public_pages_render(client):
+    for path in ("/", "/faq", "/confidentialite", "/manifest.json", "/service-worker.js"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_protected_routes_redirect_anonymous(client):
+    r = client.get("/accueil")
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+
+
+# ── Semaine continue : passage d'année ───────────────────────────
+
+def test_derniere_fois_traverse_le_nouvel_an(fake_db, logged_in):
+    """Une perf de fin décembre doit alimenter « Dernière fois » et le
+    pré-remplissage début janvier (cassait avec les semaines ISO : 52 < 1)."""
+    _seed_prog(fake_db)
+    _hist_row(fake_db, MONDAY_W52, poids=80.0, reps=8)
+
+    r = logged_in.get(f"/seance?date={MONDAY_W02.isoformat()}&mode=prefaite&name=Push")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert "80kg" in html  # last_summary "80kg × 8" injecté dans le payload exo
+
+
+def test_save_exo_remplace_les_lignes_legacy_meme_semaine(fake_db, logged_in):
+    """Le remplacement d'un exo cible la semaine PAR DATES : une ligne écrite
+    avant la migration (semaine stockée = n° ISO) doit quand même être
+    remplacée, pas dupliquée."""
+    from core.dates import continuous_week
+    _seed_prog(fake_db)
+    # Ligne legacy : même semaine calendaire que la saisie, semaine stockée ISO (2).
+    _hist_row(fake_db, MONDAY_W02, poids=80.0, reps=8, semaine=2)
+
+    r = logged_in.post("/seance/save-exo", data={
+        "_csrf": CSRF,
+        "semaine": str(continuous_week(MONDAY_W02)),
+        "seance_name": "Push",
+        "exo_base": "Développé couché",
+        "variant": "Standard",
+        "muscle": "Pecs",
+        "date": MONDAY_W02.isoformat(),
+        "mode": "prefaite",
+        "name": "Push",
+        "sets_json": json.dumps([
+            {"reps": 8, "poids": 82.5},
+            {"reps": 6, "poids": 85.0},
+        ]),
+    })
+    assert r.status_code == 302
+
+    rows = [row for row in fake_db.tables["history"]
+            if row["exercice"] == "Développé couché"]
+    # La ligne legacy a été remplacée : exactement les 2 nouvelles séries.
+    assert len(rows) == 2
+    assert sorted(row["poids"] for row in rows) == [82.5, 85.0]
+
+
+def test_reset_exo_supprime_aussi_les_lignes_legacy(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _hist_row(fake_db, MONDAY_W02, semaine=2)          # legacy ISO
+    _hist_row(fake_db, MONDAY_W02 + dt.timedelta(days=1), serie=2, semaine=2)
+    # Une perf d'une AUTRE semaine ne doit pas être touchée.
+    _hist_row(fake_db, MONDAY_W51, serie=1, semaine=51)
+
+    r = logged_in.post("/seance/reset-exo", data={
+        "_csrf": CSRF,
+        "seance_name": "Push",
+        "exo_base": "Développé couché",
+        "variant": "Standard",
+        "date": MONDAY_W02.isoformat(),
+        "mode": "prefaite",
+        "name": "Push",
+    })
+    assert r.status_code == 302
+    remaining = [row for row in fake_db.tables["history"]
+                 if row["exercice"] == "Développé couché"]
+    assert len(remaining) == 1
+    assert remaining[0]["date"] == MONDAY_W51.isoformat()
+
+
+def test_streak_traverse_le_nouvel_an(fake_db, logged_in):
+    """3 semaines consécutives W51-2025 → W1-2026 = streak 3 (cassait en ISO :
+    [52, 51, 1] non consécutifs)."""
+    _seed_prog(fake_db)
+    for monday in (MONDAY_W51, MONDAY_W52, MONDAY_W01):
+        _hist_row(fake_db, monday)
+
+    r = logged_in.get("/accueil")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert "3 SEMAINES" in html
+
+
+def test_accueil_affiche_semaine_relative(fake_db, logged_in):
+    """Le n° de semaine affiché doit être relatif au programme (petit),
+    pas l'index continu interne (>100)."""
+    _seed_prog(fake_db)
+    _hist_row(fake_db, MONDAY_W51)
+
+    r = logged_in.get("/accueil")
+    html = r.data.decode("utf-8")
+    import re
+    m = re.search(r"SEMAINE (\d+)", html)
+    assert m, "numéro de semaine absent de l'accueil"
+    assert int(m.group(1)) < 100  # relatif au _started_at, pas continu
+
+
+# ── Suppression de compte ────────────────────────────────────────
+
+def test_delete_account_efface_tout_et_deconnecte(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _hist_row(fake_db, MONDAY_W51)
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    fake_db.table("nutrition").insert({"user_id": USER_ID, "date": "2026-06-01",
+                                       "meal_type": "diner", "calories": 600}).execute()
+
+    r = logged_in.post("/gestion/delete-account", data={"_csrf": CSRF, "confirm": "yes"})
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+
+    for table in ("history", "programs", "profiles", "nutrition"):
+        rows = [row for row in fake_db.tables.get(table, [])
+                if row.get("user_id") == USER_ID or row.get("id") == USER_ID]
+        assert rows == [], f"table {table} non vidée"
+    assert fake_db.auth.admin.deleted_users == [USER_ID]
+    # La session est purgée → la requête suivante redirige vers la landing.
+    r2 = logged_in.get("/accueil")
+    assert r2.status_code == 302 and r2.headers["Location"] == "/"
+
+
+def test_delete_account_sans_confirmation_ne_fait_rien(fake_db, logged_in):
+    _seed_prog(fake_db)
+    r = logged_in.post("/gestion/delete-account", data={"_csrf": CSRF})
+    assert r.status_code == 302
+    assert fake_db.tables["programs"], "les données ne doivent PAS être effacées"
+    assert fake_db.auth.admin.deleted_users == []
+
+
+# ── Import JSON : validation ─────────────────────────────────────
+
+def test_import_json_malforme_rejete(fake_db, logged_in):
+    import io
+    _seed_prog(fake_db)
+    before = json.dumps(fake_db.tables["programs"], sort_keys=True, default=str)
+    r = logged_in.post(
+        "/gestion/import",
+        data={"_csrf": CSRF,
+              "file": (io.BytesIO(b'{"programme": "pas un dict"}'), "backup.json")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 302 and "import=error" in r.headers["Location"]
+    after = json.dumps(fake_db.tables["programs"], sort_keys=True, default=str)
+    assert before == after, "un import invalide ne doit rien écraser"

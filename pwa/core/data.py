@@ -51,16 +51,17 @@ def save_prog(prog_dict):
 
 
 # ── Opérations ciblées ──────────────────────────────────────────────────
-def replace_exo_rows(semaine, seance, exercice, new_rows):
-    return db.replace_exo_rows(_uid(), semaine, seance, exercice, new_rows)
+# Le ciblage de semaine se fait par date (plage lun→dim), plus par n° ISO.
+def replace_exo_rows(date_str, seance, exercice, new_rows):
+    return db.replace_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
 
-def delete_exo_rows(semaine, seance, exercice):
-    return db.delete_exo_rows(_uid(), semaine, seance, exercice)
+def delete_exo_rows(date_str, seance, exercice):
+    return db.delete_exo_rows(_uid(), date_str, seance, exercice)
 
 
-def delete_session_rows(semaine, seance):
-    return db.delete_session_rows(_uid(), semaine, seance)
+def delete_session_rows(date_str, seance):
+    return db.delete_session_rows(_uid(), date_str, seance)
 
 
 def mark_session_missed(semaine, seance_name, date_str):

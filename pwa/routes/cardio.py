@@ -13,7 +13,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for
 
 from core.data import replace_exo_rows, get_profile
-from core.dates import today_paris, today_paris_str, DAYS_FR, MONTHS_FR
+from core.dates import today_paris, today_paris_str, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,8 @@ def _parse_date(s):
 
 
 def _iso_week(d):
-    return d.isocalendar().week
+    # Index de semaine continu — cf. core.dates.continuous_week.
+    return continuous_week(d)
 
 
 INCLINE_MET_BONUS = {
@@ -113,8 +114,8 @@ def new():
 @limiter.limit("20 per minute")
 def save():
     f = request.form
-    date_str = f.get("date") or today_paris_str()
-    target = _parse_date(date_str) or today_paris()
+    target = _parse_date(f.get("date")) or today_paris()
+    date_str = target.strftime("%Y-%m-%d")
     semaine = _iso_week(target)
 
     activite = (f.get("activite") or "Autre").strip()
@@ -190,7 +191,7 @@ def save():
     }]
 
     try:
-        replace_exo_rows(semaine, seance_name, exo_final, rows)
+        replace_exo_rows(date_str, seance_name, exo_final, rows)
     except Exception as e:
         logger.error("cardio save FAILED: %s", e)
         return render_template(

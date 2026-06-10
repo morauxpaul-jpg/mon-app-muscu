@@ -13,7 +13,7 @@ from core.data import (
     get_hist, get_prog, clear_user_cache,
     replace_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
 )
-from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, DAYS_FR, MONTHS_FR
+from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
 from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
@@ -51,7 +51,9 @@ def _parse_date(s):
 
 
 def _iso_week(date_):
-    return date_.isocalendar().week
+    # Index de semaine CONTINU (ancré 2024-01-01) — le n° ISO recommençait
+    # chaque année et faisait collisionner l'historique au-delà d'un an.
+    return continuous_week(date_)
 
 
 def _display_week(target_date, prog, hist):
@@ -749,6 +751,14 @@ def _back_to_editor(form):
     ))
 
 
+def _form_date(form):
+    """Date du formulaire validée et normalisée (YYYY-MM-DD). Une valeur
+    malformée retombe sur l'aujourd'hui logique au lieu de provoquer un 500
+    (les opérations ciblées dérivent la plage de semaine de cette date)."""
+    d = _parse_date(form.get("date"))
+    return (d or logical_today_paris()).strftime("%Y-%m-%d")
+
+
 def _parse_cardio_remarque(remarque):
     """Extrait Cal/Vit/RPE/note d'une remarque CARDIO du type
     'Cal:360 | Vit:10.5 | RPE:Modéré | commentaire libre'."""
@@ -843,7 +853,7 @@ def save_exo():
     exo_base = f["exo_base"]
     variant = f["variant"]
     muscle = f["muscle"]
-    date_str = f["date"]
+    date_str = _form_date(f)
     is_bw = f.get("is_bw") == "1"
     sets_json = f.get("sets_json", "[]")
     try:
@@ -876,7 +886,7 @@ def save_exo():
         })
 
     try:
-        replace_exo_rows(semaine, seance, exo_final, new_rows)
+        replace_exo_rows(date_str, seance, exo_final, new_rows)
         clear_user_cache()
     except Exception as e:
         logger.error("save-exo FAILED seance=%s exo=%s: %s", seance, exo_final, e)
@@ -895,13 +905,14 @@ def skip_exo():
     variant = f["variant"]
     exo_base = f["exo_base"]
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
+    date_str = _form_date(f)
     new_rows = [{
         "Semaine": semaine, "Séance": seance, "Exercice": exo_final,
         "Série": 1, "Reps": 0, "Poids": 0.0,
         "Remarque": "SKIP", "Muscle": f.get("muscle", "Autre"),
-        "Date": f["date"],
+        "Date": date_str,
     }]
-    replace_exo_rows(semaine, seance, exo_final, new_rows)
+    replace_exo_rows(date_str, seance, exo_final, new_rows)
     clear_user_cache()
     return _back_to_editor(f)
 
@@ -910,12 +921,11 @@ def skip_exo():
 @limiter.limit("10 per minute")
 def reset_exo():
     f = request.form
-    semaine = int(f["semaine"])
     seance = f["seance_name"]
     variant = f["variant"]
     exo_base = f["exo_base"]
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
-    delete_exo_rows(semaine, seance, exo_final)
+    delete_exo_rows(_form_date(f), seance, exo_final)
     clear_user_cache()
     return _back_to_editor(f)
 
@@ -924,7 +934,7 @@ def reset_exo():
 @limiter.limit("10 per minute")
 def reset_session():
     f = request.form
-    delete_session_rows(int(f["semaine"]), f["seance_name"])
+    delete_session_rows(_form_date(f), f["seance_name"])
     clear_user_cache()
     return _back_to_editor(f)
 
@@ -1030,8 +1040,8 @@ def add_cardio():
     from routes.cardio import ACTIVITES_MAP, RPE_LABELS, _estimate_calories, _adjust_met_for_incline
     from core.data import get_profile
     f = request.form
-    date_str = f["date"]
-    target = _parse_date(date_str) or today_paris()
+    target = _parse_date(f.get("date")) or today_paris()
+    date_str = target.strftime("%Y-%m-%d")
     semaine = _iso_week(target)
     seance_name = f["seance_name"]
 
@@ -1095,7 +1105,7 @@ def add_cardio():
         "Date": date_str,
     }]
     try:
-        replace_exo_rows(semaine, seance_name, exo_final, rows)
+        replace_exo_rows(date_str, seance_name, exo_final, rows)
         clear_user_cache()
     except Exception as e:
         logger.error("add-cardio FAILED: %s", e)
@@ -1107,16 +1117,12 @@ def add_cardio():
 def delete_cardio():
     from core.data import delete_exo_rows
     f = request.form
-    try:
-        semaine = int(f["semaine"])
-    except (KeyError, ValueError):
-        return _back_to_editor(f)
     seance_name = f["seance_name"]
     activite = (f.get("activite") or "").strip()
     if not activite:
         return _back_to_editor(f)
     try:
-        delete_exo_rows(semaine, seance_name, f"CARDIO:{activite}")
+        delete_exo_rows(_form_date(f), seance_name, f"CARDIO:{activite}")
         clear_user_cache()
     except Exception as e:
         logger.error("delete-cardio FAILED: %s", e)
