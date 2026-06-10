@@ -1,0 +1,9 @@
+# Force le provider Python pour Railway/Nixpacks.
+#
+# Depuis l'ajout de package.json à la racine (coquille Capacitor), Nixpacks
+# auto-détectait le projet comme Node.js et montait un environnement SANS
+# pip → "pip: command not found" au build. Le serveur est 100 % Python
+# (Flask/gunicorn) ; Node ne sert QUE sur la machine de dev pour builder
+# l'app Android, jamais sur Railway. On verrouille donc le provider Python,
+# qui installe python + pip (version pinée par runtime.txt).
+providers = ["python"]
