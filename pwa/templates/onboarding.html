@@ -329,7 +329,7 @@
        ⚠️ form.submit() programmatique ne déclenche PAS l'événement submit, donc
        l'injection CSRF globale de base.html ne s'applique pas : le token doit
        être inclus statiquement ici, sinon le POST est rejeté en 400. #}
-    <form x-ref="onbForm" method="post" action="{{ url_for('onboarding.submit') }}" style="display:none;">
+    <form id="onb-form" x-ref="onbForm" method="post" action="{{ url_for('onboarding.submit') }}" style="display:none;">
       <input type="hidden" name="_csrf" value="{{ csrf_token }}">
       <input type="hidden" name="prenom"      :value="form.prenom">
       <input type="hidden" name="age"         :value="form.age">
@@ -508,10 +508,16 @@ function onboardingFlow() {
 
     // Choisit un programme et valide l'onboarding directement (pas besoin de
     // scroller jusqu'à un bouton en bas).
+    // ⚠️ Ne PAS utiliser this.$refs ici : ce handler est appelé depuis la
+    // modale <template x-if="previewProg">, et fermer la modale détruit
+    // l'élément d'origine — $refs (qui remonte le DOM depuis cet élément)
+    // devient introuvable et le submit était silencieusement ignoré.
     useProgram(id) {
       this.form.programme_id = id;
+      const form = document.getElementById('onb-form');
       this.previewProg = null;
-      this.$nextTick(() => { if (this.$refs.onbForm) this.$refs.onbForm.submit(); });
+      // nextTick : laisse Alpine pousser programme_id dans l'input caché.
+      this.$nextTick(() => { if (form) form.submit(); });
     },
 
     async goStep4() {
