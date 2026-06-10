@@ -248,6 +248,42 @@ def test_onboarding_page_rend_le_catalogue(fake_db, client):
     assert 'name="_csrf"' in html
 
 
+# ── Session d'un compte supprimé ─────────────────────────────────
+
+def test_session_invalidee_apres_suppression_compte(fake_db, logged_in):
+    """Un cookie encore valide sur un autre appareil ne doit plus donner accès
+    après suppression du compte : la revalidation périodique (TTL VIP) vérifie
+    l'existence du compte auth et purge la session."""
+    fake_db.auth.admin.deleted_users.append(USER_ID)
+    # Force la revalidation : timestamp VIP périmé.
+    with logged_in.session_transaction() as s:
+        s["is_vip_ts"] = 0
+    r = logged_in.get("/accueil")
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+    # La session est purgée → même une requête avec ts frais ne passe plus.
+    r2 = logged_in.get("/accueil")
+    assert r2.status_code == 302 and r2.headers["Location"] == "/"
+
+
+# ── Asset links (TWA Play Store) ─────────────────────────────────
+
+def test_assetlinks_404_sans_config(client):
+    import os
+    os.environ.pop("TWA_SHA256_FINGERPRINT", None)
+    assert client.get("/.well-known/assetlinks.json").status_code == 404
+
+
+def test_assetlinks_avec_empreinte(client, monkeypatch):
+    monkeypatch.setenv("TWA_SHA256_FINGERPRINT", "aa:bb:cc")
+    monkeypatch.setenv("TWA_PACKAGE_NAME", "com.muscutracker.app")
+    r = client.get("/.well-known/assetlinks.json")
+    assert r.status_code == 200
+    payload = r.get_json()
+    assert payload[0]["target"]["package_name"] == "com.muscutracker.app"
+    assert payload[0]["target"]["sha256_cert_fingerprints"] == ["AA:BB:CC"]
+    assert payload[0]["relation"] == ["delegate_permission/common.handle_all_urls"]
+
+
 # ── Import JSON : validation ─────────────────────────────────────
 
 def test_import_json_malforme_rejete(fake_db, logged_in):

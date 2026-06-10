@@ -11,3 +11,4 @@ supabase==2.8.1
 pyjwt==2.9.0
 cryptography==43.0.3
 anthropic==0.39.0
+sentry-sdk[flask]==2.19.2

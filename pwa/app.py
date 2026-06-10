@@ -39,6 +39,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Monitoring d'erreurs (Sentry) — actif uniquement si SENTRY_DSN est défini.
+# Sans la variable, zéro impact. send_default_pii=False : jamais d'emails ni
+# de cookies dans les rapports.
+_sentry_dsn = (os.getenv("SENTRY_DSN") or "").strip()
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(dsn=_sentry_dsn, traces_sample_rate=0, send_default_pii=False)
+        logger.info("Sentry actif (monitoring erreurs)")
+    except Exception as _e:  # sdk absent ou DSN invalide : on boot quand même
+        logger.error("Sentry init FAILED: %s", _e)
+
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 # Rate limiter global — protège les routes POST contre les clics compulsifs.
@@ -98,7 +110,7 @@ app.register_blueprint(admin_bp)
 # ────────────────────────────────────────────────────────────────
 # /faq et /confidentialite sont publics : les stores (Play/App Store) exigent
 # une URL de politique de confidentialité consultable sans compte.
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite"}
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/.well-known/assetlinks.json"}
 
 
 @app.before_request
@@ -122,6 +134,17 @@ def _require_login():
     cached_vip = session.get("is_vip")
     checked_at = session.get("is_vip_ts", 0)
     if cached_vip is None or (time.time() - checked_at) > VIP_CACHE_TTL:
+        # On profite de cette revalidation périodique pour vérifier que le
+        # compte auth existe toujours : après une suppression de compte, un
+        # cookie de session encore valide sur un AUTRE appareil pourrait sinon
+        # recréer des données orphelines via l'onboarding.
+        try:
+            if not core_db.auth_user_exists(user_id):
+                session.clear()
+                return redirect(url_for("landing"))
+        except Exception:
+            # Erreur transitoire (API auth indisponible) : on ne déconnecte pas.
+            pass
         try:
             profile = core_db.get_profile(user_id) or {}
             cached_vip = (profile.get("tier") or "free").strip().lower() == "vip"
@@ -354,6 +377,31 @@ def service_worker():
     response = send_from_directory("static", "service-worker.js", mimetype="application/javascript")
     response.headers["Service-Worker-Allowed"] = "/"
     return response
+
+
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    """Digital Asset Links — requis par le TWA Android (Play Store) pour
+    prouver que l'app possède ce domaine (sinon la barre d'URL Chrome reste
+    visible). Configuration via env :
+      - TWA_SHA256_FINGERPRINT : empreinte SHA-256 du certificat de signature
+        (Play Console → Signature de l'application), plusieurs possibles
+        séparées par des virgules.
+      - TWA_PACKAGE_NAME : nom de package Android (défaut com.muscutracker.app).
+    Tant que l'empreinte n'est pas configurée → 404 (pas de fichier vide)."""
+    from flask import jsonify
+    fingerprints = [f.strip().upper() for f in (os.getenv("TWA_SHA256_FINGERPRINT") or "").split(",") if f.strip()]
+    if not fingerprints:
+        abort(404)
+    package = (os.getenv("TWA_PACKAGE_NAME") or "com.muscutracker.app").strip()
+    return jsonify([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": package,
+            "sha256_cert_fingerprints": fingerprints,
+        },
+    }])
 
 
 # ────────────────────────────────────────────────────────────────

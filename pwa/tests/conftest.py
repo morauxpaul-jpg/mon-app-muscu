@@ -161,6 +161,11 @@ class FakeAdmin:
     def delete_user(self, uid):
         self.deleted_users.append(uid)
 
+    def get_user_by_id(self, uid):
+        if uid in self.deleted_users:
+            raise Exception("User not found")
+        return types.SimpleNamespace(user=types.SimpleNamespace(id=uid))
+
     def list_users(self):
         return []
 

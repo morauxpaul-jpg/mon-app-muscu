@@ -656,6 +656,23 @@ def reset_user_coach_quota(user_id: str) -> None:
     client.table("profiles").upsert({"id": user_id, "coach_quota_count": 0}).execute()
 
 
+def auth_user_exists(user_id: str) -> bool:
+    """True si le compte auth Supabase existe encore. Lève en cas d'erreur
+    transitoire (réseau, API down) — l'appelant décide alors de ne PAS
+    déconnecter. Utilisé pour invalider les sessions d'un compte supprimé."""
+    client = get_client()
+    try:
+        resp = client.auth.admin.get_user_by_id(user_id)
+    except Exception as e:
+        msg = str(e).lower()
+        if "not found" in msg or "not_found" in msg or "404" in msg:
+            return False
+        raise
+    user = getattr(resp, "user", None) or resp
+    uid = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
+    return bool(uid)
+
+
 def delete_user_account(user_id: str) -> None:
     """Suppression DÉFINITIVE d'un compte : toutes les tables + l'utilisateur
     auth Supabase. Exigence des stores (Google Play / App Store) : la
