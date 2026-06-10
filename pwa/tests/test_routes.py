@@ -299,6 +299,123 @@ def test_assetlinks_avec_empreinte(client, monkeypatch):
     assert payload[0]["relation"] == ["delegate_permission/common.handle_all_urls"]
 
 
+# ── Billing / Stripe ─────────────────────────────────────────────
+
+def test_premium_montre_boutons_achat_pour_free(fake_db, client):
+    _fresh_login(client)
+    r = client.get("/premium")
+    html = r.data.decode("utf-8")
+    assert r.status_code == 200
+    assert '/billing/checkout' in html
+    assert 'value="monthly"' in html and 'value="annual"' in html and 'value="lifetime"' in html
+
+
+def test_premium_montre_portail_pour_vip(fake_db, logged_in):
+    r = logged_in.get("/premium")
+    html = r.data.decode("utf-8")
+    assert "/billing/portal" in html
+    # Pas de bouton d'achat pour un VIP.
+    assert 'value="monthly"' not in html
+
+
+def test_checkout_anonyme_redirige_login(client):
+    r = client.post("/billing/checkout", data={"plan": "monthly"})
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+
+
+def test_checkout_sans_cle_stripe_renvoie_503(fake_db, logged_in, monkeypatch):
+    monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
+    r = logged_in.post("/billing/checkout", data={"_csrf": CSRF, "plan": "monthly"})
+    assert r.status_code == 503
+
+
+def test_checkout_plan_invalide_redirige(fake_db, logged_in):
+    r = logged_in.post("/billing/checkout", data={"_csrf": CSRF, "plan": "pirate"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/premium")
+
+
+def test_checkout_cree_session_stripe(fake_db, logged_in, monkeypatch):
+    import routes.billing as billing
+    captured = {}
+
+    import types as _types
+
+    class FakeSession:
+        @staticmethod
+        def create(**kwargs):
+            captured.update(kwargs)
+            # Le vrai SDK renvoie un objet avec attribut .url
+            return _types.SimpleNamespace(url="https://checkout.stripe.test/abc")
+
+    fake_stripe = type("S", (), {"checkout": type("C", (), {"Session": FakeSession})})
+    monkeypatch.setattr(billing, "_stripe", lambda: fake_stripe)
+
+    r = logged_in.post("/billing/checkout", data={"_csrf": CSRF, "plan": "annual"})
+    assert r.status_code == 303
+    assert r.headers["Location"] == "https://checkout.stripe.test/abc"
+    assert captured["mode"] == "subscription"
+    assert captured["client_reference_id"] == USER_ID
+    assert captured["line_items"][0]["price_data"]["unit_amount"] == 3999
+    assert captured["line_items"][0]["price_data"]["recurring"]["interval"] == "year"
+
+
+def test_webhook_public_et_csrf_exempt(fake_db, client):
+    # Pas de session, pas de token CSRF : le webhook ne doit PAS être redirigé
+    # vers /login ni rejeté en 400-CSRF. Sans clé Stripe configurée → 503.
+    import os
+    os.environ.pop("STRIPE_SECRET_KEY", None)
+    r = client.post("/billing/webhook", data=b"{}", content_type="application/json")
+    assert r.status_code == 503  # pas 302 (auth) ni 400 (csrf)
+
+
+def test_webhook_active_vip_sur_paiement(fake_db, client, monkeypatch):
+    import routes.billing as billing
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free"}).execute()
+
+    event = {
+        "type": "checkout.session.completed",
+        "data": {"object": {
+            "client_reference_id": USER_ID,
+            "customer": "cus_test_123",
+            "metadata": {"user_id": USER_ID},
+        }},
+    }
+    fake_stripe = type("S", (), {
+        "Webhook": type("W", (), {"construct_event": staticmethod(lambda payload, sig, secret: event)}),
+    })
+    monkeypatch.setattr(billing, "_stripe", lambda: fake_stripe)
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
+    r = client.post("/billing/webhook", data=b"{}",
+                    headers={"Stripe-Signature": "t=1,v1=x"})
+    assert r.status_code == 200
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    assert prof["tier"] == "vip"
+    assert prof.get("stripe_customer_id") == "cus_test_123"
+
+
+def test_webhook_downgrade_sur_annulation(fake_db, client, monkeypatch):
+    import routes.billing as billing
+    fake_db.table("profiles").insert(
+        {"id": USER_ID, "tier": "vip", "stripe_customer_id": "cus_x"}
+    ).execute()
+
+    event = {
+        "type": "customer.subscription.deleted",
+        "data": {"object": {"customer": "cus_x", "metadata": {"user_id": USER_ID}}},
+    }
+    fake_stripe = type("S", (), {
+        "Webhook": type("W", (), {"construct_event": staticmethod(lambda p, s, sec: event)}),
+    })
+    monkeypatch.setattr(billing, "_stripe", lambda: fake_stripe)
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test")
+
+    r = client.post("/billing/webhook", data=b"{}", headers={"Stripe-Signature": "x"})
+    assert r.status_code == 200
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    assert prof["tier"] == "free"
+
+
 # ── Import JSON : validation ─────────────────────────────────────
 
 def test_import_json_malforme_rejete(fake_db, logged_in):

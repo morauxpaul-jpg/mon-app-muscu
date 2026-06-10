@@ -445,6 +445,35 @@ def set_user_tier(user_id: str, tier: str) -> None:
     client.table("profiles").upsert({"id": user_id, "tier": tier}).execute()
 
 
+# ── Stripe (abonnements Premium) ─────────────────────────────────
+def set_stripe_customer(user_id: str, customer_id: str) -> None:
+    """Mémorise l'ID client Stripe sur le profil (pour le portail + le mapping
+    customer→user lors des webhooks d'annulation). Nécessite la colonne
+    profiles.stripe_customer_id (migration v27)."""
+    if not customer_id:
+        return
+    client = get_client()
+    client.table("profiles").upsert(
+        {"id": user_id, "stripe_customer_id": customer_id}
+    ).execute()
+
+
+def get_user_by_stripe_customer(customer_id: str) -> Optional[str]:
+    """Retrouve l'user_id à partir de l'ID client Stripe (webhook annulation)."""
+    if not customer_id:
+        return None
+    client = get_client()
+    resp = (
+        client.table("profiles")
+        .select("id")
+        .eq("stripe_customer_id", customer_id)
+        .limit(1)
+        .execute()
+    )
+    rows = resp.data or []
+    return rows[0]["id"] if rows else None
+
+
 def list_coach_messages(user_id: str, conversation_id: str | None = None,
                          limit: int = 50) -> list[dict]:
     """Derniers messages du coach (rôle, content, created_at) en ordre

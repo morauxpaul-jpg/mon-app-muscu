@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Merci · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <div class="card" style="text-align:center; margin-top:24px;">
+    {% if activated %}
+      <svg class="icon icon-lg" style="color:var(--gold, #FFD700); width:48px; height:48px;"><use href="/static/img/icons.svg#gem"/></svg>
+      <h1 style="margin:12px 0 6px; font-size:1.4rem; font-weight:600;">Bienvenue chez les VIP 🎉</h1>
+      <p style="font-size:0.9rem; color:var(--text-2); line-height:1.5; margin:0 0 18px;">
+        Ton paiement est confirmé. Toutes les fonctionnalités Premium sont débloquées :
+        Coach IA, stats avancées, programmes PRO, export…
+      </p>
+      <a href="/accueil" class="btn primary label-icon" style="display:inline-flex; justify-content:center;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#home"/></svg>Commencer
+      </a>
+    {% else %}
+      <svg class="icon icon-lg icon-accent" style="width:44px; height:44px;"><use href="/static/img/icons.svg#clock"/></svg>
+      <h1 style="margin:12px 0 6px; font-size:1.3rem; font-weight:600;">Paiement en cours de validation</h1>
+      <p style="font-size:0.9rem; color:var(--text-2); line-height:1.5; margin:0 0 18px;">
+        Merci ! Ton accès Premium s'active dans quelques instants. Si rien ne change,
+        recharge la page d'ici une minute.
+      </p>
+      <a href="/accueil" class="btn label-icon" style="display:inline-flex; justify-content:center;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#home"/></svg>Retour à l'accueil
+      </a>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -28,6 +28,7 @@ from routes.cardio import bp as cardio_bp
 from routes.nutrition import bp as nutrition_bp
 from routes.coach import bp as coach_bp
 from routes.premium import bp as premium_bp
+from routes.billing import bp as billing_bp
 from routes.admin import bp as admin_bp
 
 from core import db as core_db
@@ -102,6 +103,7 @@ app.register_blueprint(cardio_bp)
 app.register_blueprint(nutrition_bp)
 app.register_blueprint(coach_bp)
 app.register_blueprint(premium_bp)
+app.register_blueprint(billing_bp)
 app.register_blueprint(admin_bp)
 
 
@@ -110,7 +112,9 @@ app.register_blueprint(admin_bp)
 # ────────────────────────────────────────────────────────────────
 # /faq et /confidentialite sont publics : les stores (Play/App Store) exigent
 # une URL de politique de confidentialité consultable sans compte.
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/.well-known/assetlinks.json"}
+# /billing/webhook : appelé par Stripe (pas de session) → public, sécurisé par
+# la signature Stripe et exempté de CSRF (cf. _CSRF_EXEMPT_PATHS).
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/.well-known/assetlinks.json", "/billing/webhook"}
 
 
 @app.before_request
@@ -199,7 +203,7 @@ def _require_login():
 _CSRF_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # /auth/session = handshake de login (pas encore de session Flask, déjà protégé
 # par la vérification du JWT Supabase). Exempté.
-_CSRF_EXEMPT_PATHS = {"/auth/session"}
+_CSRF_EXEMPT_PATHS = {"/auth/session", "/billing/webhook"}
 
 
 def _csrf_enabled() -> bool:

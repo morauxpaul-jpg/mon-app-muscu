@@ -16,7 +16,12 @@
     <div class="card" style="text-align:center;">
       <svg class="icon icon-lg" style="color:var(--gold);"><use href="/static/img/icons.svg#shield-check"/></svg>
       <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Tu es VIP</h3>
-      <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app. Les plans ci-dessous arrivent avec la version Play Store.</p>
+      <p style="margin:0 0 12px; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app 🙏</p>
+      <form method="post" action="/billing/portal" class="billing-cta" style="margin:0;">
+        <button type="submit" class="btn label-icon" style="display:inline-flex; justify-content:center;">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Gérer mon abonnement
+        </button>
+      </form>
     </div>
   {% endif %}
 
@@ -55,10 +60,21 @@
         <li><span class="ok">✓</span>Stats détaillées par muscle</li>
         <li><span class="ok">✓</span>Pas de pub future</li>
       </ul>
-      <button class="btn primary tier-cta" disabled data-haptic="1">
-        Bientôt disponible
-      </button>
-      <div class="tier-note">Lancement prévu avec la version Play Store</div>
+      {% if is_premium %}
+        <button class="btn tier-cta" disabled style="opacity:0.5;">Déjà débloqué</button>
+      {% else %}
+        <div class="billing-cta">
+          <form method="post" action="/billing/checkout" style="margin:0;">
+            <input type="hidden" name="plan" value="monthly">
+            <button type="submit" class="btn primary tier-cta" data-haptic="1">S'abonner — 4,99€/mois</button>
+          </form>
+          <form method="post" action="/billing/checkout" style="margin:8px 0 0;">
+            <input type="hidden" name="plan" value="annual">
+            <button type="submit" class="btn tier-cta" data-haptic="1">Annuel — 39,99€/an</button>
+          </form>
+        </div>
+        <div class="native-note tier-note" style="display:none;">Abonnement gérable depuis le site web.</div>
+      {% endif %}
     </div>
 
     <!-- LIFETIME -->
@@ -76,9 +92,16 @@
         <li><span class="ok">✓</span>Soutien le créateur</li>
         <li><span class="ok">✓</span>Badge VIP doré</li>
       </ul>
-      <button class="btn tier-cta" disabled style="background:var(--warning-bg); color:var(--warning); font-weight:500; border-color:var(--warning);">
-        Bientôt disponible
-      </button>
+      {% if is_premium %}
+        <button class="btn tier-cta" disabled style="opacity:0.5;">Déjà débloqué</button>
+      {% else %}
+        <div class="billing-cta">
+          <form method="post" action="/billing/checkout" style="margin:0;">
+            <input type="hidden" name="plan" value="lifetime">
+            <button type="submit" class="btn tier-cta" data-haptic="1" style="background:var(--warning-bg); color:var(--warning); font-weight:500; border-color:var(--warning);">Acheter à vie — 79,99€</button>
+          </form>
+        </div>
+      {% endif %}
       <div class="tier-note">Pour les 100 premiers utilisateurs</div>
     </div>
 
@@ -86,11 +109,24 @@
 
   <div class="card" style="margin-top:14px; font-size:0.78rem; color:var(--text-2); line-height:1.5;">
     <strong style="color:var(--text-1);">FAQ rapide</strong><br><br>
-    <strong>Puis-je annuler ?</strong> Oui, à tout moment. L'accès reste actif jusqu'à la fin de la période payée.<br><br>
-    <strong>L'abonnement se renouvelle-t-il automatiquement ?</strong> Oui, via Google Play. Tu peux désactiver le renouvellement dans les paramètres Google Play à tout moment.<br><br>
+    <strong>Paiement sécurisé ?</strong> Oui — le paiement est traité par Stripe (leader mondial). Carte, Apple Pay et Google Pay acceptés. L'app ne voit jamais ton numéro de carte.<br><br>
+    <strong>Puis-je annuler ?</strong> Oui, à tout moment depuis « Gérer mon abonnement ». L'accès reste actif jusqu'à la fin de la période payée.<br><br>
     <strong>Que se passe-t-il si j'annule ?</strong> Tu repasses en gratuit — tu gardes toutes tes données, seules les features premium sont désactivées.<br><br>
-    <strong>Et sur iOS ?</strong> Bientôt — on commence par Android.
+    <strong>Le « à vie » ?</strong> Un paiement unique, accès Premium pour toujours, sans renouvellement.
   </div>
+
+  <script>
+    // Règles des stores : on ne propose pas de paiement web À L'INTÉRIEUR de
+    // l'app native. Détection Capacitor → on masque les boutons d'achat et on
+    // affiche une note neutre. Sur le web / la PWA : paiement visible.
+    (function () {
+      var C = window.Capacitor;
+      if (C && typeof C.isNativePlatform === "function" && C.isNativePlatform()) {
+        document.querySelectorAll(".billing-cta").forEach(function (el) { el.style.display = "none"; });
+        document.querySelectorAll(".native-note").forEach(function (el) { el.style.display = "block"; });
+      }
+    })();
+  </script>
 
   <style>
     .premium-hero {
