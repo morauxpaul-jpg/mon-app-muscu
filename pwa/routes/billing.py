@@ -136,16 +136,33 @@ def success():
     if sid and stripe:
         try:
             cs = stripe.checkout.Session.retrieve(sid)
-            paid = cs.get("payment_status") in ("paid", "no_payment_required")
-            if paid and cs.get("client_reference_id") == g.user_id:
+            status = cs.get("status")            # 'complete' quand la session est finalisée
+            pstatus = cs.get("payment_status")   # 'paid' / 'no_payment_required'
+            ref = cs.get("client_reference_id")
+            done = (status == "complete") or (pstatus in ("paid", "no_payment_required"))
+            if done and ref == g.user_id:
                 _activate_vip(g.user_id, cs.get("customer"))
                 # Rafraîchit le cache VIP de la session immédiatement.
                 session["is_vip"] = True
                 import time as _t
                 session["is_vip_ts"] = _t.time()
                 activated = True
+            else:
+                logger.warning(
+                    "billing success NON activé: status=%s payment=%s ref=%s uid=%s",
+                    status, pstatus, ref, getattr(g, "user_id", None),
+                )
         except Exception as e:
             logger.error("billing success verify FAILED: %s", e)
+    elif not stripe:
+        logger.error("billing success: _stripe() None (STRIPE_SECRET_KEY ?)")
+
+    # Dans tous les cas, on invalide le cache VIP de la session : si le webhook
+    # a déjà fait passer le tier en base, la prochaine navigation le reflétera
+    # (sinon l'utilisateur resterait « free » jusqu'à expiration du TTL).
+    if not activated:
+        session.pop("is_vip", None)
+        session.pop("is_vip_ts", None)
     return render_template("billing_success.html", active="plus", activated=activated)
 
 
