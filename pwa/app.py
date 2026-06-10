@@ -326,6 +326,11 @@ def _inject_user():
         "is_vip": premium,
         "is_admin": bool(email) and email in admin_emails,
         "csrf_token": _get_or_create_csrf() if uid else "",
+        # IDs AdMob (app native Capacitor, comptes Free uniquement). Défauts =
+        # IDs de TEST officiels Google — à remplacer par les vrais via l'env
+        # Railway une fois le compte AdMob créé. Côté web/PWA : sans effet.
+        "admob_banner_id": os.getenv("ADMOB_BANNER_ID", "ca-app-pub-3940256099942544/6300978111"),
+        "admob_interstitial_id": os.getenv("ADMOB_INTERSTITIAL_ID", "ca-app-pub-3940256099942544/1033173712"),
     }
 
 

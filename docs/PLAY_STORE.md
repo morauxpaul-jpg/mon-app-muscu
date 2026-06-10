@@ -1,9 +1,11 @@
-# Publier Muscu Tracker sur le Play Store (TWA)
+# Publier Muscu Tracker sur le Play Store
 
-L'app étant une PWA, on la publie sur Android via une **TWA** (Trusted Web
-Activity) : une vraie app Android qui affiche le site en plein écran, sans
-barre d'URL. Le serveur est déjà prêt (manifest, service worker, route
-`/.well-known/assetlinks.json`) — il reste les étapes ci-dessous.
+> **Mise à jour 2026-06** : la stratégie est passée de TWA à **Capacitor**
+> (coquille native, nécessaire pour les pubs AdMob) — voir
+> `docs/CAPACITOR.md` pour générer l'AAB. La section 2 (PWABuilder) est
+> conservée pour référence mais n'est plus le chemin retenu. Tout le reste
+> (Play Console, fiche, déclarations) reste valable, avec une déclaration en
+> plus : **« L'application contient des annonces » = OUI**.
 
 ## 1. Compte Play Console (à faire une fois)
 

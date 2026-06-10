@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- Fallback local de la coquille Capacitor : affiché uniquement si l'URL de
+     prod (capacitor.config.json → server.url) est inaccessible au démarrage.
+     L'app réelle est servie depuis Railway. -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muscu Tracker</title>
+  <style>
+    body { background:#0a0a0f; color:#e7e9ee; font-family:system-ui,sans-serif;
+           display:flex; align-items:center; justify-content:center; height:100vh;
+           margin:0; text-align:center; }
+    .box { max-width:280px; }
+    h1 { font-size:1.2rem; font-weight:600; }
+    p { font-size:0.9rem; color:#9aa3b2; line-height:1.5; }
+    button { margin-top:14px; padding:12px 22px; border-radius:10px; border:none;
+             background:#3b82f6; color:#fff; font-size:0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Muscu Tracker</h1>
+    <p>Connexion impossible — vérifie ta connexion internet puis réessaie.</p>
+    <button onclick="window.location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>

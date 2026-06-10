@@ -248,6 +248,21 @@ def test_onboarding_page_rend_le_catalogue(fake_db, client):
     assert 'name="_csrf"' in html
 
 
+# ── Pubs (config AdMob injectée pour les Free uniquement) ────────
+
+def test_ads_config_absente_pour_vip(fake_db, logged_in):
+    _seed_prog(fake_db)
+    r = logged_in.get("/accueil")  # fixture logged_in = VIP
+    assert "__ADS__" not in r.data.decode("utf-8")
+
+
+def test_ads_config_presente_pour_free(fake_db, client):
+    _fresh_login(client)
+    r = client.get("/onboarding")
+    html = r.data.decode("utf-8")
+    assert "__ADS__" in html and "ads.js" in html
+
+
 # ── Session d'un compte supprimé ─────────────────────────────────
 
 def test_session_invalidee_apres_suppression_compte(fake_db, logged_in):

@@ -86,6 +86,11 @@
     <a href="/plus"    data-tuto="plus"      class="{% if active == 'plus'    %}active{% endif %}" {% if active == 'plus' %}aria-current="page"{% endif %}><svg class="icon nav-icon" aria-hidden="true"><use href="/static/img/icons.svg#grid"/></svg>Plus</a>
   </nav>
 
+  {% if is_authenticated and not is_vip %}
+  {# Pubs AdMob — uniquement dans l'app native Capacitor (no-op sur web/PWA). #}
+  <script>window.__ADS__ = {{ {"banner": admob_banner_id, "interstitial": admob_interstitial_id} | tojson }};</script>
+  <script src="/static/js/ads.js" defer></script>
+  {% endif %}
   <script src="/static/js/sw-register.js"></script>
   <script src="/static/js/offline.js"></script>
   <script src="/static/js/notifications.js"></script>

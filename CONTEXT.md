@@ -9,6 +9,7 @@ PWA Flask (Python) avec Supabase (PostgreSQL) en backend, déployée sur Railway
 - **Data** : Supabase tables (history, programs, profiles, onboarding, nutrition, coach_messages) via `service_role` key
 - **PWA** : Service Worker (Network First), manifest.json, offline support
 - **IA** : Coach via API Anthropic (Claude Haiku 4.5)
+- **Coquille native** : Capacitor (`android/`, `capacitor.config.json` à la racine) — webview sur l'URL de prod + plugin AdMob. Pubs (Free uniquement, app native uniquement) : `pwa/static/js/ads.js`, IDs via env `ADMOB_BANNER_ID`/`ADMOB_INTERSTITIAL_ID`. Docs : `docs/CAPACITOR.md` + `docs/PLAY_STORE.md`. ⚠️ Login Google natif pas encore branché (OAuth Google interdit en webview — voir CAPACITOR.md)
 
 ## Structure des fichiers
 
@@ -242,7 +243,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v89-2026-06-10-onboarding-submit-fix` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v90-2026-06-10-ads-capacitor` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

@@ -1,0 +1,16 @@
+{
+  "appId": "com.muscutracker.app",
+  "appName": "Muscu Tracker",
+  "webDir": "www",
+  "server": {
+    "url": "https://REMPLACE-PAR-TON-DOMAINE.up.railway.app",
+    "cleartext": false,
+    "allowNavigation": [
+      "accounts.google.com",
+      "*.supabase.co"
+    ]
+  },
+  "android": {
+    "backgroundColor": "#0a0a0f"
+  }
+}
