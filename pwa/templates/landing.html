@@ -11,6 +11,15 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <script>
+    // Capture l'événement d'installation le plus tôt possible : Chrome le
+    // déclenche dès le chargement, souvent avant install.js. On le stocke pour
+    // que le bouton « Installer » puisse le réutiliser au clic.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__deferredInstallPrompt = e;
+    });
+  </script>
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
@@ -80,6 +89,66 @@
     .landing-social svg { width:14px; height:14px; color: var(--success); }
 
     .landing-footer { margin-top:24px; font-size:var(--text-xs); color:var(--text-3); text-align:center; max-width:340px; }
+
+    /* Bouton « Installer l'app » — secondaire, sous le CTA principal */
+    .install-btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:9px;
+      margin-top:12px; padding:12px 24px; font-size:0.92rem; font-weight:500;
+      border-radius:var(--radius-pill); cursor:pointer; text-decoration:none;
+      background: rgba(255,255,255,0.04); color: var(--text-1);
+      border:0.5px solid var(--border-default);
+      transition: all var(--ease-normal);
+    }
+    .install-btn:hover { background: rgba(255,255,255,0.07); border-color: var(--border-hover); }
+    .install-btn:active { transform:scale(0.97); }
+    .install-btn svg { width:18px; height:18px; color: var(--text-2); }
+
+    /* Overlay guide d'installation (iOS / fallback) */
+    .install-overlay {
+      position:fixed; inset:0; z-index:9999;
+      display:flex; align-items:flex-end; justify-content:center;
+      background:rgba(0,0,0,0.55); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      animation: install-fade 0.2s ease-out;
+    }
+    @keyframes install-fade { from { opacity:0; } to { opacity:1; } }
+    .install-sheet {
+      position:relative; width:100%; max-width:440px;
+      background: var(--bg-surface, #14161d);
+      border:0.5px solid var(--border-default);
+      border-radius:22px 22px 0 0;
+      padding:24px 22px calc(28px + env(safe-area-inset-bottom));
+      box-shadow:0 -8px 48px rgba(0,0,0,0.5);
+      animation: install-slide 0.28s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes install-slide { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .install-close {
+      position:absolute; top:12px; right:14px; width:32px; height:32px;
+      border:none; background:rgba(255,255,255,0.06); color:var(--text-2);
+      border-radius:50%; font-size:1.3rem; line-height:1; cursor:pointer;
+    }
+    .install-h { margin:0 0 4px; font-size:1.15rem; font-weight:600; color:var(--text-1); }
+    .install-p { margin:0 0 16px; font-size:0.9rem; color:var(--text-2); line-height:1.5; }
+    .install-steps { list-style:none; padding:0; margin:0 0 14px; }
+    .install-steps li {
+      display:flex; align-items:flex-start; gap:12px; margin-bottom:14px;
+      font-size:0.92rem; color:var(--text-1); line-height:1.5;
+    }
+    .install-num {
+      flex-shrink:0; width:26px; height:26px; border-radius:50%;
+      background:var(--accent-bg, rgba(120,200,255,0.12)); color:var(--accent, #78c8ff);
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:0.85rem; font-weight:600;
+    }
+    .install-share-ic, .install-plus-ic {
+      display:inline-flex; vertical-align:middle; margin:0 3px;
+      color:var(--accent, #78c8ff);
+    }
+    .install-hint { margin:4px 0 0; font-size:0.82rem; color:var(--text-3); line-height:1.5; }
+    .install-arrow {
+      text-align:center; color:var(--accent, #78c8ff); font-size:1.4rem;
+      margin-top:10px; animation: install-bounce 1.4s ease-in-out infinite;
+    }
+    @keyframes install-bounce { 0%,100% { transform:translateY(0); opacity:0.6; } 50% { transform:translateY(6px); opacity:1; } }
   </style>
 </head>
 <body>
@@ -148,6 +217,11 @@
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Commencer — Connexion Google
     </a>
 
+    <button id="install-btn" class="install-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      <span id="install-btn-label">Installer l'app sur mon téléphone</span>
+    </button>
+
     <div class="landing-social">
       <svg><use href="/static/img/icons.svg#shield-check"/></svg>
       Gratuit · Tes données restent privées · PWA installable
@@ -159,5 +233,16 @@
       · <a href="/faq" style="color:var(--text-3); text-decoration:underline;">FAQ</a>
     </div>
   </div>
+
+  <script>
+    // Enregistre le service worker : requis pour que Chrome considère le site
+    // « installable » et émette beforeinstallprompt (le bouton d'install natif).
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/service-worker.js').catch(function () {});
+      });
+    }
+  </script>
+  <script src="/static/js/install.js" defer></script>
 </body>
 </html>
