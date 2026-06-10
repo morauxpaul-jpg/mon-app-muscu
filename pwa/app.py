@@ -260,10 +260,16 @@ def _csrf_protect():
 #   vraies dépendances (jsDelivr pour supabase-js, Google Fonts, Plotly, le
 #   domaine Supabase pour connect-src). N'bloque rien ; sert de base pour un
 #   futur durcissement total via CSP_ENFORCE=1. CSP_DISABLED=1 retire tout.
+# form-action liste TOUTES les cibles vers lesquelles un <form> peut partir,
+# y compris APRÈS une redirection 3xx. Le paiement Stripe POST /billing/checkout
+# (self) puis redirige vers checkout.stripe.com → ce domaine DOIT y figurer,
+# sinon le navigateur bloque silencieusement la redirection (paiement qui
+# « charge sans aboutir »). billing.stripe.com = portail de gestion.
+_STRIPE_FORM_ACTION = "https://checkout.stripe.com https://billing.stripe.com"
 _CSP_ENFORCED = (
     "frame-ancestors 'self'; "
     "base-uri 'self'; "
-    "form-action 'self' https://accounts.google.com; "
+    f"form-action 'self' https://accounts.google.com {_STRIPE_FORM_ACTION}; "
     "object-src 'none'"
 )
 
@@ -285,7 +291,7 @@ def _csp_report_policy() -> str:
         f"connect-src 'self' https://cdn.plot.ly https://cdn.jsdelivr.net{connect_extra}; "
         "frame-ancestors 'self'; "
         "base-uri 'self'; "
-        "form-action 'self' https://accounts.google.com; "
+        f"form-action 'self' https://accounts.google.com {_STRIPE_FORM_ACTION}; "
         "object-src 'none'"
     )
 
