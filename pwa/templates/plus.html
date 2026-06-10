@@ -5,13 +5,14 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#grid"/></svg>Plus</h1>
 
   {% if is_premium %}
-    <div class="card" style="display:flex; align-items:center; gap:12px;">
+    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
       <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
       <div style="flex:1;">
         <div style="font-weight:500; color: var(--text-1); font-size:0.9rem;">Membre VIP</div>
-        <div style="font-size:0.75rem; color:var(--text-2);">Merci de ton soutien — toutes les features sont débloquées.</div>
+        <div style="font-size:0.75rem; color:var(--text-2);">Merci de ton soutien — voir les offres et plans supérieurs.</div>
       </div>
-    </div>
+      <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    </a>
   {% else %}
     <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
       <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>

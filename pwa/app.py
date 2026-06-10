@@ -134,8 +134,11 @@ def _require_login():
     g.is_vip = bool(cached_vip)
 
     # Phase 4 : gate onboarding. Les routes /onboarding/* et /logout sont
-    # exemptées pour éviter la boucle de redirection.
-    if path.startswith("/onboarding") or path == "/logout":
+    # exemptées pour éviter la boucle de redirection. /premium, /faq et
+    # /confidentialite aussi : la carte « Plus de programmes PRO » de
+    # l'onboarding pointe vers les offres, et ces pages de présentation
+    # ne nécessitent aucune donnée utilisateur.
+    if path.startswith("/onboarding") or path in ("/logout", "/premium", "/faq", "/confidentialite"):
         return None
     # Cache le flag en session pour éviter un hit DB à chaque requête
     if not session.get("onboarded"):

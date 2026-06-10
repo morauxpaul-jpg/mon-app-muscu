@@ -325,8 +325,12 @@
       </div>
     </div>
 
-    {# Form caché — soumis directement depuis la modale détail / la carte custom #}
+    {# Form caché — soumis directement depuis la modale détail / la carte custom.
+       ⚠️ form.submit() programmatique ne déclenche PAS l'événement submit, donc
+       l'injection CSRF globale de base.html ne s'applique pas : le token doit
+       être inclus statiquement ici, sinon le POST est rejeté en 400. #}
     <form x-ref="onbForm" method="post" action="{{ url_for('onboarding.submit') }}" style="display:none;">
+      <input type="hidden" name="_csrf" value="{{ csrf_token }}">
       <input type="hidden" name="prenom"      :value="form.prenom">
       <input type="hidden" name="age"         :value="form.age">
       <input type="hidden" name="sexe"        :value="form.sexe">
@@ -339,14 +343,16 @@
     </form>
 
     <div class="onb-list">
+    {# Les programmes PRO (locked) ne sont pas listés ici : impossible d'être
+       VIP pendant l'onboarding. Une carte unique « Plus de programmes » en fin
+       de liste renvoie vers les offres Premium. #}
     <template x-for="p in orderedPrograms" :key="p.id">
       <div class="onb-card"
-           :class="{ 'reco-card': isReco(p.id), 'locked': p.locked }"
-           @click="p.locked ? null : openPreview(p)">
+           :class="{ 'reco-card': isReco(p.id) }"
+           @click="openPreview(p)">
 
-        <div class="onb-badges" x-show="isReco(p.id) || p.locked">
-          <span class="onb-badge-reco" x-show="isReco(p.id) && !p.locked">★ Recommandé</span>
-          <span class="onb-badge-pro" x-show="p.locked">PRO</span>
+        <div class="onb-badges" x-show="isReco(p.id)">
+          <span class="onb-badge-reco" x-show="isReco(p.id)">★ Recommandé</span>
         </div>
 
         <h3 class="onb-title">
@@ -373,8 +379,7 @@
                 x-text="'+' + (p.muscles.length - 5)"></span>
         </div>
 
-        <div class="onb-preview-btn" x-show="!p.locked">Voir le détail & les exercices →</div>
-        <a class="onb-locked-cta" x-show="p.locked" href="/premium" @click.stop>Débloquer avec PRO</a>
+        <div class="onb-preview-btn">Voir le détail & les exercices →</div>
       </div>
     </template>
 
@@ -386,6 +391,17 @@
       <div class="onb-desc">Tu seras amené directement dans l'éditeur pour construire ton programme à zéro.</div>
       <div class="onb-preview-btn">Partir de zéro →</div>
     </div>
+
+    <a class="onb-card" x-show="lockedCount > 0" href="/premium"
+       style="text-decoration:none; color:inherit; display:block; border-color:rgba(255,215,0,0.35);">
+      <div class="onb-badges"><span class="onb-badge-pro">PRO</span></div>
+      <h3 class="onb-title">
+        <svg class="icon icon-md onb-title-icon" style="color:var(--gold, #FFD700);"><use href="/static/img/icons.svg#gem"/></svg>
+        <span class="onb-title-text">Plus de programmes avec PRO</span>
+      </h3>
+      <div class="onb-desc"><span x-text="lockedCount"></span> programmes avancés (PPL, Upper/Lower, spécialisations…) sont réservés aux membres Premium. Tu pourras les débloquer à tout moment.</div>
+      <div class="onb-preview-btn">Voir les offres Premium →</div>
+    </a>
     </div>
   </div>
 
@@ -454,7 +470,10 @@ function onboardingFlow() {
       { id: "rien", label: "Rien (poids du corps)", icon: "✊" },
     ],
     recommended: [],
-    orderedPrograms: CATALOG_PROGRAMS,
+    // Les programmes verrouillés (PRO) ne sont pas proposés pendant
+    // l'onboarding — une carte unique renvoie vers /premium.
+    orderedPrograms: CATALOG_PROGRAMS.filter(p => !p.locked),
+    lockedCount: CATALOG_PROGRAMS.filter(p => p.locked).length,
     previewProg: null,
 
     init() {},
@@ -509,11 +528,13 @@ function onboardingFlow() {
         });
         const data = await resp.json();
         this.recommended = data.recommended || [];
-        // Réordonne : les plus pertinents d'abord, le reste (ex. PRO) ensuite.
+        // Réordonne : les plus pertinents d'abord, le reste ensuite.
+        // Les programmes verrouillés (PRO) restent exclus de la liste.
+        const available = CATALOG_PROGRAMS.filter(p => !p.locked);
         const ids = new Set(this.recommended);
-        const reco = CATALOG_PROGRAMS.filter(p => ids.has(p.id))
+        const reco = available.filter(p => ids.has(p.id))
           .sort((a, b) => this.recommended.indexOf(a.id) - this.recommended.indexOf(b.id));
-        const rest = CATALOG_PROGRAMS.filter(p => !ids.has(p.id));
+        const rest = available.filter(p => !ids.has(p.id));
         this.orderedPrograms = [...reco, ...rest];
       } catch (e) {
         console.warn("recommend failed", e);

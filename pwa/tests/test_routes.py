@@ -187,6 +187,67 @@ def test_delete_account_sans_confirmation_ne_fait_rien(fake_db, logged_in):
     assert fake_db.auth.admin.deleted_users == []
 
 
+# ── Onboarding ───────────────────────────────────────────────────
+
+def _fresh_login(client):
+    """Session authentifiée mais PAS encore onboardée (nouveau compte)."""
+    import time
+    with client.session_transaction() as s:
+        s["user_id"] = USER_ID
+        s["email"] = "test@example.com"
+        s["is_vip"] = False
+        s["is_vip_ts"] = time.time()
+        s["_csrf"] = CSRF
+    return client
+
+
+def test_onboarding_submit_avec_csrf_statique(fake_db, client):
+    """Régression : le form caché est soumis via form.submit() programmatique,
+    qui ne déclenche pas l'injection CSRF globale — le token statique du
+    template doit suffire, sinon 400 et l'onboarding ne « passe pas »."""
+    _fresh_login(client)
+    r = client.post("/onboarding/submit", data={
+        "_csrf": CSRF,
+        "prenom": "Paul",
+        "age": "25",
+        "sexe": "homme",
+        "niveau": "debutant",
+        "frequence": "3",
+        "objectif": "prise de masse",
+        "equipement": "salle",
+        "programme_id": "custom",
+    })
+    assert r.status_code == 302
+    assert r.headers["Location"].endswith("/accueil")
+    rows = [x for x in fake_db.tables.get("onboarding", []) if x["user_id"] == USER_ID]
+    assert rows and rows[0]["prenom"] == "Paul"
+
+
+def test_onboarding_submit_sans_csrf_rejete(fake_db, client):
+    _fresh_login(client)
+    r = client.post("/onboarding/submit", data={"prenom": "Paul"})
+    assert r.status_code == 400
+
+
+def test_premium_accessible_pendant_onboarding(fake_db, client):
+    """La carte « Plus de programmes PRO » de l'onboarding pointe vers
+    /premium : la page ne doit pas re-rediriger vers /onboarding."""
+    _fresh_login(client)
+    r = client.get("/premium")
+    assert r.status_code == 200
+
+
+def test_onboarding_page_rend_le_catalogue(fake_db, client):
+    _fresh_login(client)
+    r = client.get("/onboarding")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert "Plus de programmes avec PRO" in html
+    assert "CATALOG_PROGRAMS" in html
+    # Le token CSRF statique du form caché (form.submit() programmatique).
+    assert 'name="_csrf"' in html
+
+
 # ── Import JSON : validation ─────────────────────────────────────
 
 def test_import_json_malforme_rejete(fake_db, logged_in):

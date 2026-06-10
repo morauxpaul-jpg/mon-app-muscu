@@ -15,10 +15,10 @@
   {% if is_premium %}
     <div class="card" style="text-align:center;">
       <svg class="icon icon-lg" style="color:var(--gold);"><use href="/static/img/icons.svg#shield-check"/></svg>
-      <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Tu es déjà VIP</h3>
-      <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app.</p>
+      <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Tu es VIP</h3>
+      <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app. Les plans ci-dessous arrivent avec la version Play Store.</p>
     </div>
-  {% else %}
+  {% endif %}
 
   <div class="tier-grid">
 
@@ -36,7 +36,7 @@
         <li><span class="ok">✓</span>Badges</li>
         <li class="muted"><span class="ko">·</span>Coach IA réservé Premium</li>
       </ul>
-      <button class="btn tier-cta" disabled style="opacity:0.5;">Tu y es déjà</button>
+      <button class="btn tier-cta" disabled style="opacity:0.5;">{% if is_premium %}Plan gratuit{% else %}Tu y es déjà{% endif %}</button>
     </div>
 
     <!-- PREMIUM MENSUEL -->
@@ -91,7 +91,6 @@
     <strong>Que se passe-t-il si j'annule ?</strong> Tu repasses en gratuit — tu gardes toutes tes données, seules les features premium sont désactivées.<br><br>
     <strong>Et sur iOS ?</strong> Bientôt — on commence par Android.
   </div>
-  {% endif %}
 
   <style>
     .premium-hero {
