@@ -4,125 +4,114 @@
 {% block content %}
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#grid"/></svg>Plus</h1>
 
+  {# ── Bandeau Premium ───────────────────────────────────────── #}
   {% if is_premium %}
-    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(255,215,0,0.25);">
       <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
       <div style="flex:1;">
-        <div style="font-weight:500; color: var(--text-1); font-size:0.9rem;">Membre VIP</div>
-        <div style="font-size:0.75rem; color:var(--text-2);">Merci de ton soutien — voir les offres et plans supérieurs.</div>
+        <div style="font-weight:600; color: var(--text-1); font-size:0.9rem;">Membre PRO</div>
+        <div style="font-size:0.75rem; color:var(--text-2);">Merci de ton soutien — gérer mon abonnement.</div>
       </div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
   {% else %}
-    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+    <a href="/premium" class="card plus-link plus-promo" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
       <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
       <div style="flex:1;">
-        <div style="font-weight:500; color: var(--text-1); font-size:0.9rem;">Passe en Premium</div>
-        <div style="font-size:0.75rem; color:var(--text-2);">Coach IA illimité, export, programmes avancés…</div>
+        <div style="font-weight:600; color: var(--text-1); font-size:0.95rem;">Passe en PRO</div>
+        <div style="font-size:0.78rem; color:var(--text-2);">Coach IA, nutrition, stats détaillées & programmes avancés.</div>
       </div>
-      <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+      <span class="plus-promo-cta">Voir</span>
     </a>
   {% endif %}
 
-  <a href="/coach" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Coach IA
-          {% if is_vip %}<span class="badge badge-info" style="margin-left:6px;">NEW</span>{% else %}<span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}
-        </h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Ton assistant musculation personnel, alimenté par Claude.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  {# ── Entraînement ──────────────────────────────────────────── #}
+  <div class="plus-section">Entraînement</div>
+
+  <a href="/programme" class="card plus-link plus-row">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>
+    <div class="plus-row-txt"><h3>Programme</h3><p>Séances, exercices et planning.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
-  <a href="/programme" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Programme</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Gère tes séances, exercices et planning hebdomadaire.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  <a href="/cardio" class="card plus-link plus-row">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#heart"/></svg>
+    <div class="plus-row-txt"><h3>Cardio</h3><p>Course, vélo, rameur… durée &amp; calories.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
-  <a href="/nutrition" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Nutrition</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Calories, macros, objectifs quotidiens et suivi des repas.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  <a href="/plaques" class="card plus-link plus-row">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>
+    <div class="plus-row-txt"><h3>Calcul de plaques</h3><p>Quels disques charger sur la barre.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
-  <a href="/cardio" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#heart"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Cardio</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Suivi des sessions cardio : course, vélo, rameur, durée, FC, calories.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  {# ── Premium (fonctions avancées, verrouillées en gratuit) ──── #}
+  <div class="plus-section">Premium{% if not is_vip %} <span style="color:var(--text-3); font-weight:400; text-transform:none; letter-spacing:0;">· inclus avec PRO</span>{% endif %}</div>
+
+  <a href="/coach" class="card plus-link plus-row{% if not is_vip %} plus-locked{% endif %}">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
+    <div class="plus-row-txt"><h3>Coach IA{% if not is_vip %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Ton coach perso, alimenté par l'IA.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip %}chevron-right{% else %}lock{% endif %}"/></svg>
   </a>
 
-  <a href="/plaques" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Calcul de plaques</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Quels disques mettre de chaque côté pour ton poids cible.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  <a href="/nutrition" class="card plus-link plus-row{% if not is_vip %} plus-locked{% endif %}">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>
+    <div class="plus-row-txt"><h3>Nutrition{% if not is_vip %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Calories, macros et suivi des repas.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip %}chevron-right{% else %}lock{% endif %}"/></svg>
   </a>
 
-  <a href="/arcade" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#gamepad"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Arcade</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Mini-jeux fun entre deux séances.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  {# ── Détente ───────────────────────────────────────────────── #}
+  <div class="plus-section">Détente</div>
+
+  <a href="/arcade" class="card plus-link plus-row">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#gamepad"/></svg>
+    <div class="plus-row-txt"><h3>Arcade</h3><p>Mini-jeux entre deux séances.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
-  <a href="/gestion" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#settings"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">Gestion</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Paramètres, mises à jour, réinitialisation des données.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  {# ── Réglages ──────────────────────────────────────────────── #}
+  <div class="plus-section">Réglages</div>
+
+  <a href="/gestion" class="card plus-link plus-row">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>
+    <div class="plus-row-txt"><h3>Gestion</h3><p>Paramètres, export, réinitialisation.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
-  <a href="/faq" class="card plus-link" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; align-items:center; gap:14px;">
-      <svg class="icon icon-xl icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>
-      <div>
-        <h3 style="margin:0 0 2px;">FAQ &amp; confidentialité</h3>
-        <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Tes données, la sécurité, le coach IA, le compte… toutes les réponses.</p>
-      </div>
-      <svg class="icon icon-md icon-mute" style="margin-left:auto;"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </div>
+  <a href="/faq" class="card plus-link plus-row">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>
+    <div class="plus-row-txt"><h3>FAQ &amp; confidentialité</h3><p>Données, sécurité, compte…</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
   {% if is_admin %}
-    <a href="/admin" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+  <div class="plus-section">Admin</div>
+    <a href="/admin" class="card plus-link plus-row">
       <svg class="icon icon-lg" style="color:var(--success);"><use href="/static/img/icons.svg#shield-check"/></svg>
-      <div style="flex:1;">
-        <div style="font-weight:500; color:var(--success); font-size:0.9rem;">Admin</div>
-        <div style="font-size:0.75rem; color:var(--text-2);">Gérer les utilisateurs et attribuer VIP.</div>
-      </div>
+      <div class="plus-row-txt"><h3 style="color:var(--success);">Admin</h3><p>Utilisateurs &amp; attribution PRO.</p></div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
   {% endif %}
 
+  <style>
+    .plus-section {
+      font-size:0.72rem; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;
+      color:var(--text-3); margin:18px 4px 8px;
+    }
+    .plus-row { display:flex; align-items:center; gap:14px; padding:13px 14px; }
+    .plus-row-txt { flex:1; min-width:0; }
+    .plus-row-txt h3 { margin:0 0 1px; font-size:0.92rem; font-weight:500; }
+    .plus-row-txt p { margin:0; font-size:0.78rem; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .plus-locked .plus-row-txt h3 { color:var(--text-1); }
+    .plus-locked { opacity:0.92; }
+    .plus-promo {
+      border-color:rgba(255,215,0,0.3);
+      background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(120,200,255,0.05));
+    }
+    .plus-promo-cta {
+      flex-shrink:0; font-size:0.8rem; font-weight:600; color:var(--gold, #FFD700);
+      border:0.5px solid rgba(255,215,0,0.4); border-radius:9999px; padding:6px 14px;
+    }
+  </style>
 {% endblock %}

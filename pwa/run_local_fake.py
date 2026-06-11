@@ -22,7 +22,7 @@ import core.db as core_db  # noqa: E402
 core_db._client = FakeSupabase()
 
 import app as appmod  # noqa: E402
-from flask import session, redirect  # noqa: E402
+from flask import session, redirect, request  # noqa: E402
 
 # L'auth gate tourne avant la route : /test-login doit être public.
 appmod._PUBLIC_PATHS.add("/test-login")
@@ -34,10 +34,11 @@ def test_login():
     session.clear()
     session["user_id"] = USER_ID
     session["email"] = "test@example.com"
-    session["is_vip"] = False
+    session["is_vip"] = (request.args.get("vip") == "1")
     session["is_vip_ts"] = time.time()
+    session["onboarded"] = (request.args.get("onb") != "0")
     session.permanent = True
-    return redirect("/onboarding")
+    return redirect(request.args.get("to") or "/accueil")
 
 
 if __name__ == "__main__":

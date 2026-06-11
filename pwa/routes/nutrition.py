@@ -8,7 +8,7 @@
 """
 import logging
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, g
 
 from core.data import get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition, sum_nutrition_range
 from core.dates import today_paris_str, today_paris, DAYS_FR
@@ -107,6 +107,10 @@ def _compute_targets(profile):
 
 @bp.route("/nutrition")
 def index():
+    # Nutrition = fonctionnalité Premium (offre « équilibrée »). Les comptes
+    # gratuits voient le mur PRO plutôt que la page (masque l'avancé + incite).
+    if not getattr(g, "is_vip", False):
+        return render_template("vip_wall.html", active="plus", feature="Nutrition")
     try:
         profile = get_profile() or {}
     except Exception as e:
@@ -200,9 +204,17 @@ def index():
     )
 
 
+def _require_vip():
+    """True si free (l'appelant doit alors court-circuiter). Garde anti-bypass
+    sur les actions POST nutrition (la page est déjà gatée côté GET)."""
+    return not getattr(g, "is_vip", False)
+
+
 @bp.route("/nutrition/profile", methods=["POST"])
 @limiter.limit("10 per minute")
 def save_profile_route():
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
     f = request.form
 
     def _num(k, cast, default=0):
@@ -235,6 +247,8 @@ def save_profile_route():
 @bp.route("/nutrition/add-meal", methods=["POST"])
 @limiter.limit("30 per minute")
 def add_meal():
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
     f = request.form
     date_iso = f.get("date") or today_paris_str()
     try:
@@ -271,6 +285,8 @@ def add_meal():
 @bp.route("/nutrition/delete-meal", methods=["POST"])
 @limiter.limit("20 per minute")
 def remove_meal():
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
     f = request.form
     try:
         entry_id = int(f.get("id") or 0)

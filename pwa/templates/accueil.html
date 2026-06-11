@@ -165,23 +165,37 @@
   </div>
   {% endif %}
 
-  {% if cal_cible > 0 %}
-    <a href="/nutrition" class="card calories-widget" style="display:block; text-decoration:none; color:inherit; margin-top: 14px; border-color:var(--accent);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>CALORIES DU JOUR</div>
-        <div style="font-size:0.78rem; color: var(--text-2);">{{ cal_pct }}%</div>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
-        <div style="font-variant-numeric:tabular-nums; font-size: 1.3rem; color:var(--text-1); font-weight: 600;">{{ cal_today }} <span style="color: var(--text-2); font-size: 0.85rem;">/ {{ cal_cible }} kcal</span></div>
-        <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-      </div>
-      <div class="xp-bar-bg" style="height: 8px;">
-        <div class="xp-bar-fill" style="width: {{ cal_pct }}%;"></div>
-      </div>
-    </a>
+  {% if is_premium %}
+    {% if cal_cible > 0 %}
+      <a href="/nutrition" class="card calories-widget" style="display:block; text-decoration:none; color:inherit; margin-top: 14px; border-color:var(--accent);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>CALORIES DU JOUR</div>
+          <div style="font-size:0.78rem; color: var(--text-2);">{{ cal_pct }}%</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+          <div style="font-variant-numeric:tabular-nums; font-size: 1.3rem; color:var(--text-1); font-weight: 600;">{{ cal_today }} <span style="color: var(--text-2); font-size: 0.85rem;">/ {{ cal_cible }} kcal</span></div>
+          <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+        </div>
+        <div class="xp-bar-bg" style="height: 8px;">
+          <div class="xp-bar-fill" style="width: {{ cal_pct }}%;"></div>
+        </div>
+      </a>
+    {% else %}
+      <a href="/nutrition" class="card calories-widget" style="display:block; text-decoration:none; color:inherit; margin-top: 14px; border-color:var(--accent); text-align:center;">
+        <div class="label-icon" style="color: var(--accent); font-size: 0.8rem; justify-content:center;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Configurer mes objectifs calories</div>
+      </a>
+    {% endif %}
   {% else %}
-    <a href="/nutrition" class="card calories-widget" style="display:block; text-decoration:none; color:inherit; margin-top: 14px; border-color:var(--accent); text-align:center;">
-      <div class="label-icon" style="color: var(--accent); font-size: 0.8rem; justify-content:center;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Configurer mes objectifs calories</div>
+    {# Incitation VIP douce (gratuits) — une seule, discrète, en bas de l'accueil. #}
+    <a href="/premium" class="card" style="display:block; text-decoration:none; color:inherit; margin-top:14px; border-color:rgba(255,215,0,0.3); background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(120,200,255,0.05));">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <svg class="icon icon-lg" style="color:var(--gold, #FFD700);"><use href="/static/img/icons.svg#gem"/></svg>
+        <div style="flex:1;">
+          <div style="font-weight:600; font-size:0.9rem; color:var(--text-1);">Passe en PRO</div>
+          <div style="font-size:0.78rem; color:var(--text-2);">Coach IA, nutrition &amp; stats détaillées pour progresser plus vite.</div>
+        </div>
+        <span style="flex-shrink:0; font-size:0.8rem; font-weight:600; color:var(--gold, #FFD700); border:0.5px solid rgba(255,215,0,0.4); border-radius:9999px; padding:6px 14px;">Voir</span>
+      </div>
     </a>
   {% endif %}
 

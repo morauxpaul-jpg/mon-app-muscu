@@ -111,7 +111,9 @@ pwa/
 ## Système Free / VIP
 
 - **Tier** stocké dans `profiles.tier` ∈ {`free`, `vip`}. Lu et caché en session via `g.is_vip`.
-- **Gating Free** : Coach IA (réservé VIP, 15 msg/jour), Export/Import, certains programmes du catalogue, stats avancées.
+- **Offre « équilibrée »** (2026-06-11) — Free = séances illimitées + progrès simple + 1 programme + cardio. VIP = Coach IA (15 msg/j), **Nutrition**, stats détaillées (body map/1RM/zoom), programmes PRO, multi-programmes/profils, export.
+- **Gating Free** : Coach IA, Nutrition, Export/Import, programmes PRO du catalogue, stats avancées, multi-programmes/profils.
+- **Onglet Plus** : sections épurées (Entraînement / Premium / Détente / Réglages) ; features VIP visibles avec cadenas + `vip_wall`. Incitation VIP douce sur l'accueil pour les gratuits (remplace le widget calories).
 - **Mur VIP** : `templates/partials/vip_lock.html` (inline) ou `vip_wall.html` (plein écran).
 - **Badge PRO** affiché dans la topbar pour les VIP.
 - **Admin** (`ADMIN_EMAILS` env, séparateur virgule) peut basculer manuellement le tier d'un user via `/admin/set-tier`.
@@ -244,7 +246,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v95-2026-06-11-stripe-getfix` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v96-2026-06-11-free-vip-simplify` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm
