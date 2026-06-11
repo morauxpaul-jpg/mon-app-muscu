@@ -3,7 +3,7 @@
   "appName": "Muscu Tracker",
   "webDir": "www",
   "server": {
-    "url": "https://REMPLACE-PAR-TON-DOMAINE.up.railway.app",
+    "url": "https://muscu-tracker.up.railway.app",
     "cleartext": false,
     "allowNavigation": [
       "accounts.google.com",
