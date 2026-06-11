@@ -359,6 +359,54 @@ def test_checkout_cree_session_stripe(fake_db, logged_in, monkeypatch):
     assert captured["line_items"][0]["price_data"]["recurring"]["interval"] == "year"
 
 
+class _FakeStripeObj:
+    """Imite un StripeObject v15 : str() = JSON, mais .get() lève AttributeError
+    (le SDK v15 n'expose pas .get) → vérifie que _to_plain neutralise ça."""
+    def __init__(self, d):
+        self._d = d
+
+    def __str__(self):
+        import json as _j
+        return _j.dumps(self._d)
+
+    def get(self, *a, **k):
+        raise AttributeError("get")
+
+    @property
+    def url(self):
+        return self._d.get("url")
+
+
+def test_success_active_vip_malgre_stripeobject(fake_db, client, monkeypatch):
+    """Régression du bug : .get() sur l'objet Stripe plantait → activation
+    silencieusement ratée. _to_plain doit récupérer status/ref via JSON."""
+    import time, routes.billing as billing
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free"}).execute()
+    with client.session_transaction() as s:
+        s["user_id"] = USER_ID
+        s["email"] = "test@example.com"
+        s["onboarded"] = True
+        s["is_vip"] = False
+        s["is_vip_ts"] = time.time()
+        s["_csrf"] = CSRF
+
+    sess_obj = _FakeStripeObj({
+        "status": "complete", "payment_status": "paid",
+        "client_reference_id": USER_ID, "customer": "cus_abc",
+    })
+    fake_stripe = type("S", (), {
+        "checkout": type("C", (), {"Session": type("X", (), {
+            "retrieve": staticmethod(lambda sid: sess_obj)})}),
+    })
+    monkeypatch.setattr(billing, "_stripe", lambda: fake_stripe)
+
+    r = client.get("/billing/success?session_id=cs_test_123")
+    assert r.status_code == 200
+    assert "VIP" in r.data.decode("utf-8")
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    assert prof["tier"] == "vip"
+
+
 def test_webhook_public_et_csrf_exempt(fake_db, client):
     # Pas de session, pas de token CSRF : le webhook ne doit PAS être redirigé
     # vers /login ni rejeté en 400-CSRF. Sans clé Stripe configurée → 503.

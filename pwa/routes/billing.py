@@ -55,6 +55,23 @@ def _base_url() -> str:
     return request.url_root.rstrip("/")
 
 
+def _to_plain(obj):
+    """Convertit un objet Stripe en dict Python simple.
+
+    ⚠️ Le SDK Stripe v15 n'expose PAS `.get()` sur ses objets (StripeObject) :
+    `obj.get("x")` lève AttributeError. Mais `str(obj)` renvoie du JSON valide.
+    On normalise donc tout en dict avant lecture. Les dicts simples (tests)
+    passent au travers inchangés."""
+    import json
+    try:
+        d = json.loads(str(obj))
+        if isinstance(d, dict):
+            return d
+    except Exception:
+        pass
+    return obj
+
+
 def _activate_vip(user_id: str, customer_id=None) -> None:
     """Passe l'utilisateur en VIP et mémorise son customer Stripe (best-effort :
     la colonne stripe_customer_id peut ne pas exister si la migration SQL n'a
@@ -135,7 +152,7 @@ def success():
     stripe = _stripe()
     if sid and stripe:
         try:
-            cs = stripe.checkout.Session.retrieve(sid)
+            cs = _to_plain(stripe.checkout.Session.retrieve(sid))
             status = cs.get("status")            # 'complete' quand la session est finalisée
             pstatus = cs.get("payment_status")   # 'paid' / 'no_payment_required'
             ref = cs.get("client_reference_id")
@@ -190,8 +207,10 @@ def webhook():
         logger.warning("billing webhook signature refusée: %s", e)
         return "", 400
 
+    event = _to_plain(event)  # StripeObject → dict (cf. _to_plain)
     etype = event.get("type")
     obj = (event.get("data") or {}).get("object") or {}
+    logger.info("billing webhook reçu: %s", etype)
 
     try:
         if etype == "checkout.session.completed":
@@ -244,7 +263,7 @@ def portal():
         email = (session.get("email") or "").strip()
         if email:
             try:
-                res = stripe.Customer.list(email=email, limit=1)
+                res = _to_plain(stripe.Customer.list(email=email, limit=1))
                 data = res.get("data") or []
                 if data:
                     customer_id = data[0]["id"]
@@ -260,4 +279,5 @@ def portal():
     except Exception as e:
         logger.error("billing portal FAILED: %s", e)
         return redirect(url_for("premium.index"))
-    return redirect(ps.url, code=303)
+    # ps.url est un attribut (OK), mais on sécurise via _to_plain au cas où.
+    return redirect(_to_plain(ps).get("url") or ps.url, code=303)
