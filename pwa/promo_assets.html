@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- Composants UI recréés pour la pub motion design (capture par élément).
+     Pas de données perso. Style fidèle à l'app : dark #0a0a0f, accents bleus,
+     doré pour le PRO. Chaque bloc #asset-* est capturé indépendamment. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: rgba(20,23,33,0.92); --border: rgba(255,255,255,0.10);
+    --accent: #78c8ff; --gold: #FFD700; --green: #34c759; --orange: #ff9f0a;
+    --t1: #eef1f6; --t2: #9aa3b2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px; background: #0a0a0f;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column; gap: 48px; align-items: flex-start;
+  }
+  .card {
+    background: linear-gradient(160deg, rgba(26,30,44,0.96), rgba(14,16,24,0.96));
+    border: 1px solid var(--border); border-radius: 24px; padding: 26px 28px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07),
+                0 0 80px rgba(120,200,255,0.07);
+    color: var(--t1); width: 460px;
+  }
+  .label { font-size: 15px; font-weight: 700; letter-spacing: 3px; color: var(--t2); }
+
+  /* ── Streak ── */
+  #asset-streak .label { color: var(--orange); display:flex; align-items:center; gap:8px; }
+  #asset-streak .big { font-size: 58px; font-weight: 800; margin: 10px 0 4px; color: var(--t1); }
+  #asset-streak .sub { font-size: 17px; color: var(--t2); }
+  #asset-streak { border-color: rgba(255,159,10,0.35); box-shadow: 0 18px 60px rgba(0,0,0,0.55), 0 0 90px rgba(255,159,10,0.12); }
+  .flame { font-size: 22px; }
+
+  /* ── Coach chat ── */
+  #asset-coach { width: 520px; display: flex; flex-direction: column; gap: 14px; background: transparent; border: none; box-shadow: none; padding: 0; }
+  .bubble { max-width: 86%; padding: 16px 20px; border-radius: 20px; font-size: 19px; line-height: 1.5; }
+  .bubble.user { align-self: flex-end; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; border-bottom-right-radius: 6px; box-shadow: 0 10px 36px rgba(59,130,246,0.35); }
+  .bubble.coach { align-self: flex-start; background: linear-gradient(160deg, rgba(26,30,44,0.97), rgba(14,16,24,0.97)); border: 1px solid var(--border); color: var(--t1); border-bottom-left-radius: 6px; box-shadow: 0 14px 48px rgba(0,0,0,0.5), 0 0 60px rgba(120,200,255,0.08); }
+  .coach-tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--accent); background: rgba(120,200,255,0.10); border: 1px solid rgba(120,200,255,0.35); padding: 7px 16px; border-radius: 999px; }
+  .bubble.coach b { color: var(--accent); }
+
+  /* ── Nutrition donut ── */
+  #asset-nutrition { display: flex; align-items: center; gap: 26px; width: 520px; }
+  .donut-wrap { position: relative; width: 170px; height: 170px; flex-shrink: 0; }
+  .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .donut-center .kcal { font-size: 34px; font-weight: 800; color: var(--t1); }
+  .donut-center .goal { font-size: 14px; color: var(--t2); }
+  .macros { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .macro { display: flex; align-items: center; gap: 12px; font-size: 17px; color: var(--t1); }
+  .macro .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .macro .bar { flex: 1; height: 9px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .macro .bar i { display: block; height: 100%; border-radius: 999px; }
+
+  /* ── Volume chart ── */
+  #asset-volume { width: 460px; }
+  .bars { display: flex; align-items: flex-end; gap: 14px; height: 150px; margin-top: 18px; }
+  .bars .b { flex: 1; border-radius: 10px 10px 4px 4px; background: linear-gradient(to top, rgba(120,200,255,0.25), rgba(120,200,255,0.85)); box-shadow: 0 0 24px rgba(120,200,255,0.25); }
+  .vol-delta { margin-top: 14px; font-size: 19px; font-weight: 700; color: var(--green); }
+
+  /* ── PRO lockup ── */
+  #asset-pro { width: 520px; text-align: center; padding: 40px 28px; border-color: rgba(255,215,0,0.35); box-shadow: 0 18px 60px rgba(0,0,0,0.55), 0 0 100px rgba(255,215,0,0.14); }
+  .gem { font-size: 84px; filter: drop-shadow(0 0 34px rgba(255,215,0,0.55)); }
+  .pro-name { font-size: 42px; font-weight: 800; color: var(--t1); margin-top: 8px; letter-spacing: 1px; }
+  .pro-name span { color: var(--gold); }
+  .pro-cta { display: inline-block; margin-top: 20px; padding: 16px 44px; border-radius: 999px; font-size: 22px; font-weight: 700; color: #1a1405; background: linear-gradient(135deg, #ffe066, #ffc400); box-shadow: 0 12px 44px rgba(255,196,0,0.45), inset 0 1px 0 rgba(255,255,255,0.6); }
+
+  /* ── Séance card ── */
+  #asset-seance { width: 460px; }
+  .exo-row { display:flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 19px; }
+  .exo-row:last-child { border-bottom: none; }
+  .exo-row .w { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .exo-check { color: var(--green); font-weight: 800; margin-right: 10px; }
+</style>
+</head>
+<body>
+
+  <div class="card" id="asset-streak">
+    <div class="label"><span class="flame">🔥</span> STREAK</div>
+    <div class="big">6 SEMAINES</div>
+    <div class="sub">Palier Bronze · Record personnel</div>
+  </div>
+
+  <div class="card" id="asset-coach">
+    <div class="coach-tag">💬 COACH IA</div>
+    <div class="bubble user">Je stagne au développé couché, comment progresser ?</div>
+    <div class="bubble coach">Tu es à <b>80 kg × 8</b>, c'est solide 💪<br>Vise <b>+2,5 kg</b> toutes les 2 semaines et ajoute une 4ᵉ série lourde. On y va ?</div>
+  </div>
+
+  <div class="card" id="asset-nutrition">
+    <div class="donut-wrap">
+      <svg viewBox="0 0 120 120" width="170" height="170">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="11"/>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#34c759" stroke-width="11"
+                stroke-linecap="round" stroke-dasharray="263 314" transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="donut-center"><div class="kcal">2 670</div><div class="goal">/ 2 950 kcal</div></div>
+    </div>
+    <div class="macros">
+      <div class="macro"><span class="dot" style="background:#78c8ff"></span>Protéines<span class="bar"><i style="width:78%;background:#78c8ff"></i></span></div>
+      <div class="macro"><span class="dot" style="background:#34c759"></span>Glucides<span class="bar"><i style="width:64%;background:#34c759"></i></span></div>
+      <div class="macro"><span class="dot" style="background:#ff9f0a"></span>Lipides<span class="bar"><i style="width:71%;background:#ff9f0a"></i></span></div>
+    </div>
+  </div>
+
+  <div class="card" id="asset-volume">
+    <div class="label" style="color:var(--accent)">VOLUME · 8 SEMAINES</div>
+    <div class="bars">
+      <div class="b" style="height:34%"></div><div class="b" style="height:42%"></div>
+      <div class="b" style="height:39%"></div><div class="b" style="height:55%"></div>
+      <div class="b" style="height:63%"></div><div class="b" style="height:58%"></div>
+      <div class="b" style="height:78%"></div><div class="b" style="height:96%"></div>
+    </div>
+    <div class="vol-delta">▲ +12% cette semaine</div>
+  </div>
+
+  <div class="card" id="asset-seance">
+    <div class="label" style="color:var(--accent)">PUSH · AUJOURD'HUI</div>
+    <div style="margin-top:10px;">
+      <div class="exo-row"><span><span class="exo-check">✓</span>Développé couché</span><span class="w">4 × 80 kg</span></div>
+      <div class="exo-row"><span><span class="exo-check">✓</span>Développé militaire</span><span class="w">3 × 50 kg</span></div>
+      <div class="exo-row"><span style="color:var(--t2)">○ Dips lestés</span><span class="w" style="opacity:0.55">3 × 20 kg</span></div>
+    </div>
+  </div>
+
+  <div class="card" id="asset-pro">
+    <div class="gem">💎</div>
+    <div class="pro-name">MUSCU TRACKER <span>PRO</span></div>
+    <div class="pro-cta">Passe en PRO</div>
+  </div>
+
+</body>
+</html>

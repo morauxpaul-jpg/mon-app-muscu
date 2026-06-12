@@ -55,9 +55,9 @@ def test_seed():
     today = dt.date(2026, 6, 12)
     monday0 = today - dt.timedelta(days=today.weekday())  # lundi de cette semaine
 
-    # Profil VIP complet
+    # Profil VIP complet (prénom neutre pour les captures marketing)
     c.table("profiles").insert({
-        "id": USER_ID, "tier": "vip", "prenom": "Paul",
+        "id": USER_ID, "tier": "vip", "prenom": "Alex",
         "poids_kg": 78, "taille_cm": 180, "age": 25, "sexe": "H",
         "activite": "actif", "objectif_nutrition": "masse",
         "tdee": 2550, "calories_cible": 2950,
@@ -65,7 +65,7 @@ def test_seed():
 
     # Onboarding
     c.table("onboarding").insert({
-        "user_id": USER_ID, "prenom": "Paul", "age": 25, "sexe": "H",
+        "user_id": USER_ID, "prenom": "Alex", "age": 25, "sexe": "H",
         "niveau": "intermédiaire", "frequence": 3, "objectif": "prise de masse",
         "equipement": "salle", "completed_at": (monday0 - dt.timedelta(weeks=6)).isoformat(),
     }).execute()
