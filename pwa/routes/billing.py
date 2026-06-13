@@ -72,6 +72,85 @@ def _to_plain(obj):
     return obj
 
 
+# ── Helpers customer / abonnements ───────────────────────────────
+def _resolve_customer_id(stripe, profile=None):
+    """ID client Stripe : depuis le profil, sinon recherche par email."""
+    if profile is None:
+        try:
+            profile = get_profile() or {}
+        except Exception:
+            profile = {}
+    cid = profile.get("stripe_customer_id")
+    if cid:
+        return cid
+    email = (session.get("email") or "").strip()
+    if email:
+        try:
+            res = _to_plain(stripe.Customer.list(email=email, limit=1))
+            data = res.get("data") or []
+            if data:
+                return data[0]["id"]
+        except Exception as e:
+            logger.error("billing resolve customer FAILED: %s", e)
+    return None
+
+
+def _active_subscriptions(stripe, customer_id):
+    if not customer_id:
+        return []
+    try:
+        res = _to_plain(stripe.Subscription.list(customer=customer_id, status="active", limit=10))
+        return res.get("data") or []
+    except Exception as e:
+        logger.error("billing list subs FAILED: %s", e)
+        return []
+
+
+def detect_current_plan():
+    """Plan d'abonnement actif de l'utilisateur courant : 'monthly' | 'annual'
+    | None (lifetime, VIP manuel, ou pas d'abonnement). Best-effort."""
+    stripe = _stripe()
+    if not stripe:
+        return None
+    subs = _active_subscriptions(stripe, _resolve_customer_id(stripe))
+    if not subs:
+        return None
+    try:
+        items = ((subs[0].get("items") or {}).get("data")) or []
+        interval = (((items[0].get("price") or {}).get("recurring") or {}).get("interval"))
+        if interval == "year":
+            return "annual"
+        if interval == "month":
+            return "monthly"
+    except Exception:
+        pass
+    return "monthly"
+
+
+def _supersede_and_cancel(stripe, sub_id):
+    """Annule un ancien abonnement lors d'un upgrade. On marque d'abord
+    metadata.superseded=1 : le webhook customer.subscription.deleted saura
+    alors NE PAS rétrograder l'utilisateur (qui vient justement d'upgrader)."""
+    if not sub_id:
+        return
+    try:
+        stripe.Subscription.modify(sub_id, metadata={"superseded": "1"})
+    except Exception as e:
+        logger.warning("billing supersede modify FAILED %s: %s", sub_id, e)
+    try:
+        stripe.Subscription.cancel(sub_id)
+        logger.info("billing: ancien abonnement %s annulé (upgrade)", sub_id)
+    except Exception as e:
+        logger.warning("billing cancel old sub FAILED %s: %s", sub_id, e)
+
+
+def _handle_upgrade_cancel(stripe, meta, new_sub_id):
+    """Si la session portait un previous_subscription (upgrade), l'annule."""
+    prev = (meta or {}).get("previous_subscription")
+    if prev and prev != new_sub_id:
+        _supersede_and_cancel(stripe, prev)
+
+
 def _activate_vip(user_id: str, customer_id=None) -> None:
     """Passe l'utilisateur en VIP et mémorise son customer Stripe (best-effort :
     la colonne stripe_customer_id peut ne pas exister si la migration SQL n'a
@@ -131,6 +210,19 @@ def checkout():
     if plan["mode"] == "subscription":
         params["subscription_data"] = {"metadata": {"user_id": g.user_id, "plan": plan_key}}
 
+    # Upgrade : si l'utilisateur est déjà abonné, on note son abonnement courant
+    # pour l'annuler une fois le nouveau plan payé (pas de double facturation).
+    if getattr(g, "is_vip", False):
+        try:
+            prev_subs = _active_subscriptions(stripe, _resolve_customer_id(stripe))
+            if prev_subs:
+                params["metadata"]["previous_subscription"] = prev_subs[0]["id"]
+                # Réutilise le même client Stripe (évite un doublon de customer).
+                params["customer"] = prev_subs[0].get("customer") or _resolve_customer_id(stripe)
+                params.pop("customer_email", None)  # customer et customer_email sont exclusifs
+        except Exception as e:
+            logger.error("billing upgrade detect FAILED: %s", e)
+
     try:
         cs = stripe.checkout.Session.create(**params)
     except Exception as e:
@@ -159,6 +251,7 @@ def success():
             done = (status == "complete") or (pstatus in ("paid", "no_payment_required"))
             if done and ref == g.user_id:
                 _activate_vip(g.user_id, cs.get("customer"))
+                _handle_upgrade_cancel(stripe, cs.get("metadata"), cs.get("subscription"))
                 # Rafraîchit le cache VIP de la session immédiatement.
                 session["is_vip"] = True
                 import time as _t
@@ -217,6 +310,7 @@ def webhook():
             uid = obj.get("client_reference_id") or (obj.get("metadata") or {}).get("user_id")
             if uid:
                 _activate_vip(uid, obj.get("customer"))
+                _handle_upgrade_cancel(stripe, obj.get("metadata"), obj.get("subscription"))
         elif etype == "customer.subscription.deleted":
             _downgrade_from_subscription(obj)
         elif etype == "customer.subscription.updated":
@@ -231,7 +325,14 @@ def webhook():
 
 
 def _downgrade_from_subscription(obj) -> None:
-    """Repasse en free l'utilisateur d'un abonnement annulé/expiré."""
+    """Repasse en free l'utilisateur d'un abonnement annulé/expiré.
+
+    Exception : si l'abonnement a été marqué `superseded` (annulé lors d'un
+    upgrade vers un plan supérieur ou le « à vie »), on NE rétrograde PAS —
+    l'utilisateur vient au contraire de monter en gamme."""
+    if (obj.get("metadata") or {}).get("superseded"):
+        logger.info("billing: abonnement supersédé (upgrade) — pas de rétrogradation")
+        return
     uid = (obj.get("metadata") or {}).get("user_id")
     if not uid:
         try:
@@ -252,23 +353,7 @@ def portal():
     stripe = _stripe()
     if not stripe:
         return redirect(url_for("premium.index"))
-    try:
-        profile = get_profile() or {}
-    except Exception:
-        profile = {}
-    customer_id = profile.get("stripe_customer_id")
-    if not customer_id:
-        # Repli : retrouve le customer via l'email (cas où la colonne n'était
-        # pas encore présente au moment du paiement).
-        email = (session.get("email") or "").strip()
-        if email:
-            try:
-                res = _to_plain(stripe.Customer.list(email=email, limit=1))
-                data = res.get("data") or []
-                if data:
-                    customer_id = data[0]["id"]
-            except Exception as e:
-                logger.error("billing portal customer lookup FAILED: %s", e)
+    customer_id = _resolve_customer_id(stripe)
     if not customer_id:
         return redirect(url_for("premium.index"))
     try:

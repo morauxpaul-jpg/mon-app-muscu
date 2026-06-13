@@ -6,8 +6,36 @@ le « Dernière fois » et le remplacement de séries au passage du Nouvel An.
 """
 import datetime as dt
 import json
+import types
 
 from conftest import USER_ID, CSRF
+
+
+def _fake_stripe_upgrade(rec, interval="month"):
+    """Faux module Stripe pour les scénarios d'upgrade (client + abonnement
+    actif). Les méthodes renvoient des dicts simples (cf. _to_plain)."""
+    def sess_create(**k):
+        rec["create"] = k
+        return types.SimpleNamespace(url="https://checkout.test/x")
+
+    def sub_list(**k):
+        return {"data": [{"id": "sub_old", "customer": "cus_1",
+                          "items": {"data": [{"price": {"recurring": {"interval": interval}}}]}}]}
+
+    def sub_modify(sid, **k):
+        rec.setdefault("modified", []).append(sid)
+
+    def sub_cancel(sid):
+        rec.setdefault("cancelled", []).append(sid)
+
+    def cust_list(**k):
+        return {"data": [{"id": "cus_1"}]}
+
+    return types.SimpleNamespace(
+        checkout=types.SimpleNamespace(Session=types.SimpleNamespace(create=sess_create)),
+        Subscription=types.SimpleNamespace(list=sub_list, modify=sub_modify, cancel=sub_cancel),
+        Customer=types.SimpleNamespace(list=cust_list),
+    )
 
 # Dates pivot autour du Nouvel An 2025→2026.
 MONDAY_W51 = dt.date(2025, 12, 15)   # lundi, ISO W51 2025
@@ -261,6 +289,70 @@ def test_ads_config_presente_pour_free(fake_db, client):
     r = client.get("/onboarding")
     html = r.data.decode("utf-8")
     assert "__ADS__" in html and "ads.js" in html
+
+
+# ── Upgrade d'abonnement ─────────────────────────────────────────
+
+def test_premium_affiche_upgrades_pour_abonne_mensuel(fake_db, logged_in, monkeypatch):
+    import routes.billing as billing
+    monkeypatch.setattr(billing, "_stripe", lambda: _fake_stripe_upgrade({}, interval="month"))
+    html = logged_in.get("/premium").data.decode("utf-8")
+    assert "Passer à l'annuel" in html
+    assert "Passer à vie" in html
+
+
+def test_premium_pas_d_upgrade_mensuel_pour_abonne_annuel(fake_db, logged_in, monkeypatch):
+    import routes.billing as billing
+    monkeypatch.setattr(billing, "_stripe", lambda: _fake_stripe_upgrade({}, interval="year"))
+    html = logged_in.get("/premium").data.decode("utf-8")
+    assert "Ton plan actuel (annuel)" in html
+    assert "Passer à vie" in html
+    assert "Passer à l'annuel" not in html
+
+
+def test_checkout_upgrade_marque_l_abonnement_precedent(fake_db, logged_in, monkeypatch):
+    import routes.billing as billing
+    rec = {}
+    monkeypatch.setattr(billing, "_stripe", lambda: _fake_stripe_upgrade(rec))
+    r = logged_in.post("/billing/checkout", data={"_csrf": CSRF, "plan": "annual"})
+    assert r.status_code == 303
+    md = rec["create"]["metadata"]
+    assert md["previous_subscription"] == "sub_old"
+    assert rec["create"].get("customer") == "cus_1"
+    assert "customer_email" not in rec["create"]  # exclusif avec customer
+
+
+def test_webhook_upgrade_annule_l_ancien_abonnement(fake_db, client, monkeypatch):
+    import routes.billing as billing
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    rec = {}
+    fs = _fake_stripe_upgrade(rec)
+    event = {"type": "checkout.session.completed", "data": {"object": {
+        "client_reference_id": USER_ID, "customer": "cus_1", "subscription": "sub_new",
+        "metadata": {"user_id": USER_ID, "previous_subscription": "sub_old"}}}}
+    fs.Webhook = types.SimpleNamespace(construct_event=lambda p, s, sec: event)
+    monkeypatch.setattr(billing, "_stripe", lambda: fs)
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec")
+    r = client.post("/billing/webhook", data=b"{}", headers={"Stripe-Signature": "x"})
+    assert r.status_code == 200
+    assert "sub_old" in rec.get("cancelled", [])
+    assert "sub_old" in rec.get("modified", [])
+
+
+def test_webhook_superseded_ne_retrograde_pas(fake_db, client, monkeypatch):
+    """L'annulation de l'ancien abo lors d'un upgrade ne doit PAS faire perdre
+    le VIP (metadata.superseded)."""
+    import routes.billing as billing
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    event = {"type": "customer.subscription.deleted", "data": {"object": {
+        "customer": "cus_1", "metadata": {"user_id": USER_ID, "superseded": "1"}}}}
+    fs = types.SimpleNamespace(Webhook=types.SimpleNamespace(construct_event=lambda p, s, sec: event))
+    monkeypatch.setattr(billing, "_stripe", lambda: fs)
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec")
+    r = client.post("/billing/webhook", data=b"{}", headers={"Stripe-Signature": "x"})
+    assert r.status_code == 200
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    assert prof["tier"] == "vip"  # toujours VIP
 
 
 # ── Session d'un compte supprimé ─────────────────────────────────

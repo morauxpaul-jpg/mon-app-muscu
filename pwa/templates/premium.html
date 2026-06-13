@@ -84,7 +84,21 @@
         <li><span class="ok">✓</span>Sans publicité</li>
       </ul>
       {% if is_premium %}
-        <button class="btn tier-cta" disabled style="opacity:0.5;">Déjà débloqué</button>
+        {% if current_plan == 'monthly' %}
+          {# Abonné mensuel : son plan actuel + upgrade vers l'annuel. #}
+          <button class="btn tier-cta" disabled style="opacity:0.6;">✓ Ton plan actuel</button>
+          <div class="billing-cta" style="margin-top:8px;">
+            <form method="post" action="/billing/checkout" style="margin:0;">
+              <input type="hidden" name="plan" value="annual">
+              <button type="submit" class="btn primary tier-cta" data-haptic="1">Passer à l'annuel — 39,99€/an <span style="opacity:0.85;">(-33%)</span></button>
+            </form>
+          </div>
+          <div class="native-note tier-note" style="display:none;">Gère ton abonnement depuis le site web.</div>
+        {% elif current_plan == 'annual' %}
+          <button class="btn tier-cta" disabled style="opacity:0.6;">✓ Ton plan actuel (annuel)</button>
+        {% else %}
+          <button class="btn tier-cta" disabled style="opacity:0.5;">Inclus dans ton accès</button>
+        {% endif %}
       {% else %}
         <div class="billing-cta">
           <form method="post" action="/billing/checkout" style="margin:0;">
@@ -116,7 +130,17 @@
         <li><span class="ok">✓</span>Badge VIP doré</li>
       </ul>
       {% if is_premium %}
-        <button class="btn tier-cta" disabled style="opacity:0.5;">Déjà débloqué</button>
+        {% if current_plan in ('monthly', 'annual') %}
+          {# Abonné : peut passer au « à vie » (on annule l'abonnement en cours). #}
+          <div class="billing-cta">
+            <form method="post" action="/billing/checkout" style="margin:0;">
+              <input type="hidden" name="plan" value="lifetime">
+              <button type="submit" class="btn tier-cta" data-haptic="1" style="background:var(--warning-bg); color:var(--warning); font-weight:500; border-color:var(--warning);">Passer à vie — 79,99€</button>
+            </form>
+          </div>
+        {% else %}
+          <button class="btn tier-cta" disabled style="opacity:0.5;">✓ Débloqué à vie</button>
+        {% endif %}
       {% else %}
         <div class="billing-cta">
           <form method="post" action="/billing/checkout" style="margin:0;">
