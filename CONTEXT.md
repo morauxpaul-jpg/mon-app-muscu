@@ -246,7 +246,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v97-2026-06-11-promo-video` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v98-2026-06-13-motion-design-ad` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

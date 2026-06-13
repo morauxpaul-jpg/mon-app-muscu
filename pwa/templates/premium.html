@@ -13,34 +13,23 @@
   </div>
 
   {% if not is_premium %}
-  {# Vidéo promo (autoplay muet en boucle) — sell visuel en tête de page. #}
+  {# Vidéo promo motion design (autoplay muet en boucle) — la vidéo porte sa
+     propre typographie (hook « Tu stagnes ? » → features → CTA), donc pas
+     d'incrustation HTML par-dessus. #}
   <div class="promo-video-wrap">
-    <video class="promo-video" autoplay muted loop playsinline preload="metadata" poster="/static/promo-vip-poster.png">
-      <source src="/static/promo-vip.mp4" type="video/mp4">
+    <video class="promo-video" autoplay muted loop playsinline preload="metadata" poster="/static/promo-vip-motion-poster.jpg">
+      <source src="/static/promo-vip-motion.mp4" type="video/mp4">
     </video>
-    <div class="promo-video-overlay">
-      <div class="promo-video-tag">PASSE EN PRO</div>
-      <div class="promo-video-title">Va plus loin, plus vite.</div>
-    </div>
   </div>
   <style>
     .promo-video-wrap {
-      position:relative; border-radius:16px; overflow:hidden; margin-bottom:16px;
+      position:relative; border-radius:18px; overflow:hidden;
+      margin:0 auto 16px; width:min(280px, 78vw); aspect-ratio:9/16;
       border:0.5px solid rgba(255,215,0,0.25);
-      box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 0 60px rgba(255,215,0,0.08);
     }
     .promo-video {
-      display:block; width:100%; height:260px; object-fit:cover; background:#0a0a0f;
-    }
-    .promo-video-overlay {
-      position:absolute; left:0; right:0; bottom:0; padding:16px 16px 14px;
-      background:linear-gradient(to top, rgba(5,8,16,0.92), rgba(5,8,16,0));
-    }
-    .promo-video-tag {
-      font-size:0.66rem; font-weight:700; letter-spacing:2px; color:var(--gold, #FFD700);
-    }
-    .promo-video-title {
-      font-size:1.15rem; font-weight:600; color:#fff; margin-top:2px;
+      display:block; width:100%; height:100%; object-fit:cover; background:#0a0a0f;
     }
   </style>
   {% endif %}
