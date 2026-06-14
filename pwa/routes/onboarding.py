@@ -33,7 +33,7 @@ def index():
     if "equipment_details" not in existing:
         prog = get_prog() or {}
         existing["equipment_details"] = prog.get("_equipment_details", [])
-    is_vip = bool(getattr(g, "is_vip", False))
+    is_vip = bool(getattr(g, "is_vip_full", False))
     return render_template(
         "onboarding.html",
         active=None,
@@ -48,7 +48,7 @@ def recommend():
     les IDs de programmes recommandés."""
     from flask import jsonify
     data = request.get_json(silent=True) or {}
-    is_vip = bool(getattr(g, "is_vip", False))
+    is_vip = bool(getattr(g, "is_vip_full", False))
     ids = catalog.recommend(
         niveau=data.get("niveau", ""),
         frequence=int(data.get("frequence") or 3),
@@ -110,7 +110,7 @@ def submit():
     #    le programme existant. Pour un premier onboarding, on le clone normalement.
     # Free users : on bloque les programmes PRO au niveau submit pour éviter
     # un bypass client-side (un user bidouille le <input hidden>).
-    is_vip = bool(getattr(g, "is_vip", False))
+    is_vip = bool(getattr(g, "is_vip_full", False))
     if programme_id and programme_id != "custom" and not is_vip and not catalog.is_free(programme_id):
         programme_id = ""
     if programme_id and programme_id != "custom" and catalog.get_program(programme_id):
@@ -145,5 +145,7 @@ def submit():
         resp.delete_cookie("pending_ref")
         from routes.parrainage import apply_referral
         if apply_referral(g.user_id, ref):
-            session.pop("is_vip", None)  # le filleul passe VIP immédiatement
+            # Le filleul passe en essai VIP immédiatement (revalidation forcée).
+            session.pop("is_vip", None)
+            session.pop("is_vip_full", None)
     return resp

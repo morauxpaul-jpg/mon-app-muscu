@@ -257,8 +257,10 @@ def success():
             if done and ref == g.user_id:
                 _activate_vip(g.user_id, cs.get("customer"))
                 _handle_upgrade_cancel(stripe, cs.get("metadata"), cs.get("subscription"))
-                # Rafraîchit le cache VIP de la session immédiatement.
+                # Rafraîchit le cache VIP de la session immédiatement (PAYANT →
+                # accès complet : is_vip ET is_vip_full).
                 session["is_vip"] = True
+                session["is_vip_full"] = True
                 import time as _t
                 session["is_vip_ts"] = _t.time()
                 activated = True
@@ -277,6 +279,7 @@ def success():
     # (sinon l'utilisateur resterait « free » jusqu'à expiration du TTL).
     if not activated:
         session.pop("is_vip", None)
+        session.pop("is_vip_full", None)
         session.pop("is_vip_ts", None)
     return render_template("billing_success.html", active="plus", activated=activated)
 

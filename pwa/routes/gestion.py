@@ -280,7 +280,7 @@ def delete_account():
 @bp.route("/gestion/export")
 def export_data():
     """Exporte toutes les données utilisateur en JSON (VIP uniquement)."""
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Export complet", 403)
     prog = get_prog()
     hist = get_hist()
@@ -306,7 +306,7 @@ def export_data():
 @limiter.limit("5 per minute")
 def import_data():
     """Importe des données depuis un fichier JSON (VIP uniquement)."""
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Import complet", 403)
     f = request.files.get("file")
     if not f:

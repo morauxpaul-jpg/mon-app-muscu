@@ -219,7 +219,7 @@ def _title_from_message(msg: str) -> str:
 
 @bp.route("/coach")
 def index():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Coach IA")
     try:
         profile = get_profile() or {}
@@ -264,7 +264,7 @@ def index():
 @bp.route("/coach/clear", methods=["POST"])
 @limiter.limit("10 per minute")
 def clear():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return redirect(url_for("accueil.index"))
     try:
         clear_coach_messages()
@@ -276,7 +276,7 @@ def clear():
 @bp.route("/coach/conversation/delete", methods=["POST"])
 @limiter.limit("20 per minute")
 def delete_conversation():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return jsonify({"error": "réservé aux membres PRO"}), 403
     payload = request.get_json(silent=True) or {}
     conv_id = (payload.get("conversation_id") or "").strip()
@@ -293,7 +293,7 @@ def delete_conversation():
 @bp.route("/coach/ask", methods=["POST"])
 @limiter.limit("30 per minute")
 def ask():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return jsonify({"error": "Coach IA réservé aux membres PRO."}), 403
     payload = request.get_json(silent=True) or {}
     message = (payload.get("message") or "").strip()

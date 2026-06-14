@@ -215,13 +215,15 @@ def client(fake_db):
 
 @pytest.fixture()
 def logged_in(client):
-    """Session authentifiée + onboardée + VIP (cache frais → pas de hit DB)."""
+    """Session authentifiée + onboardée + VIP PAYANT (is_vip_full) — cache frais
+    → pas de hit DB."""
     import time
     with client.session_transaction() as s:
         s["user_id"] = USER_ID
         s["email"] = "test@example.com"
         s["onboarded"] = True
         s["is_vip"] = True
+        s["is_vip_full"] = True
         s["is_vip_ts"] = time.time()
         s["_csrf"] = CSRF
     return client

@@ -229,7 +229,7 @@ def programme():
         muscle_list=MUSCLE_LIST,
         seance_names=[s for s, _ in seances],
         origin_seance_names=_origin_seance_names(prog),
-        catalog_programs=catalog.list_programs(is_vip=bool(getattr(g, "is_vip", False))),
+        catalog_programs=catalog.list_programs(is_vip=bool(getattr(g, "is_vip_full", False))),
         current_program_meta=current_program_meta,
         ui_state=ui_state,
     )
@@ -328,7 +328,7 @@ def save_state():
     # Limite 2 programmes pour les non-VIP. On tolère l'état existant
     # (ex: un user qui aurait déjà 3 programmes avant d'être passé free)
     # mais on bloque toute création d'un nouveau programme au-delà.
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         old_ids = {p.get("id") for p in (old.get("_programmes") or []) if isinstance(p, dict)}
         added = [p for p in new_programmes if p.get("id") not in old_ids]
         if added and len(new_programmes) > max(1, len(old_ids)):
@@ -376,7 +376,7 @@ def add_profile():
         return jsonify({"ok": False, "error": "empty_name"}), 400
     prog = get_prog()
     _ensure_profiles(prog)
-    if not getattr(g, "is_vip", False) and len(prog["_profiles"]) >= 1:
+    if not getattr(g, "is_vip_full", False) and len(prog["_profiles"]) >= 1:
         return jsonify({"ok": False, "error": "vip_required",
                         "message": "1 profil max en gratuit — passe en PRO pour en créer plus."}), 403
     if len(prog["_profiles"]) >= 8:
@@ -520,7 +520,7 @@ def reset_seance():
 # ── Export / Import du PROGRAMME entier ───────────────────────────
 @bp.route("/programme/export", methods=["GET"])
 def export_program():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Export de programme", 403)
     prog = get_prog()
     seances = {}
@@ -547,7 +547,7 @@ def export_program():
 
 @bp.route("/programme/import", methods=["POST"])
 def import_program():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Import de programme", 403)
     if request.form.get("confirm") != "yes":
         return redirect(url_for("programme.programme"))
@@ -642,7 +642,7 @@ def change_program():
         return redirect(url_for("programme.programme"))
 
     # Free users : bloque les programmes PRO.
-    if not bool(getattr(g, "is_vip", False)) and not catalog.is_free(prog_id):
+    if not bool(getattr(g, "is_vip_full", False)) and not catalog.is_free(prog_id):
         return paywall("Programme PRO", 403)
 
     old = get_prog()

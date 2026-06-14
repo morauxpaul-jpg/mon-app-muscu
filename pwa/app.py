@@ -146,11 +146,12 @@ def _require_login():
     # par l'admin resterait « free » jusqu'à reconnexion. On re-lit la base
     # toutes les VIP_CACHE_TTL s pour propager les changements de tier.
     cached_vip = session.get("is_vip")
+    cached_full = session.get("is_vip_full")
     checked_at = session.get("is_vip_ts", 0)
     # TTL asymétrique : un FREE est re-vérifié vite (pour capter un upgrade
     # admin/Stripe), un VIP confirmé l'est rarement (économise les appels DB).
     ttl = VIP_CACHE_TTL if cached_vip else FREE_RECHECK_TTL
-    if cached_vip is None or (time.time() - checked_at) > ttl:
+    if cached_vip is None or cached_full is None or (time.time() - checked_at) > ttl:
         # La vérification d'existence du compte auth (API auth, plus coûteuse)
         # reste sur la cadence LENTE : inutile de la refaire toutes les
         # FREE_RECHECK_TTL s. Elle invalide les sessions d'un compte supprimé
@@ -167,17 +168,23 @@ def _require_login():
                 pass
         try:
             profile = core_db.get_profile(user_id) or {}
-            # VIP effectif = abonnement/grant permanent (tier) OU grant à durée
-            # limitée encore valide (vip_until : parrainage, promo…).
+            # is_vip_full = PAYANT (tier 'vip') → accès complet.
+            # is_vip = full OU essai à durée limitée (vip_until : parrainage,
+            # promo) → accès restreint (Nutrition + stats détaillées seulement,
+            # cf. gates `g.is_vip_full`).
             is_paid = (profile.get("tier") or "free").strip().lower() == "vip"
+            cached_full = is_paid
             cached_vip = is_paid or core_db.vip_until_active(profile.get("vip_until"))
         except Exception:
             # En cas d'erreur DB transitoire, on garde la valeur connue plutôt
             # que de rétrograder à tort en free.
             cached_vip = bool(cached_vip) if cached_vip is not None else False
+            cached_full = bool(cached_full) if cached_full is not None else False
         session["is_vip"] = cached_vip
+        session["is_vip_full"] = cached_full
         session["is_vip_ts"] = time.time()
     g.is_vip = bool(cached_vip)
+    g.is_vip_full = bool(cached_full)
 
     # Phase 4 : gate onboarding. Les routes /onboarding/* et /logout sont
     # exemptées pour éviter la boucle de redirection. /premium, /faq et
@@ -346,6 +353,7 @@ def _inject_user():
     # réutilise au lieu de refaire un get_profile() en DB à chaque rendu de page.
     uid = session.get("user_id")
     premium = bool(uid) and bool(session.get("is_vip", False))
+    premium_full = bool(uid) and bool(session.get("is_vip_full", False))
     email = (session.get("email") or "").strip().lower()
     admin_emails = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
     return {
@@ -353,6 +361,7 @@ def _inject_user():
         "is_authenticated": bool(uid),
         "is_premium": premium,
         "is_vip": premium,
+        "is_vip_full": premium_full,
         "is_admin": bool(email) and email in admin_emails,
         "csrf_token": _get_or_create_csrf() if uid else "",
         # IDs AdMob (app native Capacitor, comptes Free uniquement). Défauts =

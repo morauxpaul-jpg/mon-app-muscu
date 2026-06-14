@@ -219,7 +219,7 @@ def _gen_used_week(user_id: str) -> int:
 # ────────────────────────────────────────────────────────────────
 @bp.route("/generator")
 def index():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Générateur de programme IA")
     track("program_generator_viewed")
     return render_template(
@@ -233,7 +233,7 @@ def index():
 @bp.route("/generator/generate", methods=["POST"])
 @limiter.limit("10 per hour")
 def generate():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return jsonify({"error": "Réservé aux membres PRO."}), 403
 
     used = _gen_used_week(g.user_id)
@@ -302,7 +302,7 @@ def generate():
 @bp.route("/generator/apply", methods=["POST"])
 @limiter.limit("20 per hour")
 def apply():
-    if not getattr(g, "is_vip", False):
+    if not getattr(g, "is_vip_full", False):
         return paywall("Générateur de programme IA", 403)
     raw = request.form.get("program") or ""
     try:

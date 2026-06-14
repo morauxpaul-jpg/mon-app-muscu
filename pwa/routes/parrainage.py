@@ -16,8 +16,11 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("parrainage", __name__)
 
-REFERRER_VIP_DAYS = 30   # parrain : par filleul qui complète l'onboarding
-REFEREE_VIP_DAYS = 14    # filleul : à l'arrivée via un lien d'invitation
+# Essai « découverte » volontairement court + restreint (Nutrition + stats
+# détaillées seulement, cf. gates g.is_vip_full) : assez pour goûter, trop court
+# pour tout extraire et ne plus payer.
+REFERRER_VIP_DAYS = 3    # parrain : par filleul qui complète l'onboarding
+REFEREE_VIP_DAYS = 1     # filleul : à l'arrivée via un lien d'invitation
 
 
 def apply_referral(user_id: str, ref_code: str) -> bool:

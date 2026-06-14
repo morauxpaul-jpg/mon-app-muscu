@@ -11,10 +11,10 @@
     <div style="display:flex; align-items:center; gap:12px;">
       <svg class="icon icon-lg" style="color:var(--gold,#FFD700);"><use href="/static/img/icons.svg#gem"/></svg>
       <div>
-        <div style="font-weight:600; color:var(--text-1); font-size:0.95rem;">Gagnez du PRO à deux</div>
+        <div style="font-weight:600; color:var(--text-1); font-size:0.95rem;">Goûtez au PRO à deux</div>
         <div style="font-size:0.82rem; color:var(--text-2); line-height:1.5; margin-top:2px;">
-          Ton ami reçoit <strong style="color:var(--text-1);">{{ referee_days }} jours PRO</strong> à l'inscription, et toi
-          <strong style="color:var(--text-1);">{{ referrer_days }} jours PRO</strong> par ami qui rejoint Muscu Tracker.
+          Ton ami reçoit <strong style="color:var(--text-1);">{{ referee_days }} jour{{ 's' if referee_days > 1 else '' }} d'essai PRO</strong> à l'inscription, et toi
+          <strong style="color:var(--text-1);">{{ referrer_days }} jour{{ 's' if referrer_days > 1 else '' }}</strong> par ami qui rejoint.
         </div>
       </div>
     </div>
@@ -46,7 +46,7 @@
   </div>
 
   <p style="font-size:0.74rem; color:var(--text-dim); text-align:center; margin-top:10px;">
-    Les jours PRO sont crédités quand ton ami termine son inscription.
+    Crédité quand ton ami termine son inscription. L'essai donne accès à la nutrition et aux stats détaillées.
   </p>
 
   <script>

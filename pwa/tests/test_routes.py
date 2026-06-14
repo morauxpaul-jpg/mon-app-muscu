@@ -697,18 +697,34 @@ def test_referral_blocks_self_and_unknown(fake_db):
     assert apply_referral("u-1", "zzzznope") is False     # code inconnu
 
 
-def test_vip_until_grants_access(fake_db, client):
-    """Un free avec vip_until futur passe VIP (gate before_request) et accède
-    aux fonctions PRO (ex : générateur)."""
+def _trial_vip_session(client):
+    """Session d'un essai VIP : vip_until futur, tier free (pas payant)."""
     import datetime as _dt
-    future = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(days=5)).isoformat()
-    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free", "vip_until": future}).execute()
-    fake_db.table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-01-01"}).execute()
+    future = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(days=2)).isoformat()
+    import core.db as db
+    db.get_client().table("profiles").insert({"id": USER_ID, "tier": "free", "vip_until": future}).execute()
+    db.get_client().table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-01-01"}).execute()
     with client.session_transaction() as s:
         s["user_id"] = USER_ID
         s["email"] = "t@e.com"
         s["onboarded"] = True
         s["_csrf"] = CSRF
-        # is_vip NON posé → force la revalidation DB dans before_request.
-    html = client.get("/generator").data.decode("utf-8")
+        # is_vip / is_vip_full NON posés → revalidation DB dans before_request.
+    return client
+
+
+def test_trial_vip_unlocks_nutrition_not_generator(fake_db, client):
+    """Un essai VIP (vip_until) débloque Nutrition + stats, mais PAS les fonctions
+    payantes (générateur, coach…)."""
+    _trial_vip_session(client)
+    nut = client.get("/nutrition").data.decode("utf-8")
+    assert "MON PROFIL NUTRITIONNEL" in nut          # accès Nutrition
+    gen = client.get("/generator").data.decode("utf-8")
+    assert "vip-wall" in gen                          # générateur = mur PRO
+    assert "Générer mon programme" not in gen
+
+
+def test_paid_vip_unlocks_generator(fake_db, logged_in):
+    """Un VIP PAYANT (is_vip_full) accède au générateur."""
+    html = logged_in.get("/generator").data.decode("utf-8")
     assert "Générer mon programme" in html
