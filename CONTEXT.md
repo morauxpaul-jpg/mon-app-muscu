@@ -170,6 +170,11 @@ pwa/
 - **Capture** : la landing pose un cookie `pending_ref` (survit au round-trip OAuth). À l'onboarding du filleul, `parrainage.apply_referral` crédite **une seule fois** : filleul **+1 j essai**, parrain **+3 j essai** (via `db.grant_vip_days` → `vip_until` cumulatif). L'essai = accès **restreint** (Nutrition + stats, cf. `is_vip_full`). Garde-fous : code valide, pas d'auto-parrainage, `referred_by` posé une seule fois. Le filleul passe en essai immédiatement (`session.pop('is_vip'/'is_vip_full')`) ; le parrain via la revalidation FREE (15 s). Récompenses ajustables : `REFERRER_VIP_DAYS` / `REFEREE_VIP_DAYS` dans `routes/parrainage.py`.
 - **Migration** : `supabase_schema_v29_referral.sql` (`profiles` += `referral_code` [unique], `referred_by`, `vip_until`). Helpers `db.py` : `get_or_create_referral_code`, `get_user_by_referral_code`, `set_referred_by`, `grant_vip_days`, `count_referrals`, `get_referred_by`, `vip_until_active`. Events : `referral_shared`, `referral_signup`.
 
+### Nudge de relance (rétention, 2026-06-14)
+- **Banner de retour** sur l'accueil : un user avec un historique mais inactif depuis ≥ `REACTIVATION_DAYS`=3 j (jours depuis la dernière perf réelle muscu/cardio) est accueilli par « Content de te revoir ! Ça fait N jours — on reprend en douceur ? » + bouton **Reprendre** (→ /seance). Dismissible (sessionStorage `reac_hidden`). Jamais pour un compte sans historique.
+- Event `reactivation_nudge_shown` ({days}), émis seulement sur vraie navigation (Sec-Fetch-Mode navigate). Logique dans `routes/accueil.py`.
+- **Phase 2 prévue** : push web (VAPID + pywebpush) pour relancer ceux qui ne rouvrent pas l'app — nécessite clés VAPID en env Railway + un déclencheur (bouton admin ou cron).
+
 ### Partage de progression (croissance, 2026-06-14)
 - **Carte partageable** : bouton « Partager ma progression » sur l'accueil (tous les users). `static/js/share-card.js` génère côté client une image (canvas 1080×1080 : streak/tonnage/séances/exos + branding) puis la partage via l'**API Web Share** (`navigator.share({files})` si supporté → sinon texte+lien → sinon téléchargement PNG + copie du lien, avec toast). Données injectées via `<script type="application/json" id="share-data">` sur l'accueil ; lien = `location.origin` (robuste aux domaines custom).
 - **Tracking** : `POST /share/track` (`routes/share.py`) → event `progress_shared` ({kind, method}). CSRF auto (header X-CSRFToken injecté par base.html).
@@ -284,7 +289,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v108-2026-06-14-essai-restreint` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v109-2026-06-14-nudge-relance` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

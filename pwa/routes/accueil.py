@@ -17,6 +17,10 @@ from core.analytics import track
 # (juste après une séance, sur l'accueil). Flag durable prog._upsell_seen.
 UPSELL_AFTER_SESSIONS = 3
 
+# Nudge de relance : un user qui a déjà un historique mais n'a rien fait depuis
+# REACTIVATION_DAYS jours est accueilli avec un message doux + reprise en 1 tap.
+REACTIVATION_DAYS = 3
+
 bp = Blueprint("accueil", __name__)
 
 
@@ -478,11 +482,33 @@ def index():
             except Exception:
                 pass
 
+    # Nudge de relance : jours depuis la dernière perf réelle (muscu ou cardio).
+    show_reactivation = False
+    days_inactive = 0
+    perf_dates = [r["Date"] for r in hist
+                  if r.get("Date") and (r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0))]
+    if perf_dates:
+        try:
+            last_perf = _date.fromisoformat(max(perf_dates))
+            days_inactive = (today - last_perf).days
+        except (ValueError, TypeError):
+            days_inactive = 0
+        if days_inactive >= REACTIVATION_DAYS:
+            show_reactivation = True
+            # Event seulement sur une vraie navigation (pas un prefetch).
+            if request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate":
+                try:
+                    track("reactivation_nudge_shown", {"days": days_inactive})
+                except Exception:
+                    pass
+
     return render_template(
         "accueil.html",
         active="accueil",
         show_upsell=show_upsell,
         upsell_sessions=upsell_sessions,
+        show_reactivation=show_reactivation,
+        days_inactive=days_inactive,
         day_name=day_name.upper(),
         date_str=date_str,
         s_act=s_display,

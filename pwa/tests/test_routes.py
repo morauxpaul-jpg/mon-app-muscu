@@ -728,3 +728,31 @@ def test_paid_vip_unlocks_generator(fake_db, logged_in):
     """Un VIP PAYANT (is_vip_full) accède au générateur."""
     html = logged_in.get("/generator").data.decode("utf-8")
     assert "Générer mon programme" in html
+
+
+# ── Nudge de relance (accueil) ───────────────────────────────────
+
+def test_reactivation_nudge_after_inactivity(fake_db, logged_in):
+    """Un user avec un historique mais inactif depuis >= 3 j voit le nudge."""
+    import datetime as _dt
+    from core.dates import logical_today_paris
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    old = logical_today_paris() - _dt.timedelta(days=5)
+    _hist_row(fake_db, old, poids=80.0, reps=8)
+    html = logged_in.get("/accueil").data.decode("utf-8")
+    assert "Content de te revoir" in html
+
+
+def test_no_nudge_when_recently_active(fake_db, logged_in):
+    import datetime as _dt
+    from core.dates import logical_today_paris
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    _hist_row(fake_db, logical_today_paris() - _dt.timedelta(days=1), poids=80.0, reps=8)
+    html = logged_in.get("/accueil").data.decode("utf-8")
+    assert "Content de te revoir" not in html
+
+
+def test_no_nudge_for_new_user_without_history(fake_db, logged_in):
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    html = logged_in.get("/accueil").data.decode("utf-8")
+    assert "Content de te revoir" not in html
