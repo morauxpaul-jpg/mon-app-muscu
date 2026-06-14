@@ -659,3 +659,56 @@ def test_accueil_has_share_button(fake_db, logged_in):
     _hist_row(fake_db, MONDAY_W52, poids=80.0, reps=8)
     html = logged_in.get("/accueil").data.decode("utf-8")
     assert "shareProgress(this)" in html and "share-card.js" in html
+
+
+# ── Parrainage + VIP à durée limitée ─────────────────────────────
+
+def test_vip_until_active_helper():
+    import datetime as _dt
+    from core.db import vip_until_active
+    future = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(days=1)).isoformat()
+    past = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=1)).isoformat()
+    assert vip_until_active(future) is True
+    assert vip_until_active(past) is False
+    assert vip_until_active(None) is False
+
+
+def test_referral_credits_both_once(fake_db):
+    import core.db as db
+    from routes.parrainage import apply_referral
+    fake_db.table("profiles").insert({"id": "ref-1", "tier": "free"}).execute()
+    code = db.get_or_create_referral_code("ref-1")
+    fake_db.table("profiles").insert({"id": "new-1", "tier": "free"}).execute()
+
+    assert apply_referral("new-1", code) is True
+    assert db.vip_until_active(db.get_profile("new-1").get("vip_until"))   # filleul
+    assert db.vip_until_active(db.get_profile("ref-1").get("vip_until"))   # parrain
+    assert db.get_profile("new-1").get("referred_by") == "ref-1"
+    # Une seule fois : 2e tentative ignorée.
+    assert apply_referral("new-1", code) is False
+
+
+def test_referral_blocks_self_and_unknown(fake_db):
+    import core.db as db
+    from routes.parrainage import apply_referral
+    fake_db.table("profiles").insert({"id": "u-1", "tier": "free"}).execute()
+    code = db.get_or_create_referral_code("u-1")
+    assert apply_referral("u-1", code) is False          # auto-parrainage
+    assert apply_referral("u-1", "zzzznope") is False     # code inconnu
+
+
+def test_vip_until_grants_access(fake_db, client):
+    """Un free avec vip_until futur passe VIP (gate before_request) et accède
+    aux fonctions PRO (ex : générateur)."""
+    import datetime as _dt
+    future = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(days=5)).isoformat()
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free", "vip_until": future}).execute()
+    fake_db.table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-01-01"}).execute()
+    with client.session_transaction() as s:
+        s["user_id"] = USER_ID
+        s["email"] = "t@e.com"
+        s["onboarded"] = True
+        s["_csrf"] = CSRF
+        # is_vip NON posé → force la revalidation DB dans before_request.
+    html = client.get("/generator").data.decode("utf-8")
+    assert "Générer mon programme" in html

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Parrainage · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Plus</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#party"/></svg>Inviter des amis</h1>
+
+  {# ── Comment ça marche ── #}
+  <div class="card" style="border-color:rgba(255,215,0,0.3); background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(120,200,255,0.05));">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg class="icon icon-lg" style="color:var(--gold,#FFD700);"><use href="/static/img/icons.svg#gem"/></svg>
+      <div>
+        <div style="font-weight:600; color:var(--text-1); font-size:0.95rem;">Gagnez du PRO à deux</div>
+        <div style="font-size:0.82rem; color:var(--text-2); line-height:1.5; margin-top:2px;">
+          Ton ami reçoit <strong style="color:var(--text-1);">{{ referee_days }} jours PRO</strong> à l'inscription, et toi
+          <strong style="color:var(--text-1);">{{ referrer_days }} jours PRO</strong> par ami qui rejoint Muscu Tracker.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Lien d'invitation ── #}
+  <div class="card">
+    <div class="card-label">Ton lien d'invitation</div>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <input id="ref-link" type="text" class="field" readonly style="flex:1; margin:0; font-size:0.8rem;" value="">
+      <button type="button" class="btn" id="ref-copy" data-haptic="1" onclick="copyRefLink(this)" style="flex-shrink:0;">Copier</button>
+    </div>
+    <button type="button" class="btn primary label-icon" data-haptic="1" onclick="shareRefLink(this)"
+            style="width:100%; justify-content:center; margin-top:10px;">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>Partager mon lien
+    </button>
+  </div>
+
+  {# ── Compteur ── #}
+  <div class="stats-row" style="margin-top:4px;">
+    <div class="stat-card stat-gold">
+      <div class="stat-label">AMIS PARRAINÉS</div>
+      <div class="stat-value">{{ referral_count }}</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="stat-label">JOURS PRO GAGNÉS</div>
+      <div class="stat-value">{{ referral_count * referrer_days }}</div>
+    </div>
+  </div>
+
+  <p style="font-size:0.74rem; color:var(--text-dim); text-align:center; margin-top:10px;">
+    Les jours PRO sont crédités quand ton ami termine son inscription.
+  </p>
+
+  <script>
+    (function () {
+      var code = {{ referral_code|tojson }};
+      var link = location.origin + '/?ref=' + encodeURIComponent(code);
+      var input = document.getElementById('ref-link');
+      if (input) input.value = link;
+
+      function toast(msg) {
+        var t = document.createElement('div');
+        t.textContent = msg;
+        t.style.cssText = 'position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1b1f27;color:#fff;border:1px solid rgba(255,255,255,0.12);padding:12px 18px;border-radius:12px;font-size:14px;z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+        document.body.appendChild(t);
+        setTimeout(function(){ t.style.transition='opacity .4s'; t.style.opacity='0'; }, 2200);
+        setTimeout(function(){ t.remove(); }, 2700);
+      }
+      function trackShare(method) {
+        try { fetch('/parrainage/share', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({method:method}), keepalive:true }).catch(function(){}); } catch(e){}
+      }
+
+      window.copyRefLink = function () {
+        if (input) { input.select(); }
+        (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
+          .then(function(){ toast('Lien copié 📋'); trackShare('copy'); })
+          .catch(function(){ try { document.execCommand('copy'); toast('Lien copié 📋'); trackShare('copy'); } catch(e){} });
+      };
+
+      window.shareRefLink = async function () {
+        var text = 'Rejoins-moi sur Muscu Tracker 💪 On gagne chacun des jours PRO !';
+        if (navigator.share) {
+          try { await navigator.share({ title: 'Muscu Tracker', text: text, url: link }); trackShare('share'); return; }
+          catch (e) { if (e && e.name === 'AbortError') return; }
+        }
+        window.copyRefLink();
+      };
+    })();
+  </script>
+{% endblock %}

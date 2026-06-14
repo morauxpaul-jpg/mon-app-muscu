@@ -48,6 +48,7 @@ pwa/
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── generator.py               # Générateur de programme IA (VIP) — Claude → JSON validé → save_prog
 │   ├── share.py                   # POST /share/track — compteur de partages de progression (analytics)
+│   ├── parrainage.py              # Lien d'invitation + récompense VIP (parrain/filleul) + apply_referral
 │   └── admin.py                   # Stats, gestion VIP, fiche user (gated par ADMIN_EMAILS env)
 ├── templates/
 │   ├── base.html                  # Layout master (topbar, nav 4 onglets, scripts globaux)
@@ -115,7 +116,7 @@ pwa/
 
 ## Système Free / VIP
 
-- **Tier** stocké dans `profiles.tier` ∈ {`free`, `vip`}. Lu et caché en session via `g.is_vip` (revalidation périodique dans `before_request`). **TTL asymétrique** (2026-06-14) : un VIP confirmé est re-vérifié toutes les `VIP_CACHE_TTL`=120 s, un FREE toutes les `FREE_RECHECK_TTL`=15 s — pour qu'un passage VIP (grant admin ou achat Stripe) se propage en quelques secondes à la session du user, même sur un autre appareil. La vérif d'existence du compte auth (API auth, plus coûteuse) reste sur la cadence lente via `session['auth_check_ts']`.
+- **Tier** stocké dans `profiles.tier` ∈ {`free`, `vip`}. **VIP effectif** `g.is_vip` = (`tier == 'vip'`) **OU** (`vip_until > now()`) — `vip_until` = VIP à durée limitée (parrainage/promo, migration v29), évalué via `db.vip_until_active()`. Lu et caché en session via `g.is_vip` (revalidation périodique dans `before_request`). **TTL asymétrique** (2026-06-14) : un VIP confirmé est re-vérifié toutes les `VIP_CACHE_TTL`=120 s, un FREE toutes les `FREE_RECHECK_TTL`=15 s — pour qu'un passage VIP (grant admin ou achat Stripe) se propage en quelques secondes à la session du user, même sur un autre appareil. La vérif d'existence du compte auth (API auth, plus coûteuse) reste sur la cadence lente via `session['auth_check_ts']`.
 - **Offre « équilibrée »** (2026-06-11) — Free = séances illimitées + progrès simple + 1 programme + cardio. VIP = Coach IA (15 msg/j), **Nutrition**, stats détaillées (body map/1RM/zoom), programmes PRO, multi-programmes/profils, export.
 - **Gating Free** : Coach IA, Nutrition, Export/Import, programmes PRO du catalogue, stats avancées, multi-programmes/profils.
 - **Onglet Plus** : sections épurées (Entraînement / Premium / Détente / Réglages) ; features VIP visibles avec cadenas + `vip_wall`. Incitation VIP douce sur l'accueil pour les gratuits (remplace le widget calories).
@@ -158,6 +159,11 @@ pwa/
 - **Anti-coût** : quota 3/semaine glissante (7 j) / VIP via la table `events` (compte les `program_generated` des 7 derniers jours, `_gen_used_week`) + backstop Flask-Limiter `10/h` sur generate, `20/h` sur apply.
 - **Prompt** : injecte la liste des exercices connus (`EXERCISES_INFO`) pour biaiser vers des exos illustrés + la liste des muscles canoniques.
 - **Events** : `program_generator_viewed`, `program_generated`, `program_adopted` (nourrissent aussi le funnel). **Entrée UI** : carte « Générateur IA » dans le hub Plus (section Premium, cadenas si free).
+
+### Parrainage (croissance, 2026-06-14)
+- **Boucle** : chaque user a un `profiles.referral_code` (stable, dérivé de l'user_id) → lien `/?ref=CODE`. Page **/parrainage** (hub Plus) : lien + copier + partager (Web Share) + compteur de filleuls/jours gagnés.
+- **Capture** : la landing pose un cookie `pending_ref` (survit au round-trip OAuth). À l'onboarding du filleul, `parrainage.apply_referral` crédite **une seule fois** : filleul **+14 j PRO**, parrain **+30 j PRO** (via `db.grant_vip_days` → `vip_until` cumulatif). Garde-fous : code valide, pas d'auto-parrainage, `referred_by` posé une seule fois. Le filleul passe VIP immédiatement (`session.pop('is_vip')`) ; le parrain via la revalidation FREE (15 s).
+- **Migration** : `supabase_schema_v29_referral.sql` (`profiles` += `referral_code` [unique], `referred_by`, `vip_until`). Helpers `db.py` : `get_or_create_referral_code`, `get_user_by_referral_code`, `set_referred_by`, `grant_vip_days`, `count_referrals`, `get_referred_by`, `vip_until_active`. Events : `referral_shared`, `referral_signup`.
 
 ### Partage de progression (croissance, 2026-06-14)
 - **Carte partageable** : bouton « Partager ma progression » sur l'accueil (tous les users). `static/js/share-card.js` génère côté client une image (canvas 1080×1080 : streak/tonnage/séances/exos + branding) puis la partage via l'**API Web Share** (`navigator.share({files})` si supporté → sinon texte+lien → sinon téléchargement PNG + copie du lien, avec toast). Données injectées via `<script type="application/json" id="share-data">` sur l'accueil ; lien = `location.origin` (robuste aux domaines custom).
@@ -273,7 +279,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v106-2026-06-14-share-progress` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v107-2026-06-14-parrainage` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

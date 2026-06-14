@@ -474,6 +474,114 @@ def get_user_by_stripe_customer(customer_id: str) -> Optional[str]:
     return rows[0]["id"] if rows else None
 
 
+# ── Parrainage + VIP à durée limitée (migration v29) ─────────────
+import hashlib as _hashlib
+
+
+def vip_until_active(vip_until) -> bool:
+    """True si un VIP à durée limitée (`profiles.vip_until`) est encore valide."""
+    if not vip_until:
+        return False
+    try:
+        s = str(vip_until).replace("Z", "+00:00")
+        dt = _dt.datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        return dt > _dt.datetime.now(_dt.timezone.utc)
+    except (ValueError, TypeError):
+        return False
+
+
+def get_or_create_referral_code(user_id: str) -> str:
+    """Code de parrainage stable de l'utilisateur. Généré (déterministe, dérivé
+    de l'user_id) et persisté au premier appel. Sert au lien d'invitation et à
+    la résolution inverse (`get_user_by_referral_code`)."""
+    client = get_client()
+    try:
+        resp = client.table("profiles").select("referral_code").eq("id", user_id).maybe_single().execute()
+        existing = (resp.data or {}).get("referral_code") if resp else None
+    except Exception as e:
+        logger.error("get_or_create_referral_code read FAILED user=%s: %s", user_id, e)
+        existing = None
+    if existing:
+        return existing
+    # Code court, lisible, déterministe (base32 d'un hash de l'user_id).
+    digest = _hashlib.sha1(user_id.encode("utf-8")).digest()
+    import base64 as _b64
+    code = _b64.b32encode(digest).decode("ascii").rstrip("=").lower()[:8]
+    try:
+        client.table("profiles").upsert({"id": user_id, "referral_code": code}).execute()
+    except Exception as e:
+        logger.error("get_or_create_referral_code write FAILED user=%s: %s", user_id, e)
+    return code
+
+
+def get_user_by_referral_code(code: str) -> Optional[str]:
+    """Retrouve l'id du parrain à partir de son code (résolution du lien ?ref=)."""
+    code = (code or "").strip().lower()
+    if not code:
+        return None
+    client = get_client()
+    try:
+        resp = client.table("profiles").select("id").eq("referral_code", code).limit(1).execute()
+        rows = resp.data or []
+        return rows[0]["id"] if rows else None
+    except Exception as e:
+        logger.error("get_user_by_referral_code FAILED code=%s: %s", code, e)
+        return None
+
+
+def set_referred_by(user_id: str, referrer_id: str) -> None:
+    """Mémorise le parrain d'un filleul (posé une seule fois côté appelant)."""
+    client = get_client()
+    client.table("profiles").upsert({"id": user_id, "referred_by": referrer_id}).execute()
+
+
+def grant_vip_days(user_id: str, days: int) -> None:
+    """Étend (cumulatif) le VIP à durée limitée : vip_until = max(now, vip_until
+    courant) + days. Utilisé par le parrainage (et réutilisable pour promos)."""
+    if days <= 0:
+        return
+    client = get_client()
+    base = _dt.datetime.now(_dt.timezone.utc)
+    try:
+        resp = client.table("profiles").select("vip_until").eq("id", user_id).maybe_single().execute()
+        cur = (resp.data or {}).get("vip_until") if resp else None
+        if cur:
+            s = str(cur).replace("Z", "+00:00")
+            cur_dt = _dt.datetime.fromisoformat(s)
+            if cur_dt.tzinfo is None:
+                cur_dt = cur_dt.replace(tzinfo=_dt.timezone.utc)
+            if cur_dt > base:
+                base = cur_dt
+    except Exception as e:
+        logger.error("grant_vip_days read FAILED user=%s: %s", user_id, e)
+    new_until = (base + _dt.timedelta(days=int(days))).isoformat()
+    client.table("profiles").upsert({"id": user_id, "vip_until": new_until}).execute()
+
+
+def count_referrals(user_id: str) -> int:
+    """Nombre de filleuls (comptes ayant ce user comme `referred_by`)."""
+    client = get_client()
+    try:
+        resp = client.table("profiles").select("id", count="exact").eq("referred_by", user_id).execute()
+        return int(getattr(resp, "count", None) or 0)
+    except Exception as e:
+        logger.error("count_referrals FAILED user=%s: %s", user_id, e)
+        return 0
+
+
+def get_referred_by(user_id: str) -> Optional[str]:
+    """Parrain déjà enregistré pour ce user, ou None."""
+    client = get_client()
+    try:
+        resp = client.table("profiles").select("referred_by").eq("id", user_id).maybe_single().execute()
+        return (resp.data or {}).get("referred_by") if resp else None
+    except Exception as e:
+        logger.error("get_referred_by FAILED user=%s: %s", user_id, e)
+        return None
+
+
 def list_coach_messages(user_id: str, conversation_id: str | None = None,
                          limit: int = 50) -> list[dict]:
     """Derniers messages du coach (rôle, content, created_at) en ordre

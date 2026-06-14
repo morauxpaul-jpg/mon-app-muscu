@@ -12,7 +12,7 @@ import secrets
 import time
 from datetime import timedelta
 
-from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request, abort
+from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request, abort, make_response
 
 from core.limiter import limiter
 
@@ -32,6 +32,7 @@ from routes.billing import bp as billing_bp
 from routes.admin import bp as admin_bp
 from routes.generator import bp as generator_bp
 from routes.share import bp as share_bp
+from routes.parrainage import bp as parrainage_bp
 
 from core import db as core_db
 
@@ -113,6 +114,7 @@ app.register_blueprint(billing_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(generator_bp)
 app.register_blueprint(share_bp)
+app.register_blueprint(parrainage_bp)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -165,7 +167,10 @@ def _require_login():
                 pass
         try:
             profile = core_db.get_profile(user_id) or {}
-            cached_vip = (profile.get("tier") or "free").strip().lower() == "vip"
+            # VIP effectif = abonnement/grant permanent (tier) OU grant à durée
+            # limitée encore valide (vip_until : parrainage, promo…).
+            is_paid = (profile.get("tier") or "free").strip().lower() == "vip"
+            cached_vip = is_paid or core_db.vip_until_active(profile.get("vip_until"))
         except Exception:
             # En cas d'erreur DB transitoire, on garde la valeur connue plutôt
             # que de rétrograder à tort en free.
@@ -367,7 +372,15 @@ def _inject_user():
 def landing():
     if session.get("user_id"):
         return redirect(url_for("accueil.index"))
-    return render_template("landing.html")
+    resp = make_response(render_template("landing.html"))
+    # Parrainage : mémorise le code ?ref= dans un cookie qui survit au round-trip
+    # OAuth Google. Crédité plus tard à l'onboarding du filleul.
+    ref = (request.args.get("ref") or "").strip()[:32]
+    if ref:
+        resp.set_cookie("pending_ref", ref, max_age=30 * 24 * 3600,
+                        samesite="Lax", httponly=True,
+                        secure=bool(os.getenv("FLASK_SECRET_KEY")))
+    return resp
 
 
 @app.route("/plus")

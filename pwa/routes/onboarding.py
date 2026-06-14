@@ -136,4 +136,14 @@ def submit():
         "niveau": niveau, "objectif": objectif, "frequence": frequence,
         "programme": programme_id or "custom",
     })
-    return redirect(url_for("accueil.index"))
+
+    # Parrainage : si l'onboarding vient d'un lien d'invitation (cookie posé sur
+    # la landing), on crédite parrain + filleul une seule fois.
+    resp = redirect(url_for("accueil.index"))
+    ref = (request.cookies.get("pending_ref") or "").strip()
+    if ref:
+        resp.delete_cookie("pending_ref")
+        from routes.parrainage import apply_referral
+        if apply_referral(g.user_id, ref):
+            session.pop("is_vip", None)  # le filleul passe VIP immédiatement
+    return resp
