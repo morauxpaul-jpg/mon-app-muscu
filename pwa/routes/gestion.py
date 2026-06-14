@@ -18,6 +18,7 @@ from core.data import (
 logger = logging.getLogger(__name__)
 from core.muscu import auto_muscles, get_base_name
 from core.limiter import limiter
+from core.analytics import paywall
 
 MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
                "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
@@ -280,7 +281,7 @@ def delete_account():
 def export_data():
     """Exporte toutes les données utilisateur en JSON (VIP uniquement)."""
     if not getattr(g, "is_vip", False):
-        return render_template("vip_wall.html", active="plus", feature="Export complet"), 403
+        return paywall("Export complet", 403)
     prog = get_prog()
     hist = get_hist()
     profile = get_profile() or {}
@@ -306,7 +307,7 @@ def export_data():
 def import_data():
     """Importe des données depuis un fichier JSON (VIP uniquement)."""
     if not getattr(g, "is_vip", False):
-        return render_template("vip_wall.html", active="plus", feature="Import complet"), 403
+        return paywall("Import complet", 403)
     f = request.files.get("file")
     if not f:
         return redirect(url_for("gestion.gestion") + "?import=error")

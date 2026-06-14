@@ -17,6 +17,7 @@ from core.data import get_prog, save_prog, get_onboarding
 from core.dates import DAYS_FR
 from core.muscu import auto_muscles
 from core import catalog
+from core.analytics import paywall
 
 logger = logging.getLogger(__name__)
 
@@ -520,7 +521,7 @@ def reset_seance():
 @bp.route("/programme/export", methods=["GET"])
 def export_program():
     if not getattr(g, "is_vip", False):
-        return render_template("vip_wall.html", active="plus", feature="Export de programme"), 403
+        return paywall("Export de programme", 403)
     prog = get_prog()
     seances = {}
     for sname, exos in _seance_items(prog):
@@ -547,7 +548,7 @@ def export_program():
 @bp.route("/programme/import", methods=["POST"])
 def import_program():
     if not getattr(g, "is_vip", False):
-        return render_template("vip_wall.html", active="plus", feature="Import de programme"), 403
+        return paywall("Import de programme", 403)
     if request.form.get("confirm") != "yes":
         return redirect(url_for("programme.programme"))
     file = request.files.get("file")
@@ -642,7 +643,7 @@ def change_program():
 
     # Free users : bloque les programmes PRO.
     if not bool(getattr(g, "is_vip", False)) and not catalog.is_free(prog_id):
-        return render_template("vip_wall.html", active="plus", feature="Programme PRO"), 403
+        return paywall("Programme PRO", 403)
 
     old = get_prog()
     # Respecte la fréquence configurée par l'utilisateur (onboarding) plutôt

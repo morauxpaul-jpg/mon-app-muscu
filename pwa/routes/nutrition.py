@@ -13,6 +13,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, g
 from core.data import get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition, sum_nutrition_range
 from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
+from core.analytics import paywall
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ def index():
     # Nutrition = fonctionnalité Premium (offre « équilibrée »). Les comptes
     # gratuits voient le mur PRO plutôt que la page (masque l'avancé + incite).
     if not getattr(g, "is_vip", False):
-        return render_template("vip_wall.html", active="plus", feature="Nutrition")
+        return paywall("Nutrition")
     try:
         profile = get_profile() or {}
     except Exception as e:

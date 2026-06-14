@@ -21,6 +21,7 @@ from core.dates import today_paris_str
 from core.db import _env
 from core.limiter import limiter
 from core import catalog
+from core.analytics import track, paywall
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ def _title_from_message(msg: str) -> str:
 @bp.route("/coach")
 def index():
     if not getattr(g, "is_vip", False):
-        return render_template("vip_wall.html", active="plus", feature="Coach IA")
+        return paywall("Coach IA")
     try:
         profile = get_profile() or {}
         onboarding = get_onboarding() or {}
@@ -330,6 +331,7 @@ def ask():
             "quota_remaining": 0,
             "quota_limit": limit,
         }), 429
+    track("coach_message", {"count_today": count_after})
 
     prenom = (onboarding.get("prenom") or "l'athlète").strip() or "l'athlète"
     niveau = onboarding.get("niveau") or "non précisé"

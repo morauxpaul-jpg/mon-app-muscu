@@ -18,6 +18,7 @@ from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
 from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
+from core.analytics import track
 
 bp = Blueprint("seance", __name__)
 
@@ -1148,6 +1149,7 @@ def finish():
     if changed:
         from core.data import save_prog
         save_prog(prog)
+    track("workout_finished", {"mode": mode, "seance": seance_name})
     return redirect(url_for("accueil.index"))
 
 

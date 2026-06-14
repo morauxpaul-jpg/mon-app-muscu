@@ -19,6 +19,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, g, ses
 from core.data import save_onboarding, save_profile, save_prog, get_onboarding, get_prog
 from core.dates import today_paris_str
 from core import catalog
+from core.analytics import track
 
 bp = Blueprint("onboarding", __name__, url_prefix="/onboarding")
 
@@ -131,4 +132,8 @@ def submit():
         save_prog(prog)
 
     session["onboarded"] = True
+    track("onboarding_completed", {
+        "niveau": niveau, "objectif": objectif, "frequence": frequence,
+        "programme": programme_id or "custom",
+    })
     return redirect(url_for("accueil.index"))

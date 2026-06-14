@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Funnel · Admin{% endblock %}
+
+{% block content %}
+  <a href="/admin" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour admin</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Funnel de conversion</h1>
+
+  {# ── Sélecteur de fenêtre ── #}
+  <div class="seg" style="margin-bottom:14px;">
+    {% for d in [7, 30, 90] %}
+      <a href="/admin/funnel?days={{ d }}" class="seg-item {% if days == d %}seg-on{% endif %}">{{ d }} j</a>
+    {% endfor %}
+  </div>
+
+  {% if not funnel.steps %}
+    <div class="card" style="text-align:center; color:var(--text-dim);">
+      Aucune donnée. La table <code>events</code> se remplit dès que les utilisateurs interagissent
+      (vérifie que la migration <code>v28</code> est appliquée dans Supabase).
+    </div>
+  {% else %}
+    <div class="card">
+      <div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:12px;">
+        Utilisateurs distincts par étape sur les <strong style="color:var(--text-2);">{{ funnel.days }} derniers jours</strong>.
+        <span style="color:var(--text-3);">% du haut de funnel · conversion vs étape précédente.</span>
+      </div>
+
+      {% for s in funnel.steps %}
+        {% set drop = (100 - s.pct_of_prev) if not loop.first else 0 %}
+        <div class="fstep">
+          <div class="fstep-head">
+            <span class="fstep-label">{{ loop.index }}. {{ s.label }}</span>
+            <span class="fstep-users">{{ s.users }}</span>
+          </div>
+          <div class="fbar-track">
+            <div class="fbar-fill" style="width:{{ s.pct_of_top if s.pct_of_top > 1.5 else 1.5 }}%;"></div>
+            <span class="fbar-pct">{{ s.pct_of_top }}%</span>
+          </div>
+          {% if not loop.first %}
+            <div class="fstep-conv">
+              <span>↳ {{ s.pct_of_prev }}% de l'étape précédente</span>
+              {% if drop >= 0.5 %}<span class="fdrop">−{{ drop|round(1) }}% de déperdition</span>{% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    {# ── Métrique d'engagement annexe ── #}
+    <div class="card" style="margin-top:12px;">
+      <div class="label-icon" style="justify-content:space-between;">
+        <span class="label-icon" style="color:var(--text-2); font-size:0.85rem;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA utilisé</span>
+        <strong style="color:var(--text-1);">{{ funnel.coach_msgs_users }} <span style="font-weight:400; color:var(--text-dim); font-size:0.78rem;">VIP actifs</span></strong>
+      </div>
+    </div>
+  {% endif %}
+
+  <style>
+    .seg { display:flex; gap:6px; background:var(--bg-surface); border:0.5px solid var(--border-default); border-radius:10px; padding:4px; }
+    .seg-item { flex:1; text-align:center; padding:7px 0; border-radius:7px; font-size:0.8rem; color:var(--text-3); text-decoration:none; transition:background .15s, color .15s; }
+    .seg-on { background:var(--accent-bg); color:var(--accent); font-weight:600; }
+
+    .fstep { margin-bottom:16px; }
+    .fstep:last-child { margin-bottom:0; }
+    .fstep-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+    .fstep-label { font-size:0.85rem; color:var(--text-1); }
+    .fstep-users { font-size:1.05rem; font-weight:700; color:var(--text-1); }
+
+    .fbar-track { position:relative; height:26px; background:var(--bg-elevated); border-radius:7px; overflow:hidden; }
+    .fbar-fill { height:100%; background:linear-gradient(90deg, var(--accent), var(--accent)); opacity:0.85; border-radius:7px; transition:width .4s ease; }
+    .fbar-pct { position:absolute; top:0; right:8px; line-height:26px; font-size:0.72rem; font-weight:600; color:var(--text-1); }
+
+    .fstep-conv { display:flex; justify-content:space-between; margin-top:4px; font-size:0.7rem; color:var(--text-dim); }
+    .fdrop { color:var(--danger); }
+  </style>
+{% endblock %}

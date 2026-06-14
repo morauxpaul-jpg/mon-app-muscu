@@ -31,6 +31,7 @@ pwa/
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
 │   ├── limiter.py                 # Instance Flask-Limiter partagée (60 req/min par IP)
+│   ├── analytics.py               # Façade track(event,props) fire-and-forget + helper paywall() (funnel conversion)
 │   └── sheets.py                  # Connexion Google Sheets (compat ancien backend Streamlit)
 ├── routes/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
@@ -70,6 +71,7 @@ pwa/
 │   ├── arcade.html                # Mini-jeux canvas
 │   ├── onboarding.html            # Questionnaire 4 étapes (Alpine)
 │   ├── admin.html                 # Console admin
+│   ├── funnel.html                # Funnel de conversion admin (étapes + déperdition, 7/30/90j)
 │   ├── vip_wall.html              # Mur de blocage VIP plein écran
 │   └── error.html                 # Page d'erreur
 ├── static/
@@ -192,8 +194,14 @@ pwa/
 - Gating Free / PRO selon le programme (les programmes avancés sont VIP)
 
 ### Admin
-- Routes : `/admin` (dashboard), `/admin/set-tier`, `/admin/user/<id>`, `/admin/reset-quota`
+- Routes : `/admin` (dashboard), `/admin/funnel` (conversion), `/admin/set-tier`, `/admin/user/<id>`, `/admin/reset-quota`
 - Accès filtré par `ADMIN_EMAILS` env (404 sinon)
+
+### Analytics produit / Funnel de conversion (2026-06-14)
+- **Auto-hébergé sur Supabase** (table `events`, migration `supabase_schema_v28_events.sql`) — pas de tiers (PostHog/Mixpanel), donc pas de bannière de consentement ; écriture côté serveur en `service_role`.
+- **Façade** : `core/analytics.py` → `track(event, props, user_id=, tier=)` **fire-and-forget** (n'échoue JAMAIS la requête, lit `g.user_id`/`g.is_vip` par défaut ; `user_id` explicite hors contexte requête = webhook Stripe). Helper `paywall(feature, status=200)` = loggue `paywall_viewed` puis rend `vip_wall.html` (centralise l'instrumentation des ~7 points de blocage VIP).
+- **Events du funnel** : `onboarding_completed` (onboarding submit), `workout_finished` (séance finish), `premium_viewed` (page Premium vue par un free), `paywall_viewed` (helper `paywall`), `checkout_started` (billing checkout créé), `vip_activated` (dans `_activate_vip`, couvre success + webhook), `coach_message` (coach/ask, après quota OK).
+- **Funnel** (`db.get_funnel_stats(days)`) : Inscrits (auth.users, fenêtre) → Onboarding → 1ʳᵉ séance → Offre vue → Checkout → VIP (profiles.tier). Distinct users par étape sur 7/30/90 j. Page `/admin/funnel` (lien depuis `/admin`) : barres, % du haut de funnel + conversion/déperdition vs étape précédente, + métrique annexe « Coach IA utilisé ».
 
 ## Configuration
 
@@ -247,7 +255,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v100-2026-06-14-vipwall-conversion` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v101-2026-06-14-analytics-funnel` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

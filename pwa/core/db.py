@@ -628,6 +628,119 @@ def get_admin_stats() -> dict:
     }
 
 
+# ── Analytics produit (events de conversion / funnel) ────────────
+def insert_event(user_id, event: str, props: dict | None = None,
+                 tier: str | None = None) -> None:
+    """Enregistre un event analytics (table `events`, migration v28).
+
+    Best-effort : l'appelant (core.analytics.track) avale déjà les exceptions,
+    mais on garde l'écriture minimale et tolérante (user_id peut être None)."""
+    client = get_client()
+    payload = {
+        "user_id": user_id or None,
+        "event": str(event)[:64],
+        "props": props or {},
+    }
+    if tier:
+        payload["tier"] = tier
+    client.table("events").insert(payload).execute()
+
+
+# Étapes du funnel : (clé, libellé, type, source).
+# type 'signup'  → compte auth.users (haut de funnel)
+# type 'event'   → distinct user_id ayant émis l'un des events listés
+# type 'tier'    → distinct user_id actuellement VIP (profiles.tier)
+_FUNNEL_STEPS = [
+    ("signup",      "Inscrits",        "signup", None),
+    ("onboarding",  "Onboarding fait", "event",  ("onboarding_completed",)),
+    ("workout",     "1ʳᵉ séance",      "event",  ("workout_finished",)),
+    ("offer",       "Offre vue",       "event",  ("premium_viewed", "paywall_viewed")),
+    ("checkout",    "Checkout lancé",  "event",  ("checkout_started",)),
+    ("vip",         "VIP",             "tier",   None),
+]
+
+
+def get_funnel_stats(days: int = 30) -> dict:
+    """Entonnoir de conversion sur les `days` derniers jours.
+
+    Interprétation (v1, orientée vue d'ensemble) : pour chaque étape, nombre
+    d'utilisateurs DISTINCTS ayant atteint l'étape DANS la fenêtre. Le haut de
+    funnel = comptes créés dans la fenêtre (auth.users). Les étapes du milieu
+    lisent la table `events`. La dernière = users actuellement VIP.
+
+    Retourne {days, steps:[{key,label,users,pct_of_top,pct_of_prev}], coach_msgs}.
+    """
+    import datetime as _dt
+    cutoff = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=days)).isoformat()
+    client = get_client()
+
+    # Events de la fenêtre (un seul fetch, dédup en Python).
+    users_by_event: dict[str, set] = {}
+    coach_users: set = set()
+    try:
+        resp = (
+            client.table("events")
+            .select("user_id, event, created_at")
+            .gte("created_at", cutoff)
+            .execute()
+        )
+        for r in (resp.data or []):
+            uid = r.get("user_id")
+            ev = r.get("event") or ""
+            if not uid:
+                continue
+            users_by_event.setdefault(ev, set()).add(uid)
+            if ev == "coach_message":
+                coach_users.add(uid)
+    except Exception as e:
+        logger.error("get_funnel_stats events FAILED: %s", e)
+
+    # Haut de funnel : comptes créés dans la fenêtre.
+    cutoff_day = cutoff[:10]
+    signups = 0
+    try:
+        users_resp = client.auth.admin.list_users()
+        auth_users = getattr(users_resp, "users", None) or users_resp or []
+        for u in auth_users:
+            created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else "")
+            if str(created or "")[:10] >= cutoff_day:
+                signups += 1
+    except Exception as e:
+        logger.error("get_funnel_stats signups FAILED: %s", e)
+
+    # VIP actuels (étape finale).
+    vip_count = 0
+    try:
+        prof = client.table("profiles").select("tier").execute()
+        vip_count = sum(1 for p in (prof.data or []) if (p.get("tier") or "") == "vip")
+    except Exception as e:
+        logger.error("get_funnel_stats vip FAILED: %s", e)
+
+    steps = []
+    top = None
+    prev = None
+    for key, label, kind, events in _FUNNEL_STEPS:
+        if kind == "signup":
+            n = signups
+        elif kind == "tier":
+            n = vip_count
+        else:
+            seen: set = set()
+            for ev in (events or ()):
+                seen |= users_by_event.get(ev, set())
+            n = len(seen)
+        if top is None:
+            top = n or 0
+        pct_top = round(100 * n / top, 1) if top else 0.0
+        pct_prev = round(100 * n / prev, 1) if prev else 100.0
+        steps.append({
+            "key": key, "label": label, "users": n,
+            "pct_of_top": pct_top, "pct_of_prev": pct_prev,
+        })
+        prev = n if n else prev
+    return {"days": days, "steps": steps, "coach_msgs_users": len(coach_users)}
+
+
 def get_user_details(user_id: str) -> dict:
     """Fiche détaillée d'un user pour l'admin."""
     import datetime as _dt

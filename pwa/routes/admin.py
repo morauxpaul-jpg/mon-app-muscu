@@ -52,6 +52,23 @@ def index():
     )
 
 
+@bp.route("/admin/funnel")
+def funnel():
+    _require_admin()
+    try:
+        days = int(request.args.get("days") or 30)
+    except (TypeError, ValueError):
+        days = 30
+    if days not in (7, 30, 90):
+        days = 30
+    try:
+        data = core_db.get_funnel_stats(days)
+    except Exception as e:
+        logger.error("/admin/funnel FAILED: %s", e)
+        data = {"days": days, "steps": [], "coach_msgs_users": 0}
+    return render_template("funnel.html", active="plus", funnel=data, days=days)
+
+
 @bp.route("/admin/set-tier", methods=["POST"])
 @limiter.limit("30 per minute")
 def set_tier():

@@ -24,6 +24,7 @@ from core.db import _env
 from core import db as core_db
 from core.data import get_profile
 from core.limiter import limiter
+from core.analytics import track
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,9 @@ def _activate_vip(user_id: str, customer_id=None) -> None:
         core_db.set_user_tier(user_id, "vip")
     except Exception as e:
         logger.error("billing activate_vip set_tier FAILED user=%s: %s", user_id, e)
+    # Event funnel : émis hors contexte requête authentifiée (webhook) → user_id
+    # explicite, tier forcé 'vip'.
+    track("vip_activated", user_id=user_id, tier="vip")
     if customer_id:
         try:
             core_db.set_stripe_customer(user_id, customer_id)
@@ -231,6 +235,7 @@ def checkout():
             "error.html", code=502,
             message="Le paiement n'a pas pu démarrer. Réessaie dans un instant.",
         ), 502
+    track("checkout_started", {"plan": plan_key, "upgrade": bool(getattr(g, "is_vip", False))})
     return redirect(cs.url, code=303)
 
 
