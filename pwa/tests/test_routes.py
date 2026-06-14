@@ -571,3 +571,70 @@ def test_import_json_malforme_rejete(fake_db, logged_in):
     assert r.status_code == 302 and "import=error" in r.headers["Location"]
     after = json.dumps(fake_db.tables["programs"], sort_keys=True, default=str)
     assert before == after, "un import invalide ne doit rien écraser"
+
+
+# ── Upsell post-win (accueil) ────────────────────────────────────
+
+def _free_session(client):
+    import time
+    with client.session_transaction() as s:
+        s["user_id"] = USER_ID
+        s["email"] = "free@example.com"
+        s["onboarded"] = True
+        s["is_vip"] = False
+        s["is_vip_ts"] = time.time()  # frais → pas de revalidation DB
+        s["_csrf"] = CSRF
+    return client
+
+
+def test_upsell_post_win_shown_once_for_free(fake_db, client):
+    """Un free atteignant 3 séances distinctes voit l'upsell UNE fois, puis plus."""
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01):  # 3 dates distinctes
+        _hist_row(fake_db, d, poids=80.0, reps=8)
+    _free_session(client)
+
+    r1 = client.get("/accueil")
+    assert r1.status_code == 200
+    assert "séances au compteur" in r1.data.decode("utf-8")
+    # Flag durable posé
+    prog = fake_db.tables["programs"][0]["data"]
+    assert prog.get("_upsell_seen") is True
+    # 2e visite : plus jamais
+    r2 = client.get("/accueil")
+    assert "séances au compteur" not in r2.data.decode("utf-8")
+
+
+def test_upsell_not_shown_below_threshold(fake_db, client):
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    for d in (MONDAY_W51, MONDAY_W52):  # 2 séances seulement
+        _hist_row(fake_db, d, poids=80.0, reps=8)
+    _free_session(client)
+    r = client.get("/accueil")
+    assert "séances au compteur" not in r.data.decode("utf-8")
+
+
+def test_upsell_never_shown_for_vip(fake_db, logged_in):
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01):
+        _hist_row(fake_db, d, poids=80.0, reps=8)
+    r = logged_in.get("/accueil")  # logged_in = VIP
+    assert "séances au compteur" not in r.data.decode("utf-8")
+
+
+def test_upsell_not_consumed_by_prefetch(fake_db, client):
+    """Un prefetch de /accueil (Sec-Fetch-Mode != navigate) ne doit PAS brûler
+    le one-shot : l'upsell reste dispo pour la vraie navigation qui suit."""
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01):
+        _hist_row(fake_db, d, poids=80.0, reps=8)
+    _free_session(client)
+
+    # Prefetch (background) : pas d'affichage, pas de consommation.
+    rp = client.get("/accueil", headers={"Sec-Fetch-Mode": "same-origin"})
+    assert "séances au compteur" not in rp.data.decode("utf-8")
+    assert fake_db.tables["programs"][0]["data"].get("_upsell_seen") is not True
+
+    # Vraie navigation ensuite : l'upsell s'affiche bien.
+    rn = client.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"})
+    assert "séances au compteur" in rn.data.decode("utf-8")

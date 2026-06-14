@@ -3,13 +3,19 @@
 Logique portée depuis app.py (lignes 1499-1865).
 """
 from datetime import timedelta
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, g, request
 
 from datetime import date as _date, datetime as _datetime
 
 from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
 from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
+from core.analytics import track
+
+# Upsell post-win : un free qui vient de franchir ce cap de séances distinctes
+# voit, UNE seule fois, une invitation PRO au moment où la motivation est haute
+# (juste après une séance, sur l'accueil). Flag durable prog._upsell_seen.
+UPSELL_AFTER_SESSIONS = 3
 
 bp = Blueprint("accueil", __name__)
 
@@ -440,9 +446,43 @@ def index():
         for (code, label, desc, icon) in BADGE_DEFS
     ]
 
+    # Upsell post-win (free uniquement, une seule fois). Déclenché quand l'user
+    # atteint UPSELL_AFTER_SESSIONS séances distinctes — l'accueil qui suit sa
+    # séance milestone porte alors l'invitation PRO.
+    show_upsell = False
+    upsell_sessions = 0
+    # Ne consomme l'upsell (one-shot) que sur une VRAIE navigation : un prefetch
+    # de /accueil (prefetch.js, au survol du lien nav) ferait sinon "brûler"
+    # l'affichage unique en arrière-plan, sans que l'user le voie. Les fetch de
+    # prefetch envoient Sec-Fetch-Mode: same-origin/cors, pas 'navigate'.
+    is_navigation = request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
+    if is_navigation and not getattr(g, "is_vip", False) and not prog.get("_upsell_seen"):
+        all_real = [r for r in hist
+                    if not _is_cardio_row(r) and r.get("Exercice") != "SESSION"
+                    and r.get("Reps", 0) > 0 and r.get("Poids", 0) > 0]
+        done_sessions = {(r.get("Date"), r.get("Séance")) for r in all_real if r.get("Date")}
+        for r in hist:
+            if _is_cardio_row(r) and int(r.get("Reps") or 0) > 0 and r.get("Date"):
+                done_sessions.add((r.get("Date"), r.get("Séance")))
+        upsell_sessions = len(done_sessions)
+        if upsell_sessions >= UPSELL_AFTER_SESSIONS:
+            show_upsell = True
+            prog["_upsell_seen"] = True
+            try:
+                from core.data import save_prog as _save_prog
+                _save_prog(prog)
+            except Exception:
+                pass
+            try:
+                track("upsell_shown", {"trigger": "post_workout", "sessions": upsell_sessions})
+            except Exception:
+                pass
+
     return render_template(
         "accueil.html",
         active="accueil",
+        show_upsell=show_upsell,
+        upsell_sessions=upsell_sessions,
         day_name=day_name.upper(),
         date_str=date_str,
         s_act=s_display,
