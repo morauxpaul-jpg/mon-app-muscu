@@ -638,3 +638,24 @@ def test_upsell_not_consumed_by_prefetch(fake_db, client):
     # Vraie navigation ensuite : l'upsell s'affiche bien.
     rn = client.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"})
     assert "séances au compteur" in rn.data.decode("utf-8")
+
+
+# ── Partage de progression ───────────────────────────────────────
+
+def test_share_track_ok(fake_db, logged_in):
+    r = logged_in.post("/share/track",
+                       json={"kind": "progress", "method": "share"},
+                       headers={"X-CSRFToken": CSRF})
+    assert r.status_code == 204
+
+
+def test_share_track_requires_auth(client):
+    r = client.post("/share/track", json={}, headers={"X-CSRFToken": CSRF})
+    assert r.status_code in (302, 401, 403)
+
+
+def test_accueil_has_share_button(fake_db, logged_in):
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    _hist_row(fake_db, MONDAY_W52, poids=80.0, reps=8)
+    html = logged_in.get("/accueil").data.decode("utf-8")
+    assert "shareProgress(this)" in html and "share-card.js" in html

@@ -92,6 +92,19 @@
     {% endif %}
   </div>
 
+  {# ── Partage de progression ── #}
+  <script type="application/json" id="share-data">{{ {
+    "prenom": prenom, "week": s_act, "streak": streak,
+    "sessions": sessions_done, "total": total_sessions,
+    "tonnage": vol_week, "exos": exos_count
+  }|tojson }}</script>
+  <button type="button" class="btn label-icon" data-haptic="1"
+          style="width:100%; justify-content:center; margin-bottom:16px;"
+          onclick="shareProgress(this)">
+    <svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg>Partager ma progression
+  </button>
+  <script src="/static/js/share-card.js" defer></script>
+
   {% if badges %}
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#award"/></svg>Badges</h3>
     <div class="badges-row">
