@@ -46,6 +46,7 @@ pwa/
 │   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas
 │   ├── coach.py                   # Chat IA (Claude Haiku 4.5), réservé VIP, quota 15 msg/jour
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
+│   ├── generator.py               # Générateur de programme IA (VIP) — Claude → JSON validé → save_prog
 │   └── admin.py                   # Stats, gestion VIP, fiche user (gated par ADMIN_EMAILS env)
 ├── templates/
 │   ├── base.html                  # Layout master (topbar, nav 4 onglets, scripts globaux)
@@ -66,6 +67,7 @@ pwa/
 │   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Arcade, Gestion, Tutoriel
 │   ├── premium.html               # Page de présentation des tiers
 │   ├── coach.html                 # Chat IA
+│   ├── generator.html             # Générateur de programme IA (form + preview + adopter)
 │   ├── cardio.html                # Saisie cardio
 │   ├── nutrition.html             # Profil + journal repas
 │   ├── arcade.html                # Mini-jeux canvas
@@ -148,6 +150,13 @@ pwa/
 - Quota VIP : 15 msg/jour (champs `profiles.coach_quota_date` + `coach_quota_count`, reset auto à chaque nouveau jour) — protège le coût API
 - Historique conversation persisté dans `coach_messages`, effaçable via `/coach/clear`
 - Le system prompt inclut le profil utilisateur, le programme, et l'historique récent
+
+### Générateur de programme IA (VIP, 2026-06-14)
+- **Route** `routes/generator.py` : `GET /generator` (form, VIP-gated via `paywall`), `POST /generator/generate` (prompt structuré → Claude Haiku 4.5, `max_tokens=2600` → **JSON strict** → `parse_and_validate`), `POST /generator/apply` (re-validation + `save_prog`, même chemin sûr que l'import ; reps NON persistées, cf. semaine continue).
+- **`parse_and_validate(raw)`** = fonction **pure** (testée, `tests/test_generator.py`) : tolère les blocs ``` ```json ```, normalise les muscles (vers `MUSCLES` canoniques, défaut « Autre »), clamp sets 1–8, ≤6 séances / ≤12 exos, planning FR filtré + fallback cyclique.
+- **Anti-coût** : quota 5/jour/VIP via la table `events` (compte les `program_generated` du jour) + backstop Flask-Limiter `10/h` sur generate, `20/h` sur apply.
+- **Prompt** : injecte la liste des exercices connus (`EXERCISES_INFO`) pour biaiser vers des exos illustrés + la liste des muscles canoniques.
+- **Events** : `program_generator_viewed`, `program_generated`, `program_adopted` (nourrissent aussi le funnel). **Entrée UI** : carte « Générateur IA » dans le hub Plus (section Premium, cadenas si free).
 
 ### Progression
 - **Calendrier mensuel** : cases colorées (vert=fait, rouge=manqué, bleu=à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
@@ -255,7 +264,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v101-2026-06-14-analytics-funnel` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v102-2026-06-14-generator-ia` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

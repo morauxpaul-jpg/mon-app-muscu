@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Générateur IA · Muscu Tracker{% endblock %}
+
+{% block content %}
+<div x-data="gen()">
+  <a href="/programme" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Programme</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Générateur IA</h1>
+  <p style="color:var(--text-2); font-size:0.85rem; margin:-4px 0 14px;">
+    Décris ton objectif, l'IA construit un programme sur-mesure que tu peux adopter en un clic.
+    <span style="color:var(--text-dim);">· <span x-text="quotaLeft"></span>/<span>{{ quota_limit }}</span> génération(s) restante(s) aujourd'hui</span>
+  </p>
+
+  {# ── Formulaire ─────────────────────────────────────────────── #}
+  <div class="card" x-show="!program" style="display:grid; gap:12px;">
+    <label class="gen-field">
+      <span>Objectif</span>
+      <select class="field" x-model="form.objectif">
+        {% for o in objectifs %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+      </select>
+    </label>
+
+    <label class="gen-field">
+      <span>Niveau</span>
+      <select class="field" x-model="form.niveau">
+        {% for n in niveaux %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+      </select>
+    </label>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <label class="gen-field">
+        <span>Séances / semaine</span>
+        <select class="field" x-model.number="form.frequence">
+          {% for f in [2,3,4,5,6] %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="gen-field">
+        <span>Durée / séance</span>
+        <select class="field" x-model.number="form.duree">
+          {% for d in [30,45,60,75,90] %}<option value="{{ d }}">{{ d }} min</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <label class="gen-field">
+      <span>Lieu / matériel</span>
+      <select class="field" x-model="form.lieu">
+        {% for l in lieux %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+      </select>
+    </label>
+
+    <label class="gen-field">
+      <span>Contraintes, blessures, préférences <span style="color:var(--text-dim); font-weight:400;">(optionnel)</span></span>
+      <textarea class="field" rows="2" maxlength="400" x-model="form.contraintes"
+        placeholder="Ex : épaule droite fragile, pas de soulevé de terre, je préfère les haltères…"></textarea>
+    </label>
+
+    <button type="button" class="btn primary label-icon" style="justify-content:center;"
+      :disabled="loading || quotaLeft <= 0" @click="generate()">
+      <template x-if="!loading"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg></template>
+      <span x-text="loading ? 'Génération en cours…' : 'Générer mon programme'"></span>
+    </button>
+    <div x-show="error" x-text="error" style="color:var(--danger); font-size:0.82rem; text-align:center;"></div>
+    <div x-show="quotaLeft <= 0" style="color:var(--text-dim); font-size:0.78rem; text-align:center;">
+      Limite quotidienne atteinte — reviens demain.
+    </div>
+  </div>
+
+  {# ── Preview du programme généré ────────────────────────────── #}
+  <div x-show="program" x-cloak>
+    <div class="card" style="border-color:var(--accent);">
+      <div class="label-icon" style="justify-content:space-between; margin-bottom:6px;">
+        <h2 style="margin:0; font-size:1.05rem; color:var(--text-1);" x-text="program?.name"></h2>
+        <span class="tier-pill" style="background:var(--accent-bg); color:var(--accent); font-size:0.62rem; font-weight:600; letter-spacing:1px; padding:3px 8px; border-radius:6px;">IA</span>
+      </div>
+      <p x-show="program?.notes" x-text="program?.notes" style="color:var(--text-2); font-size:0.82rem; line-height:1.45; margin:0;"></p>
+    </div>
+
+    <template x-for="(exos, sname) in program?.seances" :key="sname">
+      <div class="card" style="padding:12px 14px;">
+        <h3 class="label-icon" style="margin:0 0 8px; font-size:0.95rem; color:var(--text-1);">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>
+          <span x-text="sname"></span>
+          <span style="color:var(--text-dim); font-weight:400; font-size:0.78rem;" x-text="'· ' + exos.length + ' exos'"></span>
+        </h3>
+        <template x-for="(e, i) in exos" :key="i">
+          <div class="gen-exo">
+            <span class="gen-exo-name" x-text="e.name"></span>
+            <span class="gen-exo-meta">
+              <span x-text="e.sets + ' × ' + (e.reps || '—')"></span>
+              <span class="gen-exo-muscle" x-text="e.muscle"></span>
+            </span>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    {# Planning #}
+    <div class="card" style="padding:12px 14px;">
+      <h3 class="label-icon" style="margin:0 0 8px; font-size:0.9rem; color:var(--text-1);"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning</h3>
+      <div class="gen-planning">
+        <template x-for="day in days" :key="day">
+          <div class="gen-day" :class="{ 'gen-day-on': program?.planning?.[day] }">
+            <span class="gen-day-l" x-text="day.slice(0,3)"></span>
+            <span class="gen-day-v" x-text="program?.planning?.[day] || 'Repos'"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    {# Actions #}
+    <div style="display:flex; gap:10px; margin:14px 0 4px;">
+      <button type="button" class="btn btn-cancel" style="flex:1;" @click="reset()">↺ Régénérer</button>
+      <form method="post" action="/generator/apply" style="flex:2; margin:0;">
+        <input type="hidden" name="program" :value="JSON.stringify(program)">
+        <button type="submit" class="btn primary" style="width:100%;" data-haptic="1"
+          x-ref="adopt" @click="confirmAdopt($event)">Adopter ce programme</button>
+      </form>
+    </div>
+    <p style="color:var(--text-dim); font-size:0.74rem; text-align:center; margin:6px 0 0;">
+      Adopter remplace tes séances actuelles. Ton historique est conservé.
+    </p>
+  </div>
+</div>
+
+<style>
+  [x-cloak] { display:none !important; }
+  .gen-field { display:flex; flex-direction:column; gap:5px; }
+  .gen-field > span { font-size:0.78rem; color:var(--text-2); font-weight:500; }
+  .gen-exo { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:7px 0; border-bottom:0.5px solid var(--border-subtle); }
+  .gen-exo:last-child { border-bottom:none; }
+  .gen-exo-name { font-size:0.86rem; color:var(--text-1); }
+  .gen-exo-meta { display:flex; align-items:center; gap:8px; flex-shrink:0; font-size:0.74rem; color:var(--text-2); }
+  .gen-exo-muscle { color:var(--accent); background:var(--accent-bg); padding:2px 7px; border-radius:6px; font-size:0.66rem; }
+  .gen-planning { display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; }
+  .gen-day { text-align:center; padding:6px 2px; border-radius:7px; background:var(--bg-elevated); }
+  .gen-day-on { background:var(--accent-bg); }
+  .gen-day-l { display:block; font-size:0.62rem; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; }
+  .gen-day-v { display:block; font-size:0.6rem; color:var(--text-2); margin-top:2px; line-height:1.1; min-height:1.4em; }
+  .gen-day-on .gen-day-v { color:var(--accent); }
+</style>
+
+<script>
+  function gen() {
+    return {
+      days: {{ ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"]|tojson }},
+      form: { objectif: '{{ objectifs[0] }}', niveau: '{{ niveaux[1] if niveaux|length > 1 else niveaux[0] }}', frequence: 4, lieu: '{{ lieux[0] }}', duree: 60, contraintes: '' },
+      loading: false,
+      error: '',
+      program: null,
+      quotaLeft: {{ quota_remaining }},
+      _armed: false,
+      async generate() {
+        if (this.loading || this.quotaLeft <= 0) return;
+        this.loading = true; this.error = '';
+        try {
+          const resp = await fetch('/generator/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.form),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.ok) {
+            this.error = data.error || 'La génération a échoué. Réessaie.';
+          } else {
+            this.program = data.program;
+            if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        } catch (e) {
+          this.error = 'Erreur réseau. Réessaie.';
+        } finally {
+          this.loading = false;
+        }
+      },
+      reset() { this.program = null; this.error = ''; this._armed = false; window.scrollTo({ top: 0, behavior: 'smooth' }); },
+      confirmAdopt(ev) {
+        // Inline-confirm (jamais de confirm() natif) : 1er clic arme, 2e adopte.
+        if (this._armed) return; // 2e clic → laisse le form se soumettre
+        ev.preventDefault();
+        this._armed = true;
+        const btn = this.$refs.adopt;
+        btn.textContent = 'Confirmer le remplacement ?';
+        btn.style.borderColor = 'var(--warning)';
+        setTimeout(() => { this._armed = false; btn.textContent = 'Adopter ce programme'; btn.style.borderColor = ''; }, 4000);
+      },
+    };
+  }
+</script>
+{% endblock %}

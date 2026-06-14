@@ -55,6 +55,12 @@
     <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip %}chevron-right{% else %}lock{% endif %}"/></svg>
   </a>
 
+  <a href="/generator" class="card plus-link plus-row{% if not is_vip %} plus-locked{% endif %}">
+    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>
+    <div class="plus-row-txt"><h3>Générateur IA{% if not is_vip %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Un programme sur-mesure généré par l'IA.</p></div>
+    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip %}chevron-right{% else %}lock{% endif %}"/></svg>
+  </a>
+
   <a href="/nutrition" class="card plus-link plus-row{% if not is_vip %} plus-locked{% endif %}">
     <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>
     <div class="plus-row-txt"><h3>Nutrition{% if not is_vip %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Calories, macros et suivi des repas.</p></div>

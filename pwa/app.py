@@ -30,6 +30,7 @@ from routes.coach import bp as coach_bp
 from routes.premium import bp as premium_bp
 from routes.billing import bp as billing_bp
 from routes.admin import bp as admin_bp
+from routes.generator import bp as generator_bp
 
 from core import db as core_db
 
@@ -105,6 +106,7 @@ app.register_blueprint(coach_bp)
 app.register_blueprint(premium_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(generator_bp)
 
 
 # ────────────────────────────────────────────────────────────────
