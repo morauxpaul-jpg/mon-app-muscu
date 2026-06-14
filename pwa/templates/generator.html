@@ -8,7 +8,7 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Générateur IA</h1>
   <p style="color:var(--text-2); font-size:0.85rem; margin:-4px 0 14px;">
     Décris ton objectif, l'IA construit un programme sur-mesure que tu peux adopter en un clic.
-    <span style="color:var(--text-dim);">· <span x-text="quotaLeft"></span>/<span>{{ quota_limit }}</span> génération(s) restante(s) aujourd'hui</span>
+    <span style="color:var(--text-dim);">· <span x-text="quotaLeft"></span>/<span>{{ quota_limit }}</span> génération(s) restante(s) cette semaine</span>
   </p>
 
   {# ── Formulaire ─────────────────────────────────────────────── #}
@@ -62,7 +62,7 @@
     </button>
     <div x-show="error" x-text="error" style="color:var(--danger); font-size:0.82rem; text-align:center;"></div>
     <div x-show="quotaLeft <= 0" style="color:var(--text-dim); font-size:0.78rem; text-align:center;">
-      Limite quotidienne atteinte — reviens demain.
+      Limite hebdomadaire atteinte — reviens dans quelques jours.
     </div>
   </div>
 

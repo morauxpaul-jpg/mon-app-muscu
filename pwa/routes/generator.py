@@ -31,7 +31,7 @@ bp = Blueprint("generator", __name__)
 
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 2600
-DAILY_GEN_QUOTA = 5  # générations / jour / VIP (protège le coût API)
+WEEKLY_GEN_QUOTA = 3  # générations / semaine glissante (7 j) / VIP — protège le coût API
 
 # Muscles canoniques (alignés sur seance.MUSCLE_LIST / body map).
 MUSCLES = [
@@ -195,12 +195,12 @@ def _build_prompt(params: dict) -> str:
 # ────────────────────────────────────────────────────────────────
 # Quota
 # ────────────────────────────────────────────────────────────────
-def _gen_used_today(user_id: str) -> int:
-    """Nb de générations réussies aujourd'hui (via la table events). Best-effort :
-    si la table n'existe pas encore (migration v28 non appliquée), renvoie 0 —
-    le backstop Flask-Limiter protège alors seul contre l'abus."""
+def _gen_used_week(user_id: str) -> int:
+    """Nb de générations réussies sur les 7 derniers jours (via la table events).
+    Best-effort : si la table n'existe pas encore (migration v28 non appliquée),
+    renvoie 0 — le backstop Flask-Limiter protège alors seul contre l'abus."""
     import datetime as _dt
-    since = _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+    since = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=7)).isoformat()
     try:
         client = core_db.get_client()
         resp = (
@@ -225,8 +225,8 @@ def index():
     return render_template(
         "generator.html", active="plus",
         objectifs=OBJECTIFS, niveaux=NIVEAUX, lieux=LIEUX,
-        quota_remaining=max(0, DAILY_GEN_QUOTA - _gen_used_today(g.user_id)),
-        quota_limit=DAILY_GEN_QUOTA,
+        quota_remaining=max(0, WEEKLY_GEN_QUOTA - _gen_used_week(g.user_id)),
+        quota_limit=WEEKLY_GEN_QUOTA,
     )
 
 
@@ -236,10 +236,10 @@ def generate():
     if not getattr(g, "is_vip", False):
         return jsonify({"error": "Réservé aux membres PRO."}), 403
 
-    used = _gen_used_today(g.user_id)
-    if used >= DAILY_GEN_QUOTA:
+    used = _gen_used_week(g.user_id)
+    if used >= WEEKLY_GEN_QUOTA:
         return jsonify({
-            "error": f"Limite quotidienne atteinte ({DAILY_GEN_QUOTA}/jour). Reviens demain.",
+            "error": f"Limite hebdomadaire atteinte ({WEEKLY_GEN_QUOTA}/semaine). Reviens dans quelques jours.",
         }), 429
 
     f = request.get_json(silent=True) or {}
@@ -295,7 +295,7 @@ def generate():
     return jsonify({
         "ok": True,
         "program": program,
-        "quota_remaining": max(0, DAILY_GEN_QUOTA - (used + 1)),
+        "quota_remaining": max(0, WEEKLY_GEN_QUOTA - (used + 1)),
     })
 
 
