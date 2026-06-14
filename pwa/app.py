@@ -80,9 +80,13 @@ if not _flask_secret:
     )
 app.secret_key = _flask_secret or "dev-insecure-change-me"
 app.permanent_session_lifetime = timedelta(days=30)
-# Revalidation du tier VIP depuis la base (cf. before_request). Court pour
-# propager rapidement un passage VIP fait par l'admin, sans marteler la DB.
-VIP_CACHE_TTL = 120  # secondes
+# Revalidation du tier VIP depuis la base (cf. before_request). TTL asymétrique :
+#   - un VIP confirmé est re-vérifié peu souvent (évite de marteler la DB) ;
+#   - un FREE est re-vérifié fréquemment, pour qu'un passage VIP (grant admin OU
+#     achat Stripe) se propage en quelques secondes à la session du user, même
+#     sur un autre appareil — sans attendre la reconnexion.
+VIP_CACHE_TTL = 120       # secondes — re-check d'un VIP confirmé
+FREE_RECHECK_TTL = 15     # secondes — re-check d'un FREE (capte vite l'upgrade)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -139,18 +143,24 @@ def _require_login():
     # toutes les VIP_CACHE_TTL s pour propager les changements de tier.
     cached_vip = session.get("is_vip")
     checked_at = session.get("is_vip_ts", 0)
-    if cached_vip is None or (time.time() - checked_at) > VIP_CACHE_TTL:
-        # On profite de cette revalidation périodique pour vérifier que le
-        # compte auth existe toujours : après une suppression de compte, un
-        # cookie de session encore valide sur un AUTRE appareil pourrait sinon
-        # recréer des données orphelines via l'onboarding.
-        try:
-            if not core_db.auth_user_exists(user_id):
-                session.clear()
-                return redirect(url_for("landing"))
-        except Exception:
-            # Erreur transitoire (API auth indisponible) : on ne déconnecte pas.
-            pass
+    # TTL asymétrique : un FREE est re-vérifié vite (pour capter un upgrade
+    # admin/Stripe), un VIP confirmé l'est rarement (économise les appels DB).
+    ttl = VIP_CACHE_TTL if cached_vip else FREE_RECHECK_TTL
+    if cached_vip is None or (time.time() - checked_at) > ttl:
+        # La vérification d'existence du compte auth (API auth, plus coûteuse)
+        # reste sur la cadence LENTE : inutile de la refaire toutes les
+        # FREE_RECHECK_TTL s. Elle invalide les sessions d'un compte supprimé
+        # (un cookie encore valide sur un AUTRE appareil pourrait sinon recréer
+        # des données orphelines via l'onboarding).
+        if (time.time() - session.get("auth_check_ts", 0)) > VIP_CACHE_TTL:
+            try:
+                if not core_db.auth_user_exists(user_id):
+                    session.clear()
+                    return redirect(url_for("landing"))
+                session["auth_check_ts"] = time.time()
+            except Exception:
+                # Erreur transitoire (API auth indisponible) : on ne déconnecte pas.
+                pass
         try:
             profile = core_db.get_profile(user_id) or {}
             cached_vip = (profile.get("tier") or "free").strip().lower() == "vip"
