@@ -51,7 +51,11 @@ def _public_config() -> dict:
             "OK" if url else "VIDE",
             "OK" if anon else "VIDE",
         )
-    return {"supabase_url": url, "supabase_anon": anon}
+    # ID client OAuth Web Google (PUBLIC, pas un secret) — requis par le login
+    # natif Capacitor : le plugin l'utilise comme `serverClientId` pour obtenir
+    # un idToken dont l'audience est acceptée par Supabase. Inutile sur le web.
+    return {"supabase_url": url, "supabase_anon": anon,
+            "google_web_client_id": _env("GOOGLE_WEB_CLIENT_ID")}
 
 
 @bp.route("/login")

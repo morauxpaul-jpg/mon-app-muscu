@@ -10,7 +10,6 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from core import db as core_db
 from core import push as core_push
-from core.analytics import track
 from core.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -109,40 +108,12 @@ def send_reactivation():
     _require_admin()
     if not core_push.is_configured():
         return jsonify({"error": "Push non configuré (clés VAPID manquantes en env)."}), 503
-    try:
-        targets = core_db.get_inactive_user_ids(min_days=3, max_days=30)
-        subs = core_db.list_push_subscriptions_for_users(targets)
-    except Exception as e:
-        logger.error("send_reactivation gather FAILED: %s", e)
+    result = core_push.run_reactivation_push(min_days=3, max_days=30)
+    if not result.get("ok"):
+        if result.get("error") == "unconfigured":
+            return jsonify({"error": "Push non configuré (clés VAPID manquantes en env)."}), 503
         return jsonify({"error": "ciblage échoué"}), 500
-
-    payload = {
-        "title": "On reprend ? 💪",
-        "body": "Ta prochaine séance t'attend. Un petit effort aujourd'hui !",
-        "url": "/accueil",
-    }
-    sent, expired, errors = 0, 0, 0
-    for user_id, sub in subs:
-        status = core_push.send_push(sub, payload)
-        if status == "ok":
-            sent += 1
-        elif status == "expired":
-            expired += 1
-            try:
-                core_db.delete_push_subscription(sub.get("endpoint"))
-            except Exception:
-                pass
-        else:
-            errors += 1
-    try:
-        track("reactivation_push_sent", {"sent": sent, "expired": expired, "errors": errors},
-              user_id=session.get("user_id"))
-    except Exception:
-        pass
-    logger.info("reactivation push: sent=%s expired=%s errors=%s targets=%s",
-                sent, expired, errors, len(targets))
-    return jsonify({"ok": True, "sent": sent, "expired": expired,
-                    "errors": errors, "targets": len(targets)})
+    return jsonify(result)
 
 
 @bp.route("/admin/set-tier", methods=["POST"])

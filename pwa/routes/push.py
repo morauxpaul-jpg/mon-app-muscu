@@ -7,7 +7,9 @@
 Disponible à TOUS les users (free inclus) : la relance cible surtout les
 comptes gratuits qui décrochent.
 """
+import hmac
 import logging
+import os
 
 from flask import Blueprint, jsonify, request, g
 
@@ -18,6 +20,21 @@ from core.limiter import limiter
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("push", __name__)
+
+
+def _cron_authorized() -> bool:
+    """Vrai si la requête porte le secret cron (env CRON_SECRET).
+
+    Le secret est accepté via l'en-tête `X-Cron-Secret` ou le paramètre `?token=`
+    (certains schedulers ne savent envoyer que des query params). Comparaison à
+    temps constant. Si CRON_SECRET n'est pas configuré, l'endpoint est fermé.
+    """
+    expected = (os.getenv("CRON_SECRET", "") or "").strip()
+    if not expected:
+        return False
+    provided = (request.headers.get("X-Cron-Secret")
+                or request.args.get("token") or "").strip()
+    return bool(provided) and hmac.compare_digest(provided, expected)
 
 
 @bp.route("/push/config")
@@ -49,3 +66,22 @@ def unsubscribe():
     except Exception as e:
         logger.error("/push/unsubscribe FAILED: %s", e)
     return ("", 204)
+
+
+@bp.route("/tasks/reactivation", methods=["POST"])
+@limiter.limit("12 per hour")
+def cron_reactivation():
+    """Endpoint cron : envoie la relance push aux inactifs.
+
+    Pas de session — sécurisé par CRON_SECRET (en-tête X-Cron-Secret ou ?token=).
+    Public + exempté de CSRF (cf. app.py _PUBLIC_PATHS / _CSRF_EXEMPT_PATHS).
+    À appeler par un scheduler externe (Railway cron, cron-job.org, GitHub Actions)
+    une fois par jour, p. ex. :  curl -X POST -H "X-Cron-Secret: …" https://…/tasks/reactivation
+    """
+    if not _cron_authorized():
+        return jsonify({"error": "unauthorized"}), 401
+    result = core_push.run_reactivation_push(min_days=3, max_days=30)
+    if not result.get("ok"):
+        code = 503 if result.get("error") == "unconfigured" else 500
+        return jsonify(result), code
+    return jsonify(result)

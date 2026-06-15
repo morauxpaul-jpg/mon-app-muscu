@@ -784,6 +784,41 @@ def test_push_subscribe_stores_and_validates(fake_db, logged_in):
     assert bad.status_code == 400
 
 
+def test_cron_reactivation_requires_secret(client, monkeypatch):
+    """Sans CRON_SECRET configuré, l'endpoint est fermé (401)."""
+    monkeypatch.delenv("CRON_SECRET", raising=False)
+    r = client.post("/tasks/reactivation")
+    assert r.status_code == 401
+
+
+def test_cron_reactivation_rejects_wrong_secret(client, monkeypatch):
+    monkeypatch.setenv("CRON_SECRET", "s3cret")
+    r = client.post("/tasks/reactivation", headers={"X-Cron-Secret": "nope"})
+    assert r.status_code == 401
+
+
+def test_cron_reactivation_unconfigured_returns_503(client, monkeypatch):
+    """Bon secret mais clés VAPID absentes → 503 (rien envoyé)."""
+    monkeypatch.setenv("CRON_SECRET", "s3cret")
+    monkeypatch.delenv("VAPID_PUBLIC_KEY", raising=False)
+    monkeypatch.delenv("VAPID_PRIVATE_KEY", raising=False)
+    r = client.post("/tasks/reactivation", headers={"X-Cron-Secret": "s3cret"})
+    assert r.status_code == 503
+
+
+def test_cron_reactivation_runs_with_secret(client, monkeypatch):
+    """Bon secret + push configuré → délègue à run_reactivation_push, renvoie ses stats."""
+    import core.push as core_push
+    monkeypatch.setenv("CRON_SECRET", "s3cret")
+    monkeypatch.setattr(core_push, "run_reactivation_push",
+                        lambda **k: {"ok": True, "sent": 2, "expired": 1, "errors": 0, "targets": 3})
+    # Le secret passe aussi via ?token= (schedulers qui ne posent pas d'en-tête).
+    r = client.post("/tasks/reactivation?token=s3cret")
+    assert r.status_code == 200
+    data = json.loads(r.data)
+    assert data["sent"] == 2 and data["targets"] == 3
+
+
 def test_get_inactive_user_ids(fake_db):
     import datetime as _dt
     import core.db as db

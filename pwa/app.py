@@ -126,7 +126,7 @@ app.register_blueprint(push_bp)
 # une URL de politique de confidentialité consultable sans compte.
 # /billing/webhook : appelé par Stripe (pas de session) → public, sécurisé par
 # la signature Stripe et exempté de CSRF (cf. _CSRF_EXEMPT_PATHS).
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/.well-known/assetlinks.json", "/billing/webhook"}
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation"}
 
 
 @app.before_request
@@ -231,7 +231,7 @@ def _require_login():
 _CSRF_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # /auth/session = handshake de login (pas encore de session Flask, déjà protégé
 # par la vérification du JWT Supabase). Exempté.
-_CSRF_EXEMPT_PATHS = {"/auth/session", "/billing/webhook"}
+_CSRF_EXEMPT_PATHS = {"/auth/session", "/billing/webhook", "/tasks/reactivation"}
 
 
 def _csrf_enabled() -> bool:

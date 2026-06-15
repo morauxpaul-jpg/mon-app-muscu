@@ -27,18 +27,37 @@ Ce que la coquille apporte par rapport à la PWA :
   `com.google.android.gms.ads.APPLICATION_ID`) — actuellement l'ID de test,
   à remplacer avant la prod.
 
-## ⚠️ Bloquant connu : login Google dans la webview
+## Login Google natif (code en place — reste la config Google + le build)
 
 Google **interdit** son OAuth dans les webviews intégrées (erreur
-`403 disallowed_useragent`). Le flux actuel (supabase-js → accounts.google.com
-dans la page) fonctionnera dans Chrome/PWA mais **PAS dans l'app Capacitor**.
+`403 disallowed_useragent`). Le flux web (supabase-js → accounts.google.com)
+marche en Chrome/PWA mais **PAS dans l'app Capacitor**.
 
-Solution prévue (étape suivante) : connexion Google **native** dans la
-coquille → `supabase.auth.signInWithIdToken({ provider: 'google', token })`.
-Prérequis côté Google Cloud Console : créer un client OAuth **Android**
-(package `com.muscutracker.app` + SHA-1 de la clé) et réutiliser le client
-Web existant. Tant que ce n'est pas fait, l'app native ne permet pas de se
-connecter — ne pas publier avant.
+**Côté code (fait, 2026-06-15)** : `templates/login.html` détecte l'app native
+(`Capacitor.isNativePlatform()`) et bascule sur le **Google Sign-In natif** via
+le plugin `@capgo/capacitor-social-login` :
+`SocialLogin.initialize({ google: { webClientId } })` → `SocialLogin.login(...)`
+(avec nonce SHA-256) → `supabase.auth.signInWithIdToken({ provider:'google', token, nonce })`
+→ POST `/auth/session` (même bridge JWT que le web). Sur le web, `Capacitor` est
+absent → flux OAuth classique inchangé. Aucun changement backend (le JWT Supabase
+est validé comme avant).
+
+**Reste à faire (config + build, côté toi)** :
+1. **Google Cloud Console** :
+   - récupérer l'**ID client OAuth Web** existant (celui déjà utilisé par
+     Supabase) → le poser sur Railway dans `GOOGLE_WEB_CLIENT_ID` ;
+   - créer un **ID client OAuth Android** : type Android, package
+     `com.muscutracker.app`, empreinte **SHA-1** de la keystore de signature
+     (debug pour tester, release pour publier — `keytool -list -v -keystore …`).
+2. **Supabase** → Auth → Providers → Google : vérifier que le client Web est
+   bien le « Authorized Client ID » (sinon l'idToken sera rejeté).
+3. **Build** : `npm install` (récupère le plugin) → `npx cap sync android` →
+   tester sur téléphone. Le plugin lit `GOOGLE_WEB_CLIENT_ID` au runtime (servi
+   par Flask), donc rien à hardcoder dans la coquille.
+
+⚠️ Tant que `GOOGLE_WEB_CLIENT_ID` n'est pas posé **et** que l'ID client Android
+n'existe pas dans Google Cloud, le bouton natif affichera une erreur — ne pas
+publier avant d'avoir testé la connexion sur un vrai téléphone.
 
 ## Ce qu'il faut sur le PC pour compiler
 
@@ -66,7 +85,8 @@ et désormais : « contient des publicités » = OUI).
 ## Checklist avant publication
 
 - [ ] `capacitor.config.json` → `server.url` = domaine de prod
-- [ ] Login Google natif branché et testé sur téléphone (cf. bloquant)
+- [ ] `GOOGLE_WEB_CLIENT_ID` posé sur Railway + ID client OAuth Android créé (SHA-1)
+- [ ] Login Google natif testé sur téléphone (le code est en place, cf. section)
 - [ ] Compte AdMob créé, app déclarée → remplacer l'APPLICATION_ID du manifest
 - [ ] Blocs d'annonces créés → `ADMOB_BANNER_ID` / `ADMOB_INTERSTITIAL_ID`
       sur Railway

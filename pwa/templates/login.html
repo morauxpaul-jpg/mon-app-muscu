@@ -51,6 +51,7 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
     const SUPABASE_URL = {{ supabase_url|tojson }};
     const SUPABASE_ANON = {{ supabase_anon|tojson }};
+    const GOOGLE_WEB_CLIENT_ID = {{ google_web_client_id|tojson }};
     const errEl = document.getElementById('err');
 
     if (!SUPABASE_URL || !SUPABASE_ANON) {
@@ -61,13 +62,81 @@
       auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true }
     });
 
-    document.getElementById('google').addEventListener('click', async () => {
-      errEl.textContent = "";
+    // Dans l'app native Capacitor, l'OAuth Google en webview est interdit
+    // (403 disallowed_useragent). On bascule alors sur le Google Sign-In NATIF
+    // (plugin @capgo/capacitor-social-login) → idToken → signInWithIdToken.
+    // Sur le web/PWA, `Capacitor` est absent → flux OAuth classique inchangé.
+    const isNative = !!(window.Capacitor
+      && typeof window.Capacitor.isNativePlatform === 'function'
+      && window.Capacitor.isNativePlatform());
+
+    // ── Nonce sécurisé : digest SHA-256 → Google, brut → Supabase ──
+    function randHex(n) {
+      const a = new Uint8Array(n);
+      crypto.getRandomValues(a);
+      return Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function sha256Hex(msg) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+      return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function nativeGoogleLogin() {
+      const SocialLogin = window.Capacitor?.Plugins?.SocialLogin;
+      if (!SocialLogin) { errEl.textContent = "Plugin de connexion natif indisponible."; return; }
+      if (!GOOGLE_WEB_CLIENT_ID) { errEl.textContent = "Connexion native non configurée."; return; }
+
+      await SocialLogin.initialize({
+        google: { webClientId: GOOGLE_WEB_CLIENT_ID, mode: 'online' }
+      });
+
+      const rawNonce = randHex(32);
+      const nonceDigest = await sha256Hex(rawNonce);
+      const res = await SocialLogin.login({
+        provider: 'google',
+        options: { scopes: ['email', 'profile'], nonce: nonceDigest }
+      });
+      // La forme du retour varie selon la version du plugin.
+      const idToken = res?.result?.idToken || res?.idToken;
+      if (!idToken) { errEl.textContent = "Aucun jeton Google reçu."; return; }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google', token: idToken, nonce: rawNonce
+      });
+      if (error) { errEl.textContent = error.message; return; }
+      const accessToken = data?.session?.access_token;
+      if (!accessToken) { errEl.textContent = "Session Supabase introuvable."; return; }
+
+      // Même bridge que le web : on pose la session Flask via /auth/session.
+      const r = await fetch('/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ access_token: accessToken })
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        errEl.textContent = "Erreur : " + (j.error || r.status);
+        return;
+      }
+      window.location.replace('/accueil');
+    }
+
+    async function webGoogleLogin() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: window.location.origin + '/auth/bridge' }
       });
       if (error) errEl.textContent = error.message;
+    }
+
+    document.getElementById('google').addEventListener('click', async () => {
+      errEl.textContent = "";
+      try {
+        await (isNative ? nativeGoogleLogin() : webGoogleLogin());
+      } catch (e) {
+        errEl.textContent = (e && e.message) ? e.message : "Connexion impossible.";
+      }
     });
   </script>
 </body>

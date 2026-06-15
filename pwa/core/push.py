@@ -69,3 +69,65 @@ def send_push(subscription: dict, payload: dict) -> str:
     except Exception as e:
         logger.error("push send error: %s", e)
         return "error"
+
+
+# Payload par défaut de la relance des inactifs (réutilisé par l'admin et le cron).
+REACTIVATION_PAYLOAD = {
+    "title": "On reprend ? 💪",
+    "body": "Ta prochaine séance t'attend. Un petit effort aujourd'hui !",
+    "url": "/accueil",
+}
+
+
+def run_reactivation_push(min_days: int = 3, max_days: int = 30,
+                          payload: dict | None = None) -> dict:
+    """Cible les inactifs abonnés (min_days–max_days sans séance) et leur envoie
+    un push de relance. Source de vérité unique pour le bouton admin ET le cron.
+
+    - Ne dépend PAS du contexte requête Flask (utilisable depuis un script cron).
+    - Supprime au passage les abonnements morts (404/410).
+    - Best-effort : n'échoue jamais sur un envoi individuel.
+
+    Retour : {"ok", "sent", "expired", "errors", "targets"} ou
+             {"ok": False, "error": "..."} si le push n'est pas configuré / ciblage KO.
+    """
+    # Imports différés : évite un cycle core.push ↔ core.db / core.analytics.
+    from core import db as core_db
+    from core import analytics
+
+    if not is_configured():
+        return {"ok": False, "error": "unconfigured"}
+
+    payload = payload or REACTIVATION_PAYLOAD
+    try:
+        targets = core_db.get_inactive_user_ids(min_days=min_days, max_days=max_days)
+        subs = core_db.list_push_subscriptions_for_users(targets)
+    except Exception as e:
+        logger.error("run_reactivation_push gather FAILED: %s", e)
+        return {"ok": False, "error": "gather_failed"}
+
+    sent, expired, errors = 0, 0, 0
+    for _user_id, sub in subs:
+        status = send_push(sub, payload)
+        if status == "ok":
+            sent += 1
+        elif status == "expired":
+            expired += 1
+            try:
+                core_db.delete_push_subscription(sub.get("endpoint"))
+            except Exception:
+                pass
+        else:
+            errors += 1
+
+    try:
+        analytics.track("reactivation_push_sent",
+                        {"sent": sent, "expired": expired, "errors": errors,
+                         "min_days": min_days, "max_days": max_days},
+                        user_id=None, tier="system")
+    except Exception:
+        pass
+    logger.info("reactivation push: sent=%s expired=%s errors=%s targets=%s",
+                sent, expired, errors, len(targets))
+    return {"ok": True, "sent": sent, "expired": expired,
+            "errors": errors, "targets": len(targets)}
