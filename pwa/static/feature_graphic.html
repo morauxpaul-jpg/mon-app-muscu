@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1024px; height:500px; overflow:hidden; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(120% 140% at 88% 20%, rgba(120,200,255,0.22) 0%, rgba(120,200,255,0.05) 35%, rgba(10,10,15,0) 60%),
+      radial-gradient(90% 120% at 0% 100%, rgba(120,200,255,0.10) 0%, rgba(10,10,15,0) 55%),
+      #0a0a0f;
+    position:relative;
+    display:flex; align-items:center;
+  }
+  /* fines lignes décoratives */
+  body::after{
+    content:""; position:absolute; inset:0;
+    background:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px) 0 0/100% 56px;
+    mask: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+    opacity:.5;
+  }
+  .left { width:600px; padding:0 0 0 70px; position:relative; z-index:2; }
+  .brandrow { display:flex; align-items:center; gap:22px; margin-bottom:30px; }
+  .icon {
+    width:104px; height:104px; border-radius:26px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 0 28px rgba(120,200,255,.18);
+  }
+  .title { font-size:58px; font-weight:800; color:#fff; letter-spacing:-1.5px; line-height:1; }
+  .pro {
+    display:inline-block; margin-top:12px; font-size:15px; font-weight:800;
+    color:#0a0a0f; background:linear-gradient(135deg,#ffe14d,#ffd60a);
+    padding:4px 12px; border-radius:999px; letter-spacing:1px;
+    box-shadow:0 0 22px rgba(255,214,10,.35);
+  }
+  .tag { font-size:30px; font-weight:600; color:rgba(255,255,255,.92); line-height:1.25; margin-bottom:26px; }
+  .tag b { color:#78c8ff; }
+  .features { display:flex; flex-wrap:wrap; gap:10px 14px; max-width:560px; }
+  .chip {
+    font-size:17px; font-weight:600; color:rgba(255,255,255,.85);
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
+    padding:9px 16px; border-radius:14px; backdrop-filter:blur(6px);
+  }
+  .chip b{ color:#78c8ff; font-weight:800; }
+  /* carte stats à droite */
+  .right { position:absolute; right:64px; top:50%; transform:translateY(-50%); z-index:2; }
+  .card {
+    width:280px; border-radius:26px; padding:26px;
+    background:linear-gradient(160deg, rgba(30,33,42,.92), rgba(16,18,24,.92));
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 24px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .streak { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  .flame { font-size:46px; filter:drop-shadow(0 0 14px rgba(255,159,10,.5)); }
+  .streak .n { font-size:46px; font-weight:800; color:#fff; line-height:1; }
+  .streak .l { font-size:14px; color:rgba(255,255,255,.55); }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .stat { background:rgba(255,255,255,.05); border-radius:16px; padding:14px; }
+  .stat .v { font-size:26px; font-weight:800; color:#78c8ff; line-height:1; }
+  .stat .v.green{ color:#34c759; }
+  .stat .k { font-size:12px; color:rgba(255,255,255,.5); margin-top:6px; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brandrow">
+      <img class="icon" src="icon-512.png" alt="">
+      <div>
+        <div class="title">Muscu Tracker</div>
+        <span class="pro">PRO</span>
+      </div>
+    </div>
+    <div class="tag">Suis tes séances.<br>Visualise ta <b>progression</b>.</div>
+    <div class="features">
+      <span class="chip"><b>+</b> Programmes & plannings</span>
+      <span class="chip"><b>+</b> Carte musculaire</span>
+      <span class="chip"><b>+</b> Coach IA</span>
+      <span class="chip"><b>+</b> Hors-ligne</span>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      <div class="streak">
+        <div class="flame">🔥</div>
+        <div>
+          <div class="n">8</div>
+          <div class="l">semaines d'affilée</div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v">3/3</div><div class="k">séances</div></div>
+        <div class="stat"><div class="v green">13 236</div><div class="k">kg cette semaine</div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

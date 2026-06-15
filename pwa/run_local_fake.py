@@ -165,8 +165,9 @@ def test_seed():
     import time
     session.clear()
     session["user_id"] = USER_ID
-    session["email"] = "paul@example.com"
+    session["email"] = "alex@example.com"
     session["is_vip"] = True
+    session["is_vip_full"] = True
     session["is_vip_ts"] = time.time()
     session["onboarded"] = True
     session.permanent = True
