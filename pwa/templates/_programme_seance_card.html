@@ -49,7 +49,7 @@
       </template>
     </div>
 
-    <div x-show="showMove" x-transition style="display:flex; gap:6px; margin-bottom:10px; align-items:center;">
+    <div x-show="showMove" x-transition class="flex-show" style="gap:6px; margin-bottom:10px; align-items:center;">
       <label class="field-label" style="margin:0; white-space:nowrap;">Déplacer vers</label>
       <select class="field" style="flex:1; margin:0;"
               @change="moveSeanceToProg(sname, $event.target.value); showMove=false; $event.target.value=''">
@@ -61,7 +61,7 @@
       </select>
     </div>
 
-    <div x-show="renaming" x-transition style="display:flex; gap:6px; margin-bottom:10px;">
+    <div x-show="renaming" x-transition class="flex-show" style="gap:6px; margin-bottom:10px;">
       <input type="text" class="rn-input field" x-model="newName" style="flex:1;" maxlength="60"
              @keydown.enter.prevent="renameSeance(sname, newName); renaming=false"
              @keydown.escape="renaming=false">

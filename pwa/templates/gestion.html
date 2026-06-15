@@ -81,7 +81,7 @@
           <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" x-show="!c" @click="c=true">
             <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>
           </button>
-          <div x-show="c" x-cloak style="display:flex; gap:4px;">
+          <div x-show="c" x-cloak class="flex-show" style="gap:4px;">
             <button type="button" class="btn" style="padding:4px 8px; font-size:0.7rem;" @click="c=false">Non</button>
             <button type="submit" class="btn btn-danger" style="padding:4px 8px; font-size:0.7rem;">Oui</button>
           </div>
@@ -122,7 +122,7 @@
                 :disabled="!oldName || !newName || oldName === newName">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Renommer dans tout l'historique
         </button>
-        <div x-show="confirm" x-cloak style="display:flex; gap:8px; margin-top:10px;">
+        <div x-show="confirm" x-cloak class="flex-show" style="gap:8px; margin-top:10px;">
           <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
           <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
         </div>

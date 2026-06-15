@@ -20,16 +20,21 @@
   {% endif %}
 
   {% if show_reactivation %}
+    {# x-show pilote `display` du wrapper ; le flex reste sur la carte interne
+       pour qu'Alpine ne l'écrase pas (sinon le bandeau retombe en block et le
+       bouton « Reprendre » déborde sur le contenu du dessous). #}
     <div x-data="{ show: true }" x-show="show" x-init="if (sessionStorage.getItem('reac_hidden')) show = false"
-         class="card" style="border-color:var(--accent); background:linear-gradient(135deg, rgba(120,200,255,0.09), rgba(120,200,255,0.02)); display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-      <span style="font-size:1.7rem; line-height:1;">👋</span>
-      <div style="flex:1; min-width:0;">
-        <div style="font-weight:600; color:var(--text-1); font-size:0.92rem;">Content de te revoir !</div>
-        <div style="font-size:0.8rem; color:var(--text-2);">Ça fait {{ days_inactive }} jours — on reprend en douceur&nbsp;?</div>
+         style="margin-bottom:12px;">
+      <div class="card" style="border-color:var(--accent); background:linear-gradient(135deg, rgba(120,200,255,0.09), rgba(120,200,255,0.02)); display:flex; align-items:center; gap:12px; margin-bottom:0;">
+        <span style="font-size:1.7rem; line-height:1;">👋</span>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; color:var(--text-1); font-size:0.92rem;">Content de te revoir !</div>
+          <div style="font-size:0.8rem; color:var(--text-2);">Ça fait {{ days_inactive }} jours — on reprend en douceur&nbsp;?</div>
+        </div>
+        <a href="/seance" class="btn primary" style="flex-shrink:0; padding:8px 14px;" data-haptic="1">Reprendre</a>
+        <button type="button" @click="show = false; sessionStorage.setItem('reac_hidden','1')" aria-label="Masquer"
+                style="flex-shrink:0; background:none; border:none; color:var(--text-dim); font-size:1.3rem; line-height:1; cursor:pointer; padding:0 2px;">×</button>
       </div>
-      <a href="/seance" class="btn primary" style="flex-shrink:0; padding:8px 14px;" data-haptic="1">Reprendre</a>
-      <button type="button" @click="show = false; sessionStorage.setItem('reac_hidden','1')" aria-label="Masquer"
-              style="background:none; border:none; color:var(--text-dim); font-size:1.3rem; line-height:1; cursor:pointer; padding:0 2px;">×</button>
     </div>
   {% endif %}
 

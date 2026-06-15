@@ -271,6 +271,13 @@ input[type="url"], textarea, select {
 }
 [x-cloak] { display: none !important; }
 
+/* Flex compatible Alpine x-show. x-show retire la propriété `display` inline
+   quand l'élément s'affiche : un `display:flex` posé en inline saute alors
+   (l'élément retombe en block, boutons empilés). En passant le flex par une
+   classe, il survit à x-show. À utiliser au lieu de style="display:flex" sur
+   tout élément piloté par x-show. */
+.flex-show { display: flex; }
+
 /* ── Chrono de repos ── */
 .rest-timer-overlay {
   position: fixed;

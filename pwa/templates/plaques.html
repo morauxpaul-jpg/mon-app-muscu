@@ -70,7 +70,7 @@
         <input type="checkbox" x-model="limitMode">
         <span>Je limite mon stock de disques (matériel maison)</span>
       </label>
-      <div x-show="limitMode" x-transition.duration.150ms style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+      <div x-show="limitMode" x-transition.duration.150ms class="flex-show" style="margin-top:8px; flex-direction:column; gap:6px;">
         <div style="font-size:0.72rem; color:var(--text-3);">Combien de disques de chaque tu possèdes <b>par côté</b> (vide = illimité) :</div>
         <template x-for="p in allPlates.filter(x => enabled.includes(x))" :key="'q'+p">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
