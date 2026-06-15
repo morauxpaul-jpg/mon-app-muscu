@@ -52,6 +52,7 @@ class FakeQuery:
         self._order_desc = False
         self._limit = None
         self._maybe_single = False
+        self._on_conflict = None
 
     # builders
     def select(self, *_args, **_kwargs):
@@ -67,9 +68,10 @@ class FakeQuery:
         self._payload = payload
         return self
 
-    def upsert(self, payload):
+    def upsert(self, payload, **kwargs):
         self._op = "upsert"
         self._payload = payload
+        self._on_conflict = kwargs.get("on_conflict")
         return self
 
     def update(self, payload):
@@ -125,7 +127,7 @@ class FakeQuery:
             return FakeResponse(payload)
         if self._op == "upsert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]
-            key = "id" if self._table == "profiles" else "user_id"
+            key = self._on_conflict or ("id" if self._table == "profiles" else "user_id")
             for p in payload:
                 p = dict(p)
                 existing = next((r for r in rows if r.get(key) == p.get(key)), None)

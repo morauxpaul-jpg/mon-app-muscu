@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v109-2026-06-14-nudge-relance";
+const CACHE_VERSION = "v110-2026-06-15-push-web";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -128,15 +128,19 @@ self.addEventListener("message", (event) => {
   }
 });
 
-// ── Notification click : ouvre l'app ─────────────────────────────
+// ── Notification click : ouvre l'app sur l'URL portée par la notif ───
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/accueil";
   event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) => {
-      if (clients.length > 0) {
-        return clients[0].focus();
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ("focus" in c) {
+          if ("navigate" in c) { try { c.navigate(url); } catch (e) {} }
+          return c.focus();
+        }
       }
-      return self.clients.openWindow("/accueil");
+      return self.clients.openWindow(url);
     })
   );
 });
@@ -186,4 +190,22 @@ self.addEventListener("fetch", (event) => {
       })
       .catch(() => caches.match(req).then((cached) => cached || caches.match("/accueil")))
   );
+});
+
+// ── Push web (relance des inactifs) ──────────────────────────────
+// Le clic est géré par le handler `notificationclick` unique ci-dessus
+// (il lit event.notification.data.url).
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) {}
+  const title = data.title || "Muscu Tracker";
+  const options = {
+    body: data.body || "",
+    icon: "/static/icon-192.png",
+    badge: "/static/icon-192.png",
+    tag: data.tag || "muscu-push",
+    vibrate: [120, 60, 120],
+    data: { url: data.url || "/accueil" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
 });

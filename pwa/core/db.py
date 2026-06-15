@@ -582,6 +582,90 @@ def get_referred_by(user_id: str) -> Optional[str]:
         return None
 
 
+# ── Push web (relance des inactifs, migration v30) ───────────────
+def save_push_subscription(user_id: str, sub: dict) -> None:
+    """Upsert d'un abonnement push (clé = endpoint, unique). `sub` au format
+    PushSubscription.toJSON() : {endpoint, keys:{p256dh, auth}}."""
+    endpoint = (sub or {}).get("endpoint")
+    keys = (sub or {}).get("keys") or {}
+    if not endpoint or not keys.get("p256dh") or not keys.get("auth"):
+        raise ValueError("subscription incomplète")
+    client = get_client()
+    client.table("push_subscriptions").upsert(
+        {"user_id": user_id, "endpoint": endpoint,
+         "p256dh": keys["p256dh"], "auth": keys["auth"]},
+        on_conflict="endpoint",
+    ).execute()
+
+
+def delete_push_subscription(endpoint: str) -> None:
+    if not endpoint:
+        return
+    client = get_client()
+    client.table("push_subscriptions").delete().eq("endpoint", endpoint).execute()
+
+
+def _row_to_subscription(row: dict) -> dict:
+    """Ligne DB → format attendu par pywebpush."""
+    return {
+        "endpoint": row.get("endpoint"),
+        "keys": {"p256dh": row.get("p256dh"), "auth": row.get("auth")},
+    }
+
+
+def list_push_subscriptions(user_id: str) -> list[dict]:
+    client = get_client()
+    try:
+        resp = client.table("push_subscriptions").select("*").eq("user_id", user_id).execute()
+        return [_row_to_subscription(r) for r in (resp.data or [])]
+    except Exception as e:
+        logger.error("list_push_subscriptions FAILED user=%s: %s", user_id, e)
+        return []
+
+
+def get_inactive_user_ids(min_days: int = 3, max_days: int = 30) -> set:
+    """user_id dont la dernière séance (perf réelle) remonte à entre `min_days`
+    et `max_days` jours — cibles de relance (ni actifs, ni partis depuis trop
+    longtemps). Exclut les comptes sans historique."""
+    import datetime as _dt
+    client = get_client()
+    try:
+        resp = client.table("history").select("user_id, date, reps, poids").execute()
+        rows = resp.data or []
+    except Exception as e:
+        logger.error("get_inactive_user_ids FAILED: %s", e)
+        return set()
+    last_by_user: dict = {}
+    for r in rows:
+        if int(r.get("reps") or 0) <= 0 and float(r.get("poids") or 0) <= 0:
+            continue
+        uid = r.get("user_id")
+        d = str(r.get("date") or "")[:10]
+        if uid and d and d > last_by_user.get(uid, ""):
+            last_by_user[uid] = d
+    today = _dt.date.today()
+    lo = (today - _dt.timedelta(days=max_days)).isoformat()
+    hi = (today - _dt.timedelta(days=min_days)).isoformat()
+    return {uid for uid, last in last_by_user.items() if lo <= last <= hi}
+
+
+def list_push_subscriptions_for_users(user_ids: set) -> list[tuple]:
+    """[(user_id, subscription_dict), …] pour un ensemble d'users (envoi groupé)."""
+    if not user_ids:
+        return []
+    client = get_client()
+    try:
+        resp = client.table("push_subscriptions").select("*").execute()
+        out = []
+        for r in (resp.data or []):
+            if r.get("user_id") in user_ids:
+                out.append((r.get("user_id"), _row_to_subscription(r)))
+        return out
+    except Exception as e:
+        logger.error("list_push_subscriptions_for_users FAILED: %s", e)
+        return []
+
+
 def list_coach_messages(user_id: str, conversation_id: str | None = None,
                          limit: int = 50) -> list[dict]:
     """Derniers messages du coach (rôle, content, created_at) en ordre

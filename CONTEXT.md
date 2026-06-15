@@ -173,7 +173,11 @@ pwa/
 ### Nudge de relance (rétention, 2026-06-14)
 - **Banner de retour** sur l'accueil : un user avec un historique mais inactif depuis ≥ `REACTIVATION_DAYS`=3 j (jours depuis la dernière perf réelle muscu/cardio) est accueilli par « Content de te revoir ! Ça fait N jours — on reprend en douceur ? » + bouton **Reprendre** (→ /seance). Dismissible (sessionStorage `reac_hidden`). Jamais pour un compte sans historique.
 - Event `reactivation_nudge_shown` ({days}), émis seulement sur vraie navigation (Sec-Fetch-Mode navigate). Logique dans `routes/accueil.py`.
-- **Phase 2 prévue** : push web (VAPID + pywebpush) pour relancer ceux qui ne rouvrent pas l'app — nécessite clés VAPID en env Railway + un déclencheur (bouton admin ou cron).
+- **Phase 2 — Push web** (2026-06-15) : notifications push (VAPID + pywebpush) pour relancer ceux qui ne rouvrent pas l'app.
+  - **Abonnement universel** (free + PRO) : bouton « Activer les notifications » dans Gestion (`static/js/push.js` → `window.enablePush`), + ré-abonnement silencieux à chaque page si permission déjà accordée. SW : handlers `push` + `notificationclick` (unifié, lit `data.url`). Stockage : table `push_subscriptions` (migration v30).
+  - **Endpoints** `routes/push.py` : `GET /push/config` (clé publique + `enabled`), `POST /push/subscribe`, `POST /push/unsubscribe`. `core/push.py` : `send_push(sub, payload)` via pywebpush (retour `ok`/`expired`/`error`/`unconfigured`).
+  - **Envoi** : `POST /admin/send-reactivation` (bouton admin, inline-confirm) → cible les inactifs 3–30 j abonnés (`db.get_inactive_user_ids`), envoie, supprime les abonnements expirés (410/404). Event `reactivation_push_sent`. Un cron pourra appeler la même logique.
+  - **Env Railway requis** : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (base64url), `VAPID_SUBJECT` (`mailto:…`). iOS : push seulement si l'app est installée (écran d'accueil).
 
 ### Partage de progression (croissance, 2026-06-14)
 - **Carte partageable** : bouton « Partager ma progression » sur l'accueil (tous les users). `static/js/share-card.js` génère côté client une image (canvas 1080×1080 : streak/tonnage/séances/exos + branding) puis la partage via l'**API Web Share** (`navigator.share({files})` si supporté → sinon texte+lien → sinon téléchargement PNG + copie du lien, avec toast). Données injectées via `<script type="application/json" id="share-data">` sur l'accueil ; lien = `location.origin` (robuste aux domaines custom).
@@ -240,6 +244,7 @@ pwa/
 ## Configuration
 
 ### Variables d'environnement
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` — push web (relance des inactifs ; sans elles, le push est inactif et `/push/config` renvoie `enabled:false`)
 - `SUPABASE_URL` — URL du projet Supabase
 - `SUPABASE_SERVICE_ROLE_KEY` — Clé service_role (jamais exposée au client)
 - `FLASK_SECRET_KEY` — Secret pour signer les cookies de session (active aussi `SESSION_COOKIE_SECURE` en prod)
@@ -289,7 +294,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v109-2026-06-14-nudge-relance` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v110-2026-06-15-push-web` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

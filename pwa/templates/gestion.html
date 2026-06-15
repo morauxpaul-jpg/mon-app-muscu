@@ -189,6 +189,21 @@
     </form>
   </div>
 
+  {# ── Section : Notifications push (universel, free + PRO) ──── #}
+  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>NOTIFICATIONS</h2>
+  <div class="card">
+    <p style="font-size:0.84rem; color:var(--text-2); margin:0 0 10px; line-height:1.5;">
+      Reçois un petit rappel quand tu n'as pas fait ta séance depuis quelques jours — pour ne rien lâcher.
+    </p>
+    <button type="button" class="btn primary label-icon" data-push-enable data-haptic="1"
+            style="width:100%; justify-content:center;" onclick="enablePush(this)">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#bell"/></svg>Activer les notifications
+    </button>
+    <p style="font-size:0.72rem; color:var(--text-dim); margin:8px 0 0; text-align:center;">
+      Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.
+    </p>
+  </div>
+
   {# ── Section : Mise à jour ───────────────── #}
   <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>MISE À JOUR</h2>
 

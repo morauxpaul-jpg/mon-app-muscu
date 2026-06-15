@@ -33,6 +33,7 @@ from routes.admin import bp as admin_bp
 from routes.generator import bp as generator_bp
 from routes.share import bp as share_bp
 from routes.parrainage import bp as parrainage_bp
+from routes.push import bp as push_bp
 
 from core import db as core_db
 
@@ -115,6 +116,7 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(generator_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(parrainage_bp)
+app.register_blueprint(push_bp)
 
 
 # ────────────────────────────────────────────────────────────────

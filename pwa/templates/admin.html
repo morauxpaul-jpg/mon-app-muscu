@@ -33,6 +33,14 @@
     <svg class="icon icon-sm" style="color:var(--text-dim);"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
+  {# ── Relance des inactifs (push) ── #}
+  <div class="card" style="margin-bottom:12px;">
+    <div class="label-icon" style="color:var(--text-1); font-size:0.9rem; margin-bottom:8px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>Relance des inactifs</div>
+    <p style="font-size:0.76rem; color:var(--text-dim); margin:0 0 10px;">Envoie un push aux abonnés inactifs depuis 3 à 30 jours.</p>
+    <button type="button" id="reac-btn" class="btn" style="width:100%;" onclick="adminSendReactivation(this)">Envoyer la relance</button>
+    <div id="reac-result" style="font-size:0.78rem; color:var(--text-2); margin-top:8px; display:none;"></div>
+  </div>
+
   {# ── Recherche + liste users ── #}
   <div class="card" style="padding:10px 12px;">
     <input id="admin-search" type="search" class="field" placeholder="🔍 Rechercher email ou prénom…" style="width:100%; margin:0;" autocomplete="off">
@@ -186,6 +194,37 @@
         .catch(function() {
           btn.disabled = false;
           btn.textContent = 'Erreur — réessayer';
+        });
+    }
+
+    // Relance push des inactifs (inline-confirm : 1er clic arme, 2e envoie).
+    function adminSendReactivation(btn) {
+      if (!btn.dataset.armed) {
+        btn.dataset.armed = '1';
+        btn.textContent = 'Confirmer l\'envoi ?';
+        btn.style.borderColor = 'var(--warning)';
+        setTimeout(function() {
+          if (btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = 'Envoyer la relance'; btn.style.borderColor = ''; }
+        }, 4000);
+        return;
+      }
+      delete btn.dataset.armed;
+      btn.disabled = true;
+      btn.textContent = 'Envoi…';
+      var res = document.getElementById('reac-result');
+      fetch('/admin/send-reactivation', { method: 'POST' })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+        .then(function(x) {
+          btn.disabled = false;
+          btn.textContent = 'Envoyer la relance';
+          btn.style.borderColor = '';
+          res.style.display = 'block';
+          if (!x.ok) { res.style.color = 'var(--danger)'; res.textContent = x.d.error || 'Échec.'; return; }
+          res.style.color = 'var(--text-2)';
+          res.textContent = '✓ ' + x.d.sent + ' envoyé(s) · ' + x.d.targets + ' cible(s) · ' + x.d.expired + ' expiré(s) · ' + x.d.errors + ' erreur(s)';
+        })
+        .catch(function() {
+          btn.disabled = false; btn.textContent = 'Erreur — réessayer';
         });
     }
   </script>

@@ -756,3 +756,42 @@ def test_no_nudge_for_new_user_without_history(fake_db, logged_in):
     _seed_prog(fake_db, planning={"Lundi": "Push"})
     html = logged_in.get("/accueil").data.decode("utf-8")
     assert "Content de te revoir" not in html
+
+
+# ── Push web (relance des inactifs) ──────────────────────────────
+
+def test_push_config_endpoint(fake_db, logged_in):
+    import json as _json
+    r = logged_in.get("/push/config")
+    assert r.status_code == 200
+    data = _json.loads(r.data)
+    # Sans clés VAPID en env (tests) : désactivé.
+    assert data["enabled"] is False and data["public_key"] == ""
+
+
+def test_push_subscribe_stores_and_validates(fake_db, logged_in):
+    sub = {"endpoint": "https://push.example/abc",
+           "keys": {"p256dh": "k1", "auth": "a1"}}
+    r = logged_in.post("/push/subscribe", json=sub, headers={"X-CSRFToken": CSRF})
+    assert r.status_code == 204
+    rows = fake_db.tables.get("push_subscriptions", [])
+    assert len(rows) == 1 and rows[0]["endpoint"] == "https://push.example/abc"
+    # Idempotent : même endpoint → toujours 1 ligne.
+    logged_in.post("/push/subscribe", json=sub, headers={"X-CSRFToken": CSRF})
+    assert len(fake_db.tables["push_subscriptions"]) == 1
+    # Subscription incomplète → 400.
+    bad = logged_in.post("/push/subscribe", json={"endpoint": "x"}, headers={"X-CSRFToken": CSRF})
+    assert bad.status_code == 400
+
+
+def test_get_inactive_user_ids(fake_db):
+    import datetime as _dt
+    import core.db as db
+    today = _dt.date.today()
+    # u-old : dernière séance il y a 5 j → cible. u-recent : hier → non.
+    fake_db.table("history").insert({"user_id": "u-old", "date": (today - _dt.timedelta(days=5)).isoformat(),
+                                     "reps": 8, "poids": 80, "seance": "Push", "exercice": "DC"}).execute()
+    fake_db.table("history").insert({"user_id": "u-recent", "date": (today - _dt.timedelta(days=1)).isoformat(),
+                                     "reps": 8, "poids": 80, "seance": "Push", "exercice": "DC"}).execute()
+    inactive = db.get_inactive_user_ids(min_days=3, max_days=30)
+    assert "u-old" in inactive and "u-recent" not in inactive
