@@ -71,6 +71,36 @@ def funnel():
     return render_template("funnel.html", active="plus", funnel=data, days=days)
 
 
+@bp.route("/admin/send-test-push", methods=["POST"])
+@limiter.limit("20 per hour")
+def send_test_push():
+    """Envoie une notif de test à l'admin lui-même (ignore le filtre d'inactivité)
+    — pour vérifier la chaîne VAPID + abonnement + livraison."""
+    _require_admin()
+    if not core_push.is_configured():
+        return jsonify({"error": "Push non configuré (clés VAPID manquantes en env)."}), 503
+    uid = session.get("user_id")
+    subs = core_db.list_push_subscriptions(uid)
+    if not subs:
+        return jsonify({"error": "Aucun abonnement sur ce compte. Va dans Gestion → « Activer les notifications » sur cet appareil, puis réessaie."}), 400
+    payload = {"title": "Test ✅", "body": "Les notifications push fonctionnent !", "url": "/accueil"}
+    sent, expired, errors = 0, 0, 0
+    for sub in subs:
+        status = core_push.send_push(sub, payload)
+        if status == "ok":
+            sent += 1
+        elif status == "expired":
+            expired += 1
+            try:
+                core_db.delete_push_subscription(sub.get("endpoint"))
+            except Exception:
+                pass
+        else:
+            errors += 1
+    return jsonify({"ok": True, "sent": sent, "expired": expired, "errors": errors,
+                    "subs": len(subs)})
+
+
 @bp.route("/admin/send-reactivation", methods=["POST"])
 @limiter.limit("5 per hour")
 def send_reactivation():

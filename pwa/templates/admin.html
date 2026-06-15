@@ -38,6 +38,7 @@
     <div class="label-icon" style="color:var(--text-1); font-size:0.9rem; margin-bottom:8px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>Relance des inactifs</div>
     <p style="font-size:0.76rem; color:var(--text-dim); margin:0 0 10px;">Envoie un push aux abonnés inactifs depuis 3 à 30 jours.</p>
     <button type="button" id="reac-btn" class="btn" style="width:100%;" onclick="adminSendReactivation(this)">Envoyer la relance</button>
+    <button type="button" class="btn" style="width:100%; margin-top:8px;" onclick="adminSendTestPush(this)">M'envoyer une notif de test</button>
     <div id="reac-result" style="font-size:0.78rem; color:var(--text-2); margin-top:8px; display:none;"></div>
   </div>
 
@@ -226,6 +227,24 @@
         .catch(function() {
           btn.disabled = false; btn.textContent = 'Erreur — réessayer';
         });
+    }
+
+    // Notif de test à soi-même (vérifie la chaîne push de bout en bout).
+    function adminSendTestPush(btn) {
+      btn.disabled = true;
+      var orig = btn.textContent;
+      btn.textContent = 'Envoi…';
+      var res = document.getElementById('reac-result');
+      fetch('/admin/send-test-push', { method: 'POST' })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+        .then(function(x) {
+          btn.disabled = false; btn.textContent = orig;
+          res.style.display = 'block';
+          if (!x.ok) { res.style.color = 'var(--danger)'; res.textContent = x.d.error || 'Échec.'; return; }
+          res.style.color = 'var(--text-2)';
+          res.textContent = '✓ Test : ' + x.d.sent + ' envoyé(s) sur ' + x.d.subs + ' appareil(s)' + (x.d.errors ? ' · ' + x.d.errors + ' erreur(s)' : '');
+        })
+        .catch(function() { btn.disabled = false; btn.textContent = 'Erreur — réessayer'; });
     }
   </script>
 {% endblock %}
