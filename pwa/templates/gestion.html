@@ -179,29 +179,15 @@
         <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
         <span>Pré-remplir les poids de la dernière séance {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
-        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} {% if not is_vip %}disabled{% else %}onchange="handleNotifToggle(this)"{% endif %}>
-        <span>Notifications de rappel (jours d'entraînement) {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this)">
+        <span>Notifications de rappel &amp; relances (même app fermée)</span>
       </label>
+      <p style="font-size:0.7rem; color:var(--text-dim); margin:0 0 6px 26px;">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
       <label class="field-label" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">Nombre de semaines précédentes affichées en séance {% if not is_vip %}<span class="badge-pro" style="font-size:0.6rem; padding:1px 5px;">PRO au-delà de 2</span>{% endif %}</label>
       <input type="number" name="show_previous_weeks" min="0" max="{% if is_vip %}10{% else %}2{% endif %}" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
     </form>
-  </div>
-
-  {# ── Section : Notifications push (universel, free + PRO) ──── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>NOTIFICATIONS</h2>
-  <div class="card">
-    <p style="font-size:0.84rem; color:var(--text-2); margin:0 0 10px; line-height:1.5;">
-      Reçois un petit rappel quand tu n'as pas fait ta séance depuis quelques jours — pour ne rien lâcher.
-    </p>
-    <button type="button" class="btn primary label-icon" data-push-enable data-haptic="1"
-            style="width:100%; justify-content:center;" onclick="enablePush(this)">
-      <svg class="icon icon-sm"><use href="/static/img/icons.svg#bell"/></svg>Activer les notifications
-    </button>
-    <p style="font-size:0.72rem; color:var(--text-dim); margin:8px 0 0; text-align:center;">
-      Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.
-    </p>
   </div>
 
   {# ── Section : Mise à jour ───────────────── #}
@@ -391,13 +377,17 @@
       msg._t = setTimeout(function() { msg.remove(); }, 6000);
     }
     function handleNotifToggle(cb) {
-      if (!cb.checked) return; // unchecking = just save
+      if (!cb.checked) return; // décocher = on enregistre juste (rappels off)
       if (!('Notification' in window)) {
         showNotifMsg('Ton navigateur ne supporte pas les notifications.');
         cb.checked = false;
         return;
       }
-      if (Notification.permission === 'granted') return;
+      // Demande la permission ET abonne au push (relances même app fermée).
+      if (typeof window.enablePush === 'function') {
+        window.enablePush().then(function(ok) { if (!ok) cb.checked = false; });
+        return;
+      }
       if (Notification.permission === 'denied') {
         showNotifMsg('Les notifications sont bloquées. Active-les dans les paramètres de ton navigateur.');
         cb.checked = false;

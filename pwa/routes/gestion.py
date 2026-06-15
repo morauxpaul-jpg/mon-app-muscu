@@ -177,15 +177,16 @@ def update_settings():
     s["show_1rm"] = request.form.get("show_1rm") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
     s["show_rpe"] = request.form.get("show_rpe") == "on"
+    # Notifications : disponibles pour TOUS (rétention — on veut faire revenir
+    # surtout les gratuits). Dé-gaté du PRO.
+    s["notifications"] = request.form.get("notifications") == "on"
     # Options VIP : en Free on force à off quoi qu'il arrive.
     if is_vip:
         s["theme_animations"] = request.form.get("theme_animations") == "on"
         s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
-        s["notifications"] = request.form.get("notifications") == "on"
     else:
         s["theme_animations"] = False
         s["auto_prefill_weight"] = False
-        s["notifications"] = False
     try:
         weeks = int(request.form.get("show_previous_weeks", 2))
     except (ValueError, TypeError):

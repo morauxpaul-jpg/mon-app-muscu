@@ -208,11 +208,10 @@ pwa/
 - Pages principales en cache SW (accueil, séance)
 
 ### Notifications
-- Permission demandée après 5 s au premier login
-- Rappel matin (jour d'entraînement, <14 h)
-- Rappel soir (séance non faite, ≥18 h)
-- Alerte streak en danger (≥19 h, streak > 2)
-- Désactivable dans Gestion > Paramètres
+- **Universelles (free + PRO)** depuis 2026-06-15 : la case « Notifications de rappel & relances » dans Gestion n'est plus réservée au VIP (rétention = on veut surtout faire revenir les gratuits). Un seul contrôle : cocher la case demande la permission ET abonne au push (`handleNotifToggle` → `window.enablePush`).
+- Rappels **locaux** (notifications.js) : matin (jour d'entraînement, <14 h), soir (séance non faite, ≥18 h), streak en danger (≥19 h, streak > 2). Ne se déclenchent que si l'app est ouverte.
+- Relances **push** (app fermée) : cf. section « Push web » plus haut.
+- Désactivable dans Gestion > Paramètres.
 
 ### Export / Import
 - **Gestion** : « Exporter tout » (historique + programme + profil) ou « Programme seul » — gated VIP
@@ -294,7 +293,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v110-2026-06-15-push-web` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : `v112-2026-06-15-notifs-universelles` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm
