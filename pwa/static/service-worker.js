@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v112-2026-06-15-notifs-universelles";
+const CACHE_VERSION = "v113-2026-06-15-badge-notif";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -26,6 +26,7 @@ const APP_SHELL = [
   "/static/css/timer.css",
   "/static/icon-192.png",
   "/static/icon-512.png",
+  "/static/badge.png",
   "/static/changelog.json",
   "/manifest.json",
 ];
@@ -113,7 +114,7 @@ self.addEventListener("message", (event) => {
                 .showNotification(title, {
                   body: body,
                   icon: "/static/icon-192.png",
-                  badge: "/static/icon-192.png",
+                  badge: "/static/badge.png",
                   tag: "rest-timer",
                   renotify: true,
                   vibrate: [200, 100, 200],
@@ -202,7 +203,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "",
     icon: "/static/icon-192.png",
-    badge: "/static/icon-192.png",
+    badge: "/static/badge.png",
     tag: data.tag || "muscu-push",
     vibrate: [120, 60, 120],
     data: { url: data.url || "/accueil" },
