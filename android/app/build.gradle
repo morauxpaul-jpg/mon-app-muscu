@@ -30,6 +30,16 @@ repositories {
     }
 }
 
+// Le plugin @capgo/capacitor-social-login impose androidx.browser:1.9.0, qui
+// exige compileSdk 36 + AGP 8.9.1. Capacitor 7 livre AGP 8.7.2 / compileSdk 35.
+// On rabat androidx.browser sur 1.8.0 (compatible) pour éviter d'upgrader toute
+// la chaîne d'outils. À retirer le jour où on passe à AGP 8.9.1+ / compileSdk 36.
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.browser:browser:1.8.0'
+    }
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"

@@ -92,9 +92,12 @@
 
       const rawNonce = randHex(32);
       const nonceDigest = await sha256Hex(rawNonce);
+      // Pas de `scopes` custom : le plugin inclut déjà email/profil/openid par
+      // défaut via Credential Manager. Passer des scopes personnalisés
+      // exigerait de modifier la MainActivity native (cf. GoogleProvider.java).
       const res = await SocialLogin.login({
         provider: 'google',
-        options: { scopes: ['email', 'profile'], nonce: nonceDigest }
+        options: { nonce: nonceDigest }
       });
       // La forme du retour varie selon la version du plugin.
       const idToken = res?.result?.idToken || res?.idToken;
