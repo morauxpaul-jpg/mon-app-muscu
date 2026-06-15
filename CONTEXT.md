@@ -215,6 +215,11 @@ pwa/
 - Relances **push** (app fermée) : cf. section « Push web » plus haut.
 - Désactivable dans Gestion > Paramètres.
 
+### Newsletter e-mail (opt-in RGPD, 2026-06-15)
+- **Consentement in-app** : case « Recevoir les nouveautés par e-mail » dans Gestion > Paramètres (universelle free + PRO). Stockée dans `profiles` (migration `supabase_schema_v31_newsletter.sql`) : `newsletter_opt_in` (bool), `newsletter_opt_in_at` (date du consentement = preuve RGPD), `newsletter_email` (e-mail du compte au moment de l'opt-in, pour l'export sans appeler l'API auth). Helpers `db.set_newsletter_optin` / `db.list_newsletter_emails` ; façade `data.set_newsletter_optin` ; enregistrée dans `gestion.update_settings` (best-effort).
+- **Export** : `GET /admin/newsletter-emails` (réservé admin) → liste texte brut (un e-mail/ligne) à copier-coller dans l'outil d'emailing (**Brevo**). Lien depuis `/admin` (carte « Newsletter »).
+- L'envoi des e-mails se fait **hors app** (Brevo) — l'app ne fait que collecter le consentement + fournir la liste. Les annonces *in-app* passent, elles, par le push (cf. relance).
+
 ### Export / Import
 - **Gestion** : « Exporter tout » (historique + programme + profil) ou « Programme seul » — gated VIP
 - **Gestion** : « Importer » un fichier JSON (avec confirmation modale) — gated VIP

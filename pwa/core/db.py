@@ -623,6 +623,44 @@ def list_push_subscriptions(user_id: str) -> list[dict]:
         return []
 
 
+def set_newsletter_optin(user_id: str, opt_in: bool, email: str = "") -> None:
+    """Enregistre le consentement newsletter sur le profil (migration v31).
+    Mémorise l'e-mail + la date au moment de l'opt-in (preuve RGPD)."""
+    import datetime as _dt
+    payload = {"id": user_id, "newsletter_opt_in": bool(opt_in)}
+    if opt_in:
+        payload["newsletter_opt_in_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+        if email:
+            payload["newsletter_email"] = email.strip().lower()
+    else:
+        # On garde la date/e-mail tels quels en cas de retrait (historique) —
+        # seul le flag passe à false : on n'enverra plus rien.
+        pass
+    client = get_client()
+    client.table("profiles").upsert(payload).execute()
+
+
+def list_newsletter_emails() -> list[str]:
+    """E-mails distincts ayant consenti à la newsletter (pour export Brevo)."""
+    client = get_client()
+    try:
+        resp = (
+            client.table("profiles")
+            .select("newsletter_email")
+            .eq("newsletter_opt_in", True)
+            .execute()
+        )
+    except Exception as e:
+        logger.error("list_newsletter_emails FAILED: %s", e)
+        return []
+    seen = []
+    for r in (resp.data or []):
+        em = (r.get("newsletter_email") or "").strip().lower()
+        if em and em not in seen:
+            seen.append(em)
+    return seen
+
+
 def get_inactive_user_ids(min_days: int = 3, max_days: int = 30) -> set:
     """user_id dont la dernière séance (perf réelle) remonte à entre `min_days`
     et `max_days` jours — cibles de relance (ni actifs, ni partis depuis trop

@@ -77,6 +77,10 @@ def save_profile(fields):
     return db.save_profile(_uid(), fields)
 
 
+def set_newsletter_optin(opt_in, email=""):
+    return db.set_newsletter_optin(_uid(), opt_in, email)
+
+
 # ── Onboarding (Phase 4) ────────────────────────────────────────────────
 def get_onboarding():
     return db.get_onboarding(_uid())

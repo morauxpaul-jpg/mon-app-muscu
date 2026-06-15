@@ -819,6 +819,38 @@ def test_cron_reactivation_runs_with_secret(client, monkeypatch):
     assert data["sent"] == 2 and data["targets"] == 3
 
 
+def test_newsletter_optin_saves_consent(fake_db, logged_in):
+    """Cocher la newsletter dans Gestion enregistre le consentement + l'e-mail."""
+    _seed_prog(fake_db)
+    r = logged_in.post("/gestion/settings", data={"newsletter": "on"},
+                       headers={"X-CSRFToken": CSRF})
+    assert r.status_code in (302, 200)
+    row = next((p for p in fake_db.tables.get("profiles", []) if p.get("id") == USER_ID), None)
+    assert row is not None
+    assert row.get("newsletter_opt_in") is True
+    assert row.get("newsletter_email") == "test@example.com"
+    assert row.get("newsletter_opt_in_at")
+    # Décocher → le flag repasse à false (on n'enverra plus rien).
+    logged_in.post("/gestion/settings", data={}, headers={"X-CSRFToken": CSRF})
+    row = next((p for p in fake_db.tables.get("profiles", []) if p.get("id") == USER_ID), None)
+    assert row.get("newsletter_opt_in") is False
+
+
+def test_newsletter_export_lists_opted_in_emails(fake_db, logged_in, monkeypatch):
+    """L'export admin ne renvoie que les e-mails ayant consenti."""
+    monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
+    _seed_prog(fake_db)
+    # Un autre user non abonné ne doit pas apparaître.
+    fake_db.table("profiles").insert({"id": "u-other", "newsletter_opt_in": False,
+                                      "newsletter_email": "other@example.com"}).execute()
+    logged_in.post("/gestion/settings", data={"newsletter": "on"}, headers={"X-CSRFToken": CSRF})
+    r = logged_in.get("/admin/newsletter-emails")
+    assert r.status_code == 200
+    body = r.data.decode("utf-8")
+    assert "test@example.com" in body
+    assert "other@example.com" not in body
+
+
 def test_get_inactive_user_ids(fake_db):
     import datetime as _dt
     import core.db as db

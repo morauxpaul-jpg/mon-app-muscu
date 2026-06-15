@@ -184,6 +184,11 @@
         <span>Notifications de rappel &amp; relances (même app fermée)</span>
       </label>
       <p style="font-size:0.7rem; color:var(--text-dim); margin:0 0 6px 26px;">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
+        <span>Recevoir les nouveautés par e-mail (mises à jour, nouveaux programmes)</span>
+      </label>
+      <p style="font-size:0.7rem; color:var(--text-dim); margin:0 0 6px 26px;">Quelques e-mails par an, jamais de spam. Désactivable ici à tout moment.</p>
       <label class="field-label" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">Nombre de semaines précédentes affichées en séance {% if not is_vip %}<span class="badge-pro" style="font-size:0.6rem; padding:1px 5px;">PRO au-delà de 2</span>{% endif %}</label>
       <input type="number" name="show_previous_weeks" min="0" max="{% if is_vip %}10{% else %}2{% endif %}" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>

@@ -12,7 +12,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from core.data import (
     get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding,
-    delete_user_account,
+    delete_user_account, set_newsletter_optin,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,8 @@ def gestion():
         for name, cnt in sorted(exo_counts.items(), key=lambda kv: kv[0].lower())
     ]
 
+    newsletter_opt_in = bool((get_profile() or {}).get("newsletter_opt_in"))
+
     return render_template(
         "gestion.html",
         active="plus",
@@ -86,6 +88,7 @@ def gestion():
         hist_exercises=hist_exercises,
         muscle_list=MUSCLE_LIST,
         profil_options=PROFIL_OPTIONS,
+        newsletter_opt_in=newsletter_opt_in,
     )
 
 
@@ -195,6 +198,14 @@ def update_settings():
     s["show_previous_weeks"] = max(0, min(max_weeks, weeks))
     prog["_settings"] = s
     save_prog(prog)
+    # Newsletter : consentement stocké dans profiles (requêtable pour l'export),
+    # avec l'e-mail du compte + la date (preuve RGPD). Best-effort : ne casse
+    # pas l'enregistrement des autres réglages.
+    try:
+        opt = request.form.get("newsletter") == "on"
+        set_newsletter_optin(opt, getattr(g, "email", "") or session.get("email", ""))
+    except Exception as e:
+        logger.error("newsletter opt-in FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
     return redirect(url_for("gestion.gestion"))
 
 

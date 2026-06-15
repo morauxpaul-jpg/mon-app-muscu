@@ -54,7 +54,7 @@ Que tu débutes ou que tu vises la performance, Muscu Tracker t'accompagne à ch
 
 ## Assets graphiques requis
 - [x] **Icône** 512×512 PNG → `pwa/static/icon-512.png` (déjà dispo)
-- [ ] **Image de présentation (feature graphic)** 1024×500 PNG/JPG → À créer (on peut la générer)
+- [x] **Image de présentation (feature graphic)** 1024×500 → `pwa/static/promo/feature_graphic_1024x500.png`
 - [x] **Captures téléphone** (min 2, max 8) → `pwa/static/promo/promo_*.png` (5 dispo)
 - [ ] (Optionnel) Captures tablette 7" et 10"
 
@@ -67,4 +67,40 @@ Que tu débutes ou que tu vises la performance, Muscu Tracker t'accompagne à ch
 - **Public cible** : adultes / 13+ (à confirmer selon ton choix).
 - **Catégorie** : Santé et remise en forme.
 - **Coordonnées** : e-mail de contact (public sur la fiche).
+
+---
+
+## Data Safety — réponses détaillées (questionnaire « Sécurité des données »)
+
+> ⚠️ À vérifier contre l'implémentation réelle avant de soumettre. Mal déclarer
+> est une violation des règles Play.
+
+**L'app collecte-t-elle ou partage-t-elle des données utilisateur ?** → **Oui**
+
+**Données collectées** (cocher type + objectif) :
+| Type de donnée | Collectée | Partagée* | Objectif | Obligatoire ? |
+|---|---|---|---|---|
+| Adresse e-mail (via Google Sign-In) | Oui | Non | Gestion du compte | Oui |
+| Infos de santé/fitness (séances, charges, mensurations, nutrition) | Oui | Non | Fonctionnalité de l'app | Oui |
+| Actions dans l'app / analytics (events auto-hébergés) | Oui | Non | Analytics, fonctionnalité | Oui |
+| Identifiant publicitaire (AdMob, comptes Free) | Oui | **Oui** | Publicité | Non (Free only) |
+
+\* « Partagé » au sens Google = transfert à un tiers pour SON usage. Les
+prestataires qui traitent **pour ton compte** ne comptent pas comme « partage » :
+Supabase (hébergement BDD), Anthropic (coach IA, messages traités via l'API
+Claude), Stripe (paiement, l'app ne voit jamais le n° de carte). → à déclarer
+comme *collecté/traité*, pas comme *partagé*. **AdMob** sert des pubs tierces →
+l'identifiant publicitaire est, lui, bien **partagé** (objectif Publicité).
+
+**Pratiques de sécurité** :
+- Données chiffrées en transit (HTTPS) → **Oui**
+- L'utilisateur peut demander la suppression de ses données → **Oui** (suppression de compte in-app, Gestion)
+- Engagement à respecter la Play Families Policy → selon le public cible choisi
+
+## Classification du contenu (questionnaire IARC)
+App de fitness, aucun contenu sensible. Réponses types :
+- Violence / contenu sexuel / nudité / grossièretés / drogues / jeux d'argent → **Non** partout
+- Contenu généré par les utilisateurs partagé publiquement ? → **Non** (le partage de progression génère une image que l'utilisateur partage lui-même ; pas de plateforme de contenu public)
+- Échange d'infos / messagerie entre utilisateurs ? → **Non** (le coach est une IA, pas d'autres utilisateurs)
+- Catégorie : **Santé et remise en forme** → classification attendue **Tout public / PEGI 3**.
 ```

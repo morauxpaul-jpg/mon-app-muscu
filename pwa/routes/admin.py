@@ -6,7 +6,7 @@ Exemple : ADMIN_EMAILS="moraux.paul@gmail.com"
 import logging
 import os
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, abort, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, abort, jsonify, Response
 
 from core import db as core_db
 from core import push as core_push
@@ -114,6 +114,20 @@ def send_reactivation():
             return jsonify({"error": "Push non configuré (clés VAPID manquantes en env)."}), 503
         return jsonify({"error": "ciblage échoué"}), 500
     return jsonify(result)
+
+
+@bp.route("/admin/newsletter-emails")
+def newsletter_emails():
+    """Liste des e-mails ayant consenti à la newsletter, en texte brut (un par
+    ligne) — à copier-coller dans Brevo. Réservé admin."""
+    _require_admin()
+    try:
+        emails = core_db.list_newsletter_emails()
+    except Exception as e:
+        logger.error("newsletter_emails FAILED: %s", e)
+        emails = []
+    body = "\n".join(emails) if emails else "(aucun abonné pour l'instant)"
+    return Response(body, mimetype="text/plain; charset=utf-8")
 
 
 @bp.route("/admin/set-tier", methods=["POST"])
