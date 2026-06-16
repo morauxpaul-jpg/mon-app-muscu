@@ -34,24 +34,25 @@
   // deux pages à pub (sinon il clignote / disparaît).
   var BANNER_PAGES = ["/accueil", "/progres", "/plus"];
   var BANNER_H = 60; // hauteur réservée (dp), ≥ bandeau adaptatif
-  var ACTIVE_KEY = "ads_banner_active";
+  var CREATED_KEY = "ads_banner_created"; // le bandeau natif a déjà été créé
 
   function reserve(on) {
     document.documentElement.style.setProperty("--ad-banner-h", (on ? BANNER_H : 0) + "px");
     document.documentElement.classList.toggle("has-ad-banner", !!on);
   }
-  function isActive() { try { return sessionStorage.getItem(ACTIVE_KEY) === "1"; } catch (e) { return false; } }
-  function setActive(v) { try { v ? sessionStorage.setItem(ACTIVE_KEY, "1") : sessionStorage.removeItem(ACTIVE_KEY); } catch (e) {} }
+  // « Créé » ≠ « visible » : une fois créé, le bandeau natif persiste tant que
+  // l'app vit. Il faut alors le RÉAFFICHER (resumeBanner), pas le recréer
+  // (showBanner échouerait → espace réservé mais pas de pub).
+  function isCreated() { try { return sessionStorage.getItem(CREATED_KEY) === "1"; } catch (e) { return false; } }
+  function setCreated(v) { try { v ? sessionStorage.setItem(CREATED_KEY, "1") : sessionStorage.removeItem(CREATED_KEY); } catch (e) {} }
 
   function showBanner() {
     reserve(true);
-    if (isActive()) {
-      // Déjà affiché et persistant entre les pages → juste s'assurer qu'il est
-      // visible, sans le recréer (évite le clignotement).
+    if (isCreated()) {
       initDone.then(function () { return AdMob.resumeBanner(); }).catch(function () {});
       return;
     }
-    setActive(true);
+    setCreated(true);
     initDone
       .then(function () {
         return AdMob.showBanner({
@@ -60,14 +61,13 @@
           position: "BOTTOM_CENTER",
         });
       })
-      .catch(function () { setActive(false); reserve(false); });
+      .catch(function () { setCreated(false); reserve(false); });
   }
 
   function hideBanner() {
-    // Pages sans pub (ex. séance) : le bandeau natif persiste sinon → on le cache.
+    // Pages sans pub (ex. séance) : on cache le bandeau (il reste « créé »).
     reserve(false);
-    if (!isActive()) return;
-    setActive(false);
+    if (!isCreated()) return;
     initDone.then(function () { return AdMob.hideBanner(); }).catch(function () {});
   }
 
