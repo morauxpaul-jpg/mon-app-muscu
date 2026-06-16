@@ -48,6 +48,14 @@
 
   function showBanner() {
     reserve(true);
+    // Lie l'espace à la présence RÉELLE d'une pub : si AdMob n'a rien à servir
+    // (no-fill, fréquent les 1-2 premiers jours d'un bloc neuf), on replie
+    // l'espace au lieu de laisser une barre vide. Réattaché à chaque page.
+    try {
+      AdMob.addListener("bannerAdLoaded", function () { reserve(true); });
+      AdMob.addListener("bannerAdSizeChanged", function (info) { if (info && info.height > 0) reserve(true); });
+      AdMob.addListener("bannerAdFailedToLoad", function () { reserve(false); });
+    } catch (e) {}
     if (isCreated()) {
       initDone.then(function () { return AdMob.resumeBanner(); }).catch(function () {});
       return;
