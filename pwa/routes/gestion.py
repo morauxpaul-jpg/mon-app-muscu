@@ -283,7 +283,7 @@ def delete_account():
         return render_template(
             "error.html", code=500,
             message="La suppression du compte a échoué. Réessaie, ou écris à "
-                    "moraux.paul@gmail.com pour une suppression manuelle.",
+                    "muscutracker@gmail.com pour une suppression manuelle.",
         ), 500
     session.clear()
     return redirect("/")
