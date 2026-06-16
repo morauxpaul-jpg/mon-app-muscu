@@ -27,6 +27,20 @@ body {
   font-size: var(--text-base);
   font-weight: 400;
   letter-spacing: -0.01em;
+  /* App-like : pas de sélection de texte ni de menu « Rechercher sur le web »
+     au clic long (webview Android / mobile). Réactivé sur les champs et les
+     éléments .selectable (ex. code de parrainage à copier). */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea, select, [contenteditable="true"], .selectable {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .day-cell, .day-cell *,

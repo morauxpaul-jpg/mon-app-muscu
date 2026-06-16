@@ -11,6 +11,7 @@
     "@capacitor-community/admob": "^7.0.0",
     "@capacitor/android": "^7.0.0",
     "@capacitor/core": "^7.0.0",
+    "@capacitor/local-notifications": "^7.0.6",
     "@capgo/capacitor-social-login": "^7.0.0"
   },
   "devDependencies": {

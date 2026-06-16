@@ -1045,18 +1045,50 @@
     } catch (e) {}
   }
 
+  // Plugin Capacitor Local Notifications (app native uniquement) — accessible
+  // via le pont natif sur la page distante. Permet une notif planifiée par
+  // l'OS, fiable même quand la webview est tuée en arrière-plan (contrairement
+  // au setTimeout du service worker, jamais garanti sur mobile).
+  var _REST_NOTIF_ID = 4242;
+  function _capLN() {
+    return (window.Capacitor && window.Capacitor.Plugins
+            && window.Capacitor.Plugins.LocalNotifications) || null;
+  }
+  function _cancelNativeRestNotif() {
+    var ln = _capLN(); if (!ln) return;
+    try { ln.cancel({ notifications: [{ id: _REST_NOTIF_ID }] }); } catch (e) {}
+  }
+  function _scheduleNativeRestNotif(seconds) {
+    var ln = _capLN(); if (!ln) return false;
+    try {
+      ln.cancel({ notifications: [{ id: _REST_NOTIF_ID }] });
+      ln.schedule({ notifications: [{
+        id: _REST_NOTIF_ID,
+        title: 'Repos terminé !',
+        body: "C'est reparti — série suivante",
+        schedule: { at: new Date(Date.now() + seconds * 1000), allowWhileIdle: true }
+      }] });
+      return true;
+    } catch (e) { return false; }
+  }
+
   // Demande la permission notifications si pas encore tranchée — au moment où
   // l'utilisateur lance un chrono (contexte clair) plutôt qu'au hasard.
   function _ensureNotifPermission() {
     try {
+      var ln = _capLN();
+      if (ln) { try { ln.requestPermissions(); } catch (e) {} return; }
       if (!('Notification' in window)) return;
       if (Notification.permission === 'default') Notification.requestPermission();
     } catch (e) {}
   }
 
-  // Planifie la notif de fin de repos via le SW (couvre le cas app en arrière-plan).
+  // Planifie la notif de fin de repos. App native → notification planifiée par
+  // l'OS (fiable). Web/PWA → fallback via le SW (setTimeout, best-effort).
   function _scheduleTimerNotif() {
     _postTimerMsg({ type: 'CANCEL_TIMER' });
+    _cancelNativeRestNotif();
+    if (_scheduleNativeRestNotif(_timerTotal)) return;
     _postTimerMsg({
       type: 'SCHEDULE_TIMER',
       delay: _timerTotal * 1000,
@@ -1135,9 +1167,10 @@
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     document.title = 'GO ! — Muscu Tracker';
     _timerEndTime = 0;
-    // L'app est au premier plan (on vient de biper) → la notif SW n'a plus
-    // lieu d'être : on l'annule pour éviter un doublon si elle n'a pas tiré.
+    // L'app est au premier plan (on vient de biper) → la notif planifiée n'a
+    // plus lieu d'être : on l'annule (SW + native) pour éviter un doublon.
     _postTimerMsg({ type: 'CANCEL_TIMER' });
+    _cancelNativeRestNotif();
     setTimeout(function() {
       if (bar.style.display !== 'none') skipTimer();
     }, 3000);
@@ -1151,6 +1184,7 @@
     document.title = _originalTitle;
     document.getElementById('rest-timer').style.display = 'none';
     _postTimerMsg({ type: 'CANCEL_TIMER' });
+    _cancelNativeRestNotif();
   }
 
   function setTimerDuration(sec) {

@@ -215,6 +215,11 @@ pwa/
 - Relances **push** (app fermée) : cf. section « Push web » plus haut.
 - Désactivable dans Gestion > Paramètres.
 
+### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
+- **Texte non sélectionnable** : `theme.css` pose `user-select:none` + `-webkit-touch-callout:none` sur `body` (supprime le menu « Rechercher sur le web » au clic long en webview Android). Réactivé sur `input/textarea/select/[contenteditable]/.selectable`. Déployé par Railway → corrige l'app native **sans rebuild**.
+- **Notif de fin de repos fiable** : le chrono (`seance_edit.html`) planifiait la notif via un `setTimeout` dans le service worker → tué en arrière-plan = notif parfois manquante. Ajout de `@capacitor/local-notifications` (plugin natif) : en app native, la notif est planifiée par l'**OS** (`LocalNotifications.schedule({at})`, fiable même app fermée) ; le SW reste le fallback web. Cancel sur fin/skip (SW + natif). **Nécessite rebuild AAB.** Permission via `requestPermissions()`.
+- ⏳ Non fait : countdown **live** dans la barre de notif (demande un foreground service Android avec chronomètre — hors scope du plugin standard).
+
 ### Défis hebdo (rétention, 2026-06-16)
 - `core/challenges.py` : un défi **tournant** choisi par l'index de semaine continu (`continuous_week`) → identique pour tous, change chaque lundi. Évalué **depuis l'historique normalisé** (clés Date/Séance/Exercice/Poids/Reps/Semaine), aucune donnée stockée pour l'évaluation. `weekly_challenge(hist, today)` → dict {id, title, emoji, desc, current/target(+_fmt), pct, done}.
 - Cycle actuel : 3 séances / 10 000 kg / nouvel exercice / 1 cardio / battre le volume de la semaine passée.
