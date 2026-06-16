@@ -25,12 +25,10 @@
         </activity>
 
         <!-- AdMob : ID d'APPLICATION (différent des IDs d'annonces).
-             Valeur actuelle = ID de TEST officiel Google. À remplacer par le
-             vrai (AdMob → Paramètres de l'app, format ca-app-pub-XXXX~YYYY)
-             avant la mise en production, sinon aucun revenu. -->
+             ID de production Muscu Tracker (AdMob → Paramètres de l'app). -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-3523578671547864~7063902680" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
