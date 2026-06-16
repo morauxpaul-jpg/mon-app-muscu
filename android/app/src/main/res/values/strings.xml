@@ -4,4 +4,6 @@
     <string name="title_activity_main">Muscu Tracker</string>
     <string name="package_name">com.muscutracker.fit</string>
     <string name="custom_url_scheme">com.muscutracker.fit</string>
+    <!-- Bloc App Open AdMob (production Muscu Tracker). -->
+    <string name="admob_app_open_id">ca-app-pub-3523578671547864/6963303671</string>
 </resources>
