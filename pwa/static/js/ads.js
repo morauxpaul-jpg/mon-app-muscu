@@ -29,13 +29,17 @@
   var BANNER_PAGES = ["/accueil", "/progres", "/plus"];
 
   function showBanner() {
+    // Marge = hauteur RÉELLE de la bottom-nav (safe-area incluse) pour que le
+    // bandeau se pose juste au-dessus, sans la recouvrir (fallback 64).
+    var nav = document.querySelector(".bottom-nav");
+    var navH = nav ? Math.round(nav.getBoundingClientRect().height) : 64;
     initDone
       .then(function () {
         return AdMob.showBanner({
           adId: CONF.banner,
           adSize: "ADAPTIVE_BANNER",
           position: "BOTTOM_CENTER",
-          margin: 56, // hauteur de la bottom-nav : le bandeau s'affiche au-dessus
+          margin: navH,
         });
       })
       .then(function () {
