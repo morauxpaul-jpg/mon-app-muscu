@@ -871,9 +871,14 @@ button.btn-danger:hover {
 }
 
 /* ── Pub bandeau AdMob (app native, comptes Free) ─────────────────
-   ads.js pose cette classe quand un bandeau est affiché au-dessus de la
-   bottom-nav : on réserve nav + bandeau + safe-area pour ne rien masquer.
-   (~64px = hauteur d'un bandeau adaptatif ancré). */
+   Le bandeau natif est un overlay collé en bas qui recouvre la webview.
+   ads.js pose la classe has-ad-banner et la hauteur réelle dans --ad-banner-h.
+   On remonte la bottom-nav AU-DESSUS du bandeau, et on réserve nav + bandeau
+   pour le contenu, pour que rien ne soit masqué. */
+body.has-ad-banner .bottom-nav {
+  bottom: calc(var(--ad-banner-h, 0px) + env(safe-area-inset-bottom));
+  padding-bottom: 6px;
+}
 body.has-ad-banner main.app {
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 64px);
+  padding-bottom: calc(var(--nav-h) + var(--ad-banner-h, 0px) + env(safe-area-inset-bottom) + var(--sp-xl));
 }

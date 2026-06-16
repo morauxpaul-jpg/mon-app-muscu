@@ -29,21 +29,24 @@
   var BANNER_PAGES = ["/accueil", "/progres", "/plus"];
 
   function showBanner() {
-    // Marge = hauteur RÉELLE de la bottom-nav (safe-area incluse) pour que le
-    // bandeau se pose juste au-dessus, sans la recouvrir (fallback 64).
-    var nav = document.querySelector(".bottom-nav");
-    var navH = nav ? Math.round(nav.getBoundingClientRect().height) : 64;
+    // Le bandeau est un overlay natif collé en bas qui RECOUVRE la webview
+    // (bottom-nav incluse). On récupère sa hauteur réelle (dp = px CSS) via
+    // l'événement SizeChanged et on la met dans --ad-banner-h : le CSS remonte
+    // alors la bottom-nav ET le contenu pour que rien ne soit masqué.
+    try {
+      AdMob.addListener("bannerAdSizeChanged", function (info) {
+        var h = info && info.height > 0 ? info.height : 0;
+        document.documentElement.style.setProperty("--ad-banner-h", h + "px");
+        document.body.classList.toggle("has-ad-banner", h > 0);
+      });
+    } catch (e) {}
     initDone
       .then(function () {
         return AdMob.showBanner({
           adId: CONF.banner,
           adSize: "ADAPTIVE_BANNER",
           position: "BOTTOM_CENTER",
-          margin: navH,
         });
-      })
-      .then(function () {
-        document.body.classList.add("has-ad-banner");
       })
       .catch(function () {});
   }
