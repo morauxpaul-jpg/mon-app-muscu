@@ -61,6 +61,22 @@
     }
   })();
   </script>
+  {% if is_authenticated and not is_vip %}
+  <script>
+  // Réserve l'espace du bandeau AdMob AVANT le rendu (évite tout saut de layout
+  // au chargement). App native + pages à bandeau uniquement. Le bandeau réel est
+  // affiché/caché par ads.js ; ici on ne fait que poser la place côté CSS.
+  (function () {
+    try {
+      var C = window.Capacitor;
+      if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
+      if (["accueil", "progres", "plus"].indexOf("{{ active }}") === -1) return;
+      document.documentElement.style.setProperty("--ad-banner-h", "60px");
+      document.documentElement.classList.add("has-ad-banner");
+    } catch (e) {}
+  })();
+  </script>
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body>

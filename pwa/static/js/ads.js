@@ -25,34 +25,33 @@
 
   var initDone = AdMob.initialize({}).catch(function () {});
 
-  // ── Bandeau bas de page (au-dessus de la bottom-nav) ─────────────
+  // ── Bandeau bas de page ──────────────────────────────────────────
+  // Le bandeau natif est un OVERLAY collé en bas qui recouvre la webview et
+  // PERSISTE entre les pages (navigation = rechargement, mais l'overlay reste).
+  // Pour éviter tout saut de layout, l'espace est réservé AVANT le rendu par un
+  // script inline dans <head> (base.html : html.has-ad-banner + --ad-banner-h).
+  // Ici on ne fait qu'afficher/cacher le bandeau réel, SANS le recréer entre
+  // deux pages à pub (sinon il clignote / disparaît).
   var BANNER_PAGES = ["/accueil", "/progres", "/plus"];
-  var BANNER_H_KEY = "ads_banner_h"; // hauteur mémorisée (dp) du bandeau
+  var BANNER_H = 60; // hauteur réservée (dp), ≥ bandeau adaptatif
+  var ACTIVE_KEY = "ads_banner_active";
 
-  function applyBannerHeight(h) {
-    var px = h > 0 ? h : 0;
-    document.documentElement.style.setProperty("--ad-banner-h", px + "px");
-    document.body.classList.toggle("has-ad-banner", px > 0);
+  function reserve(on) {
+    document.documentElement.style.setProperty("--ad-banner-h", (on ? BANNER_H : 0) + "px");
+    document.documentElement.classList.toggle("has-ad-banner", !!on);
   }
+  function isActive() { try { return sessionStorage.getItem(ACTIVE_KEY) === "1"; } catch (e) { return false; } }
+  function setActive(v) { try { v ? sessionStorage.setItem(ACTIVE_KEY, "1") : sessionStorage.removeItem(ACTIVE_KEY); } catch (e) {} }
 
   function showBanner() {
-    // Le bandeau natif est un overlay collé en bas qui RECOUVRE la webview
-    // (bottom-nav incluse). Il PERSISTE d'une page à l'autre, mais l'événement
-    // bannerAdSizeChanged ne se redéclenche pas forcément sur les pages
-    // suivantes. On applique donc tout de suite la dernière hauteur connue
-    // (mémorisée), puis on la met à jour si l'événement arrive.
-    var cached = 0;
-    try { cached = parseInt(sessionStorage.getItem(BANNER_H_KEY) || "0", 10); } catch (e) {}
-    if (cached > 0) applyBannerHeight(cached);
-
-    try {
-      AdMob.addListener("bannerAdSizeChanged", function (info) {
-        var h = info && info.height > 0 ? info.height : 0;
-        if (h > 0) { try { sessionStorage.setItem(BANNER_H_KEY, String(h)); } catch (e) {} }
-        applyBannerHeight(h);
-      });
-    } catch (e) {}
-
+    reserve(true);
+    if (isActive()) {
+      // Déjà affiché et persistant entre les pages → juste s'assurer qu'il est
+      // visible, sans le recréer (évite le clignotement).
+      initDone.then(function () { return AdMob.resumeBanner(); }).catch(function () {});
+      return;
+    }
+    setActive(true);
     initDone
       .then(function () {
         return AdMob.showBanner({
@@ -61,12 +60,14 @@
           position: "BOTTOM_CENTER",
         });
       })
-      .catch(function () {});
+      .catch(function () { setActive(false); reserve(false); });
   }
 
   function hideBanner() {
     // Pages sans pub (ex. séance) : le bandeau natif persiste sinon → on le cache.
-    applyBannerHeight(0);
+    reserve(false);
+    if (!isActive()) return;
+    setActive(false);
     initDone.then(function () { return AdMob.hideBanner(); }).catch(function () {});
   }
 
