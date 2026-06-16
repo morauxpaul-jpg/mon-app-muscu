@@ -502,9 +502,40 @@ def index():
                 except Exception:
                     pass
 
+    # Défi hebdo — défi tournant évalué depuis l'historique. La validation
+    # (compteur + event + célébration) n'est consommée que sur une vraie
+    # navigation, pour ne pas être « brûlée » par un prefetch.
+    challenge = None
+    challenge_just_won = False
+    challenges_won = int(prog.get("_challenges_won", 0) or 0)
+    try:
+        from core.challenges import weekly_challenge
+        challenge = weekly_challenge(hist, today)
+        done_weeks = prog.get("_challenges_done", []) or []
+        if challenge["done"] and is_navigation and challenge["week"] not in done_weeks:
+            done_weeks.append(challenge["week"])
+            prog["_challenges_done"] = done_weeks[-52:]
+            challenges_won += 1
+            prog["_challenges_won"] = challenges_won
+            challenge_just_won = True
+            try:
+                from core.data import save_prog as _save_prog
+                _save_prog(prog)
+            except Exception:
+                pass
+            try:
+                track("challenge_completed", {"id": challenge["id"], "week": challenge["week"]})
+            except Exception:
+                pass
+    except Exception:
+        challenge = None
+
     return render_template(
         "accueil.html",
         active="accueil",
+        challenge=challenge,
+        challenge_just_won=challenge_just_won,
+        challenges_won=challenges_won,
         show_upsell=show_upsell,
         upsell_sessions=upsell_sessions,
         show_reactivation=show_reactivation,

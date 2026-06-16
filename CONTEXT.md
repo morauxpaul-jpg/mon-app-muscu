@@ -215,6 +215,12 @@ pwa/
 - Relances **push** (app fermée) : cf. section « Push web » plus haut.
 - Désactivable dans Gestion > Paramètres.
 
+### Défis hebdo (rétention, 2026-06-16)
+- `core/challenges.py` : un défi **tournant** choisi par l'index de semaine continu (`continuous_week`) → identique pour tous, change chaque lundi. Évalué **depuis l'historique normalisé** (clés Date/Séance/Exercice/Poids/Reps/Semaine), aucune donnée stockée pour l'évaluation. `weekly_challenge(hist, today)` → dict {id, title, emoji, desc, current/target(+_fmt), pct, done}.
+- Cycle actuel : 3 séances / 10 000 kg / nouvel exercice / 1 cardio / battre le volume de la semaine passée.
+- **Accueil** (`routes/accueil.py`) : carte « Défi de la semaine » avec barre de progression. Validation consommée **uniquement sur vraie navigation** (pas prefetch) → incrémente `prog._challenges_won`, mémorise la semaine dans `prog._challenges_done`, émet l'event `challenge_completed`, affiche l'état « ✅ Défi validé ». Aucune migration.
+- Suite : relance push « plus qu'1 séance pour valider », puis classement entre amis (parrainage) + objectifs perso.
+
 ### Newsletter e-mail (opt-in RGPD, 2026-06-15)
 - **Consentement in-app** : case « Recevoir les nouveautés par e-mail » dans Gestion > Paramètres (universelle free + PRO). Stockée dans `profiles` (migration `supabase_schema_v31_newsletter.sql`) : `newsletter_opt_in` (bool), `newsletter_opt_in_at` (date du consentement = preuve RGPD), `newsletter_email` (e-mail du compte au moment de l'opt-in, pour l'export sans appeler l'API auth). Helpers `db.set_newsletter_optin` / `db.list_newsletter_emails` ; façade `data.set_newsletter_optin` ; enregistrée dans `gestion.update_settings` (best-effort).
 - **Export** : `GET /admin/newsletter-emails` (réservé admin) → liste texte brut (un e-mail/ligne) à copier-coller dans l'outil d'emailing (**Brevo**). Lien depuis `/admin` (carte « Newsletter »).
