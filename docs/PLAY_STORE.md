@@ -17,7 +17,7 @@
 1. https://www.pwabuilder.com → entrer l'URL de prod → **Package for stores →
    Android**.
 2. Options :
-   - **Package ID** : `com.muscutracker.app` (doit correspondre à la variable
+   - **Package ID** : `com.muscutracker.fit` (doit correspondre à la variable
      `TWA_PACKAGE_NAME` sur Railway — c'est la valeur par défaut du code).
    - **App name** : Muscu Tracker.
    - **Signing key** : laisser PWABuilder en générer une.
@@ -42,7 +42,7 @@
    - `TWA_SHA256_FINGERPRINT` = l'empreinte copiée (on peut en mettre
      plusieurs, séparées par des virgules — utile pour ajouter aussi celle de
      la clé d'upload pendant les tests).
-   - `TWA_PACKAGE_NAME` = `com.muscutracker.app` (optionnel, c'est le défaut).
+   - `TWA_PACKAGE_NAME` = `com.muscutracker.fit` (optionnel, c'est le défaut).
 3. Vérifier : `https://<domaine>/.well-known/assetlinks.json` doit répondre un
    JSON avec l'empreinte. Test officiel :
    https://developers.google.com/digital-asset-links/tools/generator

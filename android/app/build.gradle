@@ -10,7 +10,7 @@ if (keystorePropsFile.exists()) {
 }
 
 android {
-    namespace "com.muscutracker.app"
+    namespace "com.muscutracker.fit"
     compileSdk rootProject.ext.compileSdkVersion
     signingConfigs {
         release {
@@ -23,7 +23,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId "com.muscutracker.app"
+        applicationId "com.muscutracker.fit"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

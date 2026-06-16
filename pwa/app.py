@@ -440,13 +440,13 @@ def assetlinks():
       - TWA_SHA256_FINGERPRINT : empreinte SHA-256 du certificat de signature
         (Play Console → Signature de l'application), plusieurs possibles
         séparées par des virgules.
-      - TWA_PACKAGE_NAME : nom de package Android (défaut com.muscutracker.app).
+      - TWA_PACKAGE_NAME : nom de package Android (défaut com.muscutracker.fit).
     Tant que l'empreinte n'est pas configurée → 404 (pas de fichier vide)."""
     from flask import jsonify
     fingerprints = [f.strip().upper() for f in (os.getenv("TWA_SHA256_FINGERPRINT") or "").split(",") if f.strip()]
     if not fingerprints:
         abort(404)
-    package = (os.getenv("TWA_PACKAGE_NAME") or "com.muscutracker.app").strip()
+    package = (os.getenv("TWA_PACKAGE_NAME") or "com.muscutracker.fit").strip()
     return jsonify([{
         "relation": ["delegate_permission/common.handle_all_urls"],
         "target": {

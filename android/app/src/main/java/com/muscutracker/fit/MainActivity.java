@@ -1,4 +1,4 @@
-package com.muscutracker.app;
+package com.muscutracker.fit;
 
 import com.getcapacitor.BridgeActivity;
 

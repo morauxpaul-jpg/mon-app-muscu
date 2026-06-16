@@ -382,11 +382,11 @@ def test_assetlinks_404_sans_config(client):
 
 def test_assetlinks_avec_empreinte(client, monkeypatch):
     monkeypatch.setenv("TWA_SHA256_FINGERPRINT", "aa:bb:cc")
-    monkeypatch.setenv("TWA_PACKAGE_NAME", "com.muscutracker.app")
+    monkeypatch.setenv("TWA_PACKAGE_NAME", "com.muscutracker.fit")
     r = client.get("/.well-known/assetlinks.json")
     assert r.status_code == 200
     payload = r.get_json()
-    assert payload[0]["target"]["package_name"] == "com.muscutracker.app"
+    assert payload[0]["target"]["package_name"] == "com.muscutracker.fit"
     assert payload[0]["target"]["sha256_cert_fingerprints"] == ["AA:BB:CC"]
     assert payload[0]["relation"] == ["delegate_permission/common.handle_all_urls"]
 

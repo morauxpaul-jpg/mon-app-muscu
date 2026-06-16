@@ -47,7 +47,7 @@ est validé comme avant).
    - récupérer l'**ID client OAuth Web** existant (celui déjà utilisé par
      Supabase) → le poser sur Railway dans `GOOGLE_WEB_CLIENT_ID` ;
    - créer un **ID client OAuth Android** : type Android, package
-     `com.muscutracker.app`, empreinte **SHA-1** de la keystore de signature
+     `com.muscutracker.fit`, empreinte **SHA-1** de la keystore de signature
      (debug pour tester, release pour publier — `keytool -list -v -keystore …`).
 2. **Supabase** → Auth → Providers → Google : vérifier que le client Web est
    bien le « Authorized Client ID » (sinon l'idToken sera rejeté).
