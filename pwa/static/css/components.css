@@ -875,10 +875,10 @@ button.btn-danger:hover {
    ads.js pose la classe has-ad-banner et la hauteur réelle dans --ad-banner-h.
    On remonte la bottom-nav AU-DESSUS du bandeau, et on réserve nav + bandeau
    pour le contenu, pour que rien ne soit masqué. */
-html.has-ad-banner .bottom-nav {
-  bottom: calc(var(--ad-banner-h, 0px) + env(safe-area-inset-bottom));
-  padding-bottom: 6px;
-}
-html.has-ad-banner main.app {
-  padding-bottom: calc(var(--nav-h) + var(--ad-banner-h, 0px) + env(safe-area-inset-bottom) + var(--sp-xl));
+/* Bandeau en HAUT : on descend la barre de titre (et donc tout le contenu qui
+   la suit dans le flux) de la hauteur du bandeau. La safe-area du haut est
+   absorbée par le margin, donc on retire son doublon du padding de la topbar. */
+html.has-ad-banner .topbar {
+  margin-top: calc(var(--ad-banner-h, 0px) + env(safe-area-inset-top));
+  padding-top: var(--sp-md);
 }

@@ -66,7 +66,7 @@
         return AdMob.showBanner({
           adId: CONF.banner,
           adSize: "ADAPTIVE_BANNER",
-          position: "BOTTOM_CENTER",
+          position: "TOP_CENTER",
         });
       })
       .catch(function () { setCreated(false); reserve(false); });
