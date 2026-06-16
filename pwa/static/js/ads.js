@@ -27,19 +27,32 @@
 
   // ── Bandeau bas de page (au-dessus de la bottom-nav) ─────────────
   var BANNER_PAGES = ["/accueil", "/progres", "/plus"];
+  var BANNER_H_KEY = "ads_banner_h"; // hauteur mémorisée (dp) du bandeau
+
+  function applyBannerHeight(h) {
+    var px = h > 0 ? h : 0;
+    document.documentElement.style.setProperty("--ad-banner-h", px + "px");
+    document.body.classList.toggle("has-ad-banner", px > 0);
+  }
 
   function showBanner() {
-    // Le bandeau est un overlay natif collé en bas qui RECOUVRE la webview
-    // (bottom-nav incluse). On récupère sa hauteur réelle (dp = px CSS) via
-    // l'événement SizeChanged et on la met dans --ad-banner-h : le CSS remonte
-    // alors la bottom-nav ET le contenu pour que rien ne soit masqué.
+    // Le bandeau natif est un overlay collé en bas qui RECOUVRE la webview
+    // (bottom-nav incluse). Il PERSISTE d'une page à l'autre, mais l'événement
+    // bannerAdSizeChanged ne se redéclenche pas forcément sur les pages
+    // suivantes. On applique donc tout de suite la dernière hauteur connue
+    // (mémorisée), puis on la met à jour si l'événement arrive.
+    var cached = 0;
+    try { cached = parseInt(sessionStorage.getItem(BANNER_H_KEY) || "0", 10); } catch (e) {}
+    if (cached > 0) applyBannerHeight(cached);
+
     try {
       AdMob.addListener("bannerAdSizeChanged", function (info) {
         var h = info && info.height > 0 ? info.height : 0;
-        document.documentElement.style.setProperty("--ad-banner-h", h + "px");
-        document.body.classList.toggle("has-ad-banner", h > 0);
+        if (h > 0) { try { sessionStorage.setItem(BANNER_H_KEY, String(h)); } catch (e) {} }
+        applyBannerHeight(h);
       });
     } catch (e) {}
+
     initDone
       .then(function () {
         return AdMob.showBanner({
@@ -51,8 +64,16 @@
       .catch(function () {});
   }
 
+  function hideBanner() {
+    // Pages sans pub (ex. séance) : le bandeau natif persiste sinon → on le cache.
+    applyBannerHeight(0);
+    initDone.then(function () { return AdMob.hideBanner(); }).catch(function () {});
+  }
+
   if (BANNER_PAGES.indexOf(location.pathname) !== -1) {
     showBanner();
+  } else {
+    hideBanner();
   }
 
   // ── Interstitiel de fin de séance (max 1 / 4 h) ──────────────────
