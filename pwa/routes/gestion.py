@@ -209,6 +209,24 @@ def update_settings():
     return redirect(url_for("gestion.gestion"))
 
 
+@bp.route("/gestion/notifications", methods=["POST"])
+@limiter.limit("30 per minute")
+def set_notifications():
+    """Persiste juste le réglage `notifications` (JSON {enabled: bool}).
+
+    Utilisé par la proposition d'activation affichée aux nouveaux utilisateurs
+    (base.html) pour que le toggle en Gestion reflète leur choix sans qu'ils
+    aient à y passer. Le toggle de la page Gestion, lui, passe par
+    update_settings (formulaire).
+    """
+    prog = get_prog()
+    s = _get_settings(prog)
+    s["notifications"] = bool((request.get_json(silent=True) or {}).get("enabled"))
+    prog["_settings"] = s
+    save_prog(prog)
+    return ("", 204)
+
+
 @bp.route("/gestion/reset-soft", methods=["POST"])
 @limiter.limit("3 per minute")
 def reset_soft():

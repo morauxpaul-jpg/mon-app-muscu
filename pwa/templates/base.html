@@ -132,16 +132,25 @@
   {% if is_authenticated %}
   <script>initTutorial();</script>
   <script>
-    // Patch notes modal — affiche les nouveautés une seule fois par version.
-    // Utilise lastSeenVersion pour comparer avec la version du changelog.
-    // Si le SW vient de reloader (pending_changelog flag), affiche immédiatement.
+    // Nouveautés (patch notes) + proposition de notifications.
+    //  • Nouvel utilisateur (aucun lastSeenVersion) : on NE montre PAS l'historique
+    //    des nouveautés — tout est neuf pour lui. On lui propose plutôt d'activer
+    //    les notifications, puis on mémorise la version courante comme « vue ».
+    //  • Utilisateur existant : on montre toutes les versions plus récentes que
+    //    lastSeenVersion (cumul des nouveautés non vues, les plus récentes en
+    //    haut), puis on enregistre la version courante. Comparaison numérique
+    //    monotone → jamais de re-montre d'une même version.
     (function() {
       function esc(s) {
         return String(s).replace(/[&<>"']/g, function(c) {
           return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
         });
       }
-      function renderItem(c, idx, demos) {
+      function verNum(v) {
+        var m = /(\d+)/.exec(String(v == null ? '' : v));
+        return m ? parseInt(m[1], 10) : 0;
+      }
+      function renderItem(c, demos) {
         var text, demoKey = null;
         if (typeof c === 'string') { text = c; }
         else { text = c.text || ''; demoKey = c.demo || null; }
@@ -152,60 +161,135 @@
         }
         return '<li>' + esc(text) + btn + '</li>';
       }
-      function showChangelog() {
+      // Agrège les démos de toutes les versions affichées (clic « Voir »).
+      function collectDemos(entries) {
+        var all = {};
+        entries.forEach(function(e) {
+          var d = e.demos || {};
+          Object.keys(d).forEach(function(k) { all[k] = d[k]; });
+        });
+        return all;
+      }
+      function showChangelog(entries, current) {
+        var demos = collectDemos(entries);
+        var sections = entries.map(function(e, idx) {
+          var items = (e.changes || []).map(function(c) { return renderItem(c, e.demos || {}); }).join('');
+          var title = '<h3 style="color:var(--text-1);margin:' + (idx ? '14px' : '0') + ' 0 4px;font-weight:500;">' + esc(e.title || '') + '</h3>';
+          var date = '<div style="font-size:0.75rem;color:var(--text-3);margin-bottom:8px;">' + esc(e.date || '') + '</div>';
+          return title + date + '<ul style="padding-left:18px;margin:0 0 4px;font-size:0.88rem;line-height:1.7;color:var(--text-2);">' + items + '</ul>';
+        }).join('');
+        var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.50);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" id="patchnotes-modal">' +
+          '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:18px;max-width:360px;width:calc(100vw - 32px);color:var(--text-1);max-height:80vh;overflow-y:auto;box-shadow:0 8px 48px rgba(0,0,0,0.6);" onclick="event.stopPropagation()">' +
+          sections +
+          '<button id="patchnotes-ok" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:500;font-size:0.9rem;cursor:pointer;margin-top:10px;">OK, compris</button>' +
+          '</div></div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modal = document.getElementById('patchnotes-modal');
+        modal.querySelector('#patchnotes-ok').addEventListener('click', function() {
+          try { localStorage.setItem('lastSeenVersion', current); } catch(e) {}
+          modal.remove();
+        });
+        modal.querySelectorAll('.patch-demo-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var key = btn.getAttribute('data-demo-key');
+            var demo = demos[key];
+            if (!demo) return;
+            try { localStorage.setItem('lastSeenVersion', current); } catch(e) {}
+            var payload = { url: demo.url || null, steps: demo.steps || [] };
+            if (demo.url && location.pathname !== demo.url) {
+              try { sessionStorage.setItem('pending_demo', JSON.stringify(payload)); } catch(e) {}
+              modal.remove();
+              location.href = demo.url;
+            } else {
+              modal.remove();
+              if (typeof window.playFeatureDemo === 'function') {
+                setTimeout(function() { window.playFeatureDemo(payload.steps); }, 200);
+              }
+            }
+          });
+        });
+      }
+
+      // ── Proposition d'activation des notifications (nouveaux utilisateurs) ──
+      function csrfToken() {
+        var m = document.querySelector('meta[name="csrf-token"]');
+        return (m && m.content) || '';
+      }
+      function persistNotifSetting(enabled) {
+        try {
+          fetch('/gestion/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+            body: JSON.stringify({ enabled: !!enabled }),
+            credentials: 'same-origin',
+          });
+        } catch(e) {}
+      }
+      function maybeOfferNotifications() {
+        try { if (localStorage.getItem('notifPrompted') === '1') return; } catch(e) { return; }
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        // Déjà répondu au niveau navigateur (accordé/refusé) : rien à proposer.
+        if (Notification.permission !== 'default') {
+          try { localStorage.setItem('notifPrompted', '1'); } catch(e) {}
+          return;
+        }
+        setTimeout(showNotifOffer, 1600);
+      }
+      function showNotifOffer() {
+        try { if (localStorage.getItem('notifPrompted') === '1') return; } catch(e) {}
+        var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.50);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" id="notif-offer-modal">' +
+          '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:20px;max-width:340px;width:calc(100vw - 32px);color:var(--text-1);box-shadow:0 8px 48px rgba(0,0,0,0.6);text-align:center;" onclick="event.stopPropagation()">' +
+          '<div style="font-size:2rem;margin-bottom:6px;">🔔</div>' +
+          '<h3 style="color:var(--text-1);margin:0 0 8px;font-weight:600;">Reste régulier 💪</h3>' +
+          '<p style="font-size:0.88rem;line-height:1.5;color:var(--text-2);margin:0 0 16px;">Active les notifications pour recevoir tes rappels de séance et tes relances — même quand l\'app est fermée.</p>' +
+          '<button id="notif-offer-yes" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:0.9rem;cursor:pointer;margin-bottom:8px;">Activer les notifications</button>' +
+          '<button id="notif-offer-no" style="width:100%;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--text-3);font-size:0.85rem;cursor:pointer;">Plus tard</button>' +
+          '</div></div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modal = document.getElementById('notif-offer-modal');
+        function done() { try { localStorage.setItem('notifPrompted', '1'); } catch(e) {} if (modal) modal.remove(); }
+        modal.querySelector('#notif-offer-no').addEventListener('click', done);
+        modal.querySelector('#notif-offer-yes').addEventListener('click', function() {
+          if (typeof window.enablePush === 'function') {
+            window.enablePush().then(function(ok) { if (ok) persistNotifSetting(true); });
+          }
+          done();
+        });
+      }
+
+      function run() {
         fetch('/static/changelog.json?_=' + Date.now())
           .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
           .then(function(data) {
-            var currentVersion = data.version;
-            try {
-              var seen = localStorage.getItem('lastSeenVersion');
-              if (seen === currentVersion) return;
-            } catch(e) { return; }
+            var current = data.current || (data.entries && data.entries[0] && data.entries[0].version) || '';
+            var entries = (data.entries || []).slice();
             try { localStorage.removeItem('pending_changelog'); } catch(e) {}
-            var demos = data.demos || {};
-            var items = (data.changes || []).map(function(c, i) { return renderItem(c, i, demos); }).join('');
-            var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.50);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" id="patchnotes-modal">' +
-              '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:18px;max-width:360px;width:calc(100vw - 32px);color:var(--text-1);max-height:80vh;overflow-y:auto;box-shadow:0 8px 48px rgba(0,0,0,0.6);" onclick="event.stopPropagation()">' +
-              '<h3 style="color:var(--text-1);margin:0 0 4px;font-weight:500;">' + esc(data.title) + '</h3>' +
-              '<div style="font-size:0.75rem;color:var(--text-3);margin-bottom:12px;">' + esc(data.date) + '</div>' +
-              '<ul style="padding-left:18px;margin:0 0 14px;font-size:0.88rem;line-height:1.7;color:var(--text-2);">' + items + '</ul>' +
-              '<button id="patchnotes-ok" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:500;font-size:0.9rem;cursor:pointer;">OK, compris</button>' +
-              '</div></div>';
-            document.body.insertAdjacentHTML('beforeend', html);
-            var modal = document.getElementById('patchnotes-modal');
-            modal.querySelector('#patchnotes-ok').addEventListener('click', function() {
-              try { localStorage.setItem('lastSeenVersion', currentVersion); } catch(e) {}
-              modal.remove();
-            });
-            modal.querySelectorAll('.patch-demo-btn').forEach(function(btn) {
-              btn.addEventListener('click', function() {
-                var key = btn.getAttribute('data-demo-key');
-                var demo = demos[key];
-                if (!demo) return;
-                try { localStorage.setItem('lastSeenVersion', currentVersion); } catch(e) {}
-                var payload = { url: demo.url || null, steps: demo.steps || [] };
-                if (demo.url && location.pathname !== demo.url) {
-                  try { sessionStorage.setItem('pending_demo', JSON.stringify(payload)); } catch(e) {}
-                  modal.remove();
-                  location.href = demo.url;
-                } else {
-                  modal.remove();
-                  if (typeof window.playFeatureDemo === 'function') {
-                    setTimeout(function() { window.playFeatureDemo(payload.steps); }, 200);
-                  }
-                }
-              });
-            });
+
+            var seenRaw = null;
+            try { seenRaw = localStorage.getItem('lastSeenVersion'); } catch(e) { return; }
+
+            // Nouvel utilisateur : aucune version vue → pas d'historique, on
+            // propose les notifications et on marque la version courante comme vue.
+            if (seenRaw === null || seenRaw === undefined) {
+              try { localStorage.setItem('lastSeenVersion', current); } catch(e) {}
+              maybeOfferNotifications();
+              return;
+            }
+
+            // Utilisateur existant : cumul des versions plus récentes que la
+            // dernière vue, les plus récentes en haut. Jamais de re-montre.
+            var seenNum = verNum(seenRaw);
+            var unseen = entries.filter(function(e) { return verNum(e.version) > seenNum; });
+            if (unseen.length === 0) return;
+            unseen.sort(function(a, b) { return verNum(b.version) - verNum(a.version); });
+            showChangelog(unseen, current);
           })
           .catch(function() {});
       }
+
       var pending = false;
       try { pending = localStorage.getItem('pending_changelog') === '1'; } catch(e) {}
-      if (pending) {
-        showChangelog();
-      } else {
-        setTimeout(showChangelog, 2000);
-      }
+      if (pending) { run(); } else { setTimeout(run, 2000); }
     })();
   </script>
   {# La permission notifications est demandée au moment où l'utilisateur
