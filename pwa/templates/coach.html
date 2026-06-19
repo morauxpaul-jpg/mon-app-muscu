@@ -546,7 +546,7 @@
     .coach-footer {
       position: fixed;
       left: 0; right: 0;
-      bottom: var(--nav-h, 64px);
+      bottom: calc(var(--nav-h, 64px) + env(safe-area-inset-bottom));
       background: var(--bg-base);
       border-top: 0.5px solid var(--border-default);
       padding: 8px 16px 6px;
