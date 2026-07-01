@@ -587,6 +587,13 @@ def seance():
                     "offset": offset,
                 })
 
+        # ── Cardio planifié ce jour-là (généré par le générateur IA) ──
+        target_day_name = DAYS_FR[target_date.weekday()]
+        cardio_today = [
+            c for c in (prog.get("_cardio") or [])
+            if isinstance(c, dict) and target_day_name in (c.get("jours") or [])
+        ]
+
         return render_template(
             "seance_choix.html",
             active="seance",
@@ -602,6 +609,7 @@ def seance():
             jours_map=prog.get("_jours", {}),
             prog_groups=groups,
             makeup_suggestions=makeup_suggestions,
+            cardio_today=cardio_today,
         )
 
     # ── Vue édition : mode prefaite ───────────────────────────────

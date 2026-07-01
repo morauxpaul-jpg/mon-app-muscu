@@ -1,6 +1,26 @@
 {
-  "current": "v38",
+  "current": "v39",
   "entries": [
+    {
+      "version": "v39",
+      "date": "2026-07-01",
+      "title": "Nouveauté : le générateur IA planifie aussi ton cardio",
+      "changes": [
+        "Le générateur de programme IA peut désormais inclure du cardio : natation, course, vélo, rameur, HIIT, marche…",
+        "Choisis une ou plusieurs activités (ou laisse l'IA décider), et indique si le cardio s'ajoute à tes séances ou se fait sur des jours dédiés",
+        "Les jours de cardio prévus apparaissent dans l'onglet Séance : un clic pour lancer, avec chrono et calcul des calories"
+      ],
+      "demos": {
+        "generator-cardio": {
+          "url": "/generator",
+          "steps": [
+            { "center": true, "title": "Un programme qui te ressemble", "text": "Le générateur IA sait maintenant mêler musculation et cardio. Idéal si tu veux, par exemple, des séances à la maison + de la natation à la piscine." },
+            { "center": true, "title": "Active le cardio", "text": "Dans le formulaire, active « Ajouter du cardio », coche tes activités préférées (ou laisse vide pour laisser l'IA choisir) et dis si le cardio s'ajoute à tes séances ou se fait sur des jours à part." },
+            { "center": true, "title": "Lance-le en un clic", "text": "Une fois le programme adopté, les jours de cardio prévus s'affichent dans l'onglet Séance, prêts à démarrer avec le chrono et le suivi des calories.", "finalLabel": "Je teste" }
+          ]
+        }
+      }
+    },
     {
       "version": "v38",
       "date": "2026-04-19",

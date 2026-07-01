@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from routes.generator import parse_and_validate, _clean_muscle
+from routes.generator import parse_and_validate, _clean_muscle, _clean_cardio
 
 
 def _valid_payload():
@@ -99,6 +99,34 @@ def test_all_exos_invalid_raises():
 def test_invalid_json_string_raises():
     with pytest.raises(ValueError):
         parse_and_validate("{ceci n'est pas du json")
+
+
+def test_cardio_absent_returns_empty_list():
+    prog = parse_and_validate(_valid_payload())
+    assert prog["cardio"] == []
+
+
+def test_cardio_normalization():
+    payload = _valid_payload()
+    payload["cardio"] = [
+        {"activite": "natation", "duree": "40", "jours": ["Mercredi", "JourBidon", "Samedi"]},
+        {"activite": "Inconnu", "duree": 30, "jours": []},
+        {"type": "course", "duree_min": 200},  # alias + durée hors bornes
+    ]
+    prog = parse_and_validate(payload)
+    assert prog["cardio"] == [
+        {"activite": "Natation", "duree": 40, "jours": ["Mercredi", "Samedi"]},
+        {"activite": "Course", "duree": 120, "jours": []},
+    ]
+
+
+def test_clean_cardio_tolerates_single_dict_and_bad_input():
+    assert _clean_cardio(None) == []
+    assert _clean_cardio("pas une liste") == []
+    single = _clean_cardio({"activite": "Vélo", "duree": 25})
+    assert single == [{"activite": "Vélo", "duree": 25, "jours": []}]
+    # durée par défaut si absente/illisible
+    assert _clean_cardio([{"activite": "HIIT"}])[0]["duree"] == 30
 
 
 def test_max_six_seances_and_twelve_exos():

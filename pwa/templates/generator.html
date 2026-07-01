@@ -49,6 +49,46 @@
       </select>
     </label>
 
+    {# ── Cardio ─────────────────────────────────────────────── #}
+    <div class="gen-cardio">
+      <label class="gen-cardio-toggle">
+        <span class="label-icon"><svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>Ajouter du cardio</span>
+        <input type="checkbox" x-model="form.cardio" class="gen-switch">
+      </label>
+
+      <div x-show="form.cardio" x-cloak x-transition style="display:grid; gap:12px; margin-top:12px;">
+        <div class="gen-field">
+          <span>Type(s) de cardio <span style="color:var(--text-dim); font-weight:400;">— coche, ou laisse vide = peu importe</span></span>
+          <div class="gen-chips">
+            <template x-for="t in cardioTypesAll" :key="t">
+              <button type="button" class="gen-chip"
+                :class="form.cardioTypes.includes(t) ? 'on' : ''"
+                @click="toggleCardioType(t)" x-text="t"></button>
+            </template>
+          </div>
+          <span x-show="form.cardioTypes.length === 0" style="color:var(--text-dim); font-size:0.72rem;">Peu importe — l'IA choisit selon ton objectif.</span>
+        </div>
+
+        <div class="gen-field">
+          <span>Le cardio se fait…</span>
+          <div class="gen-seg">
+            <template x-for="opt in cardioPlacements" :key="opt.v">
+              <button type="button" class="gen-seg-btn"
+                :class="form.cardioPlacement === opt.v ? 'on' : ''"
+                @click="form.cardioPlacement = opt.v" x-text="opt.l"></button>
+            </template>
+          </div>
+        </div>
+
+        <label class="gen-field">
+          <span>Séances de cardio / semaine</span>
+          <select class="field" x-model.number="form.cardioFreq">
+            {% for f in [1,2,3,4] %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+    </div>
+
     <label class="gen-field">
       <span>Contraintes, blessures, préférences <span style="color:var(--text-dim); font-weight:400;">(optionnel)</span></span>
       <textarea class="field" rows="2" maxlength="400" x-model="form.contraintes"
@@ -95,14 +135,36 @@
       </div>
     </template>
 
+    {# Cardio #}
+    <template x-if="program?.cardio?.length">
+      <div class="card" style="padding:12px 14px; border-color:var(--warning);">
+        <h3 class="label-icon" style="margin:0 0 8px; font-size:0.95rem; color:var(--text-1);">
+          <svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>
+          Cardio
+          <span style="color:var(--text-dim); font-weight:400; font-size:0.78rem;" x-text="'· ' + program.cardio.length + ' séance' + (program.cardio.length > 1 ? 's' : '')"></span>
+        </h3>
+        <template x-for="(c, i) in program.cardio" :key="i">
+          <div class="gen-exo">
+            <span class="gen-exo-name" x-text="c.activite"></span>
+            <span class="gen-exo-meta">
+              <span x-text="c.duree + ' min'"></span>
+              <span class="gen-exo-muscle" style="color:var(--warning); background:var(--warning-bg);"
+                x-text="(c.jours && c.jours.length) ? c.jours.map(j => j.slice(0,3)).join(', ') : 'flexible'"></span>
+            </span>
+          </div>
+        </template>
+      </div>
+    </template>
+
     {# Planning #}
     <div class="card" style="padding:12px 14px;">
       <h3 class="label-icon" style="margin:0 0 8px; font-size:0.9rem; color:var(--text-1);"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning</h3>
       <div class="gen-planning">
         <template x-for="day in days" :key="day">
-          <div class="gen-day" :class="{ 'gen-day-on': program?.planning?.[day] }">
+          <div class="gen-day" :class="{ 'gen-day-on': program?.planning?.[day], 'gen-day-cardio': cardioFor(day) }">
             <span class="gen-day-l" x-text="day.slice(0,3)"></span>
-            <span class="gen-day-v" x-text="program?.planning?.[day] || 'Repos'"></span>
+            <span class="gen-day-v" x-text="program?.planning?.[day] || (cardioFor(day) ? '' : 'Repos')"></span>
+            <span class="gen-day-c" x-show="cardioFor(day)" x-text="cardioFor(day)"></span>
           </div>
         </template>
       </div>
@@ -138,13 +200,39 @@
   .gen-day-l { display:block; font-size:0.62rem; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; }
   .gen-day-v { display:block; font-size:0.6rem; color:var(--text-2); margin-top:2px; line-height:1.1; min-height:1.4em; }
   .gen-day-on .gen-day-v { color:var(--accent); }
+  .gen-day-cardio { box-shadow:inset 0 0 0 1px var(--warning); }
+  .gen-day-c { display:block; font-size:0.55rem; color:var(--warning); margin-top:2px; line-height:1.1; }
+
+  /* Section cardio du formulaire */
+  .gen-cardio { border:0.5px solid var(--border-subtle); border-radius:10px; padding:12px 14px; background:var(--bg-elevated); }
+  .gen-cardio-toggle { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; font-size:0.9rem; color:var(--text-1); font-weight:500; }
+  .gen-switch { width:42px; height:24px; -webkit-appearance:none; appearance:none; background:var(--border-default); border-radius:12px; position:relative; cursor:pointer; transition:background 0.2s; flex-shrink:0; }
+  .gen-switch:checked { background:var(--warning); }
+  .gen-switch::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform 0.2s; }
+  .gen-switch:checked::after { transform:translateX(18px); }
+  .gen-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .gen-chip { padding:6px 12px; border-radius:16px; border:0.5px solid var(--border-default); background:var(--card-bg); color:var(--text-2); font-size:0.8rem; cursor:pointer; transition:all 0.15s; }
+  .gen-chip.on { background:var(--warning-bg); border-color:var(--warning); color:var(--warning); }
+  .gen-seg { display:flex; gap:6px; }
+  .gen-seg-btn { flex:1; padding:8px 6px; border-radius:8px; border:0.5px solid var(--border-default); background:var(--card-bg); color:var(--text-2); font-size:0.78rem; cursor:pointer; transition:all 0.15s; }
+  .gen-seg-btn.on { background:var(--warning-bg); border-color:var(--warning); color:var(--warning); }
 </style>
 
 <script>
   function gen() {
     return {
       days: {{ ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"]|tojson }},
-      form: { objectif: '{{ objectifs[0] }}', niveau: '{{ niveaux[1] if niveaux|length > 1 else niveaux[0] }}', frequence: 4, lieu: '{{ lieux[0] }}', duree: 60, contraintes: '' },
+      cardioTypesAll: {{ cardio_types|tojson }},
+      cardioPlacements: [
+        { v: 'complement', l: 'En plus des séances' },
+        { v: 'dedie', l: 'Jours dédiés' },
+        { v: 'mixte', l: 'Les deux' },
+      ],
+      form: {
+        objectif: '{{ objectifs[0] }}', niveau: '{{ niveaux[1] if niveaux|length > 1 else niveaux[0] }}',
+        frequence: 4, lieu: '{{ lieux[0] }}', duree: 60, contraintes: '',
+        cardio: false, cardioTypes: [], cardioPlacement: 'dedie', cardioFreq: 2,
+      },
       loading: false,
       error: '',
       program: null,
@@ -154,10 +242,19 @@
         if (this.loading || this.quotaLeft <= 0) return;
         this.loading = true; this.error = '';
         try {
+          const payload = {
+            objectif: this.form.objectif, niveau: this.form.niveau,
+            frequence: this.form.frequence, lieu: this.form.lieu,
+            duree: this.form.duree, contraintes: this.form.contraintes,
+            cardio: this.form.cardio,
+            cardio_types: this.form.cardio ? this.form.cardioTypes : [],
+            cardio_placement: this.form.cardioPlacement,
+            cardio_freq: this.form.cardioFreq,
+          };
           const resp = await fetch('/generator/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.form),
+            body: JSON.stringify(payload),
           });
           const data = await resp.json().catch(() => ({}));
           if (!resp.ok || !data.ok) {
@@ -172,6 +269,17 @@
         } finally {
           this.loading = false;
         }
+      },
+      toggleCardioType(t) {
+        const i = this.form.cardioTypes.indexOf(t);
+        if (i >= 0) this.form.cardioTypes.splice(i, 1);
+        else this.form.cardioTypes.push(t);
+      },
+      cardioFor(day) {
+        // Renvoie un libellé court des cardios planifiés ce jour (ou '').
+        const list = (this.program?.cardio || []).filter(c => (c.jours || []).includes(day));
+        if (!list.length) return '';
+        return list.map(c => c.activite).join(', ');
       },
       reset() { this.program = null; this.error = ''; this._armed = false; window.scrollTo({ top: 0, behavior: 'smooth' }); },
       confirmAdopt(ev) {

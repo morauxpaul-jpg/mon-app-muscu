@@ -99,6 +99,15 @@ def new():
     profile = get_profile() or {}
     poids_kg = float(profile.get("poids_kg") or 0)
 
+    # Pré-sélection (ex. depuis un cardio planifié par le générateur IA).
+    pre_activite = (request.args.get("activite") or "").strip()
+    if pre_activite not in ACTIVITES_MAP:
+        pre_activite = ""
+    try:
+        pre_duree = max(0, min(600, int(request.args.get("duree") or 0)))
+    except (TypeError, ValueError):
+        pre_duree = 0
+
     return render_template(
         "cardio.html",
         active="seance",
@@ -107,6 +116,8 @@ def new():
         activites=ACTIVITES,
         rpe_labels=RPE_LABELS,
         poids_kg=poids_kg,
+        pre_activite=pre_activite,
+        pre_duree=pre_duree,
     )
 
 

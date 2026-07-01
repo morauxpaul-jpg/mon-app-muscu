@@ -218,6 +218,11 @@ def programme():
         "seance_prog": dict(seance_prog),
         "profiles": [{"id": p["id"], "name": p["name"]} for p in profiles],
         "active_profile": active_profile,
+        "cardio": [
+            {"activite": c.get("activite", ""), "duree": int(c.get("duree") or 30),
+             "jours": [j for j in (c.get("jours") or []) if j in DAYS_FR]}
+            for c in (prog.get("_cardio") or []) if isinstance(c, dict) and c.get("activite")
+        ],
     }
 
     return render_template(
@@ -303,6 +308,18 @@ def save_state():
                 "_extras", "_libre_draft", "_started_at"):
         if key in old:
             new_prog[key] = old[key]
+
+    # Cardio planifié (_cardio) : si le client en envoie une liste (ex. après
+    # suppression dans l'éditeur) on la reprend nettoyée ; sinon on préserve
+    # l'existant. Le nettoyage réutilise le validateur du générateur.
+    raw_cardio = data.get("cardio")
+    if isinstance(raw_cardio, list):
+        from routes.generator import _clean_cardio
+        cleaned_cardio = _clean_cardio(raw_cardio)
+        if cleaned_cardio:
+            new_prog["_cardio"] = cleaned_cardio
+    elif old.get("_cardio"):
+        new_prog["_cardio"] = old["_cardio"]
 
     # _programmes + _seance_prog (multi-programmes)
     raw_progs = data.get("programmes")

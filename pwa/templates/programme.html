@@ -34,6 +34,28 @@
     {% endfor %}
   </div>
 
+  {# ── Cardio planifié (généré par l'IA) ───────────────── #}
+  <template x-if="cardio && cardio.length">
+    <div class="card" style="border-color:var(--warning);">
+      <div class="label-icon" style="color:var(--warning); font-size:0.7rem; letter-spacing:3px; margin-bottom:8px;">
+        <svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>CARDIO PLANIFIÉ
+      </div>
+      <p style="font-size:0.76rem; color:var(--text-2); margin:0 0 10px;">Retrouve ces séances cardio dans l'onglet Séance, le jour prévu.</p>
+      <template x-for="(c, i) in cardio" :key="i">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:0.5px solid var(--border-subtle);">
+          <div style="min-width:0;">
+            <div style="font-size:0.9rem; color:var(--text-1);" x-text="c.activite + ' · ' + c.duree + ' min'"></div>
+            <div style="font-size:0.74rem; color:var(--warning);"
+                 x-text="(c.jours && c.jours.length) ? c.jours.join(', ') : 'jour flexible'"></div>
+          </div>
+          <button type="button" class="btn mini label-icon" aria-label="Retirer ce cardio" @click="removeCardio(i)">
+            <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>
+          </button>
+        </div>
+      </template>
+    </div>
+  </template>
+
   <h2 class="label-icon" style="font-size:0.85rem; color:var(--accent); margin:18px 0 6px; letter-spacing:2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL D'ENTRAÎNEMENT</h2>
 
   {# ── Profils d'entraînement (Maison / Salle / …) ─────────── #}
@@ -487,6 +509,7 @@
       isVip: {{ 'true' if is_vip else 'false' }},
       prog: {},
       planning: {},
+      cardio: [],
       programName: '',
       seanceOrder: [],
       originSeanceNames: [],
@@ -507,6 +530,7 @@
         var initial = JSON.parse(document.getElementById('prog-initial').textContent);
         this.prog = initial.seances || {};
         this.planning = initial.planning || {};
+        this.cardio = initial.cardio || [];
         this.programName = initial.name || 'Mon programme';
         this.seanceOrder = initial.seance_order || [];
         this.originSeanceNames = initial.origin_seance_names || [];
@@ -627,6 +651,7 @@
               seance_order: this.seanceOrder,
               programmes: this.programmes,
               seance_prog: this.seanceProg,
+              cardio: this.cardio,
             }),
           });
           if (resp.ok) {
@@ -845,6 +870,12 @@
         if (checked && !has) parts.push(muscle);
         else if (!checked && has) parts.splice(parts.indexOf(muscle), 1);
         ex.muscle = parts.join(',') || 'Autre';
+        this.scheduleSave();
+      },
+
+      // ── Cardio planifié ──
+      removeCardio(i) {
+        this.cardio.splice(i, 1);
         this.scheduleSave();
       },
     };

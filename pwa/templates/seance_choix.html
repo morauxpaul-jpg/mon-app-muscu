@@ -145,6 +145,24 @@
     </a>
   </div>
 
+  {% if cardio_today %}
+    <div class="card" style="border-color:var(--warning); background:var(--warning-bg);">
+      <div class="label-icon" style="color:var(--warning); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+        <svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>CARDIO PRÉVU AUJOURD'HUI
+      </div>
+      {% for c in cardio_today %}
+        <div class="seance-choice-row" style="border-color:var(--warning);">
+          <div>
+            <div class="seance-name">{{ c.activite }}</div>
+            <div class="seance-meta" style="color:var(--warning);">{{ c.duree }} min</div>
+          </div>
+          <a href="/cardio?date={{ date_iso }}&activite={{ c.activite|urlencode }}&duree={{ c.duree }}"
+             class="btn primary label-icon" style="display:inline-flex;">Lancer<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   <div class="card" style="border-color:var(--warning);">
     <div class="label-icon" style="color: var(--warning); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>SÉANCE CARDIO</div>
     <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 12px;">

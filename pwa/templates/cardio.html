@@ -220,8 +220,8 @@
 
     function cardioForm() {
       return {
-        activite: "Course",
-        dureeMin: 0,
+        activite: {{ (pre_activite or "Course")|tojson }},
+        dureeMin: {{ pre_duree or 0 }},
         distanceKm: "",
         fcMoy: "",
         rpe: "",
