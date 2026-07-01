@@ -540,6 +540,21 @@
         this.seanceProg = initial.seance_prog || {};
         this.profiles = initial.profiles || [];
         this.activeProfile = initial.active_profile || (this.profiles[0] && this.profiles[0].id) || '';
+
+        // Filet anti-perte : si l'utilisateur quitte l'onglet ou navigue avant
+        // que la sauvegarde différée (500 ms) n'ait eu lieu, on la force
+        // immédiatement (keepalive permet à la requête d'aboutir après départ).
+        var self = this;
+        var flush = function () {
+          if (self._dirty) {
+            if (self._saveTimer) { clearTimeout(self._saveTimer); self._saveTimer = null; }
+            self.doSave();
+          }
+        };
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'hidden') flush();
+        });
+        window.addEventListener('pagehide', flush);
       },
 
       // ── Profils d'entraînement ──
@@ -643,6 +658,7 @@
         try {
           var resp = await fetch('/programme/state', {
             method: 'POST',
+            keepalive: true,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: this.programName,
