@@ -12,7 +12,7 @@
   </p>
 
   {# ── Formulaire ─────────────────────────────────────────────── #}
-  <div class="card" x-show="!program" style="display:grid; gap:12px;">
+  <div class="card gen-form" x-show="!program">
     <label class="gen-field">
       <span>Objectif</span>
       <select class="field" x-model="form.objectif">
@@ -187,6 +187,9 @@
 
 <style>
   [x-cloak] { display:none !important; }
+  /* display:grid en CSS (pas en inline) : x-show d'Alpine efface le display
+     inline en s'affichant, ce qui cassait le gap → champs collés/superposés. */
+  .gen-form { display:grid; gap:12px; }
   .gen-field { display:flex; flex-direction:column; gap:5px; }
   .gen-field > span { font-size:0.78rem; color:var(--text-2); font-weight:500; }
   .gen-exo { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:7px 0; border-bottom:0.5px solid var(--border-subtle); }
