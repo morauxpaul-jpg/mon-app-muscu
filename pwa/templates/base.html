@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/static/css/icons.css">
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/tutorial.css">
+  <link rel="stylesheet" href="/static/css/rest-timer.css">
   <script defer src="/static/js/alpine-sort.min.js"></script>
   <script defer src="/static/js/alpine.min.js"></script>
   <script>
@@ -77,6 +78,36 @@
   })();
   </script>
   {% endif %}
+  {% if is_authenticated %}
+  <script>
+  // ── Reprise de séance au démarrage à froid ──────────────────────────
+  // Quand on quitte l'app (TikTok, appel…), Android peut détruire la webview :
+  // au retour, l'app recharge son URL de départ et on atterrit sur l'accueil,
+  // en pleine séance. Ici : si une séance est en cours AUJOURD'HUI et qu'il
+  // s'agit du PREMIER chargement de cette instance d'app (sessionStorage vide,
+  // il est effacé avec la webview), on repart directement sur la séance.
+  // Une navigation volontaire vers l'accueil ensuite n'est jamais interceptée.
+  (function () {
+    var booted = true;
+    try {
+      booted = sessionStorage.getItem('app_booted') === '1';
+      sessionStorage.setItem('app_booted', '1');
+    } catch (e) { return; }
+    if (booted) return;
+    var p = window.location.pathname;
+    if (p !== '/' && p !== '/accueil') return;
+    try {
+      var s = JSON.parse(localStorage.getItem('active_session') || '{}');
+      if (!s.active_session || !s.session_id) return;
+      var today = new Date().toISOString().slice(0, 10);
+      if (s.session_date !== today) { localStorage.removeItem('active_session'); return; }
+      window.location.replace('/seance?mode=' + (s.session_mode || 'prefaite')
+        + '&name=' + encodeURIComponent(s.session_id)
+        + '&date=' + s.session_date);
+    } catch (e) {}
+  })();
+  </script>
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -110,6 +141,7 @@
   <script src="/static/js/sw-register.js"></script>
   <script src="/static/js/offline.js"></script>
   <script src="/static/js/notifications.js"></script>
+  {% if is_authenticated %}<script src="/static/js/rest-timer.js"></script>{% endif %}
   <script src="/static/js/push.js" defer></script>
   <script src="/static/js/tuto-engine.js"></script>
   <script src="/static/js/tutorial.js"></script>

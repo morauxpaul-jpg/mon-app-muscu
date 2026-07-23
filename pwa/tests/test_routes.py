@@ -185,6 +185,54 @@ def test_accueil_affiche_semaine_relative(fake_db, logged_in):
     assert int(m.group(1)) < 100  # relatif au _started_at, pas continu
 
 
+# ── Bilan de fin de séance (note /5 + commentaire) ───────────────
+
+def _finish(client, **extra):
+    data = {"_csrf": CSRF, "mode": "prefaite", "seance_name": "Push",
+            "date": MONDAY_W02.isoformat()}
+    data.update(extra)
+    return client.post("/seance/finish", data=data)
+
+
+def _prog_notes(fake):
+    return (fake.tables["programs"][0]["data"].get("_session_notes") or {})
+
+
+def test_finish_enregistre_note_et_commentaire(fake_db, logged_in):
+    _seed_prog(fake_db)
+    r = _finish(logged_in, rating="4", comment="  Bonnes sensations  ")
+    assert r.status_code == 302
+
+    note = _prog_notes(fake_db)[f"Push|{MONDAY_W02.isoformat()}"]
+    assert note["rating"] == 4
+    assert note["comment"] == "Bonnes sensations"
+
+
+def test_finish_skip_n_enregistre_aucun_bilan(fake_db, logged_in):
+    """Bouton « Passer » : les deux champs partent vides → rien de stocké."""
+    _seed_prog(fake_db)
+    assert _finish(logged_in, rating="", comment="").status_code == 302
+    assert _prog_notes(fake_db) == {}
+
+
+def test_finish_note_hors_bornes_ignoree(fake_db, logged_in):
+    _seed_prog(fake_db)
+    assert _finish(logged_in, rating="12", comment="RAS").status_code == 302
+
+    note = _prog_notes(fake_db)[f"Push|{MONDAY_W02.isoformat()}"]
+    assert "rating" not in note
+    assert note["comment"] == "RAS"
+
+
+def test_seance_affiche_le_bilan_enregistre(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _finish(logged_in, rating="5", comment="Grosse séance")
+
+    r = logged_in.get(f"/seance?date={MONDAY_W02.isoformat()}&mode=prefaite&name=Push")
+    assert r.status_code == 200
+    assert "Grosse séance" in r.data.decode("utf-8")
+
+
 # ── Suppression de compte ────────────────────────────────────────
 
 def test_delete_account_efface_tout_et_deconnecte(fake_db, logged_in):

@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v117-2026-06-16-noselect-resttimer-natif";
+const CACHE_VERSION = "v118-2026-07-23-chrono-global-bilan-seance";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -24,6 +24,8 @@ const APP_SHELL = [
   "/static/js/prefetch.js",
   "/static/js/exercise-library.js",
   "/static/css/timer.css",
+  "/static/css/rest-timer.css",
+  "/static/js/rest-timer.js",
   "/static/icon-192.png",
   "/static/icon-512.png",
   "/static/badge.png",

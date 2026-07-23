@@ -694,6 +694,7 @@ def seance():
             auto_rest_timer=auto_rest_timer,
             show_rpe=show_rpe,
             cardio_done=_build_cardio_done(hist, name, date_iso),
+            session_note=(prog.get("_session_notes") or {}).get(f"{name}|{date_iso}"),
             body_polygons=get_body_polygons(),
         )
 
@@ -743,6 +744,7 @@ def seance():
             auto_rest_timer=auto_rest_timer,
             show_rpe=show_rpe,
             cardio_done=_build_cardio_done(hist, libre_name, date_iso),
+            session_note=(prog.get("_session_notes") or {}).get(f"{libre_name}|{date_iso}"),
             body_polygons=get_body_polygons(),
         )
 
@@ -1140,7 +1142,9 @@ def delete_cardio():
 
 @bp.route("/seance/finish", methods=["POST"])
 def finish():
-    """Termine la séance : nettoie le brouillon libre ou les extras et retourne à l'accueil."""
+    """Termine la séance : enregistre le bilan (note /5 + commentaire, tous deux
+    facultatifs — le bouton « Passer » n'envoie rien), nettoie le brouillon libre
+    ou les extras, et retourne à l'accueil."""
     f = request.form
     mode = f["mode"]
     seance_name = f["seance_name"]
@@ -1154,11 +1158,44 @@ def finish():
     if mode == "prefaite" and "_extras" in prog and key in prog["_extras"]:
         prog["_extras"].pop(key, None)
         changed = True
+
+    # Bilan de séance — stocké dans le programme (JSON), pas de migration de
+    # schéma. Clé « Séance|date », comme les extras et l'ordre personnalisé.
+    note = _parse_session_note(f)
+    if note:
+        prog.setdefault("_session_notes", {})[key] = note
+        changed = True
+
     if changed:
         from core.data import save_prog
         save_prog(prog)
-    track("workout_finished", {"mode": mode, "seance": seance_name})
+        clear_user_cache()
+    track("workout_finished", {
+        "mode": mode, "seance": seance_name,
+        "rating": note.get("rating", 0) if note else 0,
+        "has_comment": bool(note and note.get("comment")),
+    })
     return redirect(url_for("accueil.index"))
+
+
+def _parse_session_note(form):
+    """Note /5 + commentaire du bilan de fin de séance. Retourne None si
+    l'utilisateur a cliqué « Passer » (les deux champs vides)."""
+    try:
+        rating = int(form.get("rating") or 0)
+    except (TypeError, ValueError):
+        rating = 0
+    if not 1 <= rating <= 5:
+        rating = 0
+    comment = (form.get("comment") or "").strip()[:500]
+    if not rating and not comment:
+        return None
+    note = {"ts": now_paris().strftime("%Y-%m-%d %H:%M")}
+    if rating:
+        note["rating"] = rating
+    if comment:
+        note["comment"] = comment
+    return note
 
 
 @bp.route("/seance/api/variant-history", methods=["POST"])

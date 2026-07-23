@@ -1,0 +1,168 @@
+/* ── Chrono de repos GLOBAL ────────────────────────────────────────────
+   La barre est injectée par /static/js/rest-timer.js dans base.html, donc sur
+   TOUTES les pages : le repos continue quand on change d'onglet, qu'on quitte
+   l'app ou qu'on enregistre un exercice (la page se recharge, pas le chrono —
+   l'état vit dans localStorage).
+
+   Deux rendus :
+     • .rest-timer-bar            → bandeau complet (page séance uniquement)
+     • .rest-timer-bar.compact    → pastille discrète (toutes les autres pages),
+                                    cliquable pour revenir à la séance en cours.
+
+   Position : TOUJOURS au-dessus de la bottom-nav (safe-area comprise) — c'est
+   ce qui évite le chevauchement avec les onglets. */
+
+:root {
+  --rest-timer-gap: calc(var(--nav-h, 64px) + env(safe-area-inset-bottom));
+}
+
+.rest-timer-bar {
+  position: fixed;
+  bottom: var(--rest-timer-gap);
+  left: 0;
+  right: 0;
+  z-index: 95; /* sous la bottom-nav (100), au-dessus du contenu */
+  background: var(--bg-surface);
+  border-top: 0.5px solid var(--border-default);
+  overflow: hidden;
+}
+.rest-timer-bar[hidden] { display: none !important; }
+
+.rest-timer-bar-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--accent-bg);
+  transition: width 1s linear;
+}
+.rest-timer-bar-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  flex-wrap: nowrap;
+}
+.rest-timer-bar-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.rest-timer-bar-time {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+}
+.rest-timer-bar-presets {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+.rest-timer-bar-presets button {
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-default);
+  color: var(--text-2);
+  font-size: 0.68rem;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.rest-timer-bar-presets button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.rest-timer-sound,
+.rest-timer-bar-skip {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.rest-timer-sound.muted { color: var(--text-3); opacity: 0.55; }
+.rest-timer-bar-skip { padding: 4px 8px; }
+
+.rest-timer-bar.timer-done { border-top-color: var(--success); }
+.rest-timer-bar.timer-done .rest-timer-bar-label { color: var(--success); }
+.rest-timer-bar.timer-done .rest-timer-bar-time { color: var(--success); }
+.rest-timer-bar.timer-done .rest-timer-bar-progress { background: var(--success-bg); }
+
+/* Petits écrans : le mot « REPOS » et les marges cèdent la place aux
+   préréglages plutôt que de pousser le bouton « passer » hors de l'écran. */
+@media (max-width: 370px) {
+  .rest-timer-bar .rest-timer-bar-label .rt-word { display: none; }
+  .rest-timer-bar-content { gap: 5px; padding: 8px; }
+  .rest-timer-bar-presets button { padding: 3px 5px; font-size: 0.64rem; }
+  .rest-timer-bar-time { font-size: 1.15rem; min-width: 38px; }
+  .rest-timer-sound { padding: 4px 2px; }
+}
+
+/* ── Pastille discrète (hors page séance) ──────────────────────────── */
+.rest-timer-bar.compact {
+  left: auto;
+  right: 10px;
+  bottom: calc(var(--rest-timer-gap) + 10px);
+  border: 0.5px solid var(--border-default);
+  border-top: 0.5px solid var(--border-default);
+  border-radius: var(--radius-pill, 9999px);
+  background: rgba(16, 18, 28, 0.88);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+}
+.rest-timer-bar.compact .rest-timer-bar-content {
+  padding: 5px 8px 5px 12px;
+  gap: 6px;
+}
+.rest-timer-bar.compact .rest-timer-bar-presets,
+.rest-timer-bar.compact .rest-timer-sound,
+.rest-timer-bar.compact .rest-timer-bar-label .rt-word { display: none; }
+.rest-timer-bar.compact .rest-timer-bar-time {
+  font-size: 1rem;
+  min-width: 34px;
+  text-align: center;
+}
+.rest-timer-bar.compact .rest-timer-bar-label { color: var(--accent); }
+.rest-timer-bar.compact.timer-done .rest-timer-bar-label { color: var(--success); }
+.rest-timer-bar.compact .rest-timer-bar-skip { padding: 2px 4px; }
+
+/* ── Modale « bilan de séance » (note + commentaire) ───────────────── */
+.seance-rating-stars {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.seance-rating-stars button {
+  background: none;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-3);
+  opacity: 0.35;
+  transition: transform var(--ease-fast, 0.15s ease), opacity var(--ease-fast, 0.15s ease);
+}
+.seance-rating-stars button .icon { width: 30px; height: 30px; }
+.seance-rating-stars button.on {
+  color: #FFC93C;
+  opacity: 1;
+}
+.seance-rating-stars button:active { transform: scale(0.9); }
+.seance-rating-label {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-3);
+  min-height: 1.2em;
+  margin-bottom: 10px;
+}

@@ -1,6 +1,17 @@
 {
-  "current": "v39",
+  "current": "v40",
   "entries": [
+    {
+      "version": "v40",
+      "date": "2026-07-23",
+      "title": "Nouveauté : ton chrono te suit, et ta séance a droit à un bilan",
+      "changes": [
+        "Le chrono de repos continue partout : change d'onglet, enregistre un exercice ou quitte l'app, il reste affiché en petit au-dessus du menu — un tap pour revenir à ta séance",
+        "Sonnerie à la fin du repos, avec un bouton dans la barre du chrono pour la couper si tu préfères le silence",
+        "Tu rouvres l'app en pleine séance ? Tu arrives directement sur ta séance en cours, plus sur l'accueil",
+        "Nouveau bilan de fin de séance : note-la sur 5 et laisse un commentaire (sensations, forme, douleurs…). Tu le retrouveras en rouvrant la séance — et tu peux passer si tu n'as rien à dire"
+      ]
+    },
     {
       "version": "v39",
       "date": "2026-07-01",

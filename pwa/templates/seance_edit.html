@@ -4,79 +4,8 @@
 {% block head_extra %}
 <link rel="stylesheet" href="/static/css/timer.css">
 <style>
-/* ── Rest Timer Bar (non-blocking, fixed bottom) ── */
-.rest-timer-bar {
-  position: fixed;
-  bottom: 60px;
-  left: 0;
-  right: 0;
-  z-index: 900;
-  background: var(--bg-surface);
-  border-top: 0.5px solid var(--border-default);
-  overflow: hidden;
-}
-.rest-timer-bar-progress {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: var(--accent-bg);
-  transition: width 1s linear;
-}
-.rest-timer-bar-content {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  flex-wrap: nowrap;
-}
-.rest-timer-bar-label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-3);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.rest-timer-bar-time {
-  font-size: 1.3rem;
-  font-weight: 500;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-  min-width: 42px;
-}
-.rest-timer-bar-presets {
-  display: flex;
-  gap: 3px;
-  margin-left: auto;
-}
-.rest-timer-bar-presets button {
-  background: var(--bg-elevated);
-  border: 0.5px solid var(--border-default);
-  color: var(--text-2);
-  font-size: 0.68rem;
-  padding: 3px 6px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.rest-timer-bar-presets button.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: transparent;
-}
-.rest-timer-bar-skip {
-  background: none;
-  border: none;
-  color: var(--text-2);
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  flex-shrink: 0;
-}
-.rest-timer-bar.timer-done { border-top-color: var(--success); }
-.rest-timer-bar.timer-done .rest-timer-bar-label { color: var(--success); }
-.rest-timer-bar.timer-done .rest-timer-bar-time { color: var(--success); }
+/* Le chrono de repos est global (base.html + /static/css/rest-timer.css) :
+   il survit aux changements d'onglet et aux rechargements de page. */
 
 /* ── Exercise info button ── */
 .exo-info-btn {
@@ -166,6 +95,25 @@
     <div class="seance-label">SÉANCE · SEMAINE {{ s_display }}</div>
     <div class="seance-title">{{ seance_name }}</div>
   </div>
+
+  {# ── Bilan enregistré à la fin de cette séance ──────────────── #}
+  {% if session_note %}
+  <div class="card" style="border-color:var(--border-default); padding:10px 12px; margin-bottom:10px;">
+    <div class="label-icon" style="font-size:0.68rem; color:var(--text-3); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:4px;">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>Ton bilan
+    </div>
+    {% if session_note.rating %}
+    <div style="display:flex; gap:2px; margin-bottom:4px;">
+      {% for i in range(1, 6) %}
+        <svg class="icon icon-sm" style="color:{{ '#FFC93C' if i <= session_note.rating else 'var(--text-3)' }}; opacity:{{ '1' if i <= session_note.rating else '0.3' }};"><use href="/static/img/icons.svg#star"/></svg>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if session_note.comment %}
+      <div style="font-size:0.85rem; color:var(--text-2); line-height:1.45;">{{ session_note.comment }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
 
   {# ── Barre de progression (Feature 5) ─────────────────────── #}
   {% if exos %}
@@ -777,28 +725,42 @@
     }
   </script>
 
-  <form method="post" action="/seance/finish" onsubmit="clearAllDrafts(); _clearActiveSession();">
+  {# Le clic sur « Terminer » ouvre d'abord le bilan (note + commentaire) ;
+     la soumission réelle se fait depuis la modale (ou via « Passer »). #}
+  <form id="finish-form" method="post" action="/seance/finish">
     <input type="hidden" name="mode" value="{{ mode }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
     <input type="hidden" name="date" value="{{ date_iso }}">
-    <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
+    <input type="hidden" name="rating" id="finish-rating" value="">
+    <input type="hidden" name="comment" id="finish-comment" value="">
+    <button type="button" id="finish-open" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
   </form>
 
-  {# ── Chrono de repos (non-bloquant, bandeau fixe) ──────── #}
-  <div id="rest-timer" class="rest-timer-bar" style="display:none;">
-    <div class="rest-timer-bar-progress" id="timer-progress-bar"></div>
-    <div class="rest-timer-bar-content">
-      <span class="rest-timer-bar-label label-icon" id="timer-label"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS</span>
-      <span class="rest-timer-bar-time" id="timer-display">1:30</span>
-      <div class="rest-timer-bar-presets">
-        <button type="button" onclick="setTimerDuration(60)">1:00</button>
-        <button type="button" onclick="setTimerDuration(90)">1:30</button>
-        <button type="button" onclick="setTimerDuration(120)">2:00</button>
-        <button type="button" onclick="setTimerDuration(180)">3:00</button>
+  {# ── Bilan de séance : note sur 5 + commentaire (skippable) ──────── #}
+  <div id="finish-modal" class="exo-info-modal" style="display:none;">
+    <div class="exo-info-box" style="max-width:340px;" onclick="event.stopPropagation()">
+      <h4 style="text-align:center; font-size:1.05rem;">Séance terminée 💪</h4>
+      <div style="text-align:center; font-size:0.82rem; color:var(--text-3); margin-bottom:10px;">Comment elle s'est passée ?</div>
+
+      <div class="seance-rating-stars" id="finish-stars">
+        {% for i in range(1, 6) %}
+        <button type="button" data-star="{{ i }}" aria-label="{{ i }} étoile{{ 's' if i > 1 }}"><svg class="icon"><use href="/static/img/icons.svg#star"/></svg></button>
+        {% endfor %}
       </div>
-      <button type="button" class="rest-timer-bar-skip" onclick="skipTimer()" aria-label="Passer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
+      <div class="seance-rating-label" id="finish-rating-label"></div>
+
+      <textarea id="finish-comment-input" rows="3" maxlength="500"
+                placeholder="Un mot sur ta séance ? (sensations, forme, douleurs…)"
+                style="width:100%; box-sizing:border-box; background:var(--bg-input, rgba(255,255,255,0.05)); border:0.5px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-1); padding:10px; font-size:0.88rem; font-family:inherit; resize:none;"></textarea>
+
+      <button type="button" class="btn primary" id="finish-save" style="width:100%; justify-content:center; margin-top:10px;">Enregistrer la séance</button>
+      <button type="button" class="btn" id="finish-skip" style="width:100%; justify-content:center; margin-top:6px; color:var(--text-3);">Passer</button>
     </div>
   </div>
+
+  {# Hôte du chrono de repos : sa présence bascule la barre globale en mode
+     complet (préréglages + son) sur cette page. #}
+  <div id="rest-timer-host" hidden></div>
 
 
   {# ── Modal info exercice (Feature 8) ────────────────────── #}
@@ -1018,221 +980,11 @@
     document.getElementById('exo-tab-rm').style.display = (tab === 'rm') ? '' : 'none';
   }
 
-  // ── Rest Timer (non-bloquant, background-aware) ───────────────
-  // On calcule tout à partir de _timerEndTime (Date.now() absolue). Ça
-  // permet au compteur de rester juste si l'onglet passe en arrière-plan
-  // (les setInterval sont throttlés sur mobile). En parallèle on planifie
-  // une notification via le Service Worker pour prévenir quand c'est fini.
-  var _timerInterval = null;
-  var _timerTotal = 90;
-  var _timerEndTime = 0;
-  var _timerRemaining = 0;
-  var _timerFinished = false; // évite un double déclenchement (setInterval + visibilitychange)
-  var _originalTitle = document.title;
-
-  // Poste un message au service worker (planifie/annule la notif de fin de
-  // repos). On vise le controller actif ; fallback sur .ready si pas encore prêt.
-  function _postTimerMsg(msg) {
-    try {
-      if (!('serviceWorker' in navigator)) return;
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage(msg);
-      } else {
-        navigator.serviceWorker.ready.then(function (reg) {
-          if (reg && reg.active) reg.active.postMessage(msg);
-        }).catch(function () {});
-      }
-    } catch (e) {}
-  }
-
-  // Plugin Capacitor Local Notifications (app native uniquement) — accessible
-  // via le pont natif sur la page distante. Permet une notif planifiée par
-  // l'OS, fiable même quand la webview est tuée en arrière-plan (contrairement
-  // au setTimeout du service worker, jamais garanti sur mobile).
-  var _REST_NOTIF_ID = 4242;
-  function _capLN() {
-    return (window.Capacitor && window.Capacitor.Plugins
-            && window.Capacitor.Plugins.LocalNotifications) || null;
-  }
-  function _cancelNativeRestNotif() {
-    var ln = _capLN(); if (!ln) return;
-    try { ln.cancel({ notifications: [{ id: _REST_NOTIF_ID }] }); } catch (e) {}
-  }
-  function _scheduleNativeRestNotif(seconds) {
-    var ln = _capLN(); if (!ln) return false;
-    try {
-      ln.cancel({ notifications: [{ id: _REST_NOTIF_ID }] });
-      ln.schedule({ notifications: [{
-        id: _REST_NOTIF_ID,
-        title: 'Repos terminé !',
-        body: "C'est reparti — série suivante",
-        schedule: { at: new Date(Date.now() + seconds * 1000), allowWhileIdle: true }
-      }] });
-      return true;
-    } catch (e) { return false; }
-  }
-
-  // Demande la permission notifications si pas encore tranchée — au moment où
-  // l'utilisateur lance un chrono (contexte clair) plutôt qu'au hasard.
-  function _ensureNotifPermission() {
-    try {
-      var ln = _capLN();
-      if (ln) { try { ln.requestPermissions(); } catch (e) {} return; }
-      if (!('Notification' in window)) return;
-      if (Notification.permission === 'default') Notification.requestPermission();
-    } catch (e) {}
-  }
-
-  // Planifie la notif de fin de repos. App native → notification planifiée par
-  // l'OS (fiable). Web/PWA → fallback via le SW (setTimeout, best-effort).
-  function _scheduleTimerNotif() {
-    _postTimerMsg({ type: 'CANCEL_TIMER' });
-    _cancelNativeRestNotif();
-    if (_scheduleNativeRestNotif(_timerTotal)) return;
-    _postTimerMsg({
-      type: 'SCHEDULE_TIMER',
-      delay: _timerTotal * 1000,
-      title: 'Repos terminé !',
-      body: "C'est reparti — série suivante"
-    });
-  }
-
-  function startTimer(seconds) {
-    _timerTotal = seconds || _timerTotal;
-    _timerEndTime = Date.now() + _timerTotal * 1000;
-    _timerRemaining = _timerTotal;
-    _timerFinished = false;
-    var bar = document.getElementById('rest-timer');
-    bar.classList.remove('timer-done');
-    bar.style.display = 'block';
-    document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg>REPOS';
-    updateTimerDisplay();
-    highlightPreset(_timerTotal);
-    clearInterval(_timerInterval);
-    _timerInterval = setInterval(tickTimer, 1000);
-    _ensureNotifPermission();
-    _scheduleTimerNotif();
-  }
-
-  function tickTimer() {
-    _timerRemaining = Math.max(0, Math.ceil((_timerEndTime - Date.now()) / 1000));
-    updateTimerDisplay();
-    if (_timerRemaining <= 0) {
-      clearInterval(_timerInterval);
-      _timerInterval = null;
-      timerFinished();
-    }
-  }
-
-  function updateTimerDisplay() {
-    var r = Math.max(0, _timerRemaining);
-    var m = Math.floor(r / 60);
-    var s = r % 60;
-    var txt = m + ':' + (s < 10 ? '0' : '') + s;
-    document.getElementById('timer-display').textContent = txt;
-    var pct = (_timerRemaining / _timerTotal) * 100;
-    document.getElementById('timer-progress-bar').style.width = pct + '%';
-    // Titre d'onglet : décompte visible sur l'écran de verrouillage / preview PWA
-    if (r > 0) {
-      document.title = 'Repos ' + txt + ' — Muscu Tracker';
-    }
-  }
-
-  // ── Bip léger (sine 600Hz, ~80ms, gain 0.04) ──
-  function _playTimerBeep() {
-    try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.frequency.value = 600;
-      osc.type = 'sine';
-      var t0 = ctx.currentTime;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.04, t0 + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t0);
-      osc.stop(t0 + 0.1);
-    } catch(e) {}
-  }
-
-  function timerFinished() {
-    if (_timerFinished) return; // idempotent : background→foreground peut tirer 2 fois
-    _timerFinished = true;
-    var bar = document.getElementById('rest-timer');
-    bar.classList.add('timer-done');
-    document.getElementById('timer-label').innerHTML = '<svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>C\'est reparti';
-    _playTimerBeep();
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    document.title = 'GO ! — Muscu Tracker';
-    _timerEndTime = 0;
-    // L'app est au premier plan (on vient de biper) → la notif planifiée n'a
-    // plus lieu d'être : on l'annule (SW + native) pour éviter un doublon.
-    _postTimerMsg({ type: 'CANCEL_TIMER' });
-    _cancelNativeRestNotif();
-    setTimeout(function() {
-      if (bar.style.display !== 'none') skipTimer();
-    }, 3000);
-  }
-
-  function skipTimer() {
-    clearInterval(_timerInterval);
-    _timerInterval = null;
-    _timerEndTime = 0;
-    _timerFinished = false;
-    document.title = _originalTitle;
-    document.getElementById('rest-timer').style.display = 'none';
-    _postTimerMsg({ type: 'CANCEL_TIMER' });
-    _cancelNativeRestNotif();
-  }
-
-  function setTimerDuration(sec) {
-    localStorage.setItem('restTimerDefault', sec);
-    _timerTotal = sec;
-    _timerEndTime = Date.now() + sec * 1000;
-    _timerRemaining = sec;
-    _timerFinished = false;
-    updateTimerDisplay();
-    highlightPreset(sec);
-    clearInterval(_timerInterval);
-    _timerInterval = setInterval(tickTimer, 1000);
-    // Re-planifie la notif avec la nouvelle durée
-    _scheduleTimerNotif();
-  }
-
-  // Quand l'onglet revient au premier plan, recalcule le reste à partir
-  // de endTime (setInterval a pu être throttlé pendant l'absence) et
-  // relance le tick pour reprendre proprement le décompte.
-  function _resumeTimerOnFocus() {
-    if (document.hidden || !_timerEndTime) return;
-    _timerRemaining = Math.max(0, Math.ceil((_timerEndTime - Date.now()) / 1000));
-    updateTimerDisplay();
-    if (_timerRemaining <= 0) {
-      clearInterval(_timerInterval);
-      _timerInterval = null;
-      timerFinished();
-    } else {
-      // Restart le tick — l'interval throttlé en background n'est pas fiable.
-      clearInterval(_timerInterval);
-      _timerInterval = setInterval(tickTimer, 1000);
-    }
-  }
-  document.addEventListener('visibilitychange', _resumeTimerOnFocus);
-  // pageshow couvre le cas iOS bfcache (retour navigateur sur la séance).
-  window.addEventListener('pageshow', _resumeTimerOnFocus);
-
-  function highlightPreset(sec) {
-    document.querySelectorAll('.rest-timer-bar-presets button').forEach(function(b) {
-      var parts = b.textContent.split(':');
-      b.classList.toggle('active', parseInt(parts[0]) * 60 + parseInt(parts[1]) === sec);
-    });
-  }
-
-  var savedTimer = parseInt(localStorage.getItem('restTimerDefault'));
-  if (savedTimer) _timerTotal = savedTimer;
-
-  // Auto rest timer setting from server
+  // ── Chrono de repos ───────────────────────────────────────────
+  // Toute la mécanique vit dans /static/js/rest-timer.js (chargé par base.html)
+  // : l'état est persisté dans localStorage, donc le repos survit à la
+  // navigation entre onglets, au rechargement après « Valider » et au retour
+  // depuis une autre app. Ici on ne fait qu'appeler l'API globale.
   var AUTO_REST_TIMER = {{ auto_rest_timer|tojson }};
 
   // ── Active session tracking (localStorage) ─────────────────
@@ -1252,6 +1004,82 @@
   function _clearActiveSession() {
     try { localStorage.removeItem(_activeSessionKey); } catch(e) {}
   }
+
+  // ── Bilan de fin de séance (note /5 + commentaire, skippable) ──
+  // « Terminer la séance » ouvre d'abord la modale ; c'est elle qui soumet
+  // réellement le formulaire (avec ou sans note si on passe).
+  (function () {
+    var LABELS = ['', 'Difficile', 'Moyenne', 'Correcte', 'Très bonne', 'Excellente'];
+    var form = document.getElementById('finish-form');
+    var modal = document.getElementById('finish-modal');
+    if (!form || !modal) return;
+    // Sorti de <main> : la page a une animation avec transform, qui créerait
+    // un bloc conteneur pour le position:fixed de la modale (mal centrée).
+    document.body.appendChild(modal);
+    var starsBox = document.getElementById('finish-stars');
+    var stars = starsBox.querySelectorAll('button');
+    var ratingLabel = document.getElementById('finish-rating-label');
+    var commentInput = document.getElementById('finish-comment-input');
+    var rating = 0;
+
+    function paintStars() {
+      Array.prototype.forEach.call(stars, function (b, i) {
+        b.classList.toggle('on', i < rating);
+      });
+      ratingLabel.textContent = LABELS[rating] || '';
+    }
+    Array.prototype.forEach.call(stars, function (b) {
+      b.addEventListener('click', function () {
+        rating = parseInt(b.getAttribute('data-star'), 10);
+        paintStars();
+      });
+    });
+
+    function reallySubmit() {
+      var save = document.getElementById('finish-save');
+      var skipBtn = document.getElementById('finish-skip');
+      save.disabled = true; skipBtn.disabled = true;
+      save.textContent = 'Enregistrement...';
+      // requestSubmit (et non submit) : l'événement submit est bien émis, donc
+      // le token CSRF, l'arrêt du chrono et le suivi des pubs restent branchés.
+      if (form.requestSubmit) { form.requestSubmit(); return; }
+      // Vieux moteur sans requestSubmit : on injecte le CSRF à la main.
+      var m = document.querySelector('meta[name="csrf-token"]');
+      if (m && m.content && !form.querySelector('input[name="_csrf"]')) {
+        var i = document.createElement('input');
+        i.type = 'hidden'; i.name = '_csrf'; i.value = m.content;
+        form.appendChild(i);
+      }
+      if (window.RestTimer) window.RestTimer.finishSession();
+      clearAllDrafts();
+      _clearActiveSession();
+      form.submit();
+    }
+
+    document.getElementById('finish-open').addEventListener('click', function () {
+      paintStars();
+      modal.style.display = 'flex';
+    });
+    document.getElementById('finish-save').addEventListener('click', function () {
+      document.getElementById('finish-rating').value = rating ? String(rating) : '';
+      document.getElementById('finish-comment').value = (commentInput.value || '').trim();
+      reallySubmit();
+    });
+    document.getElementById('finish-skip').addEventListener('click', function () {
+      document.getElementById('finish-rating').value = '';
+      document.getElementById('finish-comment').value = '';
+      reallySubmit();
+    });
+    // Tap hors de la carte = on annule (la séance n'est pas terminée).
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+
+    form.addEventListener('submit', function () {
+      clearAllDrafts();
+      _clearActiveSession();
+    });
+  })();
 
   // ── Loading state: disable buttons on form submit ─────────────
   document.addEventListener('submit', function(e) {
@@ -1432,14 +1260,14 @@
       startRestTimer: function () {
         if (!AUTO_REST_TIMER) return;
         // Pas de garde "barre déjà visible" : chaque nouvelle série relance le
-        // repos depuis le début (startTimer réinitialise proprement l'interval).
+        // repos depuis le début (start() réinitialise proprement l'échéance).
         var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
-        startTimer(dur);
+        window.RestTimer.start(dur);
       },
       // Lancement manuel via le bouton chrono de l'exo (ignore le réglage auto).
       manualRestTimer: function () {
         var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
-        startTimer(dur);
+        window.RestTimer.start(dur);
       },
       prepareSave: function (e) {
         // Clear draft on save + démarre le chrono (spec : Valider déclenche le repos)
