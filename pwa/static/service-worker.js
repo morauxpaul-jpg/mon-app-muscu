@@ -1,6 +1,6 @@
 // Service worker — Network First avec mise à jour automatique.
 // IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v118-2026-07-23-chrono-global-bilan-seance";
+const CACHE_VERSION = "v119-2026-08-18-export-natif-son-chrono-histo-croise";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [

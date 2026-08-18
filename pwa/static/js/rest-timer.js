@@ -24,6 +24,7 @@
   var STATE_KEY = "rest_timer_state";
   var DEFAULT_KEY = "restTimerDefault"; // durée préférée (préréglages)
   var MUTE_KEY = "restTimerMuted";
+  var VOLUME_KEY = "restTimerVolume"; // 0..100 (0 = coupé)
   var SESSION_KEY = "active_session";
   var NOTIF_ID = 4242;
   var DONE_GRACE_MS = 90000;  // au-delà, un chrono expiré n'est plus ré-affiché
@@ -37,6 +38,7 @@
   var _bar = null;
   var _els = {};
   var _ctx = null;
+  var _comp = null;       // compresseur de sortie (bip fort sans saturation)
   var _doneUntil = 0;     // fin de l'affichage « C'est reparti »
   var _origTitle = document.title;
 
@@ -82,12 +84,47 @@
   }
 
   // ── Son de fin (3 notes, franchement audible) ───────────────────
+  // Volume réglable 0..100 (0 = coupé). On garde MUTE_KEY pour compat : s'il
+  // vaut "1", le son est coupé quel que soit le volume enregistré.
+  function _volume() {
+    if (_muted()) return 0;
+    try {
+      var v = parseInt(localStorage.getItem(VOLUME_KEY), 10);
+      if (isNaN(v)) return 1;            // défaut : volume max
+      return Math.max(0, Math.min(100, v)) / 100;
+    } catch (e) { return 1; }
+  }
+  function _setVolume(v) {
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    try { localStorage.setItem(VOLUME_KEY, String(v)); } catch (e) {}
+    // Un volume à 0 = coupé (et inversement, bouger le curseur réactive le son).
+    try { localStorage.setItem(MUTE_KEY, v === 0 ? "1" : "0"); } catch (e) {}
+  }
+
+  // Baisse la musique de fond (Spotify…) le temps de l'alerte, via le pont
+  // natif Android (audio focus). No-op sur web/PWA.
+  function _duckNative(ms) {
+    try {
+      if (window.MTAudio && typeof window.MTAudio.duckAudio === "function") {
+        window.MTAudio.duckAudio(ms | 0);
+      }
+    } catch (e) {}
+  }
+
   function unlockAudio() {
     try {
       if (!_ctx) {
         var AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return;
         _ctx = new AC();
+        // Compresseur en sortie : autorise des pics forts sans saturer, pour
+        // que le bip passe par-dessus la musique.
+        try {
+          _comp = _ctx.createDynamicsCompressor();
+          _comp.threshold.setValueAtTime(-10, _ctx.currentTime);
+          _comp.ratio.setValueAtTime(12, _ctx.currentTime);
+          _comp.connect(_ctx.destination);
+        } catch (e) { _comp = null; }
       }
       if (_ctx.state === "suspended") _ctx.resume();
     } catch (e) {}
@@ -99,23 +136,28 @@
     osc.type = "triangle";
     osc.frequency.setValueAtTime(freq, at);
     gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(peak, at + 0.015);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), at + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     osc.connect(gain);
-    gain.connect(_ctx.destination);
+    gain.connect(_comp || _ctx.destination);
     osc.start(at);
     osc.stop(at + dur + 0.02);
   }
 
   function playEndSound() {
-    if (_muted()) return;
+    var vol = _volume();
+    if (vol <= 0) return;
     unlockAudio();
     if (!_ctx) return;
+    // Baisse la musique ~1,6 s (le temps des 3 notes + réverbération).
+    _duckNative(1600);
     try {
       var t0 = _ctx.currentTime + 0.02;
-      _note(880, t0, 0.18, 0.35);          // La
-      _note(880, t0 + 0.20, 0.18, 0.35);
-      _note(1318.5, t0 + 0.40, 0.32, 0.40); // Mi — note haute finale
+      // Pics nettement plus élevés qu'avant (0.35 → jusqu'à ~1.4 à fond),
+      // le compresseur encaisse. Mise à l'échelle par le volume choisi.
+      _note(880, t0, 0.18, 1.1 * vol);           // La
+      _note(880, t0 + 0.20, 0.18, 1.1 * vol);
+      _note(1318.5, t0 + 0.40, 0.34, 1.4 * vol);  // Mi — note haute finale
     } catch (e) {}
   }
 
@@ -196,6 +238,11 @@
         '</div>' +
         '<button type="button" class="rest-timer-sound" aria-label="Son du chrono">' + _icon("volume") + '</button>' +
         '<button type="button" class="rest-timer-bar-skip" aria-label="Passer le repos">' + _icon("x") + '</button>' +
+      '</div>' +
+      '<div class="rest-timer-vol-pop" hidden>' +
+        '<button type="button" class="rt-vol-mute" aria-label="Couper le son">' + _icon("volume-off") + '</button>' +
+        '<input type="range" class="rt-vol-slider" min="0" max="100" step="5" aria-label="Volume du chrono">' +
+        '<span class="rt-vol-val">100</span>' +
       '</div>';
     document.body.appendChild(bar);
 
@@ -204,6 +251,10 @@
     _els.label = bar.querySelector(".rest-timer-bar-label");
     _els.time = bar.querySelector(".rest-timer-bar-time");
     _els.sound = bar.querySelector(".rest-timer-sound");
+    _els.volPop = bar.querySelector(".rest-timer-vol-pop");
+    _els.volSlider = bar.querySelector(".rt-vol-slider");
+    _els.volVal = bar.querySelector(".rt-vol-val");
+    _els.volMute = bar.querySelector(".rt-vol-mute");
     _els.presets = bar.querySelectorAll(".rest-timer-bar-presets button");
 
     Array.prototype.forEach.call(_els.presets, function (b) {
@@ -216,13 +267,35 @@
       e.stopPropagation();
       skip();
     });
+    // Le bouton son ouvre/ferme le curseur de volume (0 = coupé).
     _els.sound.addEventListener("click", function (e) {
       e.stopPropagation();
-      var next = !_muted();
-      try { localStorage.setItem(MUTE_KEY, next ? "1" : "0"); } catch (err) {}
-      _renderSound();
-      if (!next) playEndSound(); // aperçu quand on réactive le son
+      _toggleVolPop();
     });
+    if (_els.volSlider) {
+      _els.volSlider.addEventListener("input", function (e) {
+        e.stopPropagation();
+        _setVolume(parseInt(_els.volSlider.value, 10) || 0);
+        _renderSound();
+      });
+      // Aperçu sonore quand on relâche le curseur.
+      var _preview = function (e) { e.stopPropagation(); if (_volume() > 0) playEndSound(); };
+      _els.volSlider.addEventListener("change", _preview);
+      _els.volSlider.addEventListener("click", function (e) { e.stopPropagation(); });
+    }
+    if (_els.volMute) {
+      _els.volMute.addEventListener("click", function (e) {
+        e.stopPropagation();
+        _setVolume(0);
+        _renderSound();
+      });
+    }
+    if (_els.volPop) {
+      _els.volPop.addEventListener("click", function (e) { e.stopPropagation(); });
+    }
+    // Un tap ailleurs ferme le popover.
+    document.addEventListener("click", function () { _closeVolPop(); });
+
     // Pastille : un tap ramène à la séance en cours.
     if (!full) {
       bar.addEventListener("click", function () {
@@ -234,11 +307,30 @@
     return bar;
   }
 
+  function _toggleVolPop() {
+    if (!_els.volPop) return;
+    if (_els.volPop.hidden) _openVolPop();
+    else _closeVolPop();
+  }
+  function _openVolPop() {
+    if (!_els.volPop) return;
+    var v = _muted() ? 0 : Math.round(_volume() * 100);
+    if (_els.volSlider) _els.volSlider.value = String(v);
+    if (_els.volVal) _els.volVal.textContent = String(v);
+    _els.volPop.hidden = false;
+  }
+  function _closeVolPop() {
+    if (_els.volPop && !_els.volPop.hidden) _els.volPop.hidden = true;
+  }
+
   function _renderSound() {
     if (!_els.sound) return;
-    var muted = _muted();
+    var v = Math.round(_volume() * 100);
+    var muted = v <= 0;
     _els.sound.classList.toggle("muted", muted);
     _els.sound.innerHTML = _icon(muted ? "volume-off" : "volume");
+    if (_els.volVal) _els.volVal.textContent = String(v);
+    if (_els.volSlider && _els.volPop && !_els.volPop.hidden) _els.volSlider.value = String(v);
   }
 
   // ── Affichage ───────────────────────────────────────────────────

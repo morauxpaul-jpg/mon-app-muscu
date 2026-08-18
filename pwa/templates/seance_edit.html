@@ -241,7 +241,7 @@
             </template>
             <template x-if="!pw.missed">
               <div>
-                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span></div>
+                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span><template x-if="pw.cross_session"><span style="color:var(--text-mute); font-size:0.78rem; margin-left:4px;">· autre séance</span></template></div>
                 <table class="prev-table">
                   <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
                   <tbody>

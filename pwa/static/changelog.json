@@ -1,6 +1,16 @@
 {
-  "current": "v40",
+  "current": "v41",
   "entries": [
+    {
+      "version": "v41",
+      "date": "2026-08-18",
+      "title": "Nouveauté : le volume du chrono se règle, et ton historique te suit partout",
+      "changes": [
+        "Règle le volume de la sonnerie de repos : un curseur dans la barre du chrono, de silencieux à bien fort — pratique quand tu t'entraînes en musique",
+        "Sur l'app, la musique baisse toute seule le temps de l'alerte de fin de repos, puis remonte aussitôt",
+        "Ton historique d'un exercice te suit d'une séance à l'autre : ajoute un développé couché dans une autre séance et tes dernières perfs s'affichent quand même (repérées « autre séance »)"
+      ]
+    },
     {
       "version": "v40",
       "date": "2026-07-23",
