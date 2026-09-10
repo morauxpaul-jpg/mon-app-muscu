@@ -46,6 +46,9 @@
   {% if request.args.get('rename') == 'none' %}
     <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucune série trouvée pour cet exercice — rien n'a changé.</div>
   {% endif %}
+  {% if request.args.get('merge') == 'ok' %}
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Doublons fusionnés ({{ request.args.get('n', '?') }} série(s) regroupée(s)).</div>
+  {% endif %}
 
   <div class="card" x-data="{ open: false }">
     <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
@@ -88,6 +91,45 @@
         </form>
       </div>
     {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if dup_groups %}
+  <div class="card" id="doublons" x-data="{ open: true }" style="border-color: rgba(255,159,10,0.5);">
+    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <span class="label-icon"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Doublons détectés ({{ dup_groups|length }})</span>
+      <span x-text="open ? '−' : '+'"></span>
+    </h3>
+    <div x-show="open" x-transition.duration.200ms>
+      <p style="font-size:0.85rem; color:var(--text-dim);">Ces exercices semblent être les mêmes écrits différemment. Choisis le bon nom dans chaque groupe : toutes les séries des autres seront regroupées dessus. <b>Vérifie bien</b> — ne fusionne pas deux variantes réellement différentes (ex. barre vs haltères).</p>
+      {% for grp in dup_groups %}
+        <form method="post" action="/gestion/exercice/fusionner"
+              x-data='{ keep: {{ grp.suggested|tojson }}, confirm: false }'
+              style="border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 12px; margin-top:10px;">
+          {% for m in grp.members %}
+            <input type="hidden" name="member" value="{{ m.name }}">
+            <label style="display:flex; align-items:center; gap:8px; padding:6px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %} cursor:pointer;">
+              <input type="radio" name="keep" value="{{ m.name }}" x-model="keep" style="flex-shrink:0;">
+              <span style="flex:1; min-width:0;">
+                <span style="font-size:0.9rem; color:var(--text-1);">{{ m.name }}</span>
+                <span style="font-size:0.75rem; color:var(--text-dim);"> · {{ m.count }} série{{ 's' if m.count > 1 else '' }}</span>
+              </span>
+            </label>
+          {% endfor %}
+          <p style="font-size:0.78rem; color:var(--text-dim); margin:8px 0 0;">
+            Tout sera regroupé sous « <span x-text="keep" style="color:var(--text-1);"></span> ».
+          </p>
+          <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"
+                  x-show="!confirm" @click="confirm = true">
+            <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Fusionner ce groupe
+          </button>
+          <div x-show="confirm" x-cloak class="flex-show" style="gap:8px; margin-top:8px;">
+            <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
+            <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
+          </div>
+        </form>
+      {% endfor %}
+    </div>
   </div>
   {% endif %}
 

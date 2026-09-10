@@ -6,6 +6,8 @@ reset soft, reset total, vider l'archive.
 """
 import json
 import logging
+import unicodedata
+from difflib import SequenceMatcher
 from datetime import date
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
@@ -41,6 +43,69 @@ def _get_settings(prog):
     s = dict(DEFAULT_SETTINGS)
     s.update(prog.get("_settings", {}) or {})
     return s
+
+
+def _exo_slug(name):
+    """Réduit un nom d'exercice à sa forme comparable : sans accents, minuscule,
+    sans ponctuation ni espaces. « Développé couché (Barre) » → « developpecouchebarre »."""
+    s = unicodedata.normalize("NFKD", name or "")
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return "".join(c for c in s.lower() if c.isalnum())
+
+
+def _duplicate_groups(exo_counts):
+    """Regroupe les noms d'exercices de l'historique qui sont vraisemblablement
+    le même exercice écrit différemment (accents, casse, ponctuation, petite
+    faute de frappe). Union-find sur la similarité des slugs.
+
+    Rien n'est modifié ici : on ne fait que PROPOSER des groupes à fusionner,
+    la fusion reste validée manuellement par l'utilisateur (l'app ne peut pas
+    deviner sans risque que « developper » = « développé »)."""
+    names = list(exo_counts.keys())
+    slugs = {n: _exo_slug(n) for n in names}
+    parent = {n: n for n in names}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            a, b = names[i], names[j]
+            sa, sb = slugs[a], slugs[b]
+            if not sa or not sb:
+                continue
+            # Slugs identiques = même exo à coup sûr (accents/casse/ponctuation).
+            # Sinon on tolère une petite variation (faute de frappe) sur des
+            # noms d'au moins 5 caractères pour éviter les faux positifs courts.
+            if sa == sb or (min(len(sa), len(sb)) >= 5
+                            and SequenceMatcher(None, sa, sb).ratio() >= 0.86):
+                union(a, b)
+
+    groups = {}
+    for n in names:
+        groups.setdefault(find(n), []).append(n)
+
+    out = []
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        members_sorted = sorted(members, key=lambda n: (-exo_counts[n], n.lower()))
+        out.append({
+            "members": [{"name": n, "count": exo_counts[n]} for n in members_sorted],
+            "suggested": members_sorted[0],  # le plus utilisé = candidat canonique
+            "total": sum(exo_counts[n] for n in members),
+        })
+    # Les gros doublons (le plus de séries en jeu) d'abord.
+    out.sort(key=lambda g: -g["total"])
+    return out
 
 
 @bp.route("/gestion")
@@ -86,6 +151,7 @@ def gestion():
         nb_archive=nb_archive,
         custom_exercises=custom_exercises,
         hist_exercises=hist_exercises,
+        dup_groups=_duplicate_groups(exo_counts),
         muscle_list=MUSCLE_LIST,
         profil_options=PROFIL_OPTIONS,
         newsletter_opt_in=newsletter_opt_in,
@@ -169,6 +235,37 @@ def rename_exercise_history():
         save_hist(hist)
         return redirect(url_for("gestion.gestion") + f"?rename=ok&n={count}")
     return redirect(url_for("gestion.gestion") + "?rename=none")
+
+
+@bp.route("/gestion/exercice/fusionner", methods=["POST"])
+@limiter.limit("10 per minute")
+def merge_exercise_history():
+    """Fusionne un groupe de doublons : renomme toutes les séries des noms
+    du groupe vers le nom canonique choisi par l'utilisateur. Match exact sur
+    chaque nom → aucune autre variante n'est touchée."""
+    keep = (request.form.get("keep") or "").strip()
+    members = [m.strip() for m in request.form.getlist("member") if m.strip()]
+    if not keep or len(members) < 2:
+        return redirect(url_for("gestion.gestion") + "?merge=noop#doublons")
+
+    to_merge = {m for m in members if m != keep}
+    if not to_merge:
+        return redirect(url_for("gestion.gestion") + "?merge=noop#doublons")
+
+    hist = get_hist()
+    new_muscle = auto_muscles(get_base_name(keep))
+    count = 0
+    for r in hist:
+        if (r.get("Exercice") or "").strip() in to_merge:
+            r["Exercice"] = keep
+            if new_muscle:
+                r["Muscle"] = new_muscle
+            count += 1
+
+    if count:
+        save_hist(hist)
+        return redirect(url_for("gestion.gestion") + f"?merge=ok&n={count}#doublons")
+    return redirect(url_for("gestion.gestion") + "?merge=none#doublons")
 
 
 @bp.route("/gestion/settings", methods=["POST"])

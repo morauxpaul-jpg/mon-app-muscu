@@ -7,7 +7,8 @@
       "title": "Nouveauté : réorganise tes exercices d'un tap",
       "changes": [
         "Range tes exercices dans l'ordre que tu veux : des flèches ↑ / ↓ sur chaque exercice de la séance, y compris ceux que tu ajoutes en cours de route",
-        "À l'ajout d'un exercice, l'app te propose les noms que tu as déjà utilisés — un historique plus propre, sans doublons dus à une orthographe différente"
+        "À l'ajout d'un exercice, l'app te propose les noms que tu as déjà utilisés — un historique plus propre, sans doublons dus à une orthographe différente",
+        "Et pour les doublons déjà présents : Plus › Gestion détecte les exercices en double (accents, majuscules, petite faute de frappe) et les regroupe sous le nom de ton choix en un tap"
       ]
     },
     {
