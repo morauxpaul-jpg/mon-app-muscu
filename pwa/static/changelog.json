@@ -1,6 +1,15 @@
 {
-  "current": "v41",
+  "current": "v42",
   "entries": [
+    {
+      "version": "v42",
+      "date": "2026-09-10",
+      "title": "Nouveauté : réorganise tes exercices d'un tap",
+      "changes": [
+        "Range tes exercices dans l'ordre que tu veux : des flèches ↑ / ↓ sur chaque exercice de la séance, y compris ceux que tu ajoutes en cours de route",
+        "À l'ajout d'un exercice, l'app te propose les noms que tu as déjà utilisés — un historique plus propre, sans doublons dus à une orthographe différente"
+      ]
+    },
     {
       "version": "v41",
       "date": "2026-08-18",

@@ -705,6 +705,7 @@ def seance():
             vol_overload=(vol_curr >= vol_prev and vol_prev > 0),
             all_prog_exos=list(all_prog_exos.values()),
             custom_exercises=prog.get("_custom_exercises", []),
+            known_exo_names=_known_exo_names(hist, prog, prog_seances),
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
@@ -755,6 +756,7 @@ def seance():
             vol_curr=0, vol_prev=0, vol_ratio=0, vol_overload=False,
             all_prog_exos=list(all_prog_exos.values()),
             custom_exercises=prog.get("_custom_exercises", []),
+            known_exo_names=_known_exo_names(hist, prog, prog_seances),
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
@@ -869,6 +871,35 @@ def _apply_seance_order(prog_dict, key, exos_ctx):
         return norm_order.index(n) if n in norm_order else len(norm_order)
 
     return sorted(exos_ctx, key=_rank)
+
+
+def _known_exo_names(hist, prog, prog_seances):
+    """Noms d'exercices déjà utilisés (historique + exos perso + programmes),
+    dédoublonnés à la casse près, pour l'autocomplétion à l'ajout d'un exo.
+    But : réutiliser un nom existant plutôt qu'en recréer un mal orthographié
+    (« developper couché » vs « Développé couché »), source de doublons dans
+    l'historique et le sélecteur de progression."""
+    seen = {}
+
+    def _add(nm):
+        nm = (nm or "").strip()
+        if not nm:
+            return
+        k = _norm(nm)
+        if k not in seen:
+            seen[k] = nm
+
+    for r in hist:
+        ex = (r.get("Exercice") or "").strip()
+        if not ex or ex == "SESSION" or ex.startswith("CARDIO:"):
+            continue
+        _add(get_base_name(ex))
+    for e in (prog.get("_custom_exercises") or []):
+        _add(e.get("name"))
+    for _sn, _exos in prog_seances.items():
+        for _e in _exos:
+            _add(_e.get("name"))
+    return sorted(seen.values(), key=lambda s: s.lower())
 
 
 @bp.route("/seance/save-exo", methods=["POST"])

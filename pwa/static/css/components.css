@@ -384,6 +384,30 @@
   touch-action: none;
 }
 .exo-drag-handle:active { cursor: grabbing; }
+/* Colonne de réordonnancement : boutons ↑/↓ + poignée de glisser */
+.exo-reorder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: -6px;
+  margin-right: 2px;
+}
+.exo-reorder .exo-drag-handle { margin: 0; height: 22px; }
+.exo-move-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.exo-move-btn:active { color: var(--accent); transform: scale(0.9); }
 .exo-card-ghost { opacity: 0.4; }
 .exo-card-dragging {
   opacity: 0.97;

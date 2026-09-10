@@ -189,9 +189,17 @@
          data-exo-base="{{ exo.base }}"
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
       <div class="exo-head">
-        <button type="button" class="exo-drag-handle" aria-label="Déplacer l'exercice" title="Maintenir pour déplacer">
-          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg>
-        </button>
+        <div class="exo-reorder">
+          <button type="button" class="exo-move-btn" onclick="moveSeanceExo(this,-1)" aria-label="Monter l'exercice" title="Monter">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-up"/></svg>
+          </button>
+          <button type="button" class="exo-drag-handle" aria-label="Déplacer l'exercice" title="Maintenir pour glisser">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg>
+          </button>
+          <button type="button" class="exo-move-btn" onclick="moveSeanceExo(this,1)" aria-label="Descendre l'exercice" title="Descendre">
+            <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-down"/></svg>
+          </button>
+        </div>
         <div style="flex:1; min-width:0;">
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)" title="Info exercice">?</button>
@@ -517,7 +525,15 @@
       </div>
 
       <label class="field-label">Nom de l'exercice</label>
-      <input type="text" name="exo_name" class="field" required x-model="newName">
+      <input type="text" name="exo_name" class="field" required x-model="newName"
+             list="known-exo-names" autocomplete="off"
+             placeholder="Tape ou choisis un exercice déjà utilisé">
+      {% if known_exo_names %}
+      <datalist id="known-exo-names">
+        {% for n in known_exo_names %}<option value="{{ n }}"></option>{% endfor %}
+      </datalist>
+      <p style="font-size:0.72rem; color:var(--text-mute); margin:4px 0 0;">Réutilise un nom déjà proposé pour éviter les doublons dans ton historique.</p>
+      {% endif %}
       <label class="field-label">Muscle principal</label>
       <select name="muscle" class="field" x-model="newMuscle">
         {% for m in muscle_list %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
@@ -689,6 +705,29 @@
         },
       };
     }
+
+    // Réordonnancement par boutons ↑/↓ : fiable partout (le glisser reste
+    // dispo mais l'appui long est capricieux sur mobile). Déplace la carte
+    // dans le DOM puis persiste via le même persistOrder() que le drag.
+    window.moveSeanceExo = function (btnEl, dir) {
+      var card = btnEl.closest('.exo-card');
+      if (!card) return;
+      var list = card.parentElement;
+      if (dir < 0) {
+        var prev = card.previousElementSibling;
+        if (!prev || !prev.classList.contains('exo-card')) return;
+        list.insertBefore(card, prev);
+      } else {
+        var next = card.nextElementSibling;
+        if (!next || !next.classList.contains('exo-card')) return;
+        list.insertBefore(next, card);
+      }
+      try { card.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+      try {
+        var comp = window.Alpine && Alpine.$data(list);
+        if (comp && comp.persistOrder) comp.persistOrder();
+      } catch (e) {}
+    };
 
     function cardioBlock() {
       var UNITS = {
