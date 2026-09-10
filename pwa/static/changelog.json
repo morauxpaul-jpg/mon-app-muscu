@@ -1,6 +1,15 @@
 {
-  "current": "v42",
+  "current": "v43",
   "entries": [
+    {
+      "version": "v43",
+      "date": "2026-09-10",
+      "title": "Nouveauté : tes plats de la semaine, loggés en un tap",
+      "changes": [
+        "Nutrition : importe ta liste de plats préparés de la semaine (avec portions et macros), puis logge-les en un seul tap matin, midi ou soir — fini de retaper les mêmes calories",
+        "Tu peux toujours ajouter un extra à la volée (yaourt, banane…) par-dessus, et remplacer ta liste à chaque nouvelle prep"
+      ]
+    },
     {
       "version": "v42",
       "date": "2026-09-10",

@@ -6,11 +6,15 @@
 - Macros recommandés en % selon objectif
 - Table Supabase `nutrition` : un repas par ligne (date, meal_type, macros, note)
 """
+import json
 import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, g
 
-from core.data import get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition, sum_nutrition_range
+from core.data import (
+    get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition,
+    sum_nutrition_range, get_prog, save_prog,
+)
 from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
 from core.analytics import paywall
@@ -57,6 +61,58 @@ MEAL_TYPES = [
     ("collation", "Collation"),
 ]
 MEAL_TYPES_MAP = dict(MEAL_TYPES)
+
+# Format du fichier « Mes plats de la semaine » (import JSON, comme le programme).
+MEAL_PLAN_FORMAT = "muscu-plats-v1"
+MAX_PLATS = 40
+
+
+def _get_meal_plan(prog):
+    """Liste des plats préparés de la semaine (config user, dans `prog`).
+    Chaque plat : name, portion, calories, protein, carbs, fat."""
+    mp = prog.get("_meal_plan") or {}
+    plats = mp.get("plats") if isinstance(mp, dict) else None
+    return {
+        "label": (mp.get("label") if isinstance(mp, dict) else "") or "",
+        "plats": plats if isinstance(plats, list) else [],
+    }
+
+
+def _parse_plats(data):
+    """Valide + normalise la liste de plats d'un JSON importé. Accepte les clés
+    FR (nom/portion/prot/gluc/lip) et EN (name/protein/carbs/fat)."""
+    if not isinstance(data, dict) or data.get("_format") != MEAL_PLAN_FORMAT:
+        return None
+    raw = data.get("plats")
+    if not isinstance(raw, list):
+        return None
+
+    def _int(d, *keys):
+        for k in keys:
+            if k in d:
+                try:
+                    return max(0, int(round(float(d.get(k) or 0))))
+                except (ValueError, TypeError):
+                    return 0
+        return 0
+
+    plats = []
+    for p in raw[:MAX_PLATS]:
+        if not isinstance(p, dict):
+            continue
+        name = (p.get("nom") or p.get("name") or "").strip()[:80]
+        if not name:
+            continue
+        plats.append({
+            "name": name,
+            "portion": (p.get("portion") or "").strip()[:60],
+            "calories": _int(p, "calories", "kcal", "cal"),
+            "protein": _int(p, "prot", "protein", "proteines", "p"),
+            "carbs": _int(p, "gluc", "carbs", "glucides", "g"),
+            "fat": _int(p, "lip", "fat", "lipides", "l"),
+        })
+    label = str(data.get("semaine") or data.get("label") or "").strip()[:60]
+    return {"label": label, "plats": plats}
 
 
 def _bmr(poids_kg, taille_cm, age, sexe):
@@ -202,6 +258,7 @@ def index():
         macros_progress=macros_progress,
         nutrition_ready=nutrition_ready,
         week_days=week_days,
+        meal_plan=_get_meal_plan(get_prog()),
     )
 
 
@@ -281,6 +338,51 @@ def add_meal():
     except Exception as e:
         logger.error("add_meal FAILED: %s", e)
     return redirect(url_for("nutrition.index", date=date_iso))
+
+
+@bp.route("/nutrition/plats/import", methods=["POST"])
+@limiter.limit("10 per minute")
+def import_plats():
+    """Importe la liste des plats de la semaine (JSON collé ou fichier),
+    façon import de programme. Remplace la liste précédente."""
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
+    raw_text = (request.form.get("data") or "").strip()
+    if not raw_text:
+        file = request.files.get("file")
+        if file and file.filename:
+            try:
+                raw_text = file.read().decode("utf-8")
+            except (UnicodeDecodeError, AttributeError):
+                return redirect(url_for("nutrition.index") + "?plats=parse")
+    if not raw_text:
+        return redirect(url_for("nutrition.index") + "?plats=empty")
+    try:
+        data = json.loads(raw_text)
+    except json.JSONDecodeError:
+        return redirect(url_for("nutrition.index") + "?plats=parse")
+
+    parsed = _parse_plats(data)
+    if parsed is None:
+        return redirect(url_for("nutrition.index") + "?plats=format")
+    if not parsed["plats"]:
+        return redirect(url_for("nutrition.index") + "?plats=empty")
+
+    prog = get_prog()
+    prog["_meal_plan"] = parsed
+    save_prog(prog)
+    return redirect(url_for("nutrition.index") + f"?plats=ok&n={len(parsed['plats'])}")
+
+
+@bp.route("/nutrition/plats/clear", methods=["POST"])
+@limiter.limit("10 per minute")
+def clear_plats():
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
+    prog = get_prog()
+    if prog.pop("_meal_plan", None) is not None:
+        save_prog(prog)
+    return redirect(url_for("nutrition.index") + "?plats=cleared")
 
 
 @bp.route("/nutrition/delete-meal", methods=["POST"])

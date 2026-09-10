@@ -6,6 +6,19 @@
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Nutrition</h1>
 
+  {% set _p = request.args.get('plats') %}
+  {% if _p == 'ok' %}
+    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>{{ request.args.get('n', '?') }} plat(s) importé(s) pour la semaine.</div>
+  {% elif _p == 'format' %}
+    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Fichier non reconnu (format « plats » attendu). Recopie bien tout le JSON.</div>
+  {% elif _p == 'parse' %}
+    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>JSON invalide — vérifie que tu as collé le texte en entier.</div>
+  {% elif _p == 'empty' %}
+    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucun plat trouvé dans le fichier.</div>
+  {% elif _p == 'cleared' %}
+    <div class="card label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#check-circle"/></svg>Liste de plats effacée.</div>
+  {% endif %}
+
   {% if not nutrition_ready %}
     <div class="card" style="border-color: rgba(255,59,48,0.4); background: rgba(255,59,48,0.06);">
       <div style="color: #FF453A; font-weight: 700; margin-bottom: 6px;">Table Supabase manquante</div>
@@ -160,13 +173,55 @@
     </div>
   {% endif %}
 
+  {# ══════════════════════ Section 2b — Mes plats de la semaine ══════════════════════ #}
+  <div class="card" x-data="{ open: {{ 'false' if meal_plan.plats else 'true' }}, showImport: {{ 'false' if meal_plan.plats else 'true' }} }">
+    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="display:inline-flex; align-items:center; gap:6px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>MES PLATS DE LA SEMAINE</span>
+      <button type="button" class="btn" style="padding:4px 10px; font-size:0.75rem;" @click="open = !open"><span x-text="open ? 'Replier' : (({{ meal_plan.plats|length }}) ? '{{ meal_plan.plats|length }} plats' : 'Ajouter')"></span></button>
+    </div>
+
+    <div x-show="open" x-transition.duration.200ms style="margin-top:10px;">
+      {% if meal_plan.label %}<div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:6px;">{{ meal_plan.label }}</div>{% endif %}
+
+      {% if meal_plan.plats %}
+        {% for p in meal_plan.plats %}
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %}">
+            <div style="min-width:0;">
+              <div style="font-size:0.88rem; color:var(--text-1); font-weight:500;">{{ p.name }}{% if p.portion %} <span style="color:var(--text-dim); font-weight:400;">· {{ p.portion }}</span>{% endif %}</div>
+              <div style="font-size:0.72rem; color:var(--text-3);">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</div>
+            </div>
+          </div>
+        {% endfor %}
+        <form method="post" action="/nutrition/plats/clear" x-data="{ c:false }" style="margin-top:8px;">
+          <button type="button" class="btn" style="width:100%; justify-content:center; font-size:0.8rem;" x-show="!c" @click="c=true">Vider la liste</button>
+          <div x-show="c" x-cloak class="flex-show" style="gap:8px;">
+            <button type="button" class="btn" style="flex:1; justify-content:center;" @click="c=false">Annuler</button>
+            <button type="submit" class="btn btn-danger" style="flex:1; justify-content:center;">Vider</button>
+          </div>
+        </form>
+      {% endif %}
+
+      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px; font-size:0.82rem;" @click="showImport = !showImport">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg><span x-text="showImport ? 'Fermer' : ({{ meal_plan.plats|length }} ? 'Remplacer la liste' : 'Importer une liste')"></span>
+      </button>
+
+      <div x-show="showImport" x-cloak style="margin-top:8px;">
+        <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 6px;">Colle ici le fichier de plats (JSON) fourni pour ta semaine, puis Importer. Ça remplace la liste actuelle.</p>
+        <form method="post" action="/nutrition/plats/import">
+          <textarea name="data" class="field" rows="5" placeholder='{"_format":"muscu-plats-v1", "plats":[ ... ]}' style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.78rem; resize:vertical;"></textarea>
+          <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Importer les plats</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   {# ══════════════════════ Section 3 — Suivi rapide ══════════════════════ #}
   <div class="card" x-data="mealForm()">
     <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>AJOUTER UN REPAS</div>
 
     <div class="meal-grid">
       {% for mt_val, mt_label in meal_types %}
-        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = 'quick'; items = [];">
+        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = '{{ 'plats' if meal_plan.plats else 'quick' }}'; items = [];">
           <div class="meal-count">{{ meals_by_type.get(mt_val, []) | length }}</div>
           <div>{{ mt_label }}</div>
         </button>
@@ -177,9 +232,34 @@
       <div x-show="open_meal === mt" x-cloak style="margin-top: 12px;">
         {# Mode toggle #}
         <div class="mode-toggle">
+          {% if meal_plan.plats %}<button type="button" class="mode-btn" :class="mode === 'plats' ? 'active' : ''" @click="mode = 'plats'">Mes plats</button>{% endif %}
           <button type="button" class="mode-btn" :class="mode === 'quick' ? 'active' : ''" @click="mode = 'quick'">Saisie rapide</button>
           <button type="button" class="mode-btn" :class="mode === 'compose' ? 'active' : ''" @click="mode = 'compose'">Composition</button>
         </div>
+
+        {% if meal_plan.plats %}
+        {# Mode « Mes plats » : un tap pour logger un plat de la semaine dans ce créneau #}
+        <div x-show="mode === 'plats'" x-cloak style="margin-top: 10px;">
+          {% for p in meal_plan.plats %}
+            <form method="post" action="/nutrition/add-meal" style="margin:0;">
+              <input type="hidden" name="date" value="{{ date_iso }}">
+              <input type="hidden" name="meal_type" :value="mt">
+              <input type="hidden" name="calories" value="{{ p.calories }}">
+              <input type="hidden" name="protein" value="{{ p.protein }}">
+              <input type="hidden" name="carbs" value="{{ p.carbs }}">
+              <input type="hidden" name="fat" value="{{ p.fat }}">
+              <input type="hidden" name="note" value="{{ p.name }}">
+              <button type="submit" data-haptic="1" style="width:100%; text-align:left; background:var(--bg-input, rgba(255,255,255,0.05)); border:0.5px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-1); padding:9px 12px; margin-bottom:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="min-width:0;">
+                  <span style="font-size:0.86rem; font-weight:500;">{{ p.name }}</span>{% if p.portion %}<span style="font-size:0.72rem; color:var(--text-dim);"> · {{ p.portion }}</span>{% endif %}
+                  <span style="display:block; font-size:0.7rem; color:var(--text-3);">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</span>
+                </span>
+                <svg class="icon icon-sm icon-accent" style="flex-shrink:0;"><use href="/static/img/icons.svg#plus-circle"/></svg>
+              </button>
+            </form>
+          {% endfor %}
+        </div>
+        {% endif %}
 
         {# Quick mode (existing) #}
         <div x-show="mode === 'quick'" style="margin-top: 10px;">
@@ -317,7 +397,7 @@
     function mealForm() {
       return {
         open_meal: '',
-        mode: 'quick',
+        mode: '{{ 'plats' if meal_plan.plats else 'quick' }}',
         items: [],
         cur: { name: '', calories: 0, protein: 0, carbs: 0, fat: 0 },
         addItem() {

@@ -963,3 +963,50 @@ def test_fusionner_regroupe_les_series_sous_le_nom_canonique(fake_db, logged_in)
     noms = {row["exercice"] for row in rows}
     assert noms == {"Curl biceps"}
     assert len(rows) == 3
+
+
+# ── Plats de la semaine (import + log en un tap) ─────────────────
+
+_PLATS_JSON = json.dumps({
+    "_format": "muscu-plats-v1",
+    "semaine": "Semaine test",
+    "plats": [
+        {"nom": "Poulet riz brocoli", "portion": "1 boîte", "calories": 620,
+         "prot": 55, "gluc": 70, "lip": 12},
+        {"nom": "Skyr fruits", "calories": 250, "prot": 20, "gluc": 30, "lip": 3},
+    ],
+})
+
+
+def test_import_plats_et_affichage(fake_db, logged_in):
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+
+    r = logged_in.post("/nutrition/plats/import", data={"_csrf": CSRF, "data": _PLATS_JSON})
+    assert r.status_code == 302 and "plats=ok" in r.headers["Location"]
+
+    prog = next(p for p in fake_db.tables["programs"] if p["user_id"] == USER_ID)["data"]
+    assert len(prog["_meal_plan"]["plats"]) == 2
+    assert prog["_meal_plan"]["plats"][0]["name"] == "Poulet riz brocoli"
+
+    html = logged_in.get("/nutrition").data.decode("utf-8")
+    assert "MES PLATS DE LA SEMAINE" in html
+    assert "Poulet riz brocoli" in html
+    assert "Skyr fruits" in html
+
+
+def test_import_plats_format_invalide_rejete(fake_db, logged_in):
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    r = logged_in.post("/nutrition/plats/import",
+                       data={"_csrf": CSRF, "data": '{"foo": "bar"}'})
+    assert r.status_code == 302 and "plats=format" in r.headers["Location"]
+
+
+def test_plats_gate_free(fake_db, client):
+    """Un compte gratuit ne peut pas importer de plats."""
+    import time
+    with client.session_transaction() as s:
+        s.update({"user_id": USER_ID, "email": "t@t.co", "onboarded": True,
+                  "is_vip": False, "is_vip_ts": time.time(), "_csrf": CSRF})
+    r = client.post("/nutrition/plats/import", data={"_csrf": CSRF, "data": _PLATS_JSON})
+    assert r.status_code == 302
+    assert "plats=ok" not in r.headers.get("Location", "")
