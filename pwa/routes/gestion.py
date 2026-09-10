@@ -6,6 +6,7 @@ reset soft, reset total, vider l'archive.
 """
 import json
 import logging
+import re
 import unicodedata
 from difflib import SequenceMatcher
 from datetime import date
@@ -45,24 +46,51 @@ def _get_settings(prog):
     return s
 
 
-def _exo_slug(name):
-    """Réduit un nom d'exercice à sa forme comparable : sans accents, minuscule,
-    sans ponctuation ni espaces. « Développé couché (Barre) » → « developpecouchebarre »."""
+def _norm_tokens(name):
+    """Découpe un nom d'exercice en mots normalisés (sans accents, minuscule,
+    sans ponctuation). « Développé couché (Barre) » → ['developpe','couche','barre']."""
     s = unicodedata.normalize("NFKD", name or "")
-    s = "".join(c for c in s if not unicodedata.combining(c))
-    return "".join(c for c in s.lower() if c.isalnum())
+    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
+    return [t for t in re.split(r"[^a-z0-9]+", s) if t]
+
+
+def _tokens_match(a, b):
+    """Deux mots = le même à une faute de frappe près. Match exact pour les mots
+    courts (< 4 lettres) où le flou n'est pas fiable, sinon similarité ≥ 0.82."""
+    if a == b:
+        return True
+    if len(a) < 4 or len(b) < 4:
+        return False
+    return SequenceMatcher(None, a, b).ratio() >= 0.82
+
+
+def _same_exercise(a, b):
+    """Vrai seulement si a et b sont le même exercice écrit différemment (casse,
+    accents, ponctuation, petite faute de frappe). Exige le MÊME nombre de mots :
+    un mot en plus (« rowing machine » vs « rowing machine banc », « triceps
+    extension » vs « triceps extension barre ») = exercice différent, pas un
+    doublon. Chaque mot doit avoir un correspondant proche dans l'autre nom."""
+    ta, tb = _norm_tokens(a), _norm_tokens(b)
+    if not ta or not tb or len(ta) != len(tb):
+        return False
+    remaining = list(tb)
+    for t in ta:
+        idx = next((i for i, u in enumerate(remaining) if _tokens_match(t, u)), None)
+        if idx is None:
+            return False
+        remaining.pop(idx)
+    return True
 
 
 def _duplicate_groups(exo_counts):
     """Regroupe les noms d'exercices de l'historique qui sont vraisemblablement
     le même exercice écrit différemment (accents, casse, ponctuation, petite
-    faute de frappe). Union-find sur la similarité des slugs.
+    faute de frappe). Union-find sur _same_exercise.
 
     Rien n'est modifié ici : on ne fait que PROPOSER des groupes à fusionner,
     la fusion reste validée manuellement par l'utilisateur (l'app ne peut pas
     deviner sans risque que « developper » = « développé »)."""
     names = list(exo_counts.keys())
-    slugs = {n: _exo_slug(n) for n in names}
     parent = {n: n for n in names}
 
     def find(x):
@@ -78,16 +106,8 @@ def _duplicate_groups(exo_counts):
 
     for i in range(len(names)):
         for j in range(i + 1, len(names)):
-            a, b = names[i], names[j]
-            sa, sb = slugs[a], slugs[b]
-            if not sa or not sb:
-                continue
-            # Slugs identiques = même exo à coup sûr (accents/casse/ponctuation).
-            # Sinon on tolère une petite variation (faute de frappe) sur des
-            # noms d'au moins 5 caractères pour éviter les faux positifs courts.
-            if sa == sb or (min(len(sa), len(sb)) >= 5
-                            and SequenceMatcher(None, sa, sb).ratio() >= 0.86):
-                union(a, b)
+            if _same_exercise(names[i], names[j]):
+                union(names[i], names[j])
 
     groups = {}
     for n in names:
