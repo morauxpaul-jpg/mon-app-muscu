@@ -104,7 +104,7 @@
 
       <label class="field-label" style="margin-top: 10px;">Cible calorique manuelle (optionnel)</label>
       <input type="number" inputmode="numeric" name="calories_custom" class="field" min="0" max="10000"
-             value="{{ profile.calories_custom or '' }}"
+             value="{{ calories_custom or '' }}"
              placeholder="{% if targets %}Auto : {{ targets.calories_auto }} kcal — laisse vide pour l'automatique{% else %}Ex : 2400{% endif %}">
       <p style="font-size:0.75rem; color:var(--text-dim); margin:4px 0 0;">Si tu suis un plan (ex. rééquilibrage à 2400 kcal), mets ta cible ici : elle remplace le calcul auto et les macros s'ajustent dessus. Vide = calcul automatique.</p>
 

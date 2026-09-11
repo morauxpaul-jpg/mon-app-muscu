@@ -121,7 +121,16 @@ def _bmr(poids_kg, taille_cm, age, sexe):
     return base + 5 if sexe == "H" else base - 161
 
 
-def _compute_targets(profile):
+def _custom_cal(prog):
+    """Cible calorique manuelle de l'user (0 = auto). Stockée dans `prog`
+    (JSONB, sans migration Supabase) et non dans la table `profiles`."""
+    try:
+        return max(0, min(10000, int((prog.get("_nutrition") or {}).get("calories_custom") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _compute_targets(profile, custom_cal=0):
     """Retourne dict(bmr, tdee, calories_cible, macros_g={protein,carbs,fat}) ou None."""
     try:
         poids = float(profile.get("poids_kg") or 0)
@@ -150,13 +159,9 @@ def _compute_targets(profile):
     # Cible manuelle : si l'user a fixé sa propre cible calorique (ex. un plan de
     # rééquilibrage à 2400), elle PRIME sur le calcul automatique. Les macros
     # s'ajustent alors sur cette cible (même répartition selon l'objectif).
-    try:
-        custom = int(float(profile.get("calories_custom") or 0))
-    except (TypeError, ValueError):
-        custom = 0
-    is_custom = custom > 0
+    is_custom = custom_cal > 0
     if is_custom:
-        cible = custom
+        cible = custom_cal
 
     prot_pct, carbs_pct, fat_pct = MACRO_SPLIT.get(objectif, MACRO_SPLIT["maintien"])
     macros_g = {
@@ -187,7 +192,8 @@ def index():
     except Exception as e:
         logger.error("nutrition get_profile FAILED: %s", e)
         profile = {}
-    targets = _compute_targets(profile)
+    prog = get_prog()
+    targets = _compute_targets(profile, _custom_cal(prog))
 
     date_iso = request.args.get("date") or today_paris_str()
 
@@ -272,7 +278,8 @@ def index():
         macros_progress=macros_progress,
         nutrition_ready=nutrition_ready,
         week_days=week_days,
-        meal_plan=_get_meal_plan(get_prog()),
+        meal_plan=_get_meal_plan(prog),
+        calories_custom=_custom_cal(prog),
     )
 
 
@@ -302,11 +309,24 @@ def save_profile_route():
         "sexe": (f.get("sexe") or "").upper()[:1],
         "activite": (f.get("activite") or "").strip(),
         "objectif_nutrition": (f.get("objectif_nutrition") or "maintien").strip(),
-        # Cible calorique manuelle (0/vide = calcul automatique).
-        "calories_custom": max(0, min(10000, _num("calories_custom", int))),
     }
-    # Calcul + stockage
-    targets = _compute_targets(fields)
+
+    # Cible calorique manuelle : stockée dans `prog` (JSONB), PAS dans la table
+    # `profiles` (colonne inexistante → l'upsert échouerait entièrement).
+    custom_cal = max(0, min(10000, _num("calories_custom", int)))
+    try:
+        prog = get_prog()
+        nutri = prog.setdefault("_nutrition", {})
+        if custom_cal > 0:
+            nutri["calories_custom"] = custom_cal
+        else:
+            nutri.pop("calories_custom", None)
+        save_prog(prog)
+    except Exception as e:
+        logger.error("nutrition save custom_cal FAILED: %s", e)
+
+    # Calcul + stockage profil (colonnes existantes uniquement).
+    targets = _compute_targets(fields, custom_cal)
     if targets:
         fields["tdee"] = targets["tdee"]
         fields["calories_cible"] = targets["calories_cible"]

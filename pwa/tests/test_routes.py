@@ -1029,11 +1029,16 @@ def test_cible_calorique_manuelle_prime(fake_db, logged_in):
     auto = prof["calories_cible"]
     assert auto != 2400
 
-    # Avec override 2400 : la cible stockée devient 2400.
+    def _prog():
+        return next(p for p in fake_db.tables["programs"] if p["user_id"] == USER_ID)["data"]
+
+    # Avec override 2400 : cible profil = 2400 ET stockée dans prog (pas dans
+    # la table profiles, dont la colonne n'existe pas).
     _save_nutri_profile(logged_in, calories_custom="2400")
     prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
     assert prof["calories_cible"] == 2400
-    assert prof["calories_custom"] == 2400
+    assert "calories_custom" not in prof  # jamais écrit dans la table profiles
+    assert _prog()["_nutrition"]["calories_custom"] == 2400
 
     html = logged_in.get("/nutrition").data.decode("utf-8")
     assert "2400" in html
@@ -1043,4 +1048,4 @@ def test_cible_calorique_manuelle_prime(fake_db, logged_in):
     _save_nutri_profile(logged_in, calories_custom="")
     prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
     assert prof["calories_cible"] == auto
-    assert prof["calories_custom"] == 0
+    assert "calories_custom" not in (_prog().get("_nutrition") or {})
