@@ -145,6 +145,18 @@ def _compute_targets(profile):
         cible = tdee - 400
     else:
         cible = tdee
+    cible_auto = int(round(cible))
+
+    # Cible manuelle : si l'user a fixé sa propre cible calorique (ex. un plan de
+    # rééquilibrage à 2400), elle PRIME sur le calcul automatique. Les macros
+    # s'ajustent alors sur cette cible (même répartition selon l'objectif).
+    try:
+        custom = int(float(profile.get("calories_custom") or 0))
+    except (TypeError, ValueError):
+        custom = 0
+    is_custom = custom > 0
+    if is_custom:
+        cible = custom
 
     prot_pct, carbs_pct, fat_pct = MACRO_SPLIT.get(objectif, MACRO_SPLIT["maintien"])
     macros_g = {
@@ -156,6 +168,8 @@ def _compute_targets(profile):
         "bmr": int(round(bmr)),
         "tdee": int(round(tdee)),
         "calories_cible": int(round(cible)),
+        "calories_auto": cible_auto,
+        "is_custom": is_custom,
         "macros_g": macros_g,
         "macros_pct": {"protein": prot_pct, "carbs": carbs_pct, "fat": fat_pct},
         "objectif": objectif,
@@ -288,6 +302,8 @@ def save_profile_route():
         "sexe": (f.get("sexe") or "").upper()[:1],
         "activite": (f.get("activite") or "").strip(),
         "objectif_nutrition": (f.get("objectif_nutrition") or "maintien").strip(),
+        # Cible calorique manuelle (0/vide = calcul automatique).
+        "calories_custom": max(0, min(10000, _num("calories_custom", int))),
     }
     # Calcul + stockage
     targets = _compute_targets(fields)

@@ -51,8 +51,9 @@
           </div>
         </div>
         <div class="detail-metric" style="background:var(--success-bg); border-color:var(--success);">
-          <div class="detail-label" style="color: var(--success);">Objectif quotidien</div>
+          <div class="detail-label" style="color: var(--success);">Objectif quotidien{% if targets.is_custom %} · manuel{% endif %}</div>
           <div class="detail-value" style="font-size: 1.8rem; color: var(--success);">{{ targets.calories_cible }} <span style="font-size:0.9rem;">kcal</span></div>
+          {% if targets.is_custom %}<div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">Auto : {{ targets.calories_auto }} kcal</div>{% endif %}
         </div>
         <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 8px; text-align:center;">
           Prot {{ targets.macros_g.protein }}g · Gluc {{ targets.macros_g.carbs }}g · Lip {{ targets.macros_g.fat }}g
@@ -101,8 +102,14 @@
         {% endfor %}
       </div>
 
-      <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center;">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Calculer et enregistrer
+      <label class="field-label" style="margin-top: 10px;">Cible calorique manuelle (optionnel)</label>
+      <input type="number" inputmode="numeric" name="calories_custom" class="field" min="0" max="10000"
+             value="{{ profile.calories_custom or '' }}"
+             placeholder="{% if targets %}Auto : {{ targets.calories_auto }} kcal — laisse vide pour l'automatique{% else %}Ex : 2400{% endif %}">
+      <p style="font-size:0.75rem; color:var(--text-dim); margin:4px 0 0;">Si tu suis un plan (ex. rééquilibrage à 2400 kcal), mets ta cible ici : elle remplace le calcul auto et les macros s'ajustent dessus. Vide = calcul automatique.</p>
+
+      <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center; margin-top: 10px;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer
       </button>
     </form>
   </div>

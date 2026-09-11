@@ -1010,3 +1010,37 @@ def test_plats_gate_free(fake_db, client):
     r = client.post("/nutrition/plats/import", data={"_csrf": CSRF, "data": _PLATS_JSON})
     assert r.status_code == 302
     assert "plats=ok" not in r.headers.get("Location", "")
+
+
+# ── Cible calorique manuelle ─────────────────────────────────────
+
+def _save_nutri_profile(client, **extra):
+    data = {"_csrf": CSRF, "poids_kg": "78", "taille_cm": "180", "age": "25",
+            "sexe": "H", "activite": "actif", "objectif_nutrition": "maintien"}
+    data.update(extra)
+    return client.post("/nutrition/profile", data=data)
+
+
+def test_cible_calorique_manuelle_prime(fake_db, logged_in):
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    # Sans override : cible = TDEE calculé (≠ 2400).
+    _save_nutri_profile(logged_in)
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    auto = prof["calories_cible"]
+    assert auto != 2400
+
+    # Avec override 2400 : la cible stockée devient 2400.
+    _save_nutri_profile(logged_in, calories_custom="2400")
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    assert prof["calories_cible"] == 2400
+    assert prof["calories_custom"] == 2400
+
+    html = logged_in.get("/nutrition").data.decode("utf-8")
+    assert "2400" in html
+    assert "manuel" in html
+
+    # Retour à l'automatique : champ vidé.
+    _save_nutri_profile(logged_in, calories_custom="")
+    prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    assert prof["calories_cible"] == auto
+    assert prof["calories_custom"] == 0
