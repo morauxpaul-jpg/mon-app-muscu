@@ -1,6 +1,17 @@
 {
-  "current": "v44",
+  "current": "v45",
   "entries": [
+    {
+      "version": "v45",
+      "date": "2026-09-21",
+      "title": "Nouveauté : ta courbe de poids",
+      "changes": [
+        "Dans Progrès, note ton poids en deux secondes (une pesée par jour, tu peux corriger ou rattraper une date passée) et regarde ta courbe sur 90 jours",
+        "Variation sur 30 jours, min et max de la période : tu vois tout de suite si ta sèche ou ta prise de masse avance",
+        "Ta nutrition suit : le TDEE et la cible calorique se recalculent automatiquement sur ta dernière pesée au lieu du poids saisi au départ",
+        "Tes pesées font partie de l'export / import de sauvegarde"
+      ]
+    },
     {
       "version": "v44",
       "date": "2026-09-21",

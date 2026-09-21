@@ -99,6 +99,19 @@ def insert_nutrition(row):
     return db.insert_nutrition(_uid(), row)
 
 
+# ── Poids corporel ──────────────────────────────────────────────────────
+def list_body_weight(limit=400):
+    return db.list_body_weight(_uid(), limit)
+
+
+def upsert_body_weight(date_str, poids_kg):
+    return db.upsert_body_weight(_uid(), date_str, poids_kg)
+
+
+def delete_body_weight(date_str):
+    return db.delete_body_weight(_uid(), date_str)
+
+
 def delete_nutrition(entry_id):
     return db.delete_nutrition(_uid(), entry_id)
 

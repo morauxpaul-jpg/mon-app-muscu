@@ -507,6 +507,49 @@ def delete_nutrition(user_id: str, entry_id: int) -> None:
     )
 
 
+# ────────────────────────────────────────────────────────────
+# Poids corporel (migration v33) — une pesée par jour
+# ────────────────────────────────────────────────────────────
+
+def list_body_weight(user_id: str, limit: int = 400) -> list[dict]:
+    """Pesées de l'user, de la plus ancienne à la plus récente :
+    [{date, poids_kg}]. `limit` borne les plus récentes."""
+    client = get_client()
+    resp = (
+        client.table("body_weight")
+        .select("date, poids_kg")
+        .eq("user_id", user_id)
+        .order("date", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = resp.data or []
+    out = [{"date": str(r.get("date") or "")[:10], "poids_kg": float(r.get("poids_kg") or 0)}
+           for r in rows]
+    out.sort(key=lambda r: r["date"])
+    return out
+
+
+def upsert_body_weight(user_id: str, date_str: str, poids_kg: float) -> None:
+    """Enregistre (ou remplace) la pesée du jour `date_str` (YYYY-MM-DD)."""
+    client = get_client()
+    client.table("body_weight").upsert({
+        "user_id": user_id,
+        "date": date_str,
+        "poids_kg": round(float(poids_kg), 1),
+    }, on_conflict="user_id,date").execute()
+
+
+def delete_body_weight(user_id: str, date_str: str) -> None:
+    client = get_client()
+    (
+        client.table("body_weight").delete()
+        .eq("user_id", user_id)
+        .eq("date", date_str)
+        .execute()
+    )
+
+
 def list_all_users_with_tier() -> list[dict]:
     """Retourne la liste de tous les users (admin). Combine auth.users (email)
     et public.profiles (tier). Réservé au backend admin — utilise service_role.
@@ -1170,6 +1213,7 @@ def delete_user_account(user_id: str) -> None:
         ("coach_conversations", "user_id"),
         ("coach_messages", "user_id"),
         ("nutrition", "user_id"),
+        ("body_weight", "user_id"),
         ("history", "user_id"),
         ("programs", "user_id"),
         ("onboarding", "user_id"),

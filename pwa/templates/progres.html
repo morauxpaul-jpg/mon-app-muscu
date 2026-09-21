@@ -79,6 +79,20 @@
     /* ── Volume chart SVG ── */
     .vol-chart { width:100%; max-height: 160px; }
     .vol-bar { transition: height .3s ease-out; }
+    /* ── Poids corporel ── */
+    .weight-chart { width:100%; height:150px; display:block; margin-top:12px; }
+    .weight-axis { display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-3); margin-top:2px; padding:0 4px; }
+    .weight-sub { font-size:0.68rem; color:var(--text-3); margin-top:2px; }
+    .weight-good { color:var(--success); }
+    .weight-bad { color:var(--warning); }
+    .weight-form { display:flex; gap:8px; margin-top:12px; align-items:stretch; }
+    .weight-form .field { min-width:0; flex:1; margin:0; }
+    .weight-form .field[type="number"] { flex:0 0 96px; }
+    .weight-form .btn { flex:0 0 auto; }
+    .weight-history { margin-top:10px; }
+    .weight-history summary { cursor:pointer; font-size:0.8rem; color:var(--text-3); }
+    .weight-history .mrow { padding:6px 0; }
+
     /* Cardio chart plus compact que le volume muscu. */
     .cardio-chart { max-width: 100%; height: 120px; display:block; }
   </style>
@@ -450,6 +464,77 @@
     </svg>
   </div>
   {% endif %}
+
+  {# ── Poids corporel ────────────────────────────────── #}
+  <div class="card" id="poids">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Poids corporel</h3>
+
+    {% if weight %}
+      <div class="detail-row" style="margin-top: 10px;">
+        <div class="detail-metric">
+          <div class="detail-label">Actuel</div>
+          <div class="detail-value">{{ weight.current|round(1) }} kg</div>
+          <div class="weight-sub">{{ weight.current_date[8:10] }}/{{ weight.current_date[5:7] }}</div>
+        </div>
+        <div class="detail-metric">
+          <div class="detail-label">Sur 30 jours</div>
+          {% if weight.delta_30 is not none %}
+            <div class="detail-value {{ weight.delta_class }}">{{ '+' if weight.delta_30 > 0 else '' }}{{ weight.delta_30|round(1) }} kg</div>
+          {% else %}
+            <div class="detail-value" style="color:var(--text-3);">—</div>
+            <div class="weight-sub">pas encore 30 j</div>
+          {% endif %}
+        </div>
+        <div class="detail-metric">
+          <div class="detail-label">Min · Max</div>
+          <div class="detail-value" style="font-size:0.95rem;">{{ weight.min|round(1) }} · {{ weight.max|round(1) }}</div>
+          <div class="weight-sub">90 jours</div>
+        </div>
+      </div>
+
+      {% if weight.points|length > 1 %}
+        <svg class="weight-chart" viewBox="0 0 {{ weight.chart_w }} {{ weight.chart_h }}" preserveAspectRatio="none" aria-label="Courbe de poids">
+          <defs>
+            <linearGradient id="weight-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#78c8ff" stop-opacity="0.25"/>
+              <stop offset="1" stop-color="#78c8ff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon points="{{ weight.points[0].x }},{{ weight.chart_h - 24 }} {{ weight.polyline }} {{ weight.points[-1].x }},{{ weight.chart_h - 24 }}" fill="url(#weight-fill)"/>
+          <polyline points="{{ weight.polyline }}" fill="none" stroke="#78c8ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          {% for pt in weight.points %}
+            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111318" stroke="#78c8ff" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
+          {% endfor %}
+        </svg>
+        <div class="weight-axis"><span>{{ weight.first_label }}</span><span>{{ weight.last_label }}</span></div>
+      {% endif %}
+    {% else %}
+      <p style="color:var(--text-3); font-size:0.85rem; margin:8px 0 0;">Pèse-toi une fois par semaine, toujours dans les mêmes conditions : la courbe apparaît ici et ta nutrition suit ton poids réel.</p>
+    {% endif %}
+
+    <form method="post" action="/progres/poids" class="weight-form">
+      <input type="date" name="date" class="field" value="{{ today_iso }}" max="{{ today_iso }}" aria-label="Date de la pesée">
+      <input type="number" name="poids_kg" class="field" inputmode="decimal" step="0.1" min="20" max="499" placeholder="kg" required aria-label="Poids en kg"{% if weight %} value="{{ weight.current|round(1) }}"{% endif %}>
+      <button type="submit" class="btn primary" data-haptic="1">OK</button>
+    </form>
+
+    {% if weight and weight.recent %}
+      <details class="weight-history">
+        <summary>Dernières pesées ({{ weight.count }})</summary>
+        {% for e in weight.recent %}
+          <div class="mrow">
+            <span>{{ e.date[8:10] }}/{{ e.date[5:7] }}/{{ e.date[0:4] }}</span>
+            <span style="display:flex; align-items:center; gap:10px;"><b>{{ e.poids_kg|round(1) }} kg</b>
+              <form method="post" action="/progres/poids/delete" style="display:inline; margin:0;">
+                <input type="hidden" name="date" value="{{ e.date }}">
+                <button type="submit" class="mini-btn" title="Supprimer cette pesée" aria-label="Supprimer la pesée du {{ e.date }}">×</button>
+              </form>
+            </span>
+          </div>
+        {% endfor %}
+      </details>
+    {% endif %}
+  </div>
 
   {# ── Cardio ────────────────────────────────────────── #}
   {% if cardio %}

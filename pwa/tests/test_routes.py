@@ -1101,3 +1101,116 @@ def test_api_variant_history_renvoie_la_suggestion(fake_db, logged_in):
     assert r.status_code == 200
     sug = r.get_json()["suggestion"]
     assert sug["kind"] == "reps" and sug["reps"] == 9
+
+
+# ── Poids corporel ───────────────────────────────────────────────
+
+def _profile(fake, **extra):
+    row = {"id": USER_ID, "poids_kg": 80.0, "taille_cm": 180.0, "age": 30, "sexe": "H",
+           "activite": "actif", "objectif_nutrition": "seche"}
+    row.update(extra)
+    fake.table("profiles").insert(row).execute()
+
+
+def _weights(fake):
+    return {r["date"]: r["poids_kg"] for r in fake.tables.get("body_weight", [])}
+
+
+def test_log_weight_enregistre_et_synchronise_le_profil(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    r = logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "78,4"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/progres#poids")
+    assert _weights(fake_db) == {"2026-09-20": 78.4}
+    prof = fake_db.tables["profiles"][0]
+    assert prof["poids_kg"] == 78.4
+    assert prof["tdee"] > 0 and prof["calories_cible"] < prof["tdee"]   # sèche → déficit
+
+
+def test_log_weight_meme_jour_remplace(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "80"})
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "79.5"})
+    assert _weights(fake_db) == {"2026-09-20": 79.5}
+    assert len(fake_db.tables["body_weight"]) == 1
+
+
+def test_log_weight_ancienne_date_ne_change_pas_le_poids_courant(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "78"})
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-06-01", "poids_kg": "85"})
+    assert fake_db.tables["profiles"][0]["poids_kg"] == 78.0
+
+
+def test_log_weight_valeur_aberrante_ignoree(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "7"})
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "abc"})
+    assert _weights(fake_db) == {}
+
+
+def test_delete_weight(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "78"})
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-13", "poids_kg": "79"})
+    logged_in.post("/progres/poids/delete", data={"_csrf": CSRF, "date": "2026-09-20"})
+    assert _weights(fake_db) == {"2026-09-13": 79.0}
+    assert fake_db.tables["profiles"][0]["poids_kg"] == 79.0   # resynchronisé
+
+
+def test_progres_affiche_la_courbe_de_poids(fake_db, logged_in):
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    for d, kg in (("2026-08-01", 82.0), ("2026-08-20", 80.5), ("2026-09-20", 79.0)):
+        logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": d, "poids_kg": str(kg)})
+    r = logged_in.get("/progres")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert 'class="weight-chart"' in html
+    assert "79.0 kg" in html
+    assert "-1.5 kg" in html          # vs 80.5 (pesée la plus proche d'il y a 30 j)
+    assert "weight-good" in html      # sèche → perdre = positif
+
+
+def test_progres_sans_pesee_affiche_le_formulaire(fake_db, logged_in):
+    _seed_prog(fake_db)
+    r = logged_in.get("/progres")
+    html = r.data.decode("utf-8")
+    assert 'action="/progres/poids"' in html and 'class="weight-chart"' not in html
+
+
+def test_profil_nutrition_cree_une_pesee(fake_db, logged_in):
+    _seed_prog(fake_db)
+    r = logged_in.post("/nutrition/profile", data={
+        "_csrf": CSRF, "poids_kg": "81.2", "taille_cm": "180", "age": "30",
+        "sexe": "H", "activite": "actif", "objectif_nutrition": "maintien",
+    })
+    assert r.status_code == 302
+    assert list(_weights(fake_db).values()) == [81.2]
+
+
+def test_export_import_conservent_les_pesees(fake_db, logged_in):
+    import io
+    _seed_prog(fake_db)
+    _profile(fake_db)
+    logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "78"})
+    r = logged_in.get("/gestion/export")
+    assert r.status_code == 200
+    payload = r.get_json()
+    assert payload["poids"] == [{"date": "2026-09-20", "poids_kg": 78.0}]
+
+    fake_db.tables["body_weight"] = []
+    payload["poids"].append({"date": "2026-09-21", "poids_kg": 77.5})
+    payload["poids"].append({"date": "n'importe quoi", "poids_kg": "x"})
+    r = logged_in.post(
+        "/gestion/import",
+        data={"_csrf": CSRF,
+              "file": (io.BytesIO(json.dumps(payload).encode("utf-8")), "backup.json")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 302 and "import=ok" in r.headers["Location"]
+    assert _weights(fake_db) == {"2026-09-20": 78.0, "2026-09-21": 77.5}

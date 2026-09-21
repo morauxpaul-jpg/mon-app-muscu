@@ -6,10 +6,14 @@ import calendar
 import logging
 from datetime import date, timedelta
 
-from flask import Blueprint, render_template, request, g
+from flask import Blueprint, render_template, request, g, redirect, url_for
 
-from core.data import get_hist, get_prog, get_onboarding
-from core.dates import today_paris, DAYS_FR
+from core.data import (
+    get_hist, get_prog, get_onboarding, get_profile, save_profile,
+    list_body_weight, upsert_body_weight, delete_body_weight,
+)
+from core.dates import today_paris, today_paris_str, DAYS_FR
+from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations, get_rep_table
 from core.body_map import get_body_polygons
 
@@ -307,6 +311,137 @@ def _build_volume_map(hist, period_days=7):
     return result
 
 
+# ── Poids corporel ─────────────────────────────────────────────────────
+WEIGHT_CHART_DAYS = 90
+
+
+def _delta_class(delta, goal):
+    """Couleur de la variation selon l'objectif nutrition : en prise de masse
+    prendre du poids est positif, en sèche c'est l'inverse ; en maintien (ou
+    sans objectif) on reste neutre."""
+    if not delta:
+        return ""
+    if goal == "masse":
+        return "weight-good" if delta > 0 else "weight-bad"
+    if goal == "seche":
+        return "weight-good" if delta < 0 else "weight-bad"
+    return ""
+
+
+def _build_weight_stats(entries, today=None, goal=""):
+    """Contexte de la carte « Poids corporel » : dernière pesée, variation sur
+    30 jours, min/max de la période, et polyline SVG des 90 derniers jours.
+    `entries` = [{date, poids_kg}] triés par date croissante. None si vide."""
+    entries = [e for e in (entries or []) if e.get("poids_kg", 0) > 0 and e.get("date")]
+    if not entries:
+        return None
+    today = today or today_paris()
+    current = entries[-1]
+    cur_date = _parse_iso_date(current["date"]) or today
+
+    # Variation vs la pesée la plus proche d'il y a 30 jours (≥ 30 j avant)
+    ref_date = cur_date - timedelta(days=30)
+    older = [e for e in entries if (_parse_iso_date(e["date"]) or today) <= ref_date]
+    delta_30 = round(current["poids_kg"] - older[-1]["poids_kg"], 1) if older else None
+
+    cutoff = (today - timedelta(days=WEIGHT_CHART_DAYS)).isoformat()
+    window = [e for e in entries if e["date"] >= cutoff] or entries[-1:]
+    values = [e["poids_kg"] for e in window]
+    vmin, vmax = min(values), max(values)
+
+    # Polyline : x proportionnel à la date (les trous restent visibles),
+    # y entre min-0,5 et max+0,5 kg pour ne pas écraser la courbe.
+    W, H, PAD_X, PAD_T, PAD_B = 600, 160, 12, 18, 24
+    d0 = _parse_iso_date(window[0]["date"]) or today
+    d1 = _parse_iso_date(window[-1]["date"]) or today
+    span = max(1, (d1 - d0).days)
+    lo, hi = vmin - 0.5, vmax + 0.5
+    points = []
+    for e in window:
+        d = _parse_iso_date(e["date"]) or today
+        x = PAD_X + (W - 2 * PAD_X) * ((d - d0).days / span) if len(window) > 1 else W / 2
+        y = PAD_T + (H - PAD_T - PAD_B) * (1 - (e["poids_kg"] - lo) / (hi - lo))
+        points.append({"x": round(x, 1), "y": round(y, 1), "kg": e["poids_kg"], "date": e["date"]})
+
+    return {
+        "current": current["poids_kg"],
+        "current_date": current["date"],
+        "delta_30": delta_30,
+        "delta_class": _delta_class(delta_30, goal),
+        "min": vmin, "max": vmax,
+        "count": len(entries),
+        "points": points,
+        "polyline": " ".join(f"{p['x']},{p['y']}" for p in points),
+        "chart_w": W, "chart_h": H,
+        "first_label": _short_date(window[0]["date"]),
+        "last_label": _short_date(window[-1]["date"]),
+        "recent": list(reversed(entries[-7:])),
+    }
+
+
+def _short_date(iso):
+    d = _parse_iso_date(iso)
+    return f"{d.day:02d}/{d.month:02d}" if d else iso
+
+
+def _sync_profile_weight():
+    """Recopie la dernière pesée dans profiles.poids_kg et recalcule le TDEE /
+    la cible calorique (nutrition) pour qu'ils suivent le poids réel."""
+    entries = list_body_weight(limit=1)
+    if not entries:
+        return
+    latest = entries[-1]["poids_kg"]
+    profile = get_profile() or {}
+    if abs(float(profile.get("poids_kg") or 0) - latest) < 0.05:
+        return
+    fields = {"poids_kg": latest}
+    try:
+        from routes.nutrition import _compute_targets, _custom_cal
+        merged = {**profile, "poids_kg": latest}
+        targets = _compute_targets(merged, _custom_cal(get_prog()))
+        if targets:
+            fields["tdee"] = targets["tdee"]
+            fields["calories_cible"] = targets["calories_cible"]
+    except Exception as e:  # le poids doit être sauvé même si le calcul échoue
+        logger.error("sync_profile_weight targets FAILED: %s", e)
+    save_profile(fields)
+
+
+@bp.route("/progres/poids", methods=["POST"])
+@limiter.limit("20 per minute")
+def log_weight():
+    """Enregistre une pesée (date + kg). Une pesée par jour : re-saisir le
+    même jour remplace la valeur."""
+    f = request.form
+    try:
+        kg = float(str(f.get("poids_kg") or "").replace(",", "."))
+    except ValueError:
+        kg = 0
+    date_str = (f.get("date") or "").strip()[:10]
+    if _parse_iso_date(date_str) is None or date_str > today_paris_str():
+        date_str = today_paris_str()
+    if 20 <= kg < 500:
+        try:
+            upsert_body_weight(date_str, kg)
+            _sync_profile_weight()
+        except Exception as e:
+            logger.error("log_weight FAILED: %s", e)
+    return redirect(url_for("progres.progres") + "#poids")
+
+
+@bp.route("/progres/poids/delete", methods=["POST"])
+@limiter.limit("20 per minute")
+def delete_weight():
+    date_str = (request.form.get("date") or "").strip()[:10]
+    if _parse_iso_date(date_str) is not None:
+        try:
+            delete_body_weight(date_str)
+            _sync_profile_weight()
+        except Exception as e:
+            logger.error("delete_weight FAILED: %s", e)
+    return redirect(url_for("progres.progres") + "#poids")
+
+
 def _build_svg_context(muscle_data, volume_map=None):
     """Prépare le dict {muscle: {fill_f, fill_b, opacity}} passé à la template SVG.
     Si volume_map est fourni, utilise les couleurs basées sur le volume."""
@@ -359,6 +494,14 @@ def progres():
         r["1RM"] = calc_1rm(r["Poids"], r["Reps"])
 
     is_vip = bool(getattr(g, "is_vip", False))
+
+    # ── Poids corporel (gratuit) ──────────────────────────────
+    try:
+        goal = (get_profile() or {}).get("objectif_nutrition") or ""
+        weight = _build_weight_stats(list_body_weight(), goal=goal)
+    except Exception as e:  # table absente (migration v33 non appliquée) → carte vide
+        logger.error("progres list_body_weight FAILED: %s", e)
+        weight = None
 
     # ── Carte du corps — période sélectionnée ────────────────
     bm_period = request.args.get("bm_period", "7")
@@ -602,4 +745,6 @@ def progres():
         vol_values=vol_values,
         vol_max=vol_max,
         cardio=cardio,
+        weight=weight,
+        today_iso=today_paris_str(),
     )

@@ -15,7 +15,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from core.data import (
     get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding,
-    delete_user_account, set_newsletter_optin,
+    delete_user_account, set_newsletter_optin, list_body_weight, upsert_body_weight,
 )
 
 logger = logging.getLogger(__name__)
@@ -435,11 +435,17 @@ def export_data():
     hist = get_hist()
     profile = get_profile() or {}
     onboarding = get_onboarding() or {}
+    try:
+        poids = list_body_weight(limit=5000)
+    except Exception as e:  # migration v33 absente → export sans les pesées
+        logger.error("export list_body_weight FAILED: %s", e)
+        poids = []
     payload = {
         "version": 1,
         "exported_at": date.today().isoformat(),
         "programme": prog,
         "historique": hist,
+        "poids": poids,
         "profil": {k: v for k, v in profile.items() if k != "id"},
         "onboarding": {k: v for k, v in onboarding.items() if k not in ("user_id", "id")},
     }
@@ -489,6 +495,18 @@ def import_data():
         except (ValueError, TypeError):
             # Lignes aux types invalides (Reps/Poids non numériques…)
             return redirect(url_for("gestion.gestion") + "?import=error")
+    # Pesées (facultatif) : fusion par date, une entrée invalide est ignorée.
+    poids_in = data.get("poids")
+    if isinstance(poids_in, list):
+        for e in poids_in[:5000]:
+            try:
+                kg = float(e.get("poids_kg"))
+                d = str(e.get("date"))[:10]
+                date.fromisoformat(d)
+                if 20 <= kg < 500:
+                    upsert_body_weight(d, kg)
+            except (AttributeError, TypeError, ValueError):
+                continue
 
     return redirect(url_for("gestion.gestion") + "?import=ok")
 

@@ -13,7 +13,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, g
 
 from core.data import (
     get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition,
-    sum_nutrition_range, get_prog, save_prog,
+    sum_nutrition_range, get_prog, save_prog, upsert_body_weight,
 )
 from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
@@ -335,6 +335,13 @@ def save_profile_route():
         save_profile(fields)
     except Exception as e:
         logger.error("nutrition save_profile FAILED: %s", e)
+    # Le poids saisi ici vaut pesée du jour : il alimente la courbe de Progrès
+    # (et inversement, une pesée dans Progrès met ce profil à jour).
+    if 20 <= fields["poids_kg"] < 500:
+        try:
+            upsert_body_weight(today_paris_str(), fields["poids_kg"])
+        except Exception as e:
+            logger.error("nutrition upsert_body_weight FAILED: %s", e)
     return redirect(url_for("nutrition.index"))
 
 

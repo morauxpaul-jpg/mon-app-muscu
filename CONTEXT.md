@@ -22,12 +22,13 @@ pwa/
 ├── compress_icon.py / generate_icons.py / rebuild_program_from_history.py  # Scripts utilitaires (non commités pour partie)
 ├── supabase_schema_v23.sql … v31  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
+├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── tests/                         # pytest — conftest = fake Supabase en mémoire (cd pwa && python -m pytest tests -q)
 ├── core/
 │   ├── db.py                      # Accès Supabase (service_role), cache LRU TTL 60s, verrou optimiste programs
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
 │   ├── dates.py                   # Helpers dates (timezone Paris), DAYS_FR, MONTHS_FR
-│   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name)
+│   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name, overload_suggestion)
 │   ├── catalog.py                 # Catalogue de 19 programmes prédéfinis (onboarding)
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
@@ -38,9 +39,9 @@ pwa/
 ├── routes/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
 │   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance"
-│   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline)
+│   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline, suggestion de surcharge)
 │   ├── programme.py               # CRUD programme + profils + planning + import/export
-│   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement
+│   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement, poids corporel (/progres/poids)
 │   ├── gestion.py                 # Paramètres, settings, export/import, fusion doublons, reset soft/total
 │   ├── arcade.py                  # Mini-jeux
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
@@ -311,6 +312,14 @@ pwa/
 - 2 workers gunicorn × cache 60 s → deux requêtes peuvent partir du même blob et s'écraser. `save_prog()` fait donc `update … eq(user_id).eq(version)` ; si 0 ligne touchée, relecture + `_merge_prog()` (fusion 3 voies par clé : seules NOS clés modifiées sont réappliquées sur la version DB), 3 tentatives, puis upsert brut loggué en `error`.
 - Base de comparaison = dernier `get_prog()` du process (`_prog_base`). Sans lecture préalable ou sans colonne `version` (migration pas appliquée) → upsert comme avant.
 - `_session_notes` (bilans de séance) : fenêtre glissante de 84 jours purgée à chaque `/seance/finish` (`routes/seance.py`), comme `_extras`/`_libre_draft`.
+
+### Suggestion de surcharge (core/muscu.py → routes/seance.py)
+- `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE est lu depuis le token `@RPE8` de la remarque.
+- Affichée sous « Dernière fois » (bouton Appliquer = pré-remplit la charge sur les séries vides ; reps cibles en placeholder). Réglage `_settings.show_overload_hint` (Gestion). Recalculée par `/seance/api/variant-history`.
+
+### Poids corporel (migration v33, routes/progres.py)
+- Table `body_weight` (user_id, date, poids_kg), une pesée / jour (upsert `on_conflict=user_id,date`). Carte gratuite dans Progrès : courbe SVG 90 j, variation 30 j (couleur selon `objectif_nutrition`), min/max, saisie + suppression.
+- Après chaque pesée/suppression, `_sync_profile_weight()` recopie la dernière pesée dans `profiles.poids_kg` et recalcule `tdee` / `calories_cible` (helpers de `routes/nutrition.py`). Le formulaire profil Nutrition crée aussi une pesée du jour. Export/import JSON : clé `poids`.
 
 ### Rate limiting (core/limiter.py)
 - Default : 60 req/min par IP (mémoire process)

@@ -134,9 +134,11 @@ class FakeQuery:
         if self._op == "upsert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]
             key = self._on_conflict or ("id" if self._table == "profiles" else "user_id")
+            keys = [k.strip() for k in key.split(",")]
             for p in payload:
                 p = dict(p)
-                existing = next((r for r in rows if r.get(key) == p.get(key)), None)
+                existing = next((r for r in rows
+                                 if all(r.get(k) == p.get(k) for k in keys)), None)
                 if existing:
                     existing.update(p)
                 else:
