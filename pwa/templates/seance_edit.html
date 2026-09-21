@@ -217,6 +217,16 @@
           <template x-if="!lastSummary && !{{ 'true' if exo.completed else 'false' }}">
             <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
           </template>
+          {# ── Suggestion de surcharge (double progression, cf. core.muscu.overload_suggestion) ── #}
+          <template x-if="suggestion && !{{ 'true' if exo.completed else 'false' }}">
+            <div class="exo-suggestion" :class="'exo-suggestion--' + suggestion.kind">
+              <svg class="icon icon-sm"><use :href="'/static/img/icons.svg#' + (suggestion.kind === 'load' ? 'arrow-up' : (suggestion.kind === 'hold' ? 'shield-check' : 'target'))"/></svg>
+              <span x-text="suggestion.label"></span>
+              <button type="button" class="exo-suggestion-apply" x-show="suggestion.kind === 'load' && !suggestionApplied"
+                      @click.stop="applySuggestion()">Appliquer</button>
+              <span class="exo-suggestion-done" x-show="suggestionApplied"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check"/></svg></span>
+            </div>
+          </template>
         </div>
         <div class="exo-toggle" @click="open = !open" style="cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;" x-text="open ? '−' : '+'"></div>
       </div>
@@ -313,7 +323,7 @@
                 <template x-for="(s, i) in sets" :key="i">
                   <tr>
                     <td x-text="i + 1"></td>
-                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" placeholder="reps" @change="onSetFilled(i)"></td>
+                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" :placeholder="suggestion && suggestion.reps ? String(suggestion.reps) : 'reps'" @change="onSetFilled(i)"></td>
                     <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @change="onSetFilled(i)"></td>
                     {% if show_rpe %}
                     <td>
@@ -1184,6 +1194,16 @@
       },
 
       lastSummary: data.last_summary || '',
+      suggestion: data.suggestion || null,
+      suggestionApplied: false,
+      // Applique la charge suggérée aux séries pas encore saisies.
+      applySuggestion: function () {
+        if (!this.suggestion || this.suggestion.poids == null) return;
+        for (var i = 0; i < this.sets.length; i++) {
+          if (!this.sets[i].reps) this.sets[i].poids = this.suggestion.poids;
+        }
+        this.suggestionApplied = true;
+      },
       record: data.record || null,
       prevWeeks: (data.prev_weeks || []).map(function(pw) {
         return {
@@ -1251,6 +1271,8 @@
         .then(function(r) { return r.json(); })
         .then(function(d) {
           self.lastSummary = d.last_summary || '';
+          self.suggestion = d.suggestion || null;
+          self.suggestionApplied = false;
           self.record = d.record || null;
           self.prevWeeks = (d.prev_weeks || []).map(function(pw) {
             return { week: pw.week, missed: pw.missed, rows: pw.rows || [] };

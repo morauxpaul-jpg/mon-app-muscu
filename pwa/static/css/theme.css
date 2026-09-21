@@ -486,6 +486,33 @@ input[type="url"], textarea, select {
   margin-top: 2px;
 }
 
+/* ── Suggestion de surcharge ── */
+.exo-suggestion {
+  display: flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  margin-top: 4px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.exo-suggestion--load { color: var(--accent); }
+.exo-suggestion--load .icon { color: var(--accent); }
+.exo-suggestion--reps .icon { color: var(--accent); }
+.exo-suggestion--hold .icon { color: var(--text-3); }
+.exo-suggestion-apply {
+  background: var(--accent-bg, rgba(94,158,255,0.12));
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 2px 10px;
+  font-size: var(--text-xs, 0.72rem);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 26px;
+}
+.exo-suggestion-apply:active { transform: scale(0.96); }
+
 /* ── Finish celebration ── */
 .finish-celebration {
   text-align: center;

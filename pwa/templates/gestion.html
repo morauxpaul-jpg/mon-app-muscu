@@ -213,6 +213,10 @@
         <input type="checkbox" name="show_rpe" {% if settings.show_rpe %}checked{% endif %}>
         <span>Afficher la colonne RPE (difficulté ressentie)</span>
       </label>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="show_overload_hint" {% if settings.show_overload_hint %}checked{% endif %}>
+        <span>Suggérer la progression (+2,5 kg / +1 rep) d'après les dernières séances</span>
+      </label>
       <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
         <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
         <span>Animations du thème (cartes, glow, pulse) {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>

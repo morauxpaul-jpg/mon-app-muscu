@@ -35,6 +35,7 @@ DEFAULT_SETTINGS = {
     "auto_rest_timer": True,
     "auto_prefill_weight": True,
     "show_rpe": True,
+    "show_overload_hint": True,
     "show_previous_weeks": 2,
     "notifications": False,
 }
@@ -297,6 +298,7 @@ def update_settings():
     s["show_1rm"] = request.form.get("show_1rm") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
     s["show_rpe"] = request.form.get("show_rpe") == "on"
+    s["show_overload_hint"] = request.form.get("show_overload_hint") == "on"
     # Notifications : disponibles pour TOUS (rétention — on veut faire revenir
     # surtout les gratuits). Dé-gaté du PRO.
     s["notifications"] = request.form.get("notifications") == "on"

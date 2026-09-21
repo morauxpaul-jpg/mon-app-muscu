@@ -15,7 +15,7 @@ from core.data import (
 )
 from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
-from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles
+from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles, parse_rpe, overload_suggestion
 from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
 from core.analytics import track
@@ -253,10 +253,9 @@ def _recup_status(hist, s_act):
     return out
 
 
-def _last_session_sets(hist, exo_final, seance, s_act):
-    """Retourne les séries de la dernière semaine où cet exo a été réalisé,
-    sous forme de liste de dicts {reps, poids}. Utilisé pour le pré-remplissage
-    des poids et l'affichage inline 'Dernière fois'."""
+def _recent_sessions_sets(hist, exo_final, seance, s_act, n=2):
+    """Séries des `n` dernières semaines où cet exo a été réalisé, de la plus
+    récente à la plus ancienne : liste de listes de dicts {reps, poids, rpe}."""
     matches = [r for r in hist
                if _norm(r["Exercice"]) == _norm(exo_final) and _norm(r["Séance"]) == _norm(seance)
                and r["Semaine"] < s_act and r["Poids"] > 0]
@@ -267,14 +266,35 @@ def _last_session_sets(hist, exo_final, seance, s_act):
                    and r["Semaine"] < s_act and r["Poids"] > 0]
     if not matches:
         return []
-    last_week = max(r["Semaine"] for r in matches)
-    last = [r for r in matches if r["Semaine"] == last_week]
-    last.sort(key=lambda r: int(r["Série"] or 0))
-    return [{"reps": int(r["Reps"]), "poids": float(r["Poids"])} for r in last]
+    weeks = sorted({r["Semaine"] for r in matches}, reverse=True)[:n]
+    out = []
+    for w in weeks:
+        rows = [r for r in matches if r["Semaine"] == w]
+        rows.sort(key=lambda r: int(r["Série"] or 0))
+        out.append([{"reps": int(r["Reps"]), "poids": float(r["Poids"]),
+                     "rpe": parse_rpe(r.get("Remarque"))} for r in rows])
+    return out
+
+
+def _last_session_sets(hist, exo_final, seance, s_act):
+    """Retourne les séries de la dernière semaine où cet exo a été réalisé,
+    sous forme de liste de dicts {reps, poids, rpe}. Utilisé pour le
+    pré-remplissage des poids et l'affichage inline 'Dernière fois'."""
+    recent = _recent_sessions_sets(hist, exo_final, seance, s_act, n=1)
+    return recent[0] if recent else []
+
+
+def _suggestion_for(hist, exo_final, seance, s_act, is_bw):
+    """Suggestion de surcharge (cf. core.muscu.overload_suggestion) à partir
+    des deux dernières séances de cet exo."""
+    recent = _recent_sessions_sets(hist, exo_final, seance, s_act, n=2)
+    if not recent:
+        return None
+    return overload_suggestion(recent[0], recent[1] if len(recent) > 1 else None, is_bw=is_bw)
 
 
 def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_weight=True,
-                       forced_variant=None, exo_index=0):
+                       forced_variant=None, exo_index=0, show_overload_hint=True):
     """Construit le dict passé au template pour un exercice."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
@@ -293,6 +313,10 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
 
     # Dernière séance pour pré-remplissage poids + affichage inline
     last_sets = _last_session_sets(hist, exo_final, seance, s_act)
+    is_iso, target_sec = detect_isometric(base)
+    suggestion = None
+    if show_overload_hint and not is_iso:
+        suggestion = _suggestion_for(hist, exo_final, seance, s_act, is_bw)
 
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
     n_rows = max(p_sets, len(curr)) if curr else p_sets
@@ -344,8 +368,6 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
     info = dict(info)
     info["one_rm"] = float(record.get("one_rm") or 0) if isinstance(record, dict) else 0
 
-    is_iso, target_sec = detect_isometric(base)
-
     return {
         "base": base,
         "muscle": muscle,
@@ -364,11 +386,12 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         "prev_weeks": prev_weeks,
         "sets": sets,
         "last_summary": last_summary,
+        "suggestion": suggestion,
         "info": info,
     }
 
 
-def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight):
+def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight, show_overload_hint=True):
     """Construit les contextes pour tous les exercices d'une séance, en
     assignant des variantes distinctes quand le même base name apparaît
     plusieurs fois (ex : 'Développé incliné' en Haltères ET en Barre)."""
@@ -392,6 +415,7 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight):
         out.append(_build_exo_context(
             hist, e, seance_name, s_act, is_extra=is_extra,
             prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
+            show_overload_hint=show_overload_hint,
         ))
     return out
 
@@ -465,6 +489,7 @@ def seance():
     auto_rest_timer = _settings.get("auto_rest_timer", True)
     auto_prefill_weight = _settings.get("auto_prefill_weight", True)
     show_rpe = _settings.get("show_rpe", True)
+    show_overload_hint = _settings.get("show_overload_hint", True)
 
     # « Aujourd'hui logique » : avant 04h du matin, on considère encore
     # la journée précédente — la séance faite « tard hier soir » est ainsi
@@ -649,7 +674,7 @@ def seance():
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
-        exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, auto_prefill_weight)
+        exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, auto_prefill_weight, show_overload_hint)
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).
@@ -720,7 +745,7 @@ def seance():
         libre_name = name or "Séance Libre"
         libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
         all_exos = [(e, False) for e in libre_exos]
-        exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, auto_prefill_weight)
+        exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, auto_prefill_weight, show_overload_hint)
 
         # Reconstruit depuis l'historique : le brouillon libre est effacé au
         # finish, donc une séance libre passée n'a plus que son historique.
@@ -1293,6 +1318,9 @@ def api_variant_history():
     last_sets = _last_session_sets(hist, exo_final, seance, s_act)
     record = _best_record(hist, exo_final, is_bw)
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
+    suggestion = None
+    if prog.get("_settings", {}).get("show_overload_hint", True) and not detect_isometric(exo_base)[0]:
+        suggestion = _suggestion_for(hist, exo_final, seance, s_act, is_bw)
 
     last_summary = ""
     if last_sets:
@@ -1319,4 +1347,5 @@ def api_variant_history():
         "last_summary": last_summary,
         "record": record,
         "prev_weeks": pw_display,
+        "suggestion": suggestion,
     })

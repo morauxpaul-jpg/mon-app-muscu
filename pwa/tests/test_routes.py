@@ -9,6 +9,7 @@ import json
 import types
 
 from conftest import USER_ID, CSRF
+from core.dates import continuous_week
 
 
 def _fake_stripe_upgrade(rec, interval="month"):
@@ -1066,3 +1067,37 @@ def test_service_worker_sans_sha_garde_la_version_du_fichier(client, monkeypatch
     monkeypatch.delenv("SOURCE_COMMIT", raising=False)
     r = client.get("/service-worker.js")
     assert 'const CACHE_VERSION = "v120";' in r.data.decode("utf-8")
+
+
+# ── Suggestion de surcharge dans l'éditeur de séance ─────────────
+
+def test_seance_propose_la_surcharge(fake_db, logged_in):
+    _seed_prog(fake_db)
+    for i in range(1, 4):
+        _hist_row(fake_db, MONDAY_W01, serie=i, reps=12, poids=80.0)
+    r = logged_in.get(f"/seance?date={MONDAY_W02.isoformat()}&mode=prefaite&name=Push")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert '"kind": "load"' in html and '"poids": 82.5' in html
+
+
+def test_seance_surcharge_desactivable(fake_db, logged_in):
+    _seed_prog(fake_db)
+    fake_db.tables["programs"][0]["data"]["_settings"] = {"show_overload_hint": False}
+    for i in range(1, 4):
+        _hist_row(fake_db, MONDAY_W01, serie=i, reps=12, poids=80.0)
+    r = logged_in.get(f"/seance?date={MONDAY_W02.isoformat()}&mode=prefaite&name=Push")
+    assert '"kind": "load"' not in r.data.decode("utf-8")
+
+
+def test_api_variant_history_renvoie_la_suggestion(fake_db, logged_in):
+    _seed_prog(fake_db)
+    for i in range(1, 3):
+        _hist_row(fake_db, MONDAY_W01, serie=i, reps=8, poids=80.0)
+    r = logged_in.post("/seance/api/variant-history", json={
+        "exo_base": "Développé couché", "variant": "Standard", "seance": "Push",
+        "s_act": continuous_week(MONDAY_W02), "week_offset": 0,
+    }, headers={"X-CSRF-Token": CSRF})
+    assert r.status_code == 200
+    sug = r.get_json()["suggestion"]
+    assert sug["kind"] == "reps" and sug["reps"] == 9

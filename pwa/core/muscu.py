@@ -113,3 +113,99 @@ def fix_muscle(exercice, muscle):
             return result
         return "Autre"
     return str(muscle)
+
+
+# ── Suggestion de surcharge progressive ─────────────────────────────────
+import re as _re
+
+_RPE_TOKEN = _re.compile(r"@RPE(\d+(?:\.5)?)", _re.I)
+
+
+def parse_rpe(remarque):
+    """RPE (float) encodé dans une remarque sous la forme '@RPE8' / '@RPE8.5',
+    ou None."""
+    m = _RPE_TOKEN.search(remarque or "")
+    return float(m.group(1)) if m else None
+
+
+def _load_step(weight):
+    """Incrément de charge réaliste : 2,5 kg à partir de 30 kg (barre, disques
+    de 1,25), 1 kg en dessous (haltères légers, machines, isolation)."""
+    return 2.5 if weight >= 30 else 1.0
+
+
+def overload_suggestion(last_sets, prev_sets=None, is_bw=False):
+    """Double progression simplifiée à partir des 1–2 dernières séances.
+
+    last_sets / prev_sets : listes de dicts {reps, poids, rpe?} (série la plus
+    ancienne en premier). Retourne None sans historique, sinon un dict :
+      kind  : "load" (monter la charge) | "reps" (même charge, +1 rep)
+              | "hold" (consolider : même charge, mêmes reps)
+      poids : charge cible (None en poids de corps)
+      reps  : reps cibles par série
+      label : phrase courte pour l'UI
+      why   : justification en un mot-clé
+
+    Règles :
+      - RPE moyen ≥ 9,5 la dernière fois → hold (la charge n'est pas digérée).
+      - Toutes les séries à la même charge ET (≥ 12 reps partout, OU ≥ 8 reps
+        avec RPE moyen ≤ 8, OU ≥ 8 reps deux séances de suite à cette charge
+        sans régression) → load (+2,5 kg / +1 kg).
+      - Sinon → reps : même charge, viser min(reps) + 1.
+    """
+    sets = [s for s in (last_sets or []) if int(s.get("reps") or 0) > 0]
+    if not sets:
+        return None
+    reps = [int(s["reps"]) for s in sets]
+    min_reps = min(reps)
+    rpes = [float(s["rpe"]) for s in sets if s.get("rpe")]
+    avg_rpe = sum(rpes) / len(rpes) if rpes else None
+
+    if is_bw:
+        return {
+            "kind": "reps", "poids": None, "reps": min_reps + 1,
+            "label": f"Objectif : {min_reps + 1} reps par série",
+            "why": "bodyweight",
+        }
+
+    weights = {float(s.get("poids") or 0) for s in sets}
+    weight = max(weights)
+    if weight <= 0:
+        return None
+    same_weight = len(weights) == 1
+
+    if avg_rpe is not None and avg_rpe >= 9.5 and min_reps < 12:
+        return {
+            "kind": "hold", "poids": weight, "reps": min_reps,
+            "label": f"Consolide : {weight:g} kg × {min_reps} (RPE {avg_rpe:g} la dernière fois)",
+            "why": "rpe_high",
+        }
+
+    ready = False
+    why = ""
+    if same_weight:
+        if min_reps >= 12:
+            ready, why = True, "reps_ceiling"
+        elif min_reps >= 8 and avg_rpe is not None and avg_rpe <= 8:
+            ready, why = True, "rpe_low"
+        elif min_reps >= 8 and prev_sets:
+            p = [s for s in prev_sets if int(s.get("reps") or 0) > 0]
+            p_weights = {float(s.get("poids") or 0) for s in p}
+            if p and p_weights == {weight}:
+                p_min = min(int(s["reps"]) for s in p)
+                if p_min >= 8 and min_reps >= p_min:
+                    ready, why = True, "two_sessions"
+
+    if ready:
+        step = _load_step(weight)
+        target = weight + step
+        return {
+            "kind": "load", "poids": target, "reps": max(6, min_reps - 2),
+            "label": f"Monte à {target:g} kg (+{step:g})",
+            "why": why,
+        }
+    return {
+        "kind": "reps", "poids": weight, "reps": min_reps + 1,
+        "label": f"Même charge, vise {min_reps + 1} reps",
+        "why": "add_rep",
+    }
