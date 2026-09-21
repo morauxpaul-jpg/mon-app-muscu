@@ -51,6 +51,7 @@ def test_seed():
     c.tables.clear()
     c._id = 0
     core_db._data_cache.clear()  # purge le cache (hist/prog d'une visite vide précédente)
+    core_db._prog_base.clear()
 
     today = dt.date(2026, 6, 12)
     monday0 = today - dt.timedelta(days=today.weekday())  # lundi de cette semaine

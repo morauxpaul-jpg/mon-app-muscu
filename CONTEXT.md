@@ -22,6 +22,7 @@ pwa/
 ├── supabase_schema_v23.sql        # Schémas SQL Supabase (versions successives)
 ├── supabase_schema_v24.sql
 ├── supabase_schema_v25_vip.sql    # Ajout colonnes tier/quota VIP
+├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── core/
 │   ├── db.py                      # Accès Supabase (service_role), cache mémoire TTL 60s
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
@@ -293,9 +294,14 @@ pwa/
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
 ### Cache mémoire (core/db.py)
-- TTL : 60 secondes
+- TTL : 60 secondes, LRU borné à 200 entrées (`_CACHE_MAX`)
 - Invalidé immédiatement après chaque `save_prog()` et `save_hist()`
 - Clés : `hist:{user_id}`, `prog:{user_id}`, `profile:{user_id}`
+
+### Verrou optimiste sur `programs.data` (core/db.py, migration v32)
+- 2 workers gunicorn × cache 60 s → deux requêtes peuvent partir du même blob et s'écraser. `save_prog()` fait donc `update … eq(user_id).eq(version)` ; si 0 ligne touchée, relecture + `_merge_prog()` (fusion 3 voies par clé : seules NOS clés modifiées sont réappliquées sur la version DB), 3 tentatives, puis upsert brut loggué en `error`.
+- Base de comparaison = dernier `get_prog()` du process (`_prog_base`). Sans lecture préalable ou sans colonne `version` (migration pas appliquée) → upsert comme avant.
+- `_session_notes` (bilans de séance) : fenêtre glissante de 84 jours purgée à chaque `/seance/finish` (`routes/seance.py`), comme `_extras`/`_libre_draft`.
 
 ### Rate limiting (core/limiter.py)
 - Default : 60 req/min par IP (mémoire process)

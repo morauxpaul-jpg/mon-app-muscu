@@ -1187,6 +1187,30 @@ def delete_cardio():
     return _back_to_editor(f)
 
 
+SESSION_NOTES_KEEP_DAYS = 84  # fenêtre glissante : 12 semaines de bilans
+
+
+def _purge_old_session_notes(prog_dict, today=None):
+    """Retire de `_session_notes` les bilans plus vieux que la fenêtre.
+    Sans ça le blob programme (relu et réécrit à chaque interaction) grossit
+    d'une entrée par séance, à vie — contrairement à `_extras` et
+    `_libre_draft` qui sont nettoyés en fin de séance. Retourne True si
+    quelque chose a été retiré."""
+    notes = prog_dict.get("_session_notes")
+    if not isinstance(notes, dict) or not notes:
+        return False
+    today = today or logical_today_paris()
+    cutoff = (today - timedelta(days=SESSION_NOTES_KEEP_DAYS)).strftime("%Y-%m-%d")
+    stale = []
+    for k in notes:
+        date_part = str(k).rsplit("|", 1)[-1]
+        if _parse_date(date_part) is None or date_part < cutoff:
+            stale.append(k)
+    for k in stale:
+        notes.pop(k, None)
+    return bool(stale)
+
+
 @bp.route("/seance/finish", methods=["POST"])
 def finish():
     """Termine la séance : enregistre le bilan (note /5 + commentaire, tous deux
@@ -1208,6 +1232,10 @@ def finish():
 
     # Bilan de séance — stocké dans le programme (JSON), pas de migration de
     # schéma. Clé « Séance|date », comme les extras et l'ordre personnalisé.
+    # Purge AVANT d'ajouter : un bilan saisi aujourd'hui sur une séance
+    # ancienne (rattrapage) doit être conservé.
+    if _purge_old_session_notes(prog):
+        changed = True
     note = _parse_session_note(f)
     if note:
         prog.setdefault("_session_notes", {})[key] = note

@@ -15,6 +15,7 @@ import os
 import json
 import logging
 import time
+from collections import OrderedDict
 from typing import Optional
 
 from supabase import create_client, Client
@@ -62,20 +63,31 @@ def get_client() -> Client:
     return _client
 
 
-# ── Cache mémoire process-wide (TTL 10 min), clé par user_id ──
-_data_cache: dict = {}
+# ── Cache mémoire process-wide (TTL 60 s), clé par user_id ──
+# Borné (LRU) : sans plafond, chaque user actif laisserait son historique
+# complet en RAM du worker jusqu'à expiration — et la clé n'était jamais
+# retirée, seulement ignorée.
+_CACHE_MAX = 200
+_data_cache: "OrderedDict[str, dict]" = OrderedDict()
 _TTL = 60.0
 
 
 def _cache_get(key: str):
     entry = _data_cache.get(key)
-    if entry and (time.time() - entry["ts"]) < _TTL:
-        return entry["value"]
-    return None
+    if entry is None:
+        return None
+    if (time.time() - entry["ts"]) >= _TTL:
+        _data_cache.pop(key, None)
+        return None
+    _data_cache.move_to_end(key)
+    return entry["value"]
 
 
 def _cache_set(key: str, value):
     _data_cache[key] = {"value": value, "ts": time.time()}
+    _data_cache.move_to_end(key)
+    while len(_data_cache) > _CACHE_MAX:
+        _data_cache.popitem(last=False)
 
 
 def _cache_invalidate(key: str):
@@ -194,32 +206,129 @@ def _row_to_supabase(user_id: str, r: dict) -> dict:
 # Programme (stocké en JSON dans programs.data)
 # ────────────────────────────────────────────────────────────
 
-def get_prog(user_id: str) -> dict:
-    key = f"prog:{user_id}"
-    cached = _cache_get(key)
-    if cached is not None:
-        return json.loads(json.dumps(cached))
+# Dernier instantané (data + version) lu par CE process pour chaque user :
+# c'est la base à partir de laquelle save_prog calcule ce que la requête a
+# réellement modifié. Borné comme le cache.
+_prog_base: "OrderedDict[str, dict]" = OrderedDict()
+_SAVE_PROG_RETRIES = 3
 
+
+def _copy(obj):
+    return json.loads(json.dumps(obj))
+
+
+def _remember_base(user_id: str, data: dict, version):
+    _prog_base[user_id] = {"data": _copy(data), "version": version}
+    _prog_base.move_to_end(user_id)
+    while len(_prog_base) > _CACHE_MAX:
+        _prog_base.popitem(last=False)
+
+
+def _read_prog_row(user_id: str):
+    """(data, version) depuis la DB. version=None si pas de ligne ou si la
+    migration v32 n'est pas encore appliquée (→ save_prog repasse en upsert)."""
     client = get_client()
     resp = (
         client.table("programs")
-        .select("data")
+        .select("*")
         .eq("user_id", user_id)
         .maybe_single()
         .execute()
     )
-    data = (resp.data or {}).get("data") or {} if resp else {}
-    _cache_set(key, data)
-    return json.loads(json.dumps(data))
+    row = (resp.data or {}) if resp else {}
+    return (row.get("data") or {}), row.get("version")
 
 
-def save_prog(user_id: str, prog_dict: dict):
-    client = get_client()
-    client.table("programs").upsert({
+def get_prog(user_id: str) -> dict:
+    key = f"prog:{user_id}"
+    cached = _cache_get(key)
+    if cached is None:
+        data, version = _read_prog_row(user_id)
+        cached = {"data": data, "version": version}
+        _cache_set(key, cached)
+    _remember_base(user_id, cached["data"], cached["version"])
+    return _copy(cached["data"])
+
+
+def _merge_prog(base: dict, ours: dict, theirs: dict, path: str = "") -> dict:
+    """Fusion 3 voies par clé : `ours` = blob que la requête veut écrire,
+    `base` = ce qu'elle avait lu, `theirs` = ce qui est en DB maintenant.
+    On repart de `theirs` et on n'y applique QUE les clés que nous avons
+    changées (ajoutées, modifiées, supprimées). Si les deux côtés ont touché
+    la même clé et que ce sont des dicts, on descend d'un niveau ; sinon
+    notre valeur l'emporte (dernier écrivain) — mais c'est loggué."""
+    if not (isinstance(base, dict) and isinstance(ours, dict) and isinstance(theirs, dict)):
+        return ours
+    merged = dict(theirs)
+    for k in set(base) | set(ours):
+        sub = f"{path}.{k}" if path else str(k)
+        if k not in ours:
+            # Supprimée par nous
+            merged.pop(k, None)
+        elif k not in base or ours[k] != base[k]:
+            # Ajoutée / modifiée par nous
+            if k in theirs and theirs[k] != base.get(k):
+                logger.warning("save_prog: clé '%s' modifiée des deux côtés", sub)
+                merged[k] = _merge_prog(base.get(k), ours[k], theirs[k], sub)
+            else:
+                merged[k] = ours[k]
+        # sinon : inchangée par nous → on garde la version DB (déjà dans merged,
+        # ou absente si l'autre côté l'a supprimée)
+    return merged
+
+
+def _upsert_prog(user_id: str, prog_dict: dict):
+    get_client().table("programs").upsert({
         "user_id": user_id,
         "data": prog_dict,
     }).execute()
+
+
+def save_prog(user_id: str, prog_dict: dict):
+    """Écrit le programme avec verrou optimiste (programs.version).
+
+    Le blob est partagé entre 2 workers gunicorn qui ont chacun un cache de
+    60 s : sans verrou, une écriture faite entre-temps par l'autre worker
+    (défi validé, badge, note…) est écrasée sans erreur. Ici l'update est
+    conditionné à la version lue ; en cas de conflit on relit et on ne
+    réapplique que nos propres modifications (cf. _merge_prog)."""
+    base = _prog_base.get(user_id)
+    if base is None or base["version"] is None:
+        # Pas de lecture préalable dans ce process (ou colonne version absente)
+        # → écriture inconditionnelle, comme avant.
+        _upsert_prog(user_id, prog_dict)
+        _cache_invalidate(f"prog:{user_id}")
+        return
+
+    client = get_client()
+    base_data, version = base["data"], base["version"]
+    for attempt in range(1, _SAVE_PROG_RETRIES + 1):
+        resp = (
+            client.table("programs")
+            .update({"data": prog_dict, "version": version + 1})
+            .eq("user_id", user_id)
+            .eq("version", version)
+            .execute()
+        )
+        if resp.data:
+            _cache_invalidate(f"prog:{user_id}")
+            _remember_base(user_id, prog_dict, version + 1)
+            return
+        # Conflit : quelqu'un a écrit depuis notre lecture.
+        theirs, their_version = _read_prog_row(user_id)
+        if their_version is None:
+            break
+        logger.warning(
+            "save_prog conflit user=%s (lu v%s, DB v%s) — fusion, tentative %d/%d",
+            user_id, version, their_version, attempt, _SAVE_PROG_RETRIES,
+        )
+        prog_dict = _merge_prog(base_data, prog_dict, theirs)
+        base_data, version = theirs, their_version
+
+    logger.error("save_prog user=%s : verrou optimiste abandonné, upsert brut", user_id)
+    _upsert_prog(user_id, prog_dict)
     _cache_invalidate(f"prog:{user_id}")
+    _prog_base.pop(user_id, None)
 
 
 # ────────────────────────────────────────────────────────────

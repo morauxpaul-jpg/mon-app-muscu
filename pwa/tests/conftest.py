@@ -105,6 +105,11 @@ class FakeQuery:
         return self
 
     # exec
+    def _apply_defaults(self, row):
+        """Valeurs par défaut du schéma SQL (migration v32 : programs.version)."""
+        if self._table == "programs":
+            row.setdefault("version", 1)
+
     def _match(self, row):
         for op, col, val in self._filters:
             cur = row.get(col)
@@ -123,6 +128,7 @@ class FakeQuery:
             for p in payload:
                 p = dict(p)
                 p.setdefault("id", self._db.next_id())
+                self._apply_defaults(p)
                 rows.append(p)
             return FakeResponse(payload)
         if self._op == "upsert":
@@ -135,6 +141,7 @@ class FakeQuery:
                     existing.update(p)
                 else:
                     p.setdefault("id", p.get("id") or self._db.next_id())
+                    self._apply_defaults(p)
                     rows.append(p)
             return FakeResponse(payload)
         matched = [r for r in rows if self._match(r)]
@@ -203,9 +210,11 @@ def fake_db():
     fake = FakeSupabase()
     core_db._client = fake
     core_db._data_cache.clear()
+    core_db._prog_base.clear()
     yield fake
     core_db._client = None
     core_db._data_cache.clear()
+    core_db._prog_base.clear()
 
 
 @pytest.fixture()
