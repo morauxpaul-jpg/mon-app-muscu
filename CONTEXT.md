@@ -15,68 +15,72 @@ PWA Flask (Python) avec Supabase (PostgreSQL) en backend, déployée sur Railway
 
 ```
 pwa/
-├── app.py                         # Flask app, blueprints, auth gate (g.user_id, g.is_vip), landing
-├── compress_icon.py               # Script utilitaire (compression PNG)
-├── generate_icons.py              # Script de génération des icônes app
-├── rebuild_program_from_history.py# Script de reconstruction d'un programme depuis l'historique
-├── supabase_schema_v23.sql        # Schémas SQL Supabase (versions successives)
-├── supabase_schema_v24.sql
-├── supabase_schema_v25_vip.sql    # Ajout colonnes tier/quota VIP
+├── app.py                         # Flask app, blueprints, auth gate (g.user_id, g.is_vip), landing, /service-worker.js (CACHE_VERSION + SHA du commit)
+├── run_local_fake.py              # App en local sur fausse DB (FakeSupabase des tests) + /test-seed — voir « Preview local »
+├── cron_reactivation.py           # Cron CLI de relance push des inactifs
+├── capture_screens.py / capture_assets.py  # Captures PNG (fiche store, motion design) via le serveur fake
+├── compress_icon.py / generate_icons.py / rebuild_program_from_history.py  # Scripts utilitaires (non commités pour partie)
+├── supabase_schema_v23.sql … v31  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
+├── tests/                         # pytest — conftest = fake Supabase en mémoire (cd pwa && python -m pytest tests -q)
 ├── core/
-│   ├── db.py                      # Accès Supabase (service_role), cache mémoire TTL 60s
+│   ├── db.py                      # Accès Supabase (service_role), cache LRU TTL 60s, verrou optimiste programs
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
 │   ├── dates.py                   # Helpers dates (timezone Paris), DAYS_FR, MONTHS_FR
 │   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name)
 │   ├── catalog.py                 # Catalogue de 19 programmes prédéfinis (onboarding)
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
-│   ├── limiter.py                 # Instance Flask-Limiter partagée (60 req/min par IP)
-│   ├── analytics.py               # Façade track(event,props) fire-and-forget + helper paywall() (funnel conversion)
-│   └── sheets.py                  # Connexion Google Sheets (compat ancien backend Streamlit)
+│   ├── challenges.py              # Défis hebdomadaires (un défi tournant, évalué depuis l'historique)
+│   ├── push.py                    # Push web : config VAPID + envoi pywebpush, relance des inactifs
+│   ├── limiter.py                 # Instance Flask-Limiter partagée (60 req/min par IP, Redis si dispo)
+│   └── analytics.py               # Façade track(event,props) fire-and-forget + helper paywall() (funnel conversion)
 ├── routes/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
-│   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, "Prochaine séance"
-│   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish, ajout cardio inline)
+│   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance"
+│   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline)
 │   ├── programme.py               # CRUD programme + profils + planning + import/export
 │   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement
-│   ├── gestion.py                 # Paramètres, settings, export/import, reset soft/total
+│   ├── gestion.py                 # Paramètres, settings, export/import, fusion doublons, reset soft/total
 │   ├── arcade.py                  # Mini-jeux
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
-│   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas
+│   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas + plats de la semaine
 │   ├── coach.py                   # Chat IA (Claude Haiku 4.5), réservé VIP, quota 15 msg/jour
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
+│   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
 │   ├── generator.py               # Générateur de programme IA (VIP) — Claude → JSON validé → save_prog
+│   ├── push.py                    # Abonnement push (clé VAPID, subscribe/unsubscribe), /tasks/reactivation
 │   ├── share.py                   # POST /share/track — compteur de partages de progression (analytics)
 │   ├── parrainage.py              # Lien d'invitation + récompense VIP (parrain/filleul) + apply_referral
-│   └── admin.py                   # Stats, gestion VIP, fiche user (gated par ADMIN_EMAILS env)
+│   └── admin.py                   # Stats, gestion VIP, fiche user, funnel (gated par ADMIN_EMAILS env)
 ├── templates/
-│   ├── base.html                  # Layout master (topbar, nav 4 onglets, scripts globaux)
-│   ├── _icons.html                # (inclus si présent) sprite SVG
+│   ├── base.html                  # Layout master (topbar, nav 4 onglets, scripts globaux, patch notes)
 │   ├── _body_map_svg.html         # SVG carte musculaire (inclus dans progres)
 │   ├── _programme_seance_card.html# Partial : carte séance dans /programme
-│   ├── partials/
-│   │   └── vip_lock.html          # Cadenas / mur VIP réutilisable
+│   ├── partials/vip_lock.html     # Cadenas / mur VIP réutilisable
 │   ├── landing.html               # Page publique (/)
-│   ├── login.html                 # Page login Google
+│   ├── login.html                 # Page login Google (web + natif Capacitor)
 │   ├── bridge.html                # Bridge OAuth → session Flask
 │   ├── accueil.html               # Dashboard
 │   ├── seance_choix.html          # Choix de séance du jour
-│   ├── seance_edit.html           # Saisie exercices (Alpine, timer, inline history)
+│   ├── seance_edit.html           # Saisie exercices (Alpine, chrono, RPE, inline history)
 │   ├── programme.html             # Gestion programme + profils + planning
 │   ├── progres.html               # Progression (body map, calendrier, volume, zoom)
-│   ├── gestion.html               # Paramètres, export/import, reset, notifications
+│   ├── gestion.html               # Paramètres, export/import, reset, notifications, newsletter
 │   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Arcade, Gestion, Tutoriel
 │   ├── premium.html               # Page de présentation des tiers
+│   ├── billing_success.html       # Retour Stripe Checkout
+│   ├── parrainage.html            # Page parrainage
+│   ├── plaques.html               # Calculateur de plaques
 │   ├── coach.html                 # Chat IA
 │   ├── generator.html             # Générateur de programme IA (form + preview + adopter)
 │   ├── cardio.html                # Saisie cardio
 │   ├── nutrition.html             # Profil + journal repas
 │   ├── arcade.html                # Mini-jeux canvas
 │   ├── onboarding.html            # Questionnaire 4 étapes (Alpine)
-│   ├── admin.html                 # Console admin
-│   ├── funnel.html                # Funnel de conversion admin (étapes + déperdition, 7/30/90j)
+│   ├── admin.html / funnel.html   # Console admin + funnel de conversion (7/30/90j)
+│   ├── faq.html / confidentialite.html  # Pages publiques (FAQ, politique de confidentialité)
 │   ├── vip_wall.html              # Mur de blocage VIP plein écran
 │   └── error.html                 # Page d'erreur
 ├── static/
@@ -84,28 +88,33 @@ pwa/
 │   │   ├── tokens.css             # Design tokens (couleurs, espacements, radius…)
 │   │   ├── theme.css              # Variables, animations, composants globaux
 │   │   ├── components.css         # Cards, stats, grids, boutons
+│   │   ├── glass.css              # Liquid glass (chargé après components.css)
 │   │   ├── icons.css              # Tailles et couleurs d'icônes (.icon, .icon-sm, .icon-accent…)
-│   │   ├── timer.css              # Styles spécifiques au chrono de repos
+│   │   ├── timer.css / rest-timer.css  # Chrono de repos (local à la séance / barre globale)
 │   │   └── tutorial.css           # Overlay tutoriel
 │   ├── js/
-│   │   ├── alpine.min.js          # Alpine.js bundlé localement
+│   │   ├── alpine.min.js / alpine-sort.min.js  # Alpine.js + plugin sort bundlés localement
 │   │   ├── sw-register.js         # Enregistrement SW + auto-update
 │   │   ├── offline.js             # Détection hors-ligne, queue localStorage, sync
 │   │   ├── notifications.js       # Rappels quotidiens (API Notification)
-│   │   ├── tutorial.js            # Tutoriel spotlight interactif
-│   │   ├── tuto-seance.js         # Tutoriel saisie de séance (1ère ouverture)
+│   │   ├── push.js                # Abonnement push web (VAPID)
+│   │   ├── install.js             # Expérience d'installation PWA (détection plateforme)
+│   │   ├── ads.js                 # AdMob (app native + Free uniquement)
+│   │   ├── rest-timer.js          # Chrono de repos global et persistant (barre injectée par base.html)
+│   │   ├── share-card.js          # Carte de progression (canvas → PNG) + Web Share
+│   │   ├── tuto-engine.js         # Moteur de tutoriel partagé (spotlight + bulle)
+│   │   ├── tutorial.js / tuto-seance.js  # Tutoriels accueil / saisie de séance
 │   │   ├── ui-fx.js               # Effets UI (toasts, micro-animations)
 │   │   ├── prefetch.js            # Prefetch des pages clés
 │   │   └── exercise-library.js    # Bibliothèque d'exercices (search/picker)
 │   ├── img/
 │   │   ├── icons.svg              # Sprite SVG (lucide-like) référencé via <use href="…#name"/>
-│   │   └── exercises/             # 18 SVG illustrations exercices
+│   │   └── exercises/             # SVG illustrations exercices
+│   ├── promo/, promo-vip*.mp4/.png # Assets marketing (fiche store, vidéo VIP)
 │   ├── changelog.json             # Notes de version (patch notes modal)
-│   ├── service-worker.js          # SW : Network First, CACHE_VERSION en tête de fichier
+│   ├── service-worker.js          # SW : Network First, CACHE_VERSION = base ; le SHA du commit est ajouté par app.py
 │   ├── manifest.json              # PWA manifest
-│   ├── manifest.webmanifest       # Variante webmanifest
-│   ├── icon-192.png               # Icône app 192×192
-│   └── icon-512.png               # Icône app 512×512
+│   └── icon-192.png / icon-512.png # Icônes app
 ```
 
 ## Navigation (4 onglets)
@@ -319,7 +328,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : `v112-2026-06-15-notifs-universelles` (incrémenter à chaque déploiement, en tête de `pwa/static/service-worker.js`)
+- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v120` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

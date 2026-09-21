@@ -1,4 +1,4 @@
-"""Couche d'accès Supabase — remplace core/sheets.py en Phase 3.
+"""Couche d'accès Supabase (Phase 3 — a remplacé l'ancien backend Google Sheets).
 
 Phase 3 choix d'archi : le backend Flask utilise la clé `service_role` (bypass
 RLS) et filtre manuellement **chaque** requête par `user_id`. L'authentification
@@ -106,8 +106,8 @@ def clear_user_cache(user_id: str):
 # ────────────────────────────────────────────────────────────
 
 def get_hist(user_id: str) -> list[dict]:
-    """Retourne l'historique de l'user sous la même forme que sheets.get_hist
-    (liste de dicts avec clés Semaine/Séance/Exercice/...)."""
+    """Retourne l'historique de l'user sous forme de liste de dicts
+    (clés Semaine/Séance/Exercice/...), même forme que l'ancien backend."""
     key = f"hist:{user_id}"
     cached = _cache_get(key)
     if cached is not None:
@@ -332,7 +332,7 @@ def save_prog(user_id: str, prog_dict: dict):
 
 
 # ────────────────────────────────────────────────────────────
-# Opérations ciblées (réplique de core/sheets.py)
+# Opérations ciblées (remplacement de ligne par exercice / date)
 # ────────────────────────────────────────────────────────────
 
 def _week_bounds(date_str: str):

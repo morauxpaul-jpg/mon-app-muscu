@@ -8,6 +8,7 @@ ce `user_id` dans `flask.g`.
 """
 import logging
 import os
+import re
 import secrets
 import time
 from datetime import timedelta
@@ -425,10 +426,31 @@ def manifest():
     return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
 
 
+_SW_VERSION_RE = re.compile(r'(const CACHE_VERSION\s*=\s*")([^"]*)(")')
+
+
+def _sw_build_suffix() -> str:
+    """Identifiant de build injecté dans CACHE_VERSION : Railway expose le SHA
+    du commit déployé → chaque déploiement invalide le cache du SW sans
+    avoir à bumper la constante à la main (source classique d'oubli)."""
+    sha = (os.getenv("RAILWAY_GIT_COMMIT_SHA") or os.getenv("SOURCE_COMMIT") or "").strip()
+    return sha[:8]
+
+
 @app.route("/service-worker.js")
 def service_worker():
-    response = send_from_directory("static", "service-worker.js", mimetype="application/javascript")
+    path = os.path.join(app.root_path, "static", "service-worker.js")
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    suffix = _sw_build_suffix()
+    if suffix:
+        text = _SW_VERSION_RE.sub(lambda m: f"{m.group(1)}{m.group(2)}-{suffix}{m.group(3)}", text, count=1)
+    response = make_response(text)
+    response.mimetype = "application/javascript"
     response.headers["Service-Worker-Allowed"] = "/"
+    # Le navigateur revalide le SW lui-même ; on interdit juste un cache
+    # intermédiaire de servir une ancienne version après un déploiement.
+    response.headers["Cache-Control"] = "no-cache"
     return response
 
 

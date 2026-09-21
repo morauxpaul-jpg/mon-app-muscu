@@ -1,6 +1,9 @@
 // Service worker — Network First avec mise à jour automatique.
-// IMPORTANT : incrémenter CACHE_VERSION à chaque déploiement pour forcer le refresh.
-const CACHE_VERSION = "v119-2026-08-18-export-natif-son-chrono-histo-croise";
+// CACHE_VERSION : en prod, app.py (route /service-worker.js) suffixe cette
+// valeur avec le SHA du commit déployé (RAILWAY_GIT_COMMIT_SHA) → chaque
+// déploiement invalide le cache automatiquement. Ne bumper la base que pour
+// forcer un refresh en local (pas de SHA) ou changer l'APP_SHELL.
+const CACHE_VERSION = "v120";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [

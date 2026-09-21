@@ -1,6 +1,6 @@
 """Façade Flask au-dessus de core.db.
 
-Les routes existantes appelaient `core.sheets.get_hist()` sans paramètre. Pour
+Les routes appelaient historiquement `get_hist()` sans paramètre (ancien backend Sheets). Pour
 garder les blueprints inchangés après la migration Supabase, ce module expose
 les mêmes signatures (sans `user_id`) et lit l'utilisateur courant depuis
 `flask.g.user_id`, qui est posé par le `before_request` de `app.py` après

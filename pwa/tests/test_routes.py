@@ -1049,3 +1049,20 @@ def test_cible_calorique_manuelle_prime(fake_db, logged_in):
     prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
     assert prof["calories_cible"] == auto
     assert "calories_custom" not in (_prog().get("_nutrition") or {})
+
+
+# ── Service worker : version de cache dérivée du commit déployé ──
+
+def test_service_worker_suffixe_le_sha_du_commit(client, monkeypatch):
+    monkeypatch.setenv("RAILWAY_GIT_COMMIT_SHA", "b1b20ea7deadbeef")
+    r = client.get("/service-worker.js")
+    assert r.status_code == 200
+    assert r.mimetype == "application/javascript"
+    assert 'const CACHE_VERSION = "v120-b1b20ea7";' in r.data.decode("utf-8")
+
+
+def test_service_worker_sans_sha_garde_la_version_du_fichier(client, monkeypatch):
+    monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
+    monkeypatch.delenv("SOURCE_COMMIT", raising=False)
+    r = client.get("/service-worker.js")
+    assert 'const CACHE_VERSION = "v120";' in r.data.decode("utf-8")
