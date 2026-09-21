@@ -1,6 +1,16 @@
 {
-  "current": "v45",
+  "current": "v46",
   "entries": [
+    {
+      "version": "v46",
+      "date": "2026-09-21",
+      "title": "Nouveauté : cherche un aliment, on calcule pour toi",
+      "changes": [
+        "Nutrition : tape « banane », « riz », « poulet », « whey »… et choisis parmi 270 aliments courants avec leurs portions usuelles (1 banane, 1 blanc de poulet, 1 dose…) — les calories et macros se calculent tout seuls",
+        "Ajoute plusieurs aliments dans le même repas, ajuste la quantité ou passe en grammes, puis valide en un tap",
+        "Les modes « Saisie rapide » et « Composition » restent là pour reporter une étiquette précise"
+      ]
+    },
     {
       "version": "v45",
       "date": "2026-09-21",

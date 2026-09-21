@@ -31,6 +31,7 @@ pwa/
 │   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name, overload_suggestion)
 │   ├── catalog.py                 # Catalogue de 19 programmes prédéfinis (onboarding)
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
+│   ├── foods_data.py              # Base de ~270 aliments courants (kcal/macros pour 100 g + portions) pour la recherche Nutrition
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
 │   ├── challenges.py              # Défis hebdomadaires (un défi tournant, évalué depuis l'historique)
 │   ├── push.py                    # Push web : config VAPID + envoi pywebpush, relance des inactifs
@@ -46,7 +47,7 @@ pwa/
 │   ├── arcade.py                  # Mini-jeux
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
-│   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas + plats de la semaine
+│   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas (recherche aliments, plats de la semaine, saisie rapide, composition)
 │   ├── coach.py                   # Chat IA (Claude Haiku 4.5), réservé VIP, quota 15 msg/jour
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
@@ -316,6 +317,10 @@ pwa/
 ### Suggestion de surcharge (core/muscu.py → routes/seance.py)
 - `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE est lu depuis le token `@RPE8` de la remarque.
 - Affichée sous « Dernière fois » (bouton Appliquer = pré-remplit la charge sur les séries vides ; reps cibles en placeholder). Réglage `_settings.show_overload_hint` (Gestion). Recalculée par `/seance/api/variant-history`.
+
+### Base d'aliments (core/foods_data.py → nutrition.html)
+- `FOODS` (liste de dicts `{n, k, p, c, f, g, r, u}` : nom, kcal/prot/gluc/lip pour 100 g, catégorie, rang, portions `[[libellé, grammes]]`) est embarquée dans la page (`var FOODS = {{ foods|tojson }}`, ~27 Ko) ; la recherche est 100 % côté client (normalisation sans accents, tous les mots doivent matcher, début de mot > milieu, aliments simples avant plats/snacks `r=1`).
+- Mode « Aliments » (par défaut) du formulaire repas : panier `basket` (qty × portion) → totaux → POST `/nutrition/add-meal` classique, note = « Banane 120 g, Riz blanc cuit 180 g ». Pour ajouter un aliment : une ligne dans `FOODS_RAW` (une chaîne seule = titre de catégorie).
 
 ### Poids corporel (migration v33, routes/progres.py)
 - Table `body_weight` (user_id, date, poids_kg), une pesée / jour (upsert `on_conflict=user_id,date`). Carte gratuite dans Progrès : courbe SVG 90 j, variation 30 j (couleur selon `objectif_nutrition`), min/max, saisie + suppression.

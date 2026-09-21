@@ -18,6 +18,7 @@ from core.data import (
 from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
 from core.analytics import paywall
+from core.foods_data import FOODS
 
 logger = logging.getLogger(__name__)
 
@@ -280,6 +281,7 @@ def index():
         week_days=week_days,
         meal_plan=_get_meal_plan(prog),
         calories_custom=_custom_cal(prog),
+        foods=FOODS,
     )
 
 
