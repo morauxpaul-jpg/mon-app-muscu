@@ -39,6 +39,7 @@ DEFAULT_SETTINGS = {
     "show_overload_hint": True,
     "show_previous_weeks": 2,
     "notifications": False,
+    "reminder_hour": 18,       # heure du rappel de séance (0 = aucun)
 }
 
 
@@ -293,6 +294,11 @@ def update_settings():
     # Notifications : disponibles pour TOUS (rétention — on veut faire revenir
     # surtout les gratuits). Dé-gaté du PRO.
     s["notifications"] = request.form.get("notifications") == "on"
+    # Heure du rappel de séance : envoyé par le serveur (cf. core/reminders.py),
+    # donc il arrive même quand l'app est fermée.
+    from core.reminders import clean_hour
+    s["reminder_hour"] = clean_hour(request.form.get("reminder_hour"),
+                                    s.get("reminder_hour", 18))
     # Options VIP : en Free on force à off quoi qu'il arrive.
     if is_vip:
         s["theme_animations"] = request.form.get("theme_animations") == "on"

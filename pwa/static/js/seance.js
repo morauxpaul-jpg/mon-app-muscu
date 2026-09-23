@@ -332,10 +332,15 @@
       save: function (ev) {
         var form = ev.target.closest("form");
         if (!form || this.saving) return;
-        // Hors ligne : on laisse le formulaire partir, offline.js le met en
-        // file d'attente et affiche son propre retour.
-        if (!navigator.onLine) return;
         ev.preventDefault();
+        // Hors ligne : on met en file NOUS-MÊMES et on valide la carte tout
+        // de suite. Avant, la page ne bougeait pas après « Enregistrer » :
+        // rien n'indiquait que la série était gardée, donc l'utilisateur la
+        // ressaisissait — et se retrouvait avec des doublons en attente.
+        if (!navigator.onLine) {
+          this._queueOffline(form);
+          return;
+        }
         this.saving = true;
         var self = this;
         var card = form.closest(".exo-card");
@@ -383,10 +388,34 @@
           .finally(function () { self.saving = false; });
       },
 
+      _queueOffline: function (form) {
+        var body = new FormData(form);
+        body.set("sets_json", this.serializedSets());
+        body.set("_csrf", csrf());
+        try {
+          window.OfflineQueue.enqueue(form.action, body);
+        } catch (e) {
+          form.submit();   // pas de file disponible : comportement d'origine
+          return;
+        }
+        try { localStorage.removeItem(draftKey); } catch (e) {}
+        var card = form.closest(".exo-card");
+        this.completed = true;
+        this.open = false;
+        if (card) card.classList.add("done");
+        refreshProgress();
+        openNextPending(card);
+        toast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
+      },
+
       skip: function (ev) {
         var form = ev.target.closest("form");
-        if (!form || !navigator.onLine) return;
+        if (!form) return;
         ev.preventDefault();
+        if (!navigator.onLine) {
+          this._queueOffline(form);
+          return;
+        }
         var self = this;
         var card = form.closest(".exo-card");
         var body = new FormData(form);
@@ -620,6 +649,17 @@
       if (window.RestTimer) window.RestTimer.finishSession();
       clearAllDrafts();
       clearActiveSession();
+      if (!navigator.onLine && window.OfflineQueue) {
+        // Hors ligne : la séance est close côté appareil, le bilan part plus
+        // tard. On ne laisse pas l'utilisateur bloqué sur la modale.
+        window.OfflineQueue.enqueue(form.action, new FormData(form));
+        modal.style.display = "none";
+        if (window.showToast) {
+          window.showToast("Séance terminée — le bilan partira au retour du réseau.", "warn");
+        }
+        setTimeout(function () { location.href = "/accueil"; }, 900);
+        return;
+      }
       if (form.requestSubmit) { form.requestSubmit(); return; }
       if (!form.querySelector('input[name="_csrf"]')) {
         var i = document.createElement("input");
@@ -662,6 +702,14 @@
   function boot() {
     initFinish();
     refreshProgress();
+    // Retour du réseau : offline.js rejoue la file, puis on recharge pour
+    // repartir de ce que le serveur a réellement enregistré.
+    window.addEventListener("online", function () {
+      if (!window.OfflineQueue || !window.OfflineQueue.pending()) return;
+      window.OfflineQueue.sync().then(function (n) {
+        if (n > 0) setTimeout(function () { location.reload(); }, 1200);
+      });
+    });
     // Les formulaires restants (reset, extras, cardio) gardent le rechargement
     // classique : ce sont des actions rares où un aller-retour est acceptable.
     document.addEventListener("submit", function (e) {

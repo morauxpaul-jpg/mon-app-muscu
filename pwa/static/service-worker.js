@@ -3,7 +3,7 @@
 // valeur avec le SHA du commit déployé (RAILWAY_GIT_COMMIT_SHA) → chaque
 // déploiement invalide le cache automatiquement. Ne bumper la base que pour
 // forcer un refresh en local (pas de SHA) ou changer l'APP_SHELL.
-const CACHE_VERSION = "v120";
+const CACHE_VERSION = "v121";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 
 const APP_SHELL = [
@@ -94,6 +94,11 @@ self.addEventListener("message", (event) => {
     return;
   }
 
+  if (data.type === "PRECACHE") {
+    event.waitUntil(precache(data.urls));
+    return;
+  }
+
   if (data.type === "SCHEDULE_TIMER") {
     _clearRestTimer();
     const delay = Math.max(0, Number(data.delay) || 0);
@@ -153,21 +158,43 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// ── Fetch : Stale-While-Revalidate pour navigations HTML, Network First sinon ─
+// ── Pré-cache des séances du jour ────────────────────────────────
+// L'app poste les URLs des séances planifiées (aujourd'hui + demain) dès
+// qu'elle s'ouvre en ligne. Sans ça, ouvrir sa séance en salle au sous-sol
+// renvoyait à l'accueil : l'URL /seance?mode=…&name=…&date=… n'avait jamais
+// été visitée, donc jamais mise en cache.
+async function precache(urls) {
+  const cache = await caches.open(CACHE);
+  await Promise.all(
+    (urls || []).map((u) =>
+      fetch(u, { credentials: "same-origin" })
+        .then((resp) => {
+          if (resp && resp.status === 200 && resp.type === "basic") {
+            return cache.put(u, resp.clone());
+          }
+        })
+        .catch(() => {})
+    )
+  );
+}
+
+// ── Fetch ────────────────────────────────────────────────────────
+// Navigations (HTML) : réseau d'abord, cache en secours. Une page fraîche
+//   vaut mieux qu'une page d'hier quand le réseau répond.
+// Assets versionnés (CSS/JS/SVG) : cache d'abord, rafraîchi en arrière-plan
+//   (stale-while-revalidate). Ils changent à chaque déploiement, jamais entre
+//   deux, donc les re-télécharger à chaque navigation est du gaspillage.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-  // Ignore les requêtes cross-origin (Plotly CDN, etc.)
   if (url.origin !== self.location.origin) return;
 
   const isNav = req.mode === "navigate" ||
                 (req.headers.get("accept") || "").includes("text/html");
 
   if (isNav) {
-    // Network First : toujours chercher le HTML frais côté serveur,
-    // fallback sur le cache si offline.
     event.respondWith(
       fetch(req)
         .then((resp) => {
@@ -177,28 +204,80 @@ self.addEventListener("fetch", (event) => {
           }
           return resp;
         })
-        .catch(() =>
-          caches.open(CACHE).then((c) =>
-            c.match(req).then((cached) => cached || c.match("/accueil"))
-          )
-        )
+        .catch(async () => {
+          const cache = await caches.open(CACHE);
+          // 1. La page exacte demandée.
+          const exact = await cache.match(req);
+          if (exact) return exact;
+          // 2. La même page sans les paramètres (une séance ouverte hier
+          //    reste utile aujourd'hui : l'utilisateur y retrouve ses exos).
+          const bare = await cache.match(url.pathname);
+          if (bare) return bare;
+          // 3. Dernier recours : l'accueil, mais en le DISANT. Un retour
+          //    silencieux à l'accueil ressemble à un bug.
+          const home = await cache.match("/accueil");
+          if (home) {
+            const html = await home.text();
+            return new Response(
+              html.replace("</body>", OFFLINE_BANNER + "</body>"),
+              { headers: { "Content-Type": "text/html; charset=utf-8" } }
+            );
+          }
+          return new Response(OFFLINE_PAGE, {
+            status: 503,
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          });
+        })
     );
     return;
   }
 
-  // Assets statiques : Network First avec fallback cache.
-  event.respondWith(
-    fetch(req)
-      .then((resp) => {
-        if (resp && resp.status === 200 && resp.type === "basic") {
-          const copy = resp.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return resp;
+  const isVersionedAsset = url.pathname.startsWith("/static/");
+  if (isVersionedAsset) {
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const cached = await cache.match(req);
+        const network = fetch(req)
+          .then((resp) => {
+            if (resp && resp.status === 200 && resp.type === "basic") {
+              cache.put(req, resp.clone());
+            }
+            return resp;
+          })
+          .catch(() => cached);
+        return cached || network;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match("/accueil")))
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(req).catch(() => caches.match(req).then((c) => c || Response.error()))
   );
 });
+
+// Message affiché quand on a dû replier sur l'accueil faute de mieux.
+const OFFLINE_BANNER =
+  '<div style="position:fixed;left:16px;right:16px;bottom:84px;z-index:99999;' +
+  'padding:12px 16px;border-radius:12px;background:rgba(255,159,10,0.95);' +
+  'color:#0a0a1a;font:600 0.85rem system-ui;text-align:center;' +
+  'box-shadow:0 4px 20px rgba(0,0,0,0.4)">' +
+  "Hors ligne \u2014 cette page n'\u00e9tait pas en m\u00e9moire. Voici ton accueil." +
+  "</div>";
+
+const OFFLINE_PAGE =
+  '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+  "<title>Hors ligne</title><style>body{margin:0;min-height:100vh;display:flex;" +
+  "align-items:center;justify-content:center;background:#0a0a0f;color:#e7e9ee;" +
+  "font-family:system-ui,sans-serif;text-align:center;padding:24px}" +
+  "h1{font-size:1.2rem;margin:0 0 8px}p{color:#9aa3b2;font-size:0.9rem;line-height:1.5;margin:0}" +
+  "button{margin-top:18px;padding:12px 22px;border:0;border-radius:10px;" +
+  "background:#78c8ff;color:#0a0a0f;font-size:0.95rem;font-weight:600}</style></head>" +
+  "<body><div><h1>Pas de connexion</h1>" +
+  "<p>Cette page n'a pas encore \u00e9t\u00e9 mise en m\u00e9moire.<br>" +
+  "Tes s\u00e9ries saisies hors ligne sont conserv\u00e9es et partiront au retour du r\u00e9seau.</p>" +
+  '<button onclick="location.reload()">R\u00e9essayer</button></div></body></html>';
 
 // ── Push web (relance des inactifs) ──────────────────────────────
 // Le clic est géré par le handler `notificationclick` unique ci-dessus

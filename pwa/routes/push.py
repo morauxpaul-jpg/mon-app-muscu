@@ -70,6 +70,28 @@ def unsubscribe():
     return ("", 204)
 
 
+@bp.route("/tasks/reminders", methods=["POST"])
+@limiter.limit("60 per hour")
+def cron_reminders():
+    """Rappels de séance — à appeler CHAQUE HEURE par un scheduler.
+
+    Envoie un push aux personnes qui ont une séance planifiée aujourd'hui, ne
+    l'ont pas encore faite, et ont choisi cette heure de rappel. Contrairement
+    aux rappels locaux (qui exigeaient que l'app soit ouverte), celui-ci part
+    même app fermée.
+
+        curl -X POST -H "X-Cron-Secret: …" https://…/tasks/reminders
+    """
+    if not _cron_authorized():
+        return jsonify({"error": "unauthorized"}), 401
+    from core import reminders
+    result = reminders.run_reminders()
+    if not result.get("ok"):
+        code = 503 if result.get("error") == "unconfigured" else 500
+        return jsonify(result), code
+    return jsonify(result)
+
+
 @bp.route("/tasks/reactivation", methods=["POST"])
 @limiter.limit("12 per hour")
 def cron_reactivation():

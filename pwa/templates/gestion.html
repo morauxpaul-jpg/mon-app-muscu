@@ -226,10 +226,22 @@
         <span>Pré-remplir les poids de la dernière séance {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
       </label>
       <label class="muscle-check" style="display:flex; margin:6px 0;">
-        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this)">
+        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this); var r=document.getElementById('reminder-hour-row'); if(r) r.hidden = !this.checked;">
         <span>Notifications de rappel &amp; relances (même app fermée)</span>
       </label>
       <p style="font-size:0.7rem; color:var(--text-dim); margin:0 0 6px 26px;">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
+      <div id="reminder-hour-row" style="margin:0 0 10px 26px;" {% if not settings.notifications %}hidden{% endif %}>
+        <label class="field-label" for="reminder-hour" style="margin-top:0;">Heure du rappel les jours de séance</label>
+        <select name="reminder_hour" id="reminder-hour" class="field" style="max-width:220px;">
+          <option value="0" {% if not settings.reminder_hour %}selected{% endif %}>Aucun rappel</option>
+          {% for h in range(6, 23) %}
+            <option value="{{ h }}" {% if settings.reminder_hour == h %}selected{% endif %}>{{ '%02d' % h }} h 00</option>
+          {% endfor %}
+        </select>
+        <p style="font-size:0.7rem; color:var(--text-dim); margin:4px 0 0;">
+          Envoyé seulement si la séance du jour n'est pas encore faite.
+        </p>
+      </div>
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
         <span>Recevoir les nouveautés par e-mail (mises à jour, nouveaux programmes)</span>

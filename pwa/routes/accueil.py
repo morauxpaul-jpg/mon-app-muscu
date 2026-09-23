@@ -361,6 +361,24 @@ def index():
         }
         break
 
+    # ── URLs à garder en cache pour le hors-ligne ───────────────
+    # Une salle en sous-sol est le cas normal, pas un cas limite. Le service
+    # worker ne peut servir que ce qu'il a déjà vu : on lui donne les séances
+    # planifiées d'aujourd'hui et de demain pendant qu'il y a du réseau.
+    from urllib.parse import quote as _q
+    precache_urls = []
+    for off in (0, 1):
+        d = today + timedelta(days=off)
+        sname = planning_map.get(DAYS_FR[d.weekday()], "")
+        if not sname:
+            continue
+        d_iso = d.strftime("%Y-%m-%d")
+        precache_urls.append(f"/seance?date={d_iso}")
+        precache_urls.append(
+            f"/seance?mode=prefaite&name={_q(sname)}&date={d_iso}")
+    # La page de choix du jour sert de point d'entrée même sans planning.
+    precache_urls.append("/seance")
+
     # Palier streak — icon_id = symbole SVG dans icons.svg, color = classe icon-*
     if streak >= 24:
         streak_tier = "diamond"
@@ -525,6 +543,7 @@ def index():
         today_seance=today_seance,
         today_done=today_done,
         notif_enabled=bool(prog.get("_settings", {}).get("notifications", False)),
+        reminder_hour=int((prog.get("_settings") or {}).get("reminder_hour", 18) or 0),
         exos_count=exos_count,
         sets_count=sets_count,
         reps_count=reps_count,
@@ -537,4 +556,5 @@ def index():
         badges=badges,
         badges_new=badges_new,
         next_session=next_session,
+        precache_urls=precache_urls,
     )

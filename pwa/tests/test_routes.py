@@ -1080,19 +1080,29 @@ def test_cible_calorique_manuelle_prime(fake_db, logged_in):
 
 # ── Service worker : version de cache dérivée du commit déployé ──
 
+def _sw_base_version():
+    """Version écrite dans le fichier source (elle est bumpée à chaque fois
+    que l'APP_SHELL change — le test ne doit pas la figer)."""
+    import pathlib
+    import re as _re
+    src = pathlib.Path(__file__).resolve().parent.parent / "static" / "service-worker.js"
+    return _re.search(r'const CACHE_VERSION = "([^"]+)"', src.read_text(encoding="utf-8")).group(1)
+
+
 def test_service_worker_suffixe_le_sha_du_commit(client, monkeypatch):
     monkeypatch.setenv("RAILWAY_GIT_COMMIT_SHA", "b1b20ea7deadbeef")
     r = client.get("/service-worker.js")
     assert r.status_code == 200
     assert r.mimetype == "application/javascript"
-    assert 'const CACHE_VERSION = "v120-b1b20ea7";' in r.data.decode("utf-8")
+    expected = f'const CACHE_VERSION = "{_sw_base_version()}-b1b20ea7";'
+    assert expected in r.data.decode("utf-8")
 
 
 def test_service_worker_sans_sha_garde_la_version_du_fichier(client, monkeypatch):
     monkeypatch.delenv("RAILWAY_GIT_COMMIT_SHA", raising=False)
     monkeypatch.delenv("SOURCE_COMMIT", raising=False)
     r = client.get("/service-worker.js")
-    assert 'const CACHE_VERSION = "v120";' in r.data.decode("utf-8")
+    assert f'const CACHE_VERSION = "{_sw_base_version()}";' in r.data.decode("utf-8")
 
 
 # ── Suggestion de surcharge dans l'éditeur de séance ─────────────

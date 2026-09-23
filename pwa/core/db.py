@@ -1058,6 +1058,40 @@ def list_push_subscriptions_for_users(user_ids: set) -> list[dict]:
         return []
 
 
+def list_all_programs() -> list[dict]:
+    """[{user_id, data}] pour tous les comptes — cron des rappels de séance.
+
+    Le planning vit dans `programs.data['_planning']` : sans lecture groupée,
+    il faudrait une requête par utilisateur à chaque heure. On ne prend que
+    les deux colonnes utiles.
+    """
+    client = get_client()
+    try:
+        return _fetch_all(lambda: (
+            client.table("programs").select("user_id, data").order("user_id")
+        ))
+    except Exception as e:
+        logger.error("list_all_programs FAILED: %s", e)
+        return []
+
+
+def users_trained_on(date_str: str) -> set:
+    """user_id ayant au moins une perf réelle à cette date (pour ne pas
+    rappeler une séance déjà faite)."""
+    client = get_client()
+    try:
+        rows = _fetch_all(lambda: (
+            client.table("history").select("user_id, reps, poids")
+            .eq("date", _norm_date(date_str)).order("id")
+        ))
+    except Exception as e:
+        logger.error("users_trained_on FAILED: %s", e)
+        return set()
+    return {r["user_id"] for r in rows
+            if r.get("user_id")
+            and (int(r.get("reps") or 0) > 0 or float(r.get("poids") or 0) > 0)}
+
+
 def mark_reactivation_sent(endpoint: str, count: int) -> None:
     """Mémorise l'envoi d'une relance sur un abonnement (colonnes v34).
     Best-effort : sans la migration, l'update échoue et on continue."""

@@ -282,6 +282,9 @@
   <style>@keyframes upsellIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }</style>
   {% endif %}
 
+  {# URLs que le service worker garde pour le hors-ligne (cf. offline.js). #}
+  <script type="application/json" id="precache-urls">{{ precache_urls|default([])|tojson }}</script>
+
   <script>
     document.getElementById('page-loader').style.display = 'none';
     {% if not error %}
@@ -290,7 +293,8 @@
         todaySeance: {{ today_seance|tojson }},
         todayDone: {{ today_done|tojson }},
         streak: {{ streak }},
-        notifEnabled: {{ notif_enabled|tojson }}
+        notifEnabled: {{ notif_enabled|tojson }},
+        serverReminders: {{ (reminder_hour or 0) > 0 }}
       });
     }
     {% endif %}

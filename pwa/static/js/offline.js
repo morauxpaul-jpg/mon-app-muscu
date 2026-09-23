@@ -18,7 +18,7 @@
     if (banner) return;
     banner = document.createElement("div");
     banner.id = "offline-banner";
-    banner.innerHTML = '📡 Mode hors-ligne — les données seront synchronisées au retour du réseau';
+    banner.textContent = "Hors ligne — tu peux continuer, tout est gardé sur l'appareil.";
     banner.style.cssText =
       "position:fixed;top:0;left:0;right:0;z-index:10000;padding:8px 16px;" +
       "background:rgba(255,159,10,0.95);color:#0a0a1a;text-align:center;" +
@@ -90,88 +90,104 @@
         "box-shadow:0 2px 12px rgba(255,159,10,0.5);";
       document.body.appendChild(existing);
     }
-    existing.textContent = "⏳ " + q.length + " action(s) en attente";
+    existing.textContent = q.length + " série(s) à envoyer";
+    existing.title = "Enregistrées sur l'appareil, elles partiront au retour du réseau.";
   }
 
   // ── Synchronisation ───────────────────────────────────────
-  function syncQueue() {
-    var q = getQueue();
-    if (q.length === 0) return;
+  // SÉQUENTIELLE et dans l'ordre de saisie : deux enregistrements du même
+  // exercice rejoués en parallèle laissaient gagner le plus rapide, pas le
+  // plus récent. On s'arrête au premier échec pour ne pas désordonner la
+  // suite (le reste repartira au prochain retour de réseau).
+  var _syncing = false;
 
-    var remaining = [];
+  function syncQueue() {
+    if (_syncing) return Promise.resolve(0);
+    if (getQueue().length === 0) return Promise.resolve(0);
+    _syncing = true;
     var synced = 0;
-    var promises = q.map(function (item) {
-      var fd = new FormData();
-      Object.keys(item.data).forEach(function (k) {
-        fd.append(k, item.data[k]);
-      });
+
+    function step() {
+      var queue = getQueue();
+      if (!queue.length) return Promise.resolve();
+      var item = queue[0];
       return fetch(item.url, {
         method: "POST",
         body: new URLSearchParams(item.data),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        credentials: "same-origin",
         redirect: "follow",
-      })
-        .then(function (resp) {
-          // Une redirection vers la landing ou le login = session expirée :
-          // la donnée n'a PAS été enregistrée — on la garde dans la file.
-          var landedOnAuth = false;
-          try {
-            var p = new URL(resp.url, window.location.origin).pathname;
-            landedOnAuth = resp.redirected && (p === "/" || p === "/login");
-          } catch (e) {}
-          if ((resp.ok || resp.redirected) && !landedOnAuth) {
-            synced++;
-          } else {
-            remaining.push(item);
-          }
-        })
-        .catch(function () {
-          remaining.push(item);
-        });
-    });
+      }).then(function (resp) {
+        // Une redirection vers la landing ou le login = session expirée :
+        // la donnée n'a PAS été enregistrée — on la garde dans la file.
+        var landedOnAuth = false;
+        try {
+          var p = new URL(resp.url, window.location.origin).pathname;
+          landedOnAuth = resp.redirected && (p === "/" || p === "/login");
+        } catch (e) {}
+        if (landedOnAuth) {
+          showToast("Reconnecte-toi pour envoyer tes séries en attente.", "warn");
+          throw new Error("auth");
+        }
+        if (!resp.ok && !resp.redirected) throw new Error("http " + resp.status);
+        synced++;
+        saveQueue(getQueue().slice(1));
+        updateBadge();
+        return step();
+      });
+    }
 
-    Promise.all(promises).then(function () {
-      saveQueue(remaining);
-      updateBadge();
-      if (synced > 0) {
-        showToast("✅ " + synced + " donnée(s) synchronisée(s)");
-      }
-    });
+    return step()
+      .catch(function () {})
+      .then(function () {
+        _syncing = false;
+        updateBadge();
+        if (synced > 0) {
+          showToast(synced + " série(s) enregistrée(s) — tout est à jour.", "ok");
+        }
+        return synced;
+      });
   }
 
-  function showToast(msg) {
+  var TOAST_COLORS = {
+    ok:   ["rgba(52,199,89,0.15)", "rgba(52,199,89,0.45)", "#4FCB8E"],
+    warn: ["rgba(255,159,10,0.15)", "rgba(255,159,10,0.45)", "#FF9F0A"],
+    info: ["rgba(120,200,255,0.12)", "rgba(120,200,255,0.40)", "#78c8ff"],
+  };
+
+  function showToast(msg, kind) {
+    var c = TOAST_COLORS[kind] || TOAST_COLORS.info;
     var t = document.createElement("div");
+    t.setAttribute("role", "status");
     t.textContent = msg;
     t.style.cssText =
-      "position:fixed;top:16px;left:50%;transform:translateX(-50%);" +
-      "background:rgba(0,255,127,0.15);border:1px solid rgba(0,255,127,0.4);" +
-      "color:#00FF7F;padding:10px 20px;border-radius:12px;font-size:0.9rem;" +
-      "z-index:9999;animation:slideIn 0.3s ease-out;";
+      "position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));" +
+      "margin:0 auto;max-width:420px;text-align:center;" +
+      "background:" + c[0] + ";border:1px solid " + c[1] + ";color:" + c[2] + ";" +
+      "padding:11px 18px;border-radius:12px;font-size:0.88rem;font-weight:500;" +
+      "z-index:9999;backdrop-filter:blur(12px);";
     document.body.appendChild(t);
-    setTimeout(function () {
-      t.remove();
-    }, 4000);
+    setTimeout(function () { t.remove(); }, 4000);
   }
+  window.showToast = showToast;
 
   // ── Interception des form POST quand offline ──────────────
   document.addEventListener("submit", function (e) {
     if (navigator.onLine) return; // online → laisser le navigateur faire
+    if (e.defaultPrevented) return; // déjà pris en charge (cf. seance.js)
     var form = e.target;
     if (form.method.toLowerCase() !== "post") return;
 
     // Ne queue que les formulaires de séance (saisie)
-    var action = form.action || "";
-    if (
-      action.indexOf("/seance/") === -1 &&
-      action.indexOf("/seance") === -1
-    )
-      return;
+    if ((form.action || "").indexOf("/seance") === -1) return;
 
     e.preventDefault();
-    var fd = new FormData(form);
-    enqueue(action, fd);
-    showToast("📡 Sauvegardé hors-ligne — sera synchronisé au retour du réseau");
-  }, true);
+    enqueue(form.action, new FormData(form));
+    showToast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
+    // Phase de BULLE (pas de capture) : le gestionnaire du formulaire lui-même
+    // s'exécute avant nous. Sans ça, seance.js et cette interception mettaient
+    // chacun la série en file — deux entrées pour un seul enregistrement.
+  }, false);
 
   // ── Désactiver les liens vers pages serveur-only en offline ─
   function disableOfflineLinks() {
@@ -214,17 +230,47 @@
     purgeOnLogout();
   }, true);
 
+  // ── API publique ──────────────────────────────────────────
+  // seance.js met lui-même en file quand il est hors ligne, pour pouvoir
+  // mettre la carte à jour immédiatement. Sans ça l'utilisateur n'avait
+  // AUCUN retour : la série semblait perdue, et il la ressaisissait.
+  window.OfflineQueue = {
+    enqueue: function (url, formData) { enqueue(url, formData); },
+    pending: function () { return getQueue().length; },
+    sync: syncQueue,
+  };
+
+  // ── Pré-cache des séances du jour ─────────────────────────
+  // L'accueil expose les URLs des séances planifiées (aujourd'hui + demain) ;
+  // on demande au service worker de les garder pendant qu'il y a du réseau.
+  // Sans ça, ouvrir sa séance au sous-sol renvoyait à l'accueil : l'URL
+  // n'avait jamais été visitée, donc jamais mise en cache.
+  function precacheSessions() {
+    if (!navigator.onLine || !navigator.serviceWorker) return;
+    var el = document.getElementById("precache-urls");
+    if (!el) return;
+    var urls;
+    try { urls = JSON.parse(el.textContent || "[]"); } catch (e) { return; }
+    if (!urls.length) return;
+    navigator.serviceWorker.ready
+      .then(function (reg) {
+        if (reg.active) reg.active.postMessage({ type: "PRECACHE", urls: urls });
+      })
+      .catch(function () {});
+  }
+
   // ── Init ──────────────────────────────────────────────────
   window.addEventListener("online", updateStatus);
   window.addEventListener("offline", updateStatus);
   // Au chargement
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
-      updateStatus();
-      disableOfflineLinks();
-    });
-  } else {
+  function init() {
     updateStatus();
     disableOfflineLinks();
+    precacheSessions();
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
   }
 })();

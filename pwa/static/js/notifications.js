@@ -55,6 +55,20 @@
     }
   }
 
+  function checkStreakOnly(opts) {
+    var today = new Date().toISOString().slice(0, 10);
+    if (!opts.todaySeance || opts.todayDone || opts.streak <= 2) return;
+    if (new Date().getHours() < 19) return;
+    var key = "streak_" + today;
+    if (alreadyShown(key)) return;
+    markShown(key);
+    showNotif(
+      "Ton streak est en jeu",
+      opts.streak + " semaines d'affilée — il reste la soirée pour ta séance.",
+      "streak-danger"
+    );
+  }
+
   /**
    * Appelé depuis accueil.html avec les infos du jour.
    * @param {Object} opts
@@ -65,6 +79,15 @@
    */
   window.checkDailyNotifications = function (opts) {
     if (!opts.notifEnabled) return;
+    // Les rappels « jour de séance » et « séance non faite » sont désormais
+    // envoyés par le serveur à l'heure choisie (cf. core/reminders.py) : ils
+    // arrivent app fermée, ce que ces notifications locales ne savent pas
+    // faire. On ne garde ici que l'alerte de streak, qui dépend d'un état
+    // visible seulement une fois la page ouverte.
+    if (opts.serverReminders) {
+      checkStreakOnly(opts);
+      return;
+    }
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
 
