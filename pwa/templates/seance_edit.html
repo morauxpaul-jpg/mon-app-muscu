@@ -115,7 +115,8 @@
     {% if session_note.duration_min %}
       <div class="label-icon" style="font-size:0.78rem; color:var(--text-3); margin-top:6px;">
         <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#clock"/></svg>
-        {{ session_note.duration_min }} min
+        {{ session_note.duration_min }} min{% if vol_curr and session_note.duration_min %}
+          · {{ (vol_curr / session_note.duration_min)|round|int }} kg/min{% endif %}
       </div>
     {% endif %}
   </div>

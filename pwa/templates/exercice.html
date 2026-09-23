@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}{{ exo_name }} · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="/progres#zoom" class="btn label-icon" style="display:inline-flex; margin-bottom:12px;">
+    <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-left"/></svg>Progrès
+  </a>
+
+  <div class="exo-page-head">
+    <h1>{{ exo_name }}</h1>
+    {% if summary %}
+      <p class="exo-page-sub">
+        {{ summary.sessions }} séance{{ 's' if summary.sessions > 1 }} ·
+        {{ summary.sets_total }} séries ·
+        du {{ summary.first_date[8:10] }}/{{ summary.first_date[5:7] }}/{{ summary.first_date[:4] }}
+        au {{ summary.last_date[8:10] }}/{{ summary.last_date[5:7] }}/{{ summary.last_date[:4] }}
+      </p>
+    {% endif %}
+  </div>
+
+  {% if not sessions %}
+    <div class="card" style="text-align:center; padding:28px 18px;">
+      <svg class="icon icon-xl icon-mute" aria-hidden="true"><use href="/static/img/icons.svg#dumbbell"/></svg>
+      <p style="margin:10px 0 0; color:var(--text-2);">Aucune série enregistrée pour cet exercice.</p>
+      <a href="/seance" class="btn primary" style="margin-top:14px; display:inline-flex;">Faire une séance</a>
+    </div>
+  {% else %}
+
+  {# ── Records ─────────────────────────────────────────────── #}
+  <div class="pr-grid">
+    <div class="pr-card">
+      <div class="pr-label">Charge max</div>
+      <div class="pr-value">{{ summary.best_weight|round(1)|int if summary.best_weight == summary.best_weight|round(0) else summary.best_weight }} <span>kg</span></div>
+      <div class="pr-sub">× {{ summary.best_weight_reps }} reps · {{ summary.best_weight_date[8:10] }}/{{ summary.best_weight_date[5:7] }}</div>
+    </div>
+    <div class="pr-card">
+      <div class="pr-label">Force estimée</div>
+      <div class="pr-value">{{ summary.best_e1rm }} <span>kg</span></div>
+      <div class="pr-sub">1RM · {{ summary.best_e1rm_date[8:10] }}/{{ summary.best_e1rm_date[5:7] }}</div>
+    </div>
+    <div class="pr-card">
+      <div class="pr-label">Meilleur volume</div>
+      <div class="pr-value">{{ '{:,}'.format(summary.best_volume).replace(',', ' ') }} <span>kg</span></div>
+      <div class="pr-sub">en une séance · {{ summary.best_volume_date[8:10] }}/{{ summary.best_volume_date[5:7] }}</div>
+    </div>
+    <div class="pr-card">
+      <div class="pr-label">Total soulevé</div>
+      <div class="pr-value">{{ '{:,}'.format(summary.volume_total).replace(',', ' ') }} <span>kg</span></div>
+      <div class="pr-sub">{{ '{:,}'.format(summary.reps_total).replace(',', ' ') }} répétitions</div>
+    </div>
+  </div>
+
+  {% if summary.delta_pct is not none %}
+    <div class="exo-delta {{ 'up' if summary.delta_pct >= 0 else 'down' }}">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#{{ 'arrow-up' if summary.delta_pct >= 0 else 'arrow-down' }}"/></svg>
+      <span>{{ '+' if summary.delta_pct > 0 }}{{ summary.delta_pct }} % de force estimée depuis ta première séance</span>
+    </div>
+  {% endif %}
+
+  {# ── Courbe ──────────────────────────────────────────────── #}
+  <div class="card">
+    <div class="metric-tabs" role="tablist" aria-label="Donnée affichée">
+      {% for key, label, unit in metrics %}
+        <a role="tab" aria-selected="{{ 'true' if metric == key else 'false' }}"
+           class="metric-tab {% if metric == key %}on{% endif %}"
+           href="/progres/exercice?exo={{ exo_name|urlencode }}{% if variant %}&variante={{ variant|urlencode }}{% endif %}&m={{ key }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    {% if chart and chart.points|length > 1 %}
+      <svg class="exo-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}"
+           preserveAspectRatio="none" role="img"
+           aria-label="Évolution : de {{ chart.min }} à {{ chart.max }} {{ metric_unit }}">
+        <defs>
+          <linearGradient id="exoFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
+            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <polygon points="{{ chart.area }}" fill="url(#exoFill)"/>
+        <polyline points="{{ chart.polyline }}" fill="none" stroke="var(--accent)"
+                  stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        {% for p in chart.points %}
+          <circle cx="{{ p.x }}" cy="{{ p.y }}" r="{{ 5 if loop.last else 3 }}"
+                  fill="var(--accent)"><title>{{ p.date }} — {{ p.value }} {{ metric_unit }}</title></circle>
+        {% endfor %}
+      </svg>
+      <div class="exo-chart-legend">
+        <span>{{ chart.points[0].date[8:10] }}/{{ chart.points[0].date[5:7] }}</span>
+        <span class="exo-chart-last">{{ chart.last.value }} {{ metric_unit }}</span>
+        <span>{{ chart.points[-1].date[8:10] }}/{{ chart.points[-1].date[5:7] }}</span>
+      </div>
+    {% else %}
+      <p class="note" style="margin:12px 0 0; color:var(--text-3);">
+        Une seule séance pour l'instant — la courbe apparaît dès la deuxième.
+      </p>
+    {% endif %}
+  </div>
+
+  {# ── Table des maxima (PRO) ──────────────────────────────── #}
+  {% if rep_table %}
+    <div class="card">
+      <div class="card-label">Charges estimées par nombre de reps</div>
+      <p class="note" style="margin:2px 0 8px; color:var(--text-2); font-size:0.78rem;">
+        D'après ta meilleure série ({{ summary.best_e1rm }} kg de 1RM estimé, formule d'Epley).
+      </p>
+      <table class="ltable rm-table">
+        <thead><tr><th>Reps</th><th>Poids</th><th>% 1RM</th></tr></thead>
+        <tbody>
+          {% for r in rep_table %}
+            <tr {% if r.reps == 1 %}class="rm-row-max"{% endif %}>
+              <td><strong>{{ r.reps }} rep{{ 's' if r.reps > 1 }}</strong></td>
+              <td>{{ r.weight }} kg</td>
+              <td>{{ r.pct }} %</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% elif not is_vip_stats and summary %}
+    <a href="/premium" class="card rm-locked">
+      <div>
+        <div class="card-label" style="margin:0;">Charges estimées par reps <span class="badge-pro">PRO</span></div>
+        <p class="note" style="margin:4px 0 0; color:var(--text-2); font-size:0.8rem;">
+          Quel poids viser pour 3, 5 ou 8 répétitions, d'après ta meilleure série.
+        </p>
+      </div>
+      <svg class="icon icon-md icon-mute" aria-hidden="true"><use href="/static/img/icons.svg#lock"/></svg>
+    </a>
+  {% endif %}
+
+  {# ── Variantes ───────────────────────────────────────────── #}
+  {% if variants|length > 1 %}
+    <div class="card">
+      <div class="card-label">Variantes utilisées</div>
+      <div class="variant-row">
+        <a class="variant-chip {% if not variant %}on{% endif %}"
+           href="/progres/exercice?exo={{ exo_name|urlencode }}&m={{ metric }}">Toutes</a>
+        {% for v in variants %}
+          <a class="variant-chip {% if variant == v %}on{% endif %}"
+             href="/progres/exercice?exo={{ exo_name|urlencode }}&variante={{ v|urlencode }}&m={{ metric }}">{{ v }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── Historique complet ──────────────────────────────────── #}
+  <h3 class="label-icon" style="margin-top:20px;">
+    <svg class="icon icon-md icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#history"/></svg>Toutes tes séances
+  </h3>
+
+  {% for s in sessions %}
+    <div class="card session-card">
+      <div class="session-head">
+        <div>
+          <div class="session-date">{{ s.date[8:10] }}/{{ s.date[5:7] }}/{{ s.date[:4] }}</div>
+          {% if s.seance %}<div class="session-name">{{ s.seance }}</div>{% endif %}
+        </div>
+        <div class="session-totals">
+          <span><strong>{{ '{:,}'.format(s.volume).replace(',', ' ') }}</strong> kg</span>
+          <span>1RM <strong>{{ s.e1rm }}</strong></span>
+        </div>
+      </div>
+      <table class="ltable session-sets">
+        <thead>
+          <tr><th>Série</th><th>Poids</th><th>Reps</th><th>RPE</th></tr>
+        </thead>
+        <tbody>
+          {% for st in s.sets %}
+            <tr {% if st.poids == s.best_set.poids and st.reps == s.best_set.reps %}class="best-set"{% endif %}>
+              <td>{{ st.serie }}</td>
+              <td>{{ st.poids }}{% if st.poids %} kg{% endif %}</td>
+              <td>{{ st.reps }}</td>
+              <td>{% if st.rpe %}<span class="rpe-chip">{{ st.rpe }}</span>{% else %}—{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endfor %}
+
+  {% endif %}
+
+<style>
+  .exo-page-head { margin-bottom: 14px; }
+  .exo-page-head h1 { font-size: 1.5rem; margin: 0; }
+  .exo-page-sub { margin: 4px 0 0; font-size: 0.82rem; color: var(--text-2); }
+
+  .pr-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .pr-card {
+    background: var(--bg-surface);
+    border: 0.5px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+  }
+  .pr-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    margin-bottom: 4px;
+  }
+  .pr-value {
+    font-size: 1.45rem;
+    font-weight: 600;
+    color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .pr-value span { font-size: 0.85rem; color: var(--text-2); font-weight: 400; }
+  .pr-sub { font-size: 0.72rem; color: var(--text-2); margin-top: 3px; }
+
+  .exo-delta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.86rem;
+    margin-bottom: 12px;
+  }
+  .exo-delta.up { background: var(--success-bg, rgba(52,199,89,0.1)); color: var(--success); }
+  .exo-delta.down { background: var(--warning-bg); color: var(--warning); }
+
+  .metric-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .metric-tab {
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 0.5px solid var(--border-default);
+    background: var(--bg-elevated);
+    color: var(--text-2);
+    font-size: 0.8rem;
+    text-decoration: none;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .metric-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .exo-chart { width: 100%; height: 160px; display: block; overflow: visible; }
+  .exo-chart-legend {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.74rem;
+    color: var(--text-2);
+    margin-top: 4px;
+  }
+  .exo-chart-last { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+
+  .variant-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .variant-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 0.5px solid var(--border-default);
+    background: var(--bg-elevated);
+    color: var(--text-2);
+    font-size: 0.8rem;
+    text-decoration: none;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .variant-chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+  .session-card { padding: 12px 14px; margin-bottom: 8px; }
+  .session-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .session-date { font-weight: 600; font-size: 0.92rem; color: var(--text-1); }
+  .session-name { font-size: 0.76rem; color: var(--text-2); }
+  .session-totals {
+    text-align: right;
+    font-size: 0.76rem;
+    color: var(--text-2);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .session-totals strong { color: var(--text-1); font-variant-numeric: tabular-nums; }
+  .session-sets td, .session-sets th { padding: 5px 6px; font-size: 0.84rem; }
+  .session-sets .best-set td { color: var(--accent); font-weight: 600; }
+
+  .rm-table td, .rm-table th { text-align: center; font-variant-numeric: tabular-nums; }
+  .rm-row-max td { color: var(--accent); background: var(--accent-bg); }
+  .rm-locked {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    border-color: rgba(255, 215, 0, 0.25);
+  }
+
+  @media (max-width: 380px) {
+    .pr-grid { gap: 8px; }
+    .pr-value { font-size: 1.25rem; }
+  }
+</style>
+{% endblock %}

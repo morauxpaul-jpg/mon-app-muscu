@@ -1,6 +1,18 @@
 {
-  "current": "v47",
+  "current": "v48",
   "entries": [
+    {
+      "version": "v48",
+      "date": "2026-09-23",
+      "title": "Nouveauté : chaque exercice a sa fiche",
+      "changes": [
+        "Touche un exercice dans Progrès et tu vois toute son histoire : charge max, force estimée, meilleur volume, total soulevé — et la liste de toutes tes séances, série par série",
+        "Une courbe au choix : force estimée, charge max, volume ou répétitions, avec le pourcentage gagné depuis ta première séance",
+        "Tu alternes barre et haltères sur le même mouvement ? Les variantes sont regroupées, avec un filtre pour n'en voir qu'une",
+        "La carte du corps se cale enfin sur ton gabarit : les pourcentages tiennent compte de ton poids et de ton sexe, au lieu d'une référence unique pour tout le monde",
+        "L'onglet Progrès s'ouvre nettement plus vite"
+      ]
+    },
     {
       "version": "v47",
       "date": "2026-09-23",

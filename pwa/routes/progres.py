@@ -1,4 +1,6 @@
-"""Blueprint progrès — carte du corps + hall of fame + zoom mouvement + calendrier + volume.
+"""Blueprint progrès — carte du corps, hall of fame, calendrier, volume, poids.
+
+Le suivi détaillé d'un mouvement vit sur sa propre page (/progres/exercice).
 
 Logique portée depuis app.py body_map_section (863-1299) et tab_st (2681-2713).
 """
@@ -14,28 +16,33 @@ from core.data import (
 )
 from core.dates import today_paris, today_paris_str, DAYS_FR
 from core.limiter import limiter
-from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_estimations, get_rep_table
+from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_table
 from core.body_map import get_body_polygons
+from core import strength, exercise_stats
+from core.exercises_data import get_exercise_info
+from core.hist import is_cardio, is_muscu_perf, is_perf, tonnage
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("progres", __name__)
 
+# Zones SVG de la carte du corps. Le 1RM de référence (« std ») n'est plus une
+# constante : il dépend du poids de corps et du sexe (cf. core/strength.py).
 MUSCLES = {
-    "Pecs":            {"std": 140, "zid_f": "z-pecs",    "zid_b": None},
-    "Dos":             {"std": 160, "zid_f": None,        "zid_b": "z-dos"},
-    "Trapèzes":        {"std": 80,  "zid_f": None,        "zid_b": "z-trapezes"},
-    "Épaules":         {"std": 90,  "zid_f": "z-epaules", "zid_b": "z-epaules-b"},
-    "Biceps":          {"std": 60,  "zid_f": "z-biceps",  "zid_b": None},
-    "Triceps":         {"std": 70,  "zid_f": None,        "zid_b": "z-triceps"},
-    "Avant-bras":      {"std": 45,  "zid_f": "z-avbras",  "zid_b": "z-avbras-b"},
-    "Abdos":           {"std": 60,  "zid_f": "z-abdos",   "zid_b": None},
-    "Quadriceps":      {"std": 180, "zid_f": "z-quad",    "zid_b": None},
-    "Ischio-jambiers": {"std": 110, "zid_f": None,        "zid_b": "z-ischio"},
-    "Fessiers":        {"std": 140, "zid_f": None,        "zid_b": "z-fessiers"},
-    "Adducteurs":      {"std": 80,  "zid_f": "z-adducteurs", "zid_b": None},
-    "Abducteurs":      {"std": 80,  "zid_f": "z-abducteurs", "zid_b": None},
-    "Mollets":         {"std": 110, "zid_f": "z-mollets", "zid_b": "z-mollets-b"},
+    "Pecs":            {"zid_f": "z-pecs",    "zid_b": None},
+    "Dos":             {"zid_f": None,        "zid_b": "z-dos"},
+    "Trapèzes":        {"zid_f": None,        "zid_b": "z-trapezes"},
+    "Épaules":         {"zid_f": "z-epaules", "zid_b": "z-epaules-b"},
+    "Biceps":          {"zid_f": "z-biceps",  "zid_b": None},
+    "Triceps":         {"zid_f": None,        "zid_b": "z-triceps"},
+    "Avant-bras":      {"zid_f": "z-avbras",  "zid_b": "z-avbras-b"},
+    "Abdos":           {"zid_f": "z-abdos",   "zid_b": None},
+    "Quadriceps":      {"zid_f": "z-quad",    "zid_b": None},
+    "Ischio-jambiers": {"zid_f": None,        "zid_b": "z-ischio"},
+    "Fessiers":        {"zid_f": None,        "zid_b": "z-fessiers"},
+    "Adducteurs":      {"zid_f": "z-adducteurs", "zid_b": None},
+    "Abducteurs":      {"zid_f": "z-abducteurs", "zid_b": None},
+    "Mollets":         {"zid_f": "z-mollets", "zid_b": "z-mollets-b"},
 }
 FILTER_MUSCLES = list(MUSCLES.keys())
 
@@ -126,14 +133,16 @@ def _muscle_rows(df, m):
     return [r for r in df if m in (r.get("Muscle") or "")]
 
 
-def _build_muscle_data(df_p, start_monday=None):
+def _build_muscle_data(df_p, start_monday=None, poids_kg=None, sexe=None):
     out = {}
+    stds = strength.standards(poids_kg, sexe)
     for m, info in MUSCLES.items():
         md = _muscle_rows(df_p, m)
         md_valid = [r for r in md if r["Reps"] > 0]
 
+        std = stds.get(m) or 0
         rm_max = max((r["1RM"] for r in md_valid), default=0)
-        pct = min((rm_max / info["std"]) * 100, 120) if info["std"] > 0 else 0
+        pct = min((rm_max / std) * 100, 150) if std > 0 else 0
 
         best_w, best_r = 0, 0
         last_sessions, top_exos, evo = [], [], []
@@ -177,7 +186,8 @@ def _build_muscle_data(df_p, start_monday=None):
             "pct": round(pct, 1),
             "col": _get_col(pct),
             "rm": round(rm_max, 1),
-            "std": info["std"],
+            "std": std,
+            "level": strength.level_for(pct) if rm_max > 0 else "",
             "zid_f": info["zid_f"],
             "zid_b": info["zid_b"],
             "best": {"w": best_w, "r": best_r},
@@ -496,8 +506,16 @@ def progres():
     is_vip = bool(getattr(g, "is_vip", False))
 
     # ── Poids corporel (gratuit) ──────────────────────────────
+    profile = get_profile() or {}
     try:
-        goal = (get_profile() or {}).get("objectif_nutrition") or ""
+        body_kg = float(profile.get("poids_kg") or 0)
+    except (TypeError, ValueError):
+        body_kg = 0.0
+    # Sexe : sert aux standards de force relatifs (cf. core/strength.py).
+    user_sexe = (get_onboarding() or {}).get("sexe") or profile.get("sexe") or ""
+
+    try:
+        goal = profile.get("objectif_nutrition") or ""
         weight = _build_weight_stats(list_body_weight(), goal=goal)
     except Exception as e:  # table absente (migration v33 non appliquée) → carte vide
         logger.error("progres list_body_weight FAILED: %s", e)
@@ -515,7 +533,8 @@ def progres():
     # Pour les non-VIP on ne calcule rien — le template affiche un aperçu verrouillé.
     if is_vip:
         volume_map = _build_volume_map(hist, period_days=bm_days)
-        muscle_data = _build_muscle_data(df_p, start_monday)
+        muscle_data = _build_muscle_data(df_p, start_monday,
+                                         poids_kg=body_kg, sexe=user_sexe)
         svg_ctx = _build_svg_context(muscle_data, volume_map)
     else:
         volume_map = {}
@@ -535,54 +554,21 @@ def progres():
     else:
         podium = []
 
-    # ── Zoom mouvement ──────────────────────────────────────────
+    # ── Accès aux fiches exercice ───────────────────────────────
     all_exos = sorted({r["Exercice"] for r in df_p})
     sel_exo = request.args.get("exo") or (all_exos[0] if all_exos else None)
 
-    zoom = None
-    if sel_exo:
-        df_e = [r for r in df_p if r["Exercice"] == sel_exo]
-        # Enrichit chaque ligne avec son rel_week (S1/S2/…) — utilisé partout
-        # en dessous. _rel_week peut renvoyer None si Date manquante → on
-        # met 0 par défaut pour garder la ligne visible mais en dernier.
-        for r in df_e:
-            r["_rw"] = _rel_week(r.get("Date"), start_monday) or 0
-        if df_e:
-            best = max(df_e, key=lambda r: (r["Poids"], r["Reps"]))
-            one_rm = calc_1rm(best["Poids"], best["Reps"])
-            # Évolution par semaine : max poids par semaine relative
-            by_week = {}
-            for r in df_e:
-                w = r["_rw"]
-                if r["Poids"] > by_week.get(w, -1):
-                    by_week[w] = r["Poids"]
-            weeks = sorted(by_week.keys())
-            chart_x = [f"S{w}" for w in weeks]
-            chart_y = [by_week[w] for w in weeks]
-
-            # ── Table historique : filtre par semaine (défaut = dernière) ──
-            avail_weeks = sorted({r["_rw"] for r in df_e}, reverse=True)
-            try:
-                sel_week = int(request.args.get("w") or 0) or avail_weeks[0]
-            except (ValueError, TypeError, IndexError):
-                sel_week = avail_weeks[0] if avail_weeks else 0
-            table = [r for r in df_e if r["_rw"] == sel_week]
-            table = sorted(table, key=lambda r: (-r["Poids"], -int(r.get("Série") or 0)))
-
-            zoom = {
-                "exo": sel_exo,
-                "best_w": best["Poids"],
-                "best_r": int(best["Reps"]),
-                "one_rm": round(one_rm, 1) if is_vip else None,
-                "rep_ests": get_rep_estimations(one_rm) if is_vip else None,
-                "rep_table": get_rep_table(one_rm) if is_vip else None,
-                "chart_x": chart_x,
-                "chart_y": chart_y,
-                "table": table,
-                "avail_weeks": avail_weeks,
-                "sel_week": sel_week,
-                "total_sets": len(df_e),
-            }
+    # Raccourcis vers les mouvements les plus travaillés (nb de séances
+    # distinctes) : c'est ce qu'on veut suivre, et ça évite de chercher dans
+    # une liste déroulante de 40 entrées.
+    _by_base = {}
+    for r in df_p:
+        b = get_base_name(r.get("Exercice") or "")
+        if not b or not r.get("Date"):
+            continue
+        _by_base.setdefault(b, set()).add(r["Date"])
+    top_exos = [{"name": b, "sessions": len(d)}
+                for b, d in sorted(_by_base.items(), key=lambda kv: -len(kv[1]))[:6]]
 
     # ── Calendrier mensuel ──────────────────────────────────
     today = today_paris()
@@ -726,13 +712,15 @@ def progres():
         body_polygons=get_body_polygons(),
         volume_map=volume_map,
         bm_days=bm_days,
+        std_relative=strength.is_relative(body_kg),
+        body_kg=body_kg,
         display_muscles=list(MUSCLES.keys()),
         filter_muscles=FILTER_MUSCLES,
         selected_muscles=selected_muscles,
         podium=podium,
         all_exos=all_exos,
         sel_exo=sel_exo,
-        zoom=zoom,
+        top_exos=top_exos,
         has_data=bool(df_p),
         cal_weeks=cal_weeks,
         cal_month_name=MONTHS_FR[cal_month - 1],
@@ -747,4 +735,73 @@ def progres():
         cardio=cardio,
         weight=weight,
         today_iso=today_paris_str(),
+    )
+
+
+# ────────────────────────────────────────────────────────────────
+# Fiche exercice — toute l'histoire d'un mouvement
+# ────────────────────────────────────────────────────────────────
+# Gratuite volontairement : c'est la base que Hevy et Strong offrent sans
+# payer, et sans elle quelqu'un qui migre depuis ces apps perd son outil de
+# travail principal. Le PRO se justifie ailleurs (coach, nutrition, body map).
+
+_METRICS = [
+    ("e1rm", "Force estimée", "kg"),
+    ("best_weight", "Charge max", "kg"),
+    ("volume", "Volume", "kg"),
+    ("reps", "Répétitions", "reps"),
+]
+
+
+@bp.route("/progres/exercice")
+def exercice():
+    """Fiche d'un exercice : records, courbe, et toutes les séances faites."""
+    name = (request.args.get("exo") or "").strip()
+    if not name:
+        return redirect(url_for("progres.progres") + "#zoom")
+
+    try:
+        hist = get_hist()
+        prog = get_prog()
+    except Exception as e:
+        logger.error("exercice() DB failed: %s", e)
+        return render_template(
+            "error.html", code=503,
+            message="Impossible de charger cet exercice. Vérifie ta connexion.",
+        ), 503
+    hist = _normalize(hist, prog)
+
+    # Regroupe les variantes du même mouvement par défaut : un « Développé
+    # couché » fait tantôt à la barre tantôt aux haltères reste le même
+    # mouvement à suivre. Un onglet permet d'isoler une variante.
+    variant = (request.args.get("variante") or "").strip()
+    by_base = not variant
+    sessions = exercise_stats.sessions_for(hist, variant or name, by_base=by_base)
+    if not sessions:
+        sessions = exercise_stats.sessions_for(hist, name, by_base=True)
+
+    metric = (request.args.get("m") or "e1rm").strip()
+    if metric not in {k for k, _l, _u in _METRICS}:
+        metric = "e1rm"
+
+    points = exercise_stats.series(sessions, metric)
+    base = get_base_name(name)
+    summ = exercise_stats.summary(sessions)
+    is_vip = bool(getattr(g, "is_vip", False))
+    return render_template(
+        "exercice.html",
+        active="progres",
+        exo_name=base,
+        variant=variant,
+        variants=exercise_stats.variants_of(hist, base),
+        sessions=sessions[:60],
+        summary=summ,
+        is_vip_stats=is_vip,
+        chart=exercise_stats.sparkline(points),
+        metric=metric,
+        metrics=_METRICS,
+        metric_unit=next((u for k, _l, u in _METRICS if k == metric), ""),
+        info=get_exercise_info(base),
+        # Table des maxima : réservée PRO (elle l'était déjà dans Progrès).
+        rep_table=get_rep_table(summ.get("best_e1rm", 0)) if is_vip else None,
     )
