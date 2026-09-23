@@ -168,8 +168,9 @@ def delete_coach_conversation(conversation_id):
 
 
 # ── Bilans de séance (table session_notes, migration v34) ───────────────
-def upsert_session_note(date_str, seance, rating, comment):
-    return db.upsert_session_note(_uid(), date_str, seance, rating, comment)
+def upsert_session_note(date_str, seance, rating, comment, duration_min=None):
+    return db.upsert_session_note(_uid(), date_str, seance, rating, comment,
+                                  duration_min)
 
 
 def get_session_note(date_str, seance):

@@ -18,7 +18,7 @@ from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles, parse_rpe, overload_suggestion
 from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
-from core.hist import is_logged as _is_real_perf
+from core.hist import is_logged as _is_real_perf, is_muscu_perf, tonnage
 from core.analytics import track
 
 bp = Blueprint("seance", __name__)
@@ -293,6 +293,9 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
     p_sets = int(exo_obj.get("sets", 3))
     muscle = exo_obj.get("muscle", "Autre")
     rest_seconds = int(exo_obj.get("rest_seconds", 90))
+    # Cible de répétitions du programme (« 8-12 ») : affichée en filigrane
+    # dans les cases reps. Sans elle, un programme n'est qu'une liste de noms.
+    target_reps = str(exo_obj.get("reps") or "").strip()[:20]
 
     var = forced_variant if forced_variant is not None else _last_variant(hist, seance, base)
     exo_final = f"{base} ({var})" if var != "Standard" else base
@@ -366,6 +369,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
         "muscle": muscle,
         "p_sets": p_sets,
         "rest_seconds": rest_seconds,
+        "target_reps": target_reps,
         "is_extra": is_extra,
         "exo_index": exo_index,
         "variant": var,
@@ -920,26 +924,9 @@ def _known_exo_names(hist, prog, prog_seances):
     return sorted(seen.values(), key=lambda s: s.lower())
 
 
-@bp.route("/seance/save-exo", methods=["POST"])
-@limiter.limit("20 per minute")
-def save_exo():
-    f = request.form
-    semaine = int(f["semaine"])
-    seance = f["seance_name"]
-    exo_base = f["exo_base"]
-    variant = f["variant"]
-    muscle = f["muscle"]
-    date_str = _form_date(f)
-    is_bw = f.get("is_bw") == "1"
-    sets_json = f.get("sets_json", "[]")
-    try:
-        sets = json.loads(sets_json)
-    except json.JSONDecodeError:
-        sets = []
-
-    exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
-
-    new_rows = []
+def _rows_from_sets(sets, *, semaine, seance, exo_final, muscle, date_str, is_bw):
+    """Lignes history à partir des séries saisies (JSON du client)."""
+    rows = []
     for i, s in enumerate(sets, start=1):
         try:
             reps = int(float(s.get("reps") or 0))
@@ -949,39 +936,149 @@ def save_exo():
             poids = 0.0 if is_bw else float(s.get("poids") or 0)
         except (ValueError, TypeError):
             poids = 0.0
-        new_rows.append({
+        try:
+            rpe = float(s.get("rpe")) if s.get("rpe") not in (None, "") else None
+        except (ValueError, TypeError):
+            rpe = None
+        rows.append({
             "Semaine": semaine,
             "Séance": seance,
             "Exercice": exo_final,
             "Série": i,
-            "Reps": reps,
-            "Poids": poids,
-            "Remarque": s.get("remarque") or "",
+            "Reps": max(0, reps),
+            "Poids": max(0.0, poids),
+            "Remarque": (s.get("remarque") or "")[:200],
             "Muscle": muscle,
             "Date": date_str,
+            "RPE": rpe if (rpe is None or 1 <= rpe <= 10) else None,
         })
+    return rows
 
+
+def _session_totals(hist, seance, date_str):
+    """Volume et nombre de séries réellement faites pour cette séance."""
+    rows = [r for r in hist if r.get("Date") == date_str
+            and _norm(r.get("Séance")) == _norm(seance)]
+    return {
+        "volume": tonnage(rows),
+        "sets": sum(1 for r in rows if is_muscu_perf(r)),
+    }
+
+
+def _pr_check(hist_before, new_rows, exo_final, is_bw):
+    """Record battu par cette saisie ? Compare la meilleure série enregistrée
+    maintenant à ce qui existait AVANT, sur la même variante d'exercice.
+
+    Retourne None, ou {kind, value, previous} — affiché en direct dans la
+    séance : c'est le moment où un record a de la valeur, pas trois écrans
+    plus loin dans l'onglet Progrès."""
+    done = [r for r in new_rows if int(r.get("Reps") or 0) > 0]
+    if not done:
+        return None
+    previous = [r for r in hist_before
+                if _norm(r.get("Exercice")) == _norm(exo_final)
+                and int(r.get("Reps") or 0) > 0]
+    if is_bw:
+        best_now = max(int(r["Reps"]) for r in done)
+        best_before = max((int(r["Reps"]) for r in previous), default=0)
+        if best_now > best_before:
+            return {"kind": "reps", "value": best_now, "previous": best_before}
+        return None
+    best_now = max(float(r.get("Poids") or 0) for r in done)
+    best_before = max((float(r.get("Poids") or 0) for r in previous), default=0.0)
+    if best_now > 0 and not previous:
+        return {"kind": "first", "value": best_now, "previous": 0}
+    if best_now > best_before > 0:
+        return {"kind": "weight", "value": best_now, "previous": best_before}
+    # Même charge mais plus de reps = record d'endurance sur cette charge.
+    if best_now > 0 and best_now == best_before:
+        reps_now = max(int(r["Reps"]) for r in done
+                       if float(r.get("Poids") or 0) == best_now)
+        reps_before = max((int(r["Reps"]) for r in previous
+                           if float(r.get("Poids") or 0) == best_now), default=0)
+        if reps_now > reps_before:
+            return {"kind": "reps_at_weight", "value": reps_now,
+                    "previous": reps_before, "weight": best_now}
+    return None
+
+
+@bp.route("/seance/save-exo", methods=["POST"])
+@limiter.limit("60 per minute")
+def save_exo():
+    """Enregistre les séries d'un exercice.
+
+    Deux modes de réponse :
+      - JSON (Accept: application/json) → la page met à jour la carte sans
+        recharger : record battu, progression, volume. C'est le chemin normal.
+      - redirection → repli sans JavaScript (formulaire classique).
+    """
+    f = request.form
+    seance = f["seance_name"]
+    exo_base = f["exo_base"]
+    variant = f["variant"]
+    muscle = f["muscle"]
+    date_str = _form_date(f)
+    semaine = _iso_week(_parse_date(date_str) or logical_today_paris())
+    is_bw = f.get("is_bw") == "1"
     try:
+        sets = json.loads(f.get("sets_json", "[]"))
+    except json.JSONDecodeError:
+        sets = []
+    if not isinstance(sets, list):
+        sets = []
+
+    exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
+    new_rows = _rows_from_sets(sets, semaine=semaine, seance=seance,
+                               exo_final=exo_final, muscle=muscle,
+                               date_str=date_str, is_bw=is_bw)
+
+    wants_json = "application/json" in (request.headers.get("Accept") or "")
+    try:
+        hist_before = get_hist() if wants_json else []
+        pr = _pr_check(hist_before, new_rows, exo_final, is_bw) if wants_json else None
         replace_exo_rows(date_str, seance, exo_final, new_rows)
         clear_user_cache()
     except Exception as e:
         logger.error("save-exo FAILED seance=%s exo=%s: %s", seance, exo_final, e)
+        if wants_json:
+            return jsonify({"ok": False,
+                            "error": "Enregistrement impossible. Tes séries sont "
+                                     "gardées sur l'appareil — réessaie."}), 503
         return render_template(
             "error.html", code=503,
             message="Impossible de sauvegarder la série. Tes données sont conservées — réessaie dans un instant.",
         ), 503
-    return _back_to_editor(f)
+
+    if not wants_json:
+        return _back_to_editor(f)
+
+    hist, _ = _normalize_hist(get_hist(), get_prog())
+    totals = _session_totals(hist, seance, date_str)
+    completed = _exo_completed(_exo_curr_rows(hist, semaine, seance, exo_final))
+    return jsonify({
+        "ok": True,
+        "completed": completed,
+        "pr": pr,
+        "volume": totals["volume"],
+        "sets_done": totals["sets"],
+        "record": _best_record(hist, exo_final, is_bw),
+        "suggestion": _suggestion_for(hist, exo_final, seance, semaine, is_bw),
+        "last_summary": ", ".join(
+            "%gkg × %d" % (r["Poids"], r["Reps"]) for r in new_rows if r["Reps"] > 0
+        ),
+    })
 
 
 @bp.route("/seance/skip-exo", methods=["POST"])
+@limiter.limit("60 per minute")
 def skip_exo():
     f = request.form
-    semaine = int(f["semaine"])
     seance = f["seance_name"]
     variant = f["variant"]
     exo_base = f["exo_base"]
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
     date_str = _form_date(f)
+    semaine = _iso_week(_parse_date(date_str) or logical_today_paris())
     new_rows = [{
         "Semaine": semaine, "Séance": seance, "Exercice": exo_final,
         "Série": 1, "Reps": 0, "Poids": 0.0,
@@ -990,6 +1087,8 @@ def skip_exo():
     }]
     replace_exo_rows(date_str, seance, exo_final, new_rows)
     clear_user_cache()
+    if "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify({"ok": True, "completed": True, "skipped": True})
     return _back_to_editor(f)
 
 
@@ -1248,7 +1347,11 @@ def finish():
         prog["_extras"].pop(key, None)
         changed = True
 
+    duration = _session_duration_min(f)
     note = _parse_session_note(f)
+    if duration:
+        note = note or {"ts": now_paris().strftime("%Y-%m-%d %H:%M")}
+        note["duration_min"] = duration
     if note:
         _save_session_note(prog, date_str, seance_name, note)
         if prog.get("_session_notes") is not None:
@@ -1262,7 +1365,7 @@ def finish():
         "mode": mode, "seance": seance_name,
         "rating": note.get("rating", 0) if note else 0,
         "has_comment": bool(note and note.get("comment")),
-        "duration_min": _session_duration_min(f),
+        "duration_min": duration,
     })
     return redirect(url_for("accueil.index"))
 
@@ -1281,7 +1384,8 @@ def _save_session_note(prog, date_str, seance_name, note):
     l'ancien stockage dans le programme si la table n'existe pas encore."""
     from core.data import upsert_session_note
     try:
-        upsert_session_note(date_str, seance_name, note.get("rating"), note.get("comment"))
+        upsert_session_note(date_str, seance_name, note.get("rating"),
+                            note.get("comment"), note.get("duration_min"))
         # La table a pris le relais : on purge l'ancien emplacement.
         if isinstance(prog.get("_session_notes"), dict):
             prog["_session_notes"].pop(f"{seance_name}|{date_str}", None)
@@ -1363,6 +1467,7 @@ def api_variant_history():
                 "reps": r.get("Reps", 0),
                 "poids": float(r.get("Poids", 0)),
                 "remarque": r.get("Remarque", ""),
+                "rpe": r.get("RPE"),
             })
         pw_display.append({
             "week": pw["week"] - week_offset,

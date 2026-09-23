@@ -112,6 +112,12 @@
     {% if session_note.comment %}
       <div style="font-size:0.85rem; color:var(--text-2); line-height:1.45;">{{ session_note.comment }}</div>
     {% endif %}
+    {% if session_note.duration_min %}
+      <div class="label-icon" style="font-size:0.78rem; color:var(--text-3); margin-top:6px;">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#clock"/></svg>
+        {{ session_note.duration_min }} min
+      </div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -184,7 +190,7 @@
        x-sort="persistOrder()"
        x-sort:config="{ handle: '.exo-drag-handle', delay: 200, delayOnTouchOnly: true, animation: 150, ghostClass: 'exo-card-ghost', dragClass: 'exo-card-dragging' }">
   {% for exo in exos %}
-    <div class="exo-card {% if exo.completed %}done{% endif %}"
+    <div class="exo-card {% if exo.completed %}done{% endif %}" :class="{ done: completed }"
          id="exo-anchor-{{ loop.index0 }}"
          data-exo-base="{{ exo.base }}"
          x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
@@ -208,17 +214,18 @@
           </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
-            {% if exo.completed %} · <svg class="icon icon-sm icon-success" aria-label="complété"><use href="/static/img/icons.svg#check-circle"/></svg>{% endif %}
+            <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · repos {{ exo.rest_seconds }} s</span>
+            <template x-if="completed"><svg class="icon icon-sm icon-success" aria-label="terminé"><use href="/static/img/icons.svg#check-circle"/></svg></template>
           </div>
           {# ── Historique inline (Feature 2) — Alpine-driven for variant reactivity ── #}
           <template x-if="lastSummary">
             <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : <span x-text="lastSummary"></span></div>
           </template>
-          <template x-if="!lastSummary && !{{ 'true' if exo.completed else 'false' }}">
+          <template x-if="!lastSummary && !completed">
             <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
           </template>
           {# ── Suggestion de surcharge (double progression, cf. core.muscu.overload_suggestion) ── #}
-          <template x-if="suggestion && !{{ 'true' if exo.completed else 'false' }}">
+          <template x-if="suggestion && !completed">
             <div class="exo-suggestion" :class="'exo-suggestion--' + suggestion.kind">
               <svg class="icon icon-sm"><use :href="'/static/img/icons.svg#' + (suggestion.kind === 'load' ? 'arrow-up' : (suggestion.kind === 'hold' ? 'shield-check' : 'target'))"/></svg>
               <span x-text="suggestion.label"></span>
@@ -264,7 +271,8 @@
                   <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
                   <tbody>
                     <template x-for="r in pw.rows" :key="r.serie">
-                      <tr><td x-text="r.serie"></td><td x-text="r.reps"></td><td x-text="r.poids"></td><td x-text="r.remarque"></td></tr>
+                      <tr><td x-text="r.serie"></td><td x-text="r.reps"></td><td x-text="r.poids"></td>
+                          <td><span x-show="r.rpe" class="rpe-chip" x-text="'RPE ' + r.rpe"></span><span x-text="r.remarque"></span></td></tr>
                     </template>
                   </tbody>
                 </table>
@@ -323,8 +331,11 @@
                 <template x-for="(s, i) in sets" :key="i">
                   <tr>
                     <td x-text="i + 1"></td>
-                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input" :placeholder="suggestion && suggestion.reps ? String(suggestion.reps) : 'reps'" @change="onSetFilled(i)"></td>
-                    <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input" placeholder="kg" @change="onSetFilled(i)"></td>
+                    <td><input type="number" inputmode="numeric" min="0" x-model.number="s.reps" class="cell-input"
+                               :placeholder="suggestion && suggestion.reps ? String(suggestion.reps) : (targetReps || 'reps')"
+                               :aria-label="'Répétitions série ' + (i + 1)" @change="onSetFilled(i)"></td>
+                    <td x-show="showWeight"><input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids" class="cell-input"
+                               placeholder="kg" :aria-label="'Poids série ' + (i + 1)" @change="onSetFilled(i)"></td>
                     {% if show_rpe %}
                     <td>
                       <select x-model="s.rpe" class="cell-input" style="padding:6px 2px;">
@@ -354,8 +365,7 @@
         </template>
 
         <div class="exo-actions">
-          <form method="post" action="/seance/save-exo"
-                @submit="prepareSave($event); sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
+          <form method="post" action="/seance/save-exo" @submit="save($event)">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
@@ -366,10 +376,13 @@
             <input type="hidden" name="is_bw" :value="showWeight ? '0' : '1'">
             <input type="hidden" name="variant" :value="variant">
             <input type="hidden" name="sets_json" :value="serializedSets()">
-            <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer</button>
+            <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;"
+                    data-haptic="1" :disabled="saving">
+              <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#save"/></svg>
+              <span x-text="saving ? 'Enregistrement…' : (completed ? 'Mettre à jour' : 'Enregistrer')"></span>
+            </button>
           </form>
-          <form method="post" action="/seance/skip-exo"
-                @submit="try{localStorage.removeItem(DRAFT_PREFIX + '{{ exo.base }}')}catch(e){} sessionStorage.setItem('lastExoAnchor', {{ loop.index0 }})">
+          <form method="post" action="/seance/skip-exo" @submit="skip($event)">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
@@ -697,82 +710,6 @@
     </form>
   </div>
 
-  <script>
-    // Réordonnancement des exos par glisser (séance en cours). On lit l'ordre
-    // courant du DOM après le drop et on le persiste ; pas de reload (les
-    // cartes sont déjà déplacées par SortableJS et gardent leur état Alpine).
-    function seanceReorder(mode, name, date) {
-      return {
-        persistOrder() {
-          var cards = this.$el.querySelectorAll(':scope > .exo-card');
-          var order = Array.prototype.map.call(cards, function (c) { return c.dataset.exoBase; })
-                                          .filter(Boolean);
-          fetch('/seance/reorder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mode: mode, seance_name: name, date: date, order: order }),
-          }).catch(function () {});
-        },
-      };
-    }
-
-    // Réordonnancement par boutons ↑/↓ : fiable partout (le glisser reste
-    // dispo mais l'appui long est capricieux sur mobile). Déplace la carte
-    // dans le DOM puis persiste via le même persistOrder() que le drag.
-    window.moveSeanceExo = function (btnEl, dir) {
-      var card = btnEl.closest('.exo-card');
-      if (!card) return;
-      var list = card.parentElement;
-      if (dir < 0) {
-        var prev = card.previousElementSibling;
-        if (!prev || !prev.classList.contains('exo-card')) return;
-        list.insertBefore(card, prev);
-      } else {
-        var next = card.nextElementSibling;
-        if (!next || !next.classList.contains('exo-card')) return;
-        list.insertBefore(next, card);
-      }
-      try { card.scrollIntoView({ block: 'nearest' }); } catch (e) {}
-      try {
-        var comp = window.Alpine && Alpine.$data(list);
-        if (comp && comp.persistOrder) comp.persistOrder();
-      } catch (e) {}
-    };
-
-    function cardioBlock() {
-      var UNITS = {
-        "Course":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
-        "Vélo":                { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
-        "Rameur":              { distLabel: "Distance (km)",    vitLabel: "Allure (min/500m)", distStep: "0.01" },
-        "Natation":            { distLabel: "Distance (km)",    vitLabel: "Vitesse (m/min)", distStep: "0.01" },
-        "Corde":               { distLabel: "Nombre de sauts",  vitLabel: "Sauts/min",       distStep: "1" },
-        "HIIT":                { distLabel: "Rounds",           vitLabel: "",                distStep: "1" },
-        "Marche":              { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
-        "Elliptique":          { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
-        "Montée d'escaliers":  { distLabel: "Étages (ou marches)", vitLabel: "Marches/min",  distStep: "1" },
-        "Autre":               { distLabel: "Distance (km)",    vitLabel: "Vitesse (km/h)",  distStep: "0.01" },
-      };
-      return {
-        open: false,
-        activite: "Course",
-        duree: "",
-        distance: "",
-        vitesse: "",
-        calories: "",
-        incline: 0,
-        units: function () { return UNITS[this.activite] || UNITS["Autre"]; },
-        autoVitesse: function () {
-          var d = parseFloat(this.distance), t = parseFloat(this.duree);
-          if (!d || !t) return "";
-          var u = this.units();
-          if (u.vitLabel.indexOf("km/h") >= 0) return (d / (t / 60)).toFixed(2);
-          if (u.vitLabel.indexOf("m/min") >= 0) return ((d * 1000) / t).toFixed(0);
-          if (u.vitLabel.indexOf("/min") >= 0) return (d / t).toFixed(0);
-          return "";
-        },
-      };
-    }
-  </script>
 
   {# Le clic sur « Terminer » ouvre d'abord le bilan (note + commentaire) ;
      la soumission réelle se fait depuis la modale (ou via « Passer »). #}
@@ -782,6 +719,7 @@
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="rating" id="finish-rating" value="">
     <input type="hidden" name="comment" id="finish-comment" value="">
+    <input type="hidden" name="duration_min" id="finish-duration-input" value="">
     <button type="button" id="finish-open" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
   </form>
 
@@ -789,7 +727,8 @@
   <div id="finish-modal" class="exo-info-modal" style="display:none;">
     <div class="exo-info-box" style="max-width:340px;" onclick="event.stopPropagation()">
       <h4 style="text-align:center; font-size:1.05rem;">Séance terminée 💪</h4>
-      <div style="text-align:center; font-size:0.82rem; color:var(--text-3); margin-bottom:10px;">Comment elle s'est passée ?</div>
+      <div style="text-align:center; font-size:0.82rem; color:var(--text-3); margin-bottom:2px;">Comment elle s'est passée ?</div>
+      <div id="finish-duration" class="finish-duration"></div>
 
       <div class="seance-rating-stars" id="finish-stars">
         {% for i in range(1, 6) %}
@@ -868,578 +807,22 @@
     </div>
   </div>
 
-  <script>
-  // Polygones du corps (partagés par la mini-carte du modal info)
-  window.__BODY_POLYGONS__ = {{ body_polygons | tojson }};
-
-  // Les descriptions d'exos utilisent des libellés détaillés ("Pectoraux (haut)",
-  // "Épaules antérieures", "Dos (grand dorsal)"…). On normalise vers les noms
-  // canoniques de la carte du corps via la sous-chaîne présente dans le libellé.
-  var MUSCLE_ALIASES = [
-    { needle: "pector", canonical: "Pecs" },
-    { needle: "pec ",   canonical: "Pecs" },
-    { needle: "dos",    canonical: "Dos" },
-    { needle: "dorsal", canonical: "Dos" },
-    { needle: "rhombo", canonical: "Dos" },
-    { needle: "trapèz", canonical: "Dos" },
-    { needle: "lombai", canonical: "Dos" },
-    { needle: "épaul",  canonical: "Épaules" },
-    { needle: "deltoï", canonical: "Épaules" },
-    { needle: "biceps", canonical: "Biceps" },
-    { needle: "triceps", canonical: "Triceps" },
-    { needle: "avant-bras", canonical: "Avant-bras" },
-    { needle: "forearm", canonical: "Avant-bras" },
-    { needle: "abdo",   canonical: "Abdos" },
-    { needle: "oblique",canonical: "Abdos" },
-    { needle: "quadri", canonical: "Quadriceps" },
-    { needle: "ischio", canonical: "Ischio-jambiers" },
-    { needle: "hamstring", canonical: "Ischio-jambiers" },
-    { needle: "fessi",  canonical: "Fessiers" },
-    { needle: "glute",  canonical: "Fessiers" },
-    { needle: "mollet", canonical: "Mollets" },
-    { needle: "soléai", canonical: "Mollets" },
-    { needle: "adduct", canonical: "Adducteurs" },
-    { needle: "abduct", canonical: "Abducteurs" },
-  ];
-  function normalizeMuscles(list) {
-    var out = {};
-    (list || []).forEach(function (raw) {
-      var s = String(raw || "").toLowerCase();
-      MUSCLE_ALIASES.forEach(function (a) {
-        if (s.indexOf(a.needle) >= 0) out[a.canonical] = true;
-      });
-    });
-    return Object.keys(out);
-  }
-
-  // Construit un <svg> mini montrant les muscles visés en accent, le reste grisé.
-  // view = 'anterior' | 'posterior'. muscles = liste de noms FR canoniques.
-  function buildMiniBodySvg(view, muscles) {
-    var data = window.__BODY_POLYGONS__ || {};
-    var side = (view === 'posterior') ? 'posterior' : 'anterior';
-    var allMuscles = data[side] || {};
-    var neutralPolys = data[side + '_neutral'] || [];
-    var accent = '#FF9F0A';
-    var dim = 'rgba(255,255,255,0.06)';
-    var stroke = 'rgba(255,255,255,0.12)';
-
-    var svg = '<svg viewBox="0 0 100 220" width="100" class="mini-body-svg" xmlns="http://www.w3.org/2000/svg">';
-    // Silhouette neutre (tête, cou, etc.)
-    neutralPolys.forEach(function (pts) {
-      svg += '<polygon points="' + pts + '" fill="' + dim + '" stroke="' + stroke + '" stroke-width="0.3"/>';
-    });
-    // Muscles
-    Object.keys(allMuscles).forEach(function (m) {
-      var isTarget = muscles && muscles.indexOf(m) >= 0;
-      var fill = isTarget ? accent : dim;
-      var sw = isTarget ? 0.5 : 0.3;
-      allMuscles[m].forEach(function (pts) {
-        svg += '<polygon points="' + pts + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + (isTarget ? ' opacity="0.92"' : ' opacity="0.7"') + '/>';
-      });
-    });
-    svg += '</svg>';
-    return svg;
-  }
-
-  // ── Exercise info modal (Feature 8) ────────────────────────────
-  function showExoInfo(info) {
-    document.getElementById('exo-info-title').textContent = info.name || '';
-    // Image
-    var imgEl = document.getElementById('exo-info-image');
-    if (info.image) {
-      imgEl.innerHTML = '<img src="/static/img/exercises/' + info.image + '" alt="" style="width:80px; height:80px; opacity:0.85;">';
-    } else {
-      imgEl.innerHTML = '';
-    }
-    // Muscles as colored tags
-    var musclesEl = document.getElementById('exo-info-muscles');
-    var muscleList = [];
-    if (Array.isArray(info.muscles)) {
-      muscleList = info.muscles.filter(Boolean);
-      musclesEl.innerHTML = muscleList.map(function(m) {
-        return '<span style="font-size:0.75rem; padding:2px 8px; border-radius:8px; background:rgba(255,159,10,0.12); border:1px solid rgba(255,159,10,0.4); color:#FF9F0A;">' + m + '</span>';
-      }).join('');
-    } else {
-      musclesEl.innerHTML = '<span style="font-size:0.85rem; color:var(--text);">' + (info.muscles || '') + '</span>';
-      muscleList = String(info.muscles || '').split(',').map(function(s){return s.trim();}).filter(Boolean);
-    }
-
-    // Mini-carte anatomique : on affiche les 2 vues (face + dos) avec
-    // les muscles visés en orange.
-    var bmEl = document.getElementById('exo-info-bodymap');
-    if (bmEl) {
-      var canonical = normalizeMuscles(muscleList);
-      bmEl.innerHTML = buildMiniBodySvg('anterior', canonical) + buildMiniBodySvg('posterior', canonical);
-    }
-    // Description
-    document.getElementById('exo-info-desc').textContent = info.description || '';
-    // Tips as list
-    var tipsEl = document.getElementById('exo-info-tips');
-    var tipsSection = document.getElementById('exo-info-tips-section');
-    if (Array.isArray(info.tips) && info.tips.length) {
-      tipsEl.innerHTML = info.tips.map(function(t) { return '<li>' + t + '</li>'; }).join('');
-      tipsSection.style.display = '';
-    } else if (info.tips && typeof info.tips === 'string') {
-      tipsEl.innerHTML = '<li>' + info.tips + '</li>';
-      tipsSection.style.display = '';
-    } else {
-      tipsSection.style.display = 'none';
-    }
-
-    // Lien coach pré-rempli avec le nom de l'exercice
-    var coachLink = document.getElementById('exo-info-coach-link');
-    if (coachLink) {
-      var exoName = info.name || '';
-      var q = 'Comment progresser au ' + exoName + ' ?';
-      coachLink.href = '/coach?q=' + encodeURIComponent(q);
-    }
-
-    // Table RM — remplit la 2e tab depuis info.one_rm
-    var oneRM = parseFloat(info.one_rm || 0) || 0;
-    var rmEmpty = document.getElementById('exo-rm-empty');
-    var rmContent = document.getElementById('exo-rm-content');
-    if (oneRM > 0) {
-      rmEmpty.style.display = 'none';
-      rmContent.style.display = '';
-      document.getElementById('exo-rm-value').textContent = Math.round(oneRM * 10) / 10;
-      var reps = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
-      var tbody = document.getElementById('exo-rm-rows');
-      tbody.innerHTML = reps.map(function (r) {
-        var w = oneRM / (1 + r / 30);
-        var pct = Math.round(w / oneRM * 100);
-        var cls = r === 1 ? 'rm-row-max' : '';
-        return '<tr class="' + cls + '"><td><strong>' + r + ' rep' + (r > 1 ? 's' : '') + '</strong></td><td>' + (Math.round(w * 10) / 10) + ' kg</td><td>' + pct + '%</td></tr>';
-      }).join('');
-    } else {
-      rmEmpty.style.display = '';
-      rmContent.style.display = 'none';
-    }
-
-    // Revient toujours sur la Fiche en ouvrant le modal
-    switchExoTab('fiche');
-    document.getElementById('exo-info-modal').style.display = 'flex';
-  }
-
-  function switchExoTab(tab) {
-    var tabs = document.querySelectorAll('.exo-info-tab');
-    tabs.forEach(function (t) {
-      t.classList.toggle('active', t.getAttribute('data-tab') === tab);
-    });
-    document.getElementById('exo-tab-fiche').style.display = (tab === 'fiche') ? '' : 'none';
-    document.getElementById('exo-tab-rm').style.display = (tab === 'rm') ? '' : 'none';
-  }
-
-  // ── Chrono de repos ───────────────────────────────────────────
-  // Toute la mécanique vit dans /static/js/rest-timer.js (chargé par base.html)
-  // : l'état est persisté dans localStorage, donc le repos survit à la
-  // navigation entre onglets, au rechargement après « Valider » et au retour
-  // depuis une autre app. Ici on ne fait qu'appeler l'API globale.
-  var AUTO_REST_TIMER = {{ auto_rest_timer|tojson }};
-
-  // ── Active session tracking (localStorage) ─────────────────
-  var _activeSessionKey = 'active_session';
-  function _markSessionActive() {
-    try {
-      var existing = JSON.parse(localStorage.getItem(_activeSessionKey) || '{}');
-      if (existing.active_session) return; // already marked
-      localStorage.setItem(_activeSessionKey, JSON.stringify({
-        active_session: true,
-        session_id: {{ seance_name|tojson }},
-        session_date: {{ date_iso|tojson }},
-        session_mode: {{ mode|tojson }}
-      }));
-    } catch(e) {}
-  }
-  function _clearActiveSession() {
-    try { localStorage.removeItem(_activeSessionKey); } catch(e) {}
-  }
-
-  // ── Bilan de fin de séance (note /5 + commentaire, skippable) ──
-  // « Terminer la séance » ouvre d'abord la modale ; c'est elle qui soumet
-  // réellement le formulaire (avec ou sans note si on passe).
-  (function () {
-    var LABELS = ['', 'Difficile', 'Moyenne', 'Correcte', 'Très bonne', 'Excellente'];
-    var form = document.getElementById('finish-form');
-    var modal = document.getElementById('finish-modal');
-    if (!form || !modal) return;
-    // Sorti de <main> : la page a une animation avec transform, qui créerait
-    // un bloc conteneur pour le position:fixed de la modale (mal centrée).
-    document.body.appendChild(modal);
-    var starsBox = document.getElementById('finish-stars');
-    var stars = starsBox.querySelectorAll('button');
-    var ratingLabel = document.getElementById('finish-rating-label');
-    var commentInput = document.getElementById('finish-comment-input');
-    var rating = 0;
-
-    function paintStars() {
-      Array.prototype.forEach.call(stars, function (b, i) {
-        b.classList.toggle('on', i < rating);
-      });
-      ratingLabel.textContent = LABELS[rating] || '';
-    }
-    Array.prototype.forEach.call(stars, function (b) {
-      b.addEventListener('click', function () {
-        rating = parseInt(b.getAttribute('data-star'), 10);
-        paintStars();
-      });
-    });
-
-    function reallySubmit() {
-      var save = document.getElementById('finish-save');
-      var skipBtn = document.getElementById('finish-skip');
-      save.disabled = true; skipBtn.disabled = true;
-      save.textContent = 'Enregistrement...';
-      // requestSubmit (et non submit) : l'événement submit est bien émis, donc
-      // le token CSRF, l'arrêt du chrono et le suivi des pubs restent branchés.
-      if (form.requestSubmit) { form.requestSubmit(); return; }
-      // Vieux moteur sans requestSubmit : on injecte le CSRF à la main.
-      var m = document.querySelector('meta[name="csrf-token"]');
-      if (m && m.content && !form.querySelector('input[name="_csrf"]')) {
-        var i = document.createElement('input');
-        i.type = 'hidden'; i.name = '_csrf'; i.value = m.content;
-        form.appendChild(i);
-      }
-      if (window.RestTimer) window.RestTimer.finishSession();
-      clearAllDrafts();
-      _clearActiveSession();
-      form.submit();
-    }
-
-    document.getElementById('finish-open').addEventListener('click', function () {
-      paintStars();
-      modal.style.display = 'flex';
-    });
-    document.getElementById('finish-save').addEventListener('click', function () {
-      document.getElementById('finish-rating').value = rating ? String(rating) : '';
-      document.getElementById('finish-comment').value = (commentInput.value || '').trim();
-      reallySubmit();
-    });
-    document.getElementById('finish-skip').addEventListener('click', function () {
-      document.getElementById('finish-rating').value = '';
-      document.getElementById('finish-comment').value = '';
-      reallySubmit();
-    });
-    // Tap hors de la carte = on annule (la séance n'est pas terminée).
-    modal.addEventListener('click', function (e) {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-
-    form.addEventListener('submit', function () {
-      clearAllDrafts();
-      _clearActiveSession();
-    });
-  })();
-
-  // ── Loading state: disable buttons on form submit ─────────────
-  document.addEventListener('submit', function(e) {
-    var form = e.target;
-    var btn = form.querySelector('button[type="submit"]');
-    if (btn && !btn.classList.contains('loading')) {
-      btn.classList.add('loading');
-      btn.dataset.origText = btn.textContent;
-      btn.textContent = '⏳ En cours...';
-    }
-  });
-
-  // ── Draft auto-save ────────────────────────────────────────────
-  var DRAFT_PREFIX = 'draft_' + {{ seance_name|tojson }} + '_' + {{ date_iso|tojson }} + '_';
-
-  function clearAllDrafts() {
-    try {
-      var keys = [];
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
-      }
-      keys.forEach(function(k) { localStorage.removeItem(k); });
-    } catch(e) {}
-  }
-
-  // ── Exercise block (Alpine component) ─────────────────────────
-  function exoBlock(index, data) {
-    var draftKey = DRAFT_PREFIX + data.base + '_' + (data.exo_index != null ? data.exo_index : index);
-    return {
-      open: !data.completed,
-      exoInfo: data.info || {},
-      variant: data.variant,
-      _initialVariant: data.variant,
-      isBw: data.is_bw || false,
-      isBwBase: data.is_bw_base || false,
-      get showWeight() { return !this.isBwBase || this.variant === 'Lesté'; },
-      restSeconds: data.rest_seconds || 90,
-      rpeOptions: ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10'],
-      sets: (data.sets || []).map(function (s) {
-        // Décode un éventuel token @RPE8 du champ remarque (stockage sans
-        // changement de schéma) → champ rpe séparé + remarque nettoyée.
-        var rawRem = s.remarque || "";
-        var rpe = "";
-        var m = rawRem.match(/@RPE(\d+(?:\.5)?)/i);
-        if (m) { rpe = m[1]; rawRem = rawRem.replace(/\s*@RPE\d+(?:\.5)?\s*/i, ' ').trim(); }
-        return {
-          reps: (s.reps != null && s.reps !== '') ? s.reps : '',
-          poids: (s.poids != null && s.poids !== '') ? s.poids : '',
-          remarque: rawRem,
-          rpe: rpe
-        };
-      }),
-
-      // Réencode le RPE dans remarque (@RPE8) pour l'envoi au serveur — garde
-      // le schéma history intact (Reps/Poids/Remarque). Lu par le champ caché.
-      serializedSets: function () {
-        return JSON.stringify(this.sets.map(function (s) {
-          var rem = (s.remarque || "").trim();
-          if (s.rpe) rem = (rem ? rem + ' ' : '') + '@RPE' + s.rpe;
-          return { reps: s.reps, poids: s.poids, remarque: rem };
-        }));
-      },
-
-      lastSummary: data.last_summary || '',
-      suggestion: data.suggestion || null,
-      suggestionApplied: false,
-      // Applique la charge suggérée aux séries pas encore saisies.
-      applySuggestion: function () {
-        if (!this.suggestion || this.suggestion.poids == null) return;
-        for (var i = 0; i < this.sets.length; i++) {
-          if (!this.sets[i].reps) this.sets[i].poids = this.suggestion.poids;
-        }
-        this.suggestionApplied = true;
-      },
-      record: data.record || null,
-      prevWeeks: (data.prev_weeks || []).map(function(pw) {
-        return {
-          week: pw.week - (Number('{{ week_offset }}') || 0),
-          missed: pw.missed || false,
-          rows: (pw.rows || []).map(function(r) {
-            // Transforme le token @RPE8 en suffixe lisible "RPE 8" pour l'affichage.
-            var rem = (r.Remarque || '').replace(/@RPE(\d+(?:\.5)?)/i, 'RPE $1').trim();
-            return { serie: r['Série'] || 0, reps: r.Reps || 0, poids: r.Poids || 0, remarque: rem };
-          })
-        };
-      }),
-
-      // ── Isométrique (gainage, planche, wall sit, etc.) ──
-      isIso: !!data.is_isometric,
-      targetSeconds: Number(data.target_seconds) || 30,
-      isoRunning: false,
-      isoEndTime: 0,
-      isoRemaining: Number(data.target_seconds) || 30,
-      _isoInterval: null,
-
-      // Indices des séries ayant déjà déclenché le chrono de repos. Volontairement
-      // HORS de `sets` pour ne pas être sérialisé dans le draft (sinon le flag
-      // survivrait au reload et bloquerait le redéclenchement).
-      _firedSets: [],
-
-      init: function() {
-        // Restore draft if page was left without saving
-        try {
-          var saved = localStorage.getItem(draftKey);
-          if (saved) {
-            var d = JSON.parse(saved);
-            if (d.sets && d.sets.length) this.sets = d.sets;
-            if (d.variant) this.variant = d.variant;
-          }
-        } catch(e) {}
-        // Auto-save on changes via $watch
-        var self = this;
-        this.$watch('sets', function() { self._saveDraft(); });
-        this.$watch('variant', function(val) {
-          self._saveDraft();
-          self._fetchVariantHistory(val);
-        });
-        // Fetch initial history if draft restored a different variant
-        if (this.variant !== this._initialVariant) {
-          this._fetchVariantHistory(this.variant);
-        }
-        // Résumé iso : si pas de `isoRemaining` cohérent, remettre à la cible
-        if (this.isIso) this.isoRemaining = this.targetSeconds;
-      },
-
-      _fetchVariantHistory: function(newVariant) {
-        var self = this;
-        fetch('/seance/api/variant-history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            exo_base: data.base,
-            variant: newVariant,
-            seance: '{{ seance_name }}',
-            s_act: Number('{{ s_act }}'),
-            week_offset: Number('{{ week_offset }}')
-          })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          self.lastSummary = d.last_summary || '';
-          self.suggestion = d.suggestion || null;
-          self.suggestionApplied = false;
-          self.record = d.record || null;
-          self.prevWeeks = (d.prev_weeks || []).map(function(pw) {
-            return { week: pw.week, missed: pw.missed, rows: pw.rows || [] };
-          });
-          if (d.last_sets && d.last_sets.length && !data.completed) {
-            for (var i = 0; i < self.sets.length; i++) {
-              if (!self.sets[i].reps && i < d.last_sets.length) {
-                self.sets[i].poids = d.last_sets[i].poids;
-              }
-            }
-          }
-        })
-        .catch(function() {});
-      },
-      _saveDraft: function() {
-        try {
-          localStorage.setItem(draftKey, JSON.stringify({ sets: this.sets, variant: this.variant }));
-        } catch(e) {}
-      },
-      addSet: function () {
-        this.sets.push({ reps: '', poids: '', remarque: "", rpe: '' });
-      },
-      removeSet: function (i) {
-        if (this.sets.length > 1) this.sets.splice(i, 1);
-      },
-      clearWeights: function () {
-        this.sets.forEach(function(s) { s.poids = ''; });
-      },
-      onSetFilled: function (i) {
-        // Marque la séance comme active dès le premier input rempli
-        _markSessionActive();
-        // Chrono auto : se lance dès que les REPS de la série sont saisies.
-        // On ne dépend PAS du poids : tantôt il est pré-rempli (séance
-        // précédente), tantôt vide — le signal fiable que la série est faite,
-        // c'est le nombre de reps. (@change = à la sortie du champ, pas en
-        // pleine frappe.)
-        if (!AUTO_REST_TIMER) return;
-        var cur = this.sets[i];
-        if (!cur) return;
-        var repsOk = cur.reps !== '' && cur.reps != null && Number(cur.reps) > 0;
-        if (!repsOk) return;
-        if (this._firedSets.indexOf(i) >= 0) return; // déjà lancé pour cette série
-        this._firedSets.push(i);
-        this.startRestTimer();
-      },
-      startRestTimer: function () {
-        if (!AUTO_REST_TIMER) return;
-        // Pas de garde "barre déjà visible" : chaque nouvelle série relance le
-        // repos depuis le début (start() réinitialise proprement l'échéance).
-        var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
-        window.RestTimer.start(dur);
-      },
-      // Lancement manuel via le bouton chrono de l'exo (ignore le réglage auto).
-      manualRestTimer: function () {
-        var dur = parseInt(localStorage.getItem('restTimerDefault')) || this.restSeconds || 90;
-        window.RestTimer.start(dur);
-      },
-      prepareSave: function (e) {
-        // Clear draft on save + démarre le chrono (spec : Valider déclenche le repos)
-        try { localStorage.removeItem(draftKey); } catch(e) {}
-        this.startRestTimer();
-      },
-
-      // ── Contrôles du chrono isométrique ──
-      formatIsoTime: function (sec) {
-        var s = Math.max(0, Math.ceil(Number(sec) || 0));
-        var m = Math.floor(s / 60);
-        var r = s % 60;
-        return m + ':' + (r < 10 ? '0' : '') + r;
-      },
-      isoProgressPct: function () {
-        if (!this.targetSeconds) return 0;
-        var done = this.targetSeconds - this.isoRemaining;
-        return Math.min(100, Math.max(0, (done / this.targetSeconds) * 100));
-      },
-      isoNextSeries: function () {
-        for (var i = 0; i < this.sets.length; i++) {
-          if (!(Number(this.sets[i].reps) > 0)) return i + 1;
-        }
-        return this.sets.length + 1;
-      },
-      isoTick: function () {
-        var rem = Math.max(0, Math.ceil((this.isoEndTime - Date.now()) / 1000));
-        this.isoRemaining = rem;
-        if (rem <= 0) {
-          clearInterval(this._isoInterval);
-          this._isoInterval = null;
-          this.isoRunning = false;
-          this.isoFinished();
-        }
-      },
-      isoStart: function () {
-        if (this.isoRunning) return;
-        _markSessionActive();
-        var rem = (this.isoRemaining > 0 && this.isoRemaining <= this.targetSeconds)
-          ? this.isoRemaining : this.targetSeconds;
-        this.isoEndTime = Date.now() + rem * 1000;
-        this.isoRunning = true;
-        var self = this;
-        clearInterval(this._isoInterval);
-        this._isoInterval = setInterval(function () { self.isoTick(); }, 250);
-      },
-      isoPause: function () {
-        if (!this.isoRunning) return;
-        this.isoRemaining = Math.max(0, Math.ceil((this.isoEndTime - Date.now()) / 1000));
-        clearInterval(this._isoInterval);
-        this._isoInterval = null;
-        this.isoRunning = false;
-      },
-      isoReset: function () {
-        clearInterval(this._isoInterval);
-        this._isoInterval = null;
-        this.isoRunning = false;
-        this.isoRemaining = this.targetSeconds;
-        this.isoEndTime = 0;
-      },
-      isoFinished: function () {
-        // Bip + vibration (même système que le chrono de repos)
-        if (typeof _playTimerBeep === 'function') _playTimerBeep();
-        if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch(e) {} }
-        // Log auto : on remplit la première série vide avec la durée cible.
-        var logged = false;
-        for (var i = 0; i < this.sets.length; i++) {
-          if (!(Number(this.sets[i].reps) > 0)) {
-            this.sets[i].reps = this.targetSeconds;
-            if (!this.sets[i].poids) this.sets[i].poids = 0;
-            logged = true;
-            break;
-          }
-        }
-        // Toutes les séries déjà validées → ajoute une série supplémentaire.
-        if (!logged) {
-          this.sets.push({ reps: this.targetSeconds, poids: 0, remarque: "", rpe: '' });
-        }
-        this.isoRemaining = this.targetSeconds;
-      },
-      isoClearLast: function () {
-        for (var i = this.sets.length - 1; i >= 0; i--) {
-          if (Number(this.sets[i].reps) > 0) {
-            this.sets[i].reps = '';
-            this.sets[i].poids = '';
-            return;
-          }
-        }
-      }
-    };
-  }
-
-  // Après un Save/Skip, le POST redirige et recharge la page. On replace
-  // alors le scroll sur la carte d'exo qui vient d'être sauvegardée.
-  window.addEventListener('DOMContentLoaded', function () {
-    var idx = sessionStorage.getItem('lastExoAnchor');
-    if (idx !== null) {
-      sessionStorage.removeItem('lastExoAnchor');
-      var el = document.getElementById('exo-anchor-' + idx);
-      if (el) {
-        setTimeout(function () {
-          el.scrollIntoView({ behavior: 'auto', block: 'start' });
-          if (window.flashRow) window.flashRow(el);
-        }, 50);
-      }
-    }
-  });
-
-  // ── Tuto séance (première ouverture) ───────────────────────────
-  </script>
+  {# Données de la page, lues par static/js/seance.js et exo-info.js.
+     Plus aucun script inline ici : le code est testable, mis en cache par
+     le service worker, et la CSP peut se passer de « unsafe-inline ». #}
+  <script type="application/json" id="seance-config">{{ {
+    "mode": mode, "seance": seance_name, "date": date_iso,
+    "semaine": s_act, "weekOffset": week_offset,
+    "autoRestTimer": auto_rest_timer, "showRpe": show_rpe,
+    "exosTotal": exos_total|default(exos|length)
+  }|tojson }}</script>
+  <script type="application/json" id="body-polygons">{{ body_polygons|tojson }}</script>
+  {# Sans « defer » : Alpine (chargé en defer par base.html) démarre dès son
+     exécution, donc les composants doivent être définis AVANT. Un script
+     classique en fin de body s'exécute avant tout script différé. #}
   <script src="/static/js/exercise-library.js"></script>
+  <script src="/static/js/exo-info.js"></script>
+  <script src="/static/js/seance.js"></script>
   <script src="/static/js/tuto-seance.js"></script>
-  <script>initTutoSeance();</script>
+  <script>window.addEventListener("load", function () { initTutoSeance(); });</script>
 {% endblock %}

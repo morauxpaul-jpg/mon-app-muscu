@@ -238,7 +238,7 @@ def _delete_history_ids(client, ids: list) -> None:
 # Tant qu'elle n'est pas appliquée, l'insert les refuse : on les retire et on
 # réessaie, puis on s'en souvient pour ce process.
 _HIST_EXT_COLS = ("session_id", "rpe")
-_hist_ext_supported = True
+_hist_ext_supported = True  # migration v34 appliquée le 2026-09-23
 
 
 def _insert_history(client, payload: list[dict]):
@@ -1461,32 +1461,77 @@ def delete_user_account(user_id: str) -> None:
 # (routes/seance.py) garde ce repli si la table est absente.
 # ────────────────────────────────────────────────────────────
 
+# Colonne ajoutée par la migration v35 ; sans elle on écrit le bilan sans durée.
+_session_duration_supported = True
+
+
+def _mark_duration_unsupported():
+    global _session_duration_supported
+    _session_duration_supported = False
+    logger.warning("session_notes.duration_min absente (migration v35 ?) "
+                   "— durée de séance non enregistrée")
+
+
+def _session_note_columns() -> str:
+    base = "rating, comment, updated_at"
+    return base + ", duration_min" if _session_duration_supported else base
+
+
 def upsert_session_note(user_id: str, date_str: str, seance: str,
-                        rating: int | None, comment: str | None) -> None:
+                        rating: int | None, comment: str | None,
+                        duration_min: int | None = None) -> None:
     client = get_client()
-    client.table("session_notes").upsert({
+    payload = {
         "user_id": user_id,
         "date": _norm_date(date_str),
         "seance": seance,
         "rating": int(rating) if rating else None,
         "comment": (comment or "")[:500] or None,
         "updated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-    }, on_conflict="user_id,date,seance").execute()
+    }
+    if duration_min and _session_duration_supported:
+        payload["duration_min"] = int(duration_min)
+    try:
+        client.table("session_notes").upsert(
+            payload, on_conflict="user_id,date,seance").execute()
+    except Exception as e:
+        # Colonne duration_min absente (migration v35 non appliquée) : on
+        # ré-essaie sans elle plutôt que de perdre la note et le commentaire.
+        if "duration_min" not in str(e).lower():
+            raise
+        _mark_duration_unsupported()
+        payload.pop("duration_min", None)
+        client.table("session_notes").upsert(
+            payload, on_conflict="user_id,date,seance").execute()
 
 
 def get_session_note(user_id: str, date_str: str, seance: str) -> dict | None:
-    """{rating, comment, ts} ou None. Lève si la table est absente (repli
-    géré par l'appelant)."""
+    """{rating, comment, duration_min, ts} ou None. Lève si la table est
+    absente (repli géré par l'appelant)."""
     client = get_client()
-    resp = (
-        client.table("session_notes")
-        .select("rating, comment, updated_at")
-        .eq("user_id", user_id)
-        .eq("date", _norm_date(date_str))
-        .eq("seance", seance)
-        .limit(1)
-        .execute()
-    )
+    try:
+        resp = (
+            client.table("session_notes")
+            .select(_session_note_columns())
+            .eq("user_id", user_id)
+            .eq("date", _norm_date(date_str))
+            .eq("seance", seance)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        if "duration_min" not in str(e).lower():
+            raise
+        _mark_duration_unsupported()
+        resp = (
+            client.table("session_notes")
+            .select(_session_note_columns())
+            .eq("user_id", user_id)
+            .eq("date", _norm_date(date_str))
+            .eq("seance", seance)
+            .limit(1)
+            .execute()
+        )
     rows = resp.data or []
     if not rows:
         return None
@@ -1496,20 +1541,33 @@ def get_session_note(user_id: str, date_str: str, seance: str) -> dict | None:
         out["rating"] = int(r["rating"])
     if r.get("comment"):
         out["comment"] = r["comment"]
+    if r.get("duration_min"):
+        out["duration_min"] = int(r["duration_min"])
     return out
 
 
 def list_session_notes(user_id: str) -> list[dict]:
-    """Tous les bilans de l'user (export, stats) : [{date, seance, rating, comment}]."""
+    """Tous les bilans de l'user (export, stats)."""
     client = get_client()
-    rows = _fetch_all(lambda: (
-        client.table("session_notes")
-        .select("date, seance, rating, comment")
-        .eq("user_id", user_id)
-        .order("date")
-    ))
+    cols = "date, seance, rating, comment"
+    if _session_duration_supported:
+        cols += ", duration_min"
+    try:
+        rows = _fetch_all(lambda: (
+            client.table("session_notes").select(cols)
+            .eq("user_id", user_id).order("date")
+        ))
+    except Exception as e:
+        if "duration_min" not in str(e).lower():
+            raise
+        _mark_duration_unsupported()
+        rows = _fetch_all(lambda: (
+            client.table("session_notes").select("date, seance, rating, comment")
+            .eq("user_id", user_id).order("date")
+        ))
     return [{"date": str(r.get("date") or "")[:10], "seance": r.get("seance") or "",
-             "rating": r.get("rating"), "comment": r.get("comment")} for r in rows]
+             "rating": r.get("rating"), "comment": r.get("comment"),
+             "duration_min": r.get("duration_min")} for r in rows]
 
 
 def sum_nutrition_day(user_id: str, date_str: str) -> dict:

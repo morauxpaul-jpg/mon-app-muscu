@@ -26,6 +26,8 @@ const APP_SHELL = [
   "/static/js/ui-fx.js",
   "/static/js/prefetch.js",
   "/static/js/exercise-library.js",
+  "/static/js/seance.js",
+  "/static/js/exo-info.js",
   "/static/css/timer.css",
   "/static/css/rest-timer.css",
   "/static/js/rest-timer.js",

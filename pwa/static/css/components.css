@@ -906,3 +906,90 @@ html.has-ad-banner .topbar {
   margin-top: calc(var(--ad-banner-h, 0px) + env(safe-area-inset-top));
   padding-top: var(--sp-md);
 }
+
+/* ── Séance : record battu, cible du programme, retours ─────────────
+   Ajoutés avec la saisie sans rechargement : la carte doit pouvoir dire
+   ce qui vient de se passer sans que la page bouge. */
+.exo-pr {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-bg);
+  border: 0.5px solid var(--warning);
+  color: var(--warning);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.exo-pr .icon { color: var(--warning); flex-shrink: 0; }
+.exo-pr-in { animation: prPop 0.45s cubic-bezier(.2, .9, .3, 1.4); }
+@keyframes prPop {
+  from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.exo-target {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.rpe-chip {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.finish-duration {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-3);
+  margin-bottom: 10px;
+  min-height: 1em;
+}
+
+/* Bouton « Terminer » mis en avant quand tous les exercices sont faits. */
+.btn-ready {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  color: #fff !important;
+}
+
+.seance-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 9999;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-default);
+  color: var(--text-1);
+  font-size: 0.86rem;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  animation: toastIn 0.25s ease-out;
+}
+.seance-toast-error {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exo-pr-in, .seance-toast { animation: none; }
+}
