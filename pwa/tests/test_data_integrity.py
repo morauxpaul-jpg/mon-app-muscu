@@ -235,3 +235,61 @@ def test_seance_poids_du_corps_debloque_le_badge_premiere_seance(fake_db, logged
     _seed_bodyweight_session(fake_db)
     logged_in.get("/accueil")
     assert "first_session" in (fake_db.tables["programs"][0]["data"].get("_badges") or [])
+
+
+# ── Planning : l'écran doit refléter les données ─────────────────
+# Les menus du planning affichaient « Repos » partout au retour sur la page,
+# alors que le planning était correct en base (l'accueil proposait bien les
+# séances). Cause : Alpine applique x-model AVANT que x-for ait créé les
+# <option>, le navigateur retombe sur la première option et rien ne
+# resynchronise ensuite. Corrigé par syncPlanningSelects().
+
+
+def test_planning_survit_a_une_sauvegarde_de_programme(fake_db, logged_in):
+    planning = {"Lundi": "Full Body A", "Mercredi": "Full Body B",
+                "Vendredi": "Full Body A"}
+    _seed_full_body(fake_db)
+    logged_in.get("/programme")
+    r = logged_in.post("/programme/state", data=json.dumps({
+        "name": "Mon prog",
+        "seances": {
+            "Full Body A": [{"name": "Squat", "sets": 3, "muscle": "Quadriceps"}],
+            "Full Body B": [{"name": "Rowing", "sets": 3, "muscle": "Dos"}],
+        },
+        "planning": planning,
+        "seance_order": ["Full Body A", "Full Body B"],
+    }), content_type="application/json", headers={"X-CSRFToken": CSRF})
+    assert r.status_code == 200
+    assert fake_db.tables["programs"][0]["data"]["_planning"] == {
+        "Lundi": "Full Body A", "Mardi": "", "Mercredi": "Full Body B",
+        "Jeudi": "", "Vendredi": "Full Body A", "Samedi": "", "Dimanche": "",
+    }
+
+
+def test_planning_renvoye_a_lecran_avec_les_bonnes_valeurs(fake_db, logged_in):
+    """Le gabarit doit porter de quoi resynchroniser les menus déroulants."""
+    _seed_full_body(fake_db)
+    html = logged_in.get("/programme").get_data(as_text=True)
+    # Chaque menu sait quel jour il représente…
+    for jour in ("Lundi", "Mardi", "Dimanche"):
+        assert f'data-day="{jour}"' in html
+    # …et la resynchronisation est branchée à l'init et aux changements.
+    assert "syncPlanningSelects" in html
+    # Les valeurs partent bien au client.
+    assert '"Lundi": "Full Body A"' in html or '"Lundi":"Full Body A"' in html
+
+
+def test_planning_ignore_une_seance_inexistante(fake_db, logged_in):
+    """Un planning qui pointe vers une séance supprimée doit être nettoyé,
+    pas conservé tel quel (sinon l'accueil propose une séance fantôme)."""
+    _seed_full_body(fake_db)
+    logged_in.get("/programme")
+    logged_in.post("/programme/state", data=json.dumps({
+        "name": "Mon prog",
+        "seances": {"Full Body A": [{"name": "Squat", "sets": 3, "muscle": "Quadriceps"}]},
+        "planning": {"Lundi": "Full Body A", "Mercredi": "Séance supprimée"},
+        "seance_order": ["Full Body A"],
+    }), content_type="application/json", headers={"X-CSRFToken": CSRF})
+    pl = fake_db.tables["programs"][0]["data"]["_planning"]
+    assert pl["Lundi"] == "Full Body A"
+    assert pl["Mercredi"] == ""
