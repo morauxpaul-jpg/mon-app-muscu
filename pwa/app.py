@@ -59,10 +59,23 @@ if _sentry_dsn:
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
+# Railway (comme tout PaaS) place un reverse-proxy devant gunicorn. Sans
+# ProxyFix :
+#   - request.remote_addr = l'IP DU PROXY → le rate-limit « 60/min par IP »
+#     devient un compteur GLOBAL partagé par tous les utilisateurs ;
+#   - request.url_root est en http:// → les URLs de retour Stripe aussi.
+# x_for/x_proto/x_host = 1 : on ne fait confiance qu'au proxy le plus proche.
+from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+app.config["PREFERRED_URL_SCHEME"] = "https"
+
 # Rate limiter global — protège les routes POST contre les clics compulsifs.
 # default_limits s'applique à toutes les routes ; sur-limite ajoutée avec
 # @limiter.limit(...) pour les actions sensibles dans les blueprints.
 limiter.init_app(app)
+# Les fichiers statiques ne consomment pas le quota : une page = ~10 requêtes
+# CSS/JS/SVG, qui épuisaient la limite « 60/min » avant toute action utile.
+limiter.exempt(app.view_functions["static"]) if "static" in app.view_functions else None
 # Trace au boot le backend du rate-limiter : "redis" = partagé entre workers
 # et persistant ; "memory" = par worker, remis à zéro à chaque déploiement.
 from core.limiter import _storage_uri as _rl_storage  # noqa: E402
@@ -74,13 +87,20 @@ logger.info(
 # Secret_key : obligatoire pour signer le cookie de session Flask. Doit être
 # défini en prod via la variable d'env FLASK_SECRET_KEY sur Railway.
 _flask_secret = os.getenv("FLASK_SECRET_KEY")
+# En prod, une clé par défaut connue = cookies de session forgeables (n'importe
+# qui peut se faire passer pour n'importe quel user_id). On refuse de démarrer
+# plutôt que de servir une app ouverte. En local (pas de marqueur Railway), on
+# garde une clé de dev pour ne pas gêner le développement.
+_IS_PROD = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
 if not _flask_secret:
-    # En prod (2 workers gunicorn) une clé éphémère différente par worker
-    # casse les sessions de façon aléatoire. On log fort sans empêcher le
-    # boot (utile en dev local).
+    if _IS_PROD:
+        raise RuntimeError(
+            "FLASK_SECRET_KEY absente en production : les cookies de session "
+            "seraient forgeables. Définis-la dans les variables Railway."
+        )
     logger.critical(
-        "FLASK_SECRET_KEY absente — sessions instables en prod multi-worker. "
-        "Définis-la dans les variables d'environnement Railway."
+        "FLASK_SECRET_KEY absente — clé de DEV utilisée. Sessions instables en "
+        "multi-worker ; à définir avant tout déploiement."
     )
 app.secret_key = _flask_secret or "dev-insecure-change-me"
 app.permanent_session_lifetime = timedelta(days=30)
@@ -94,7 +114,7 @@ FREE_RECHECK_TTL = 15     # secondes — re-check d'un FREE (capte vite l'upgrad
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=bool(os.getenv("FLASK_SECRET_KEY")),  # HTTPS-only en prod
+    SESSION_COOKIE_SECURE=_IS_PROD or bool(_flask_secret),  # HTTPS-only en prod
     # Taille max d'une requête (uploads import JSON inclus) — évite qu'un
     # fichier énorme sature la mémoire du worker gunicorn.
     MAX_CONTENT_LENGTH=5 * 1024 * 1024,  # 5 Mo
@@ -260,12 +280,9 @@ def _csrf_protect():
     # soit déjà bloquées par l'auth gate — pas de token à vérifier ici.
     if not session.get("user_id"):
         return None
-    expected = session.get("_csrf")
-    if not expected:
-        # Session antérieure au déploiement CSRF : on initialise sans bloquer
-        # cette première action (évite de verrouiller un user déjà connecté).
-        _get_or_create_csrf()
-        return None
+    # Le jeton est posé dès /auth/session (login) : une session authentifiée
+    # en a toujours un. Plus d'exemption « première requête ».
+    expected = _get_or_create_csrf()
     sent = (request.form.get("_csrf")
             or request.headers.get("X-CSRFToken")
             or request.headers.get("X-CSRF-Token")

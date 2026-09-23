@@ -10,6 +10,7 @@ from datetime import date as _date, datetime as _datetime
 from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
 from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
+from core.hist import is_cardio as _is_cardio_row, is_perf as _is_perf, is_logged as _is_real_perf, tonnage
 from core.analytics import track
 
 # Upsell post-win : un free qui vient de franchir ce cap de séances distinctes
@@ -38,20 +39,6 @@ def _normalize_hist(rows, prog):
     return rows, prog_seances
 
 
-def _is_real_perf(row):
-    """Réplique du filtre app.py 1757-1761 : une ligne 'réelle' (perf enregistrée ou SKIP)."""
-    if row["Exercice"] == "SESSION":
-        return False
-    if row["Poids"] > 0 or row["Reps"] > 0:
-        return True
-    if "SKIP" in (row.get("Remarque") or ""):
-        return True
-    return False
-
-
-def _is_cardio_row(row):
-    return str(row.get("Exercice") or "").startswith("CARDIO:")
-
 
 BADGE_DEFS = [
     # (code, label, short description, icon_id)
@@ -77,7 +64,7 @@ def _compute_badges(hist, prog, profile, planning_map, streak):
     unlocked = set()
 
     muscu = [r for r in hist if not _is_cardio_row(r) and r.get("Exercice") != "SESSION"]
-    muscu_real = [r for r in muscu if r.get("Reps", 0) > 0 and r.get("Poids", 0) > 0]
+    muscu_real = [r for r in muscu if _is_perf(r)]
     cardio = [r for r in hist if _is_cardio_row(r) and int(r.get("Reps") or 0) > 0]
 
     # Première séance : au moins une perf réelle (muscu OU cardio)
@@ -94,10 +81,10 @@ def _compute_badges(hist, prog, profile, planning_map, streak):
         unlocked.add("centurion")
 
     # Tonnage cumulé (muscu uniquement)
-    tonnage = int(sum(r["Poids"] * r["Reps"] for r in muscu_real))
-    if tonnage >= 10_000:  unlocked.add("tonnage_10k")
-    if tonnage >= 50_000:  unlocked.add("tonnage_50k")
-    if tonnage >= 100_000: unlocked.add("tonnage_100k")
+    total_kg = tonnage(muscu_real)
+    if total_kg >= 10_000:  unlocked.add("tonnage_10k")
+    if total_kg >= 50_000:  unlocked.add("tonnage_50k")
+    if total_kg >= 100_000: unlocked.add("tonnage_100k")
 
     # Régulier : 4 semaines consécutives sans manquer une séance planifiée.
     # On approxime : streak >= 4 (streak = semaines consécutives avec au moins
@@ -282,17 +269,14 @@ def index():
     # Les lignes cardio (Exercice "CARDIO:*") ne doivent pas compter dans le
     # volume muscu (km × min ≠ kg × reps). Elles sont agrégées à part.
     cur_week_muscu = [r for r in cur_week if not _is_cardio_row(r)]
-    cur_week_real = [r for r in cur_week_muscu if r["Poids"] > 0]
+    cur_week_real = [r for r in cur_week_muscu if _is_perf(r)]
     vol_week = int(sum(r["Poids"] * r["Reps"] for r in cur_week_muscu))
     vol_week_fmt = f"{vol_week:,}".replace(",", " ")
     sessions_done = len({r["Séance"] for r in cur_week_real})
     total_sessions = len(prog_seances)
 
     # Streak : semaines consécutives avec au moins une perf (muscu avec poids OU cardio avec durée)
-    weeks_with_data = sorted({
-        r["Semaine"] for r in hist
-        if (r["Poids"] > 0) or (_is_cardio_row(r) and r["Reps"] > 0)
-    }, reverse=True)
+    weeks_with_data = sorted({r["Semaine"] for r in hist if _is_perf(r)}, reverse=True)
     streak = 0
     for i, w in enumerate(weeks_with_data):
         if i == 0 or w == weeks_with_data[i - 1] - 1:
@@ -312,12 +296,7 @@ def index():
     today_day_name = DAYS_FR[today.weekday()]
     today_seance = planning_map.get(today_day_name, "")
     today_iso = today.strftime("%Y-%m-%d")
-    today_done = any(
-        r for r in hist
-        if r["Date"] == today_iso and (
-            r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0)
-        )
-    )
+    today_done = any(r for r in hist if r["Date"] == today_iso and _is_perf(r))
     # Si la séance du jour a été rattrapée récemment, on ne considère pas
     # le streak en danger (le jour est affiché comme RATTRAPÉE).
     if today_seance and not today_done:
@@ -329,7 +308,7 @@ def index():
                 d_prev_done = any(
                     r for r in hist
                     if r["Date"] == d_prev_iso and r.get("Séance") == today_seance
-                    and (r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0))
+                    and _is_perf(r)
                 )
                 if d_prev_done:
                     today_done = True  # déjà couvert par un rattrapage récent
@@ -346,12 +325,7 @@ def index():
         if not seance_name:
             continue
         d_iso = d.strftime("%Y-%m-%d")
-        d_done = any(
-            r for r in hist
-            if r["Date"] == d_iso and (
-                r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0)
-            )
-        )
+        d_done = any(r for r in hist if r["Date"] == d_iso and _is_perf(r))
         if d_done:
             continue
         # Tolérance : si cette séance a été rattrapée sur un jour précédent
@@ -366,7 +340,7 @@ def index():
                     if any(
                         r for r in hist
                         if r["Date"] == d_prev_iso and r.get("Séance") == seance_name
-                        and (r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0))
+                        and _is_perf(r)
                     ):
                         covered = True
                         break
@@ -461,13 +435,8 @@ def index():
     # prefetch envoient Sec-Fetch-Mode: same-origin/cors, pas 'navigate'.
     is_navigation = request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
     if is_navigation and not getattr(g, "is_vip", False) and not prog.get("_upsell_seen"):
-        all_real = [r for r in hist
-                    if not _is_cardio_row(r) and r.get("Exercice") != "SESSION"
-                    and r.get("Reps", 0) > 0 and r.get("Poids", 0) > 0]
-        done_sessions = {(r.get("Date"), r.get("Séance")) for r in all_real if r.get("Date")}
-        for r in hist:
-            if _is_cardio_row(r) and int(r.get("Reps") or 0) > 0 and r.get("Date"):
-                done_sessions.add((r.get("Date"), r.get("Séance")))
+        done_sessions = {(r.get("Date"), r.get("Séance")) for r in hist
+                         if r.get("Date") and _is_perf(r)}
         upsell_sessions = len(done_sessions)
         if upsell_sessions >= UPSELL_AFTER_SESSIONS:
             show_upsell = True
@@ -485,8 +454,7 @@ def index():
     # Nudge de relance : jours depuis la dernière perf réelle (muscu ou cardio).
     show_reactivation = False
     days_inactive = 0
-    perf_dates = [r["Date"] for r in hist
-                  if r.get("Date") and (r["Poids"] > 0 or (_is_cardio_row(r) and r["Reps"] > 0))]
+    perf_dates = [r["Date"] for r in hist if r.get("Date") and _is_perf(r)]
     if perf_dates:
         try:
             last_perf = _date.fromisoformat(max(perf_dates))

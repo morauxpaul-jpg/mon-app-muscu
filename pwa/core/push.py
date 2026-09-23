@@ -71,21 +71,57 @@ def send_push(subscription: dict, payload: dict) -> str:
         return "error"
 
 
-# Payload par défaut de la relance des inactifs (réutilisé par l'admin et le cron).
-REACTIVATION_PAYLOAD = {
-    "title": "On reprend ? 💪",
-    "body": "Ta prochaine séance t'attend. Un petit effort aujourd'hui !",
-    "url": "/accueil",
-}
+# Relance des inactifs : au plus 3 messages, espacés, puis on laisse la
+# personne tranquille. Sans ce plafond, un cron quotidien envoyait la MÊME
+# notification tous les jours pendant 27 jours (fenêtre 3→30 j) — le plus
+# sûr moyen de se faire désinstaller.
+MAX_REACTIVATIONS = 3
+MIN_DAYS_BETWEEN = 4  # jours entre deux relances d'une même personne
+
+REACTIVATION_MESSAGES = [
+    {"title": "On reprend ? 💪",
+     "body": "Ta prochaine séance t'attend — même courte, elle compte.",
+     "url": "/accueil"},
+    {"title": "Ton programme t'attend",
+     "body": "Reprends là où tu t'es arrêté : 20 minutes suffisent pour relancer la machine.",
+     "url": "/seance"},
+    {"title": "Un dernier coup de pouce 👋",
+     "body": "Reviens quand tu veux — ton historique et tes records sont intacts.",
+     "url": "/accueil"},
+]
+
+# Rétro-compat : l'admin et les tests importent encore ce nom.
+REACTIVATION_PAYLOAD = REACTIVATION_MESSAGES[0]
+
+
+def _should_relaunch(sub: dict, now=None) -> bool:
+    """True si cet abonnement peut recevoir une relance maintenant."""
+    import datetime as _dt
+    count = int(sub.get("reactivation_count") or 0)
+    if count >= MAX_REACTIVATIONS:
+        return False
+    last = sub.get("last_reactivation_at")
+    if not last:
+        return True
+    try:
+        dt_last = _dt.datetime.fromisoformat(str(last).replace("Z", "+00:00"))
+        if dt_last.tzinfo is None:
+            dt_last = dt_last.replace(tzinfo=_dt.timezone.utc)
+    except (ValueError, TypeError):
+        return True
+    now = now or _dt.datetime.now(_dt.timezone.utc)
+    return (now - dt_last).days >= MIN_DAYS_BETWEEN
 
 
 def run_reactivation_push(min_days: int = 3, max_days: int = 30,
-                          payload: dict | None = None) -> dict:
+                          payload: dict | None = None, force: bool = False) -> dict:
     """Cible les inactifs abonnés (min_days–max_days sans séance) et leur envoie
     un push de relance. Source de vérité unique pour le bouton admin ET le cron.
 
     - Ne dépend PAS du contexte requête Flask (utilisable depuis un script cron).
     - Supprime au passage les abonnements morts (404/410).
+    - Plafonne à MAX_REACTIVATIONS messages espacés de MIN_DAYS_BETWEEN jours
+      par personne (`force=True` ignore ce plafond : test admin).
     - Best-effort : n'échoue jamais sur un envoi individuel.
 
     Retour : {"ok", "sent", "expired", "errors", "targets"} ou
@@ -98,7 +134,6 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
     if not is_configured():
         return {"ok": False, "error": "unconfigured"}
 
-    payload = payload or REACTIVATION_PAYLOAD
     try:
         targets = core_db.get_inactive_user_ids(min_days=min_days, max_days=max_days)
         subs = core_db.list_push_subscriptions_for_users(targets)
@@ -106,11 +141,21 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
         logger.error("run_reactivation_push gather FAILED: %s", e)
         return {"ok": False, "error": "gather_failed"}
 
-    sent, expired, errors = 0, 0, 0
-    for _user_id, sub in subs:
-        status = send_push(sub, payload)
+    sent, expired, errors, skipped = 0, 0, 0, 0
+    for sub in subs:
+        if not force and not _should_relaunch(sub):
+            skipped += 1
+            continue
+        count = int(sub.get("reactivation_count") or 0)
+        # Message différent à chaque relance (le même texte répété est ignoré).
+        body = payload or REACTIVATION_MESSAGES[min(count, len(REACTIVATION_MESSAGES) - 1)]
+        status = send_push(sub["sub"], body)
         if status == "ok":
             sent += 1
+            try:
+                core_db.mark_reactivation_sent(sub.get("endpoint"), count + 1)
+            except Exception:
+                pass
         elif status == "expired":
             expired += 1
             try:
@@ -123,11 +168,11 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
     try:
         analytics.track("reactivation_push_sent",
                         {"sent": sent, "expired": expired, "errors": errors,
-                         "min_days": min_days, "max_days": max_days},
+                         "skipped": skipped, "min_days": min_days, "max_days": max_days},
                         user_id=None, tier="system")
     except Exception:
         pass
-    logger.info("reactivation push: sent=%s expired=%s errors=%s targets=%s",
-                sent, expired, errors, len(targets))
-    return {"ok": True, "sent": sent, "expired": expired,
-            "errors": errors, "targets": len(targets)}
+    logger.info("reactivation push: sent=%s skipped=%s expired=%s errors=%s targets=%s",
+                sent, skipped, expired, errors, len(targets))
+    return {"ok": True, "sent": sent, "expired": expired, "errors": errors,
+            "skipped": skipped, "targets": len(targets)}

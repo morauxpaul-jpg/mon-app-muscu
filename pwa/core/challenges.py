@@ -13,18 +13,7 @@ Principe :
   {id, title, emoji, desc, current, target, unit, pct, done}
 """
 from core.dates import continuous_week, logical_today_paris
-
-
-def _is_cardio(r):
-    return str(r.get("Exercice") or "").startswith("CARDIO:")
-
-
-def _is_real_muscu(r):
-    return (
-        not _is_cardio(r)
-        and r.get("Exercice") != "SESSION"
-        and (float(r.get("Poids") or 0) > 0 or int(r.get("Reps") or 0) > 0)
-    )
+from core.hist import is_cardio as _is_cardio, is_muscu_perf as _is_real_muscu, tonnage
 
 
 def _week_rows(hist, week_idx):
@@ -43,8 +32,7 @@ def _distinct_sessions(rows):
 
 
 def _volume(rows):
-    return int(sum(float(r.get("Poids") or 0) * int(r.get("Reps") or 0)
-                   for r in rows if _is_real_muscu(r)))
+    return tonnage(rows)
 
 
 def _cardio_sessions(rows):

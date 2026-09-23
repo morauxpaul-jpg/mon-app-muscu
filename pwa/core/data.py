@@ -50,6 +50,16 @@ def save_prog(prog_dict):
     return db.save_prog(_uid(), prog_dict)
 
 
+def save_prog_body(body):
+    """Remplace le CORPS du programme (séances + planning + dossiers) en
+    conservant toutes les données personnelles (badges, record de streak,
+    exos perso, défis…). Cf. db.replace_program_body."""
+    uid = _uid()
+    merged = db.replace_program_body(db.get_prog(uid), body)
+    db.save_prog(uid, merged)
+    return merged
+
+
 # ── Opérations ciblées ──────────────────────────────────────────────────
 # Le ciblage de semaine se fait par date (plage lun→dim), plus par n° ISO.
 def replace_exo_rows(date_str, seance, exercice, new_rows):
@@ -157,17 +167,24 @@ def delete_coach_conversation(conversation_id):
     return db.delete_coach_conversation(_uid(), conversation_id)
 
 
+# ── Bilans de séance (table session_notes, migration v34) ───────────────
+def upsert_session_note(date_str, seance, rating, comment):
+    return db.upsert_session_note(_uid(), date_str, seance, rating, comment)
+
+
+def get_session_note(date_str, seance):
+    return db.get_session_note(_uid(), date_str, seance)
+
+
+def list_session_notes():
+    return db.list_session_notes(_uid())
+
+
+# ── Renommage / fusion d'exercices (UPDATE ciblé, pas de réécriture) ────
+def rename_exercise_rows(old_names, new_name, muscle=None):
+    return db.rename_exercise_rows(_uid(), old_names, new_name, muscle)
+
+
 # ── Suppression de compte (exigence stores) ─────────────────────────────
 def delete_user_account():
     return db.delete_user_account(_uid())
-
-
-# ── Tier (Prompt D — paywall préparé, non activé) ───────────────────────
-def is_premium() -> bool:
-    """True si l'utilisateur courant est tier 'vip'. Pour l'instant tout le
-    monde est free — mais les templates peuvent déjà gater des features."""
-    try:
-        profile = db.get_profile(_uid()) or {}
-    except Exception:
-        return False
-    return (profile.get("tier") or "free").strip().lower() == "vip"

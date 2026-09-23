@@ -14,8 +14,9 @@ from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
 
 from core.data import (
-    get_hist, get_prog, save_prog, save_hist, get_profile, get_onboarding,
-    delete_user_account, set_newsletter_optin, list_body_weight, upsert_body_weight,
+    get_hist, get_prog, save_prog, save_prog_body, save_hist, get_profile,
+    get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
+    upsert_body_weight, rename_exercise_rows, list_session_notes,
 )
 
 logger = logging.getLogger(__name__)
@@ -241,19 +242,14 @@ def rename_exercise_history():
     if not old or not new or old == new:
         return redirect(url_for("gestion.gestion") + "?rename=noop")
 
-    hist = get_hist()
-    new_muscle = auto_muscles(get_base_name(new))
-    count = 0
-    for r in hist:
-        if (r.get("Exercice") or "").strip() == old:
-            r["Exercice"] = new
-            # Recalcule le muscle d'après le nouveau nom (sinon on garde l'ancien).
-            if new_muscle:
-                r["Muscle"] = new_muscle
-            count += 1
-
+    # UPDATE ciblé : on ne réécrit plus tout l'historique (un delete+insert
+    # global sur des milliers de lignes est une occasion de perte de données).
+    try:
+        count = rename_exercise_rows([old], new, auto_muscles(get_base_name(new)))
+    except Exception as e:
+        logger.error("rename_exercise FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
+        return redirect(url_for("gestion.gestion") + "?rename=error")
     if count:
-        save_hist(hist)
         return redirect(url_for("gestion.gestion") + f"?rename=ok&n={count}")
     return redirect(url_for("gestion.gestion") + "?rename=none")
 
@@ -273,18 +269,13 @@ def merge_exercise_history():
     if not to_merge:
         return redirect(url_for("gestion.gestion") + "?merge=noop#doublons")
 
-    hist = get_hist()
-    new_muscle = auto_muscles(get_base_name(keep))
-    count = 0
-    for r in hist:
-        if (r.get("Exercice") or "").strip() in to_merge:
-            r["Exercice"] = keep
-            if new_muscle:
-                r["Muscle"] = new_muscle
-            count += 1
-
+    try:
+        count = rename_exercise_rows(sorted(to_merge), keep,
+                                     auto_muscles(get_base_name(keep)))
+    except Exception as e:
+        logger.error("merge_exercise FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
+        return redirect(url_for("gestion.gestion") + "?merge=error#doublons")
     if count:
-        save_hist(hist)
         return redirect(url_for("gestion.gestion") + f"?merge=ok&n={count}#doublons")
     return redirect(url_for("gestion.gestion") + "?merge=none#doublons")
 
@@ -426,6 +417,42 @@ def delete_account():
     return redirect("/")
 
 
+def _sanitize_program(raw: dict) -> dict:
+    """Nettoie un programme importé : séances = listes d'exercices typés,
+    planning = jours FR connus. Un fichier bricolé à la main ne doit jamais
+    pouvoir rendre les pages inutilisables (une séance non-liste faisait
+    planter /gestion et /seance)."""
+    from routes.programme import _exo_entry
+    from core.dates import DAYS_FR as _DAYS
+    out: dict = {}
+    for sname, exos in (raw or {}).items():
+        if not isinstance(sname, str) or sname.startswith("_") or not isinstance(exos, list):
+            continue
+        cleaned = []
+        for e in exos:
+            if not isinstance(e, dict):
+                continue
+            name = (e.get("name") or "").strip()[:80]
+            if not name:
+                continue
+            try:
+                sets = max(1, min(20, int(e.get("sets") or 3)))
+            except (TypeError, ValueError):
+                sets = 3
+            muscle = (e.get("muscle") or "Autre").strip()[:60] or "Autre"
+            cleaned.append(_exo_entry(name, sets, muscle, e))
+        out[sname[:60]] = cleaned
+    names = set(out)
+    raw_planning = raw.get("_planning") if isinstance(raw.get("_planning"), dict) else {}
+    out["_planning"] = {d: (raw_planning.get(d) if raw_planning.get(d) in names else "")
+                        for d in _DAYS}
+    for key in ("_name", "_origin", "_started_at"):
+        val = raw.get(key)
+        if isinstance(val, str) and val.strip():
+            out[key] = val.strip()[:80]
+    return out
+
+
 @bp.route("/gestion/export")
 def export_data():
     """Exporte toutes les données utilisateur en JSON (VIP uniquement)."""
@@ -440,12 +467,18 @@ def export_data():
     except Exception as e:  # migration v33 absente → export sans les pesées
         logger.error("export list_body_weight FAILED: %s", e)
         poids = []
+    try:
+        bilans = list_session_notes()
+    except Exception as e:  # migration v34 absente
+        logger.error("export list_session_notes FAILED: %s", e)
+        bilans = []
     payload = {
-        "version": 1,
+        "version": 2,
         "exported_at": date.today().isoformat(),
         "programme": prog,
         "historique": hist,
         "poids": poids,
+        "bilans": bilans,
         "profil": {k: v for k, v in profile.items() if k != "id"},
         "onboarding": {k: v for k, v in onboarding.items() if k not in ("user_id", "id")},
     }
@@ -488,13 +521,29 @@ def import_data():
         return redirect(url_for("gestion.gestion") + "?import=error")
 
     if prog_in is not None:
-        save_prog(prog_in)
+        try:
+            save_prog_body(_sanitize_program(prog_in))
+        except (TypeError, ValueError, AttributeError):
+            return redirect(url_for("gestion.gestion") + "?import=error")
     if hist_in is not None:
         try:
             save_hist(hist_in)
         except (ValueError, TypeError):
             # Lignes aux types invalides (Reps/Poids non numériques…)
             return redirect(url_for("gestion.gestion") + "?import=error")
+    # Bilans de séance (facultatif, export v2).
+    bilans_in = data.get("bilans")
+    if isinstance(bilans_in, list):
+        from core.data import upsert_session_note
+        for bn in bilans_in[:5000]:
+            if not isinstance(bn, dict):
+                continue
+            try:
+                upsert_session_note(str(bn.get("date"))[:10], str(bn.get("seance") or "")[:60],
+                                    bn.get("rating"), bn.get("comment"))
+            except Exception:
+                continue
+
     # Pesées (facultatif) : fusion par date, une entrée invalide est ignorée.
     poids_in = data.get("poids")
     if isinstance(poids_in, list):

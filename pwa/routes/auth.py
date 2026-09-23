@@ -124,6 +124,10 @@ def set_session():
     session.clear()
     session["user_id"] = user_id
     session["email"] = email or ""
+    # Jeton CSRF posé dès la connexion : toute session authentifiée en a un,
+    # donc aucune requête mutante n'a besoin d'être exemptée (cf. app.py).
+    import secrets as _secrets
+    session["_csrf"] = _secrets.token_urlsafe(32)
     session.permanent = True
     return jsonify({"ok": True, "user_id": user_id})
 

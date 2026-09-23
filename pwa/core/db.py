@@ -15,14 +15,49 @@ import os
 import json
 import logging
 import time
+import uuid
 from collections import OrderedDict
 from typing import Optional
 
 from supabase import create_client, Client
 
-from core.dates import continuous_week, week_range
+from core.dates import continuous_week
+from core.muscu import parse_rpe
 
 logger = logging.getLogger(__name__)
+
+# Taille de page PostgREST : Supabase plafonne chaque réponse à `max-rows`
+# (1 000 par défaut) SANS erreur. Toute lecture potentiellement longue passe
+# par _fetch_all() qui enchaîne les pages jusqu'à épuisement.
+_PAGE = 1000
+
+
+def _fetch_all(build) -> list:
+    """`build()` renvoie une requête select prête (filtres + tri). On la
+    ré-exécute par tranches de _PAGE lignes via .range() jusqu'à recevoir une
+    page incomplète. Sans .range() (client minimal), une seule exécution."""
+    out: list = []
+    start = 0
+    while True:
+        q = build()
+        paged = hasattr(q, "range")
+        if paged:
+            q = q.range(start, start + _PAGE - 1)
+        resp = q.execute()
+        rows = resp.data or []
+        out.extend(rows)
+        if not paged or len(rows) < _PAGE:
+            return out
+        start += _PAGE
+
+
+# Identifiant de séance : dérivé de (user, date, nom de séance) → stable,
+# sans lecture préalable, et partagé par toutes les séries d'une même séance.
+_SESSION_NS = uuid.UUID("7f2b6d1e-9c4a-4b3e-8a6f-0d5e2c1b7a90")
+
+
+def session_id_for(user_id: str, date_str: str, seance: str) -> str:
+    return str(uuid.uuid5(_SESSION_NS, f"{user_id}|{date_str}|{seance}"))
 
 
 def _continuous_week_of(date_str: str):
@@ -70,13 +105,16 @@ def get_client() -> Client:
 _CACHE_MAX = 200
 _data_cache: "OrderedDict[str, dict]" = OrderedDict()
 _TTL = 60.0
+# Le profil porte le tier VIP : TTL court pour qu'un passage PRO (Stripe,
+# admin) se propage vite à toutes les requêtes (cf. FREE_RECHECK_TTL app.py).
+_PROFILE_TTL = 15.0
 
 
-def _cache_get(key: str):
+def _cache_get(key: str, ttl: float | None = None):
     entry = _data_cache.get(key)
     if entry is None:
         return None
-    if (time.time() - entry["ts"]) >= _TTL:
+    if (time.time() - entry["ts"]) >= (ttl or _TTL):
         _data_cache.pop(key, None)
         return None
     _data_cache.move_to_end(key)
@@ -97,8 +135,8 @@ def _cache_invalidate(key: str):
 def clear_user_cache(user_id: str):
     """Invalide explicitement toutes les entrées cache d'un utilisateur.
     Appelé après chaque save réussi pour éviter les séances vides au reload."""
-    _data_cache.pop(f"hist:{user_id}", None)
-    _data_cache.pop(f"prog:{user_id}", None)
+    for prefix in ("hist", "prog", "profile", "onboarding"):
+        _data_cache.pop(f"{prefix}:{user_id}", None)
 
 
 # ────────────────────────────────────────────────────────────
@@ -114,14 +152,12 @@ def get_hist(user_id: str) -> list[dict]:
         return [dict(r) for r in cached]
 
     client = get_client()
-    resp = (
+    rows = _fetch_all(lambda: (
         client.table("history")
         .select("*")
         .eq("user_id", user_id)
         .order("id")
-        .execute()
-    )
-    rows = resp.data or []
+    ))
     cleaned = []
     for r in rows:
         date_str = str(r.get("date") or "")
@@ -131,6 +167,11 @@ def get_hist(user_id: str) -> list[dict]:
         week = _continuous_week_of(date_str)
         if week is None:
             week = int(r.get("semaine") or 1)
+        remarque = r.get("remarque") or ""
+        # RPE : colonne dédiée (migration v34) sinon token « @RPE8 » hérité.
+        rpe = r.get("rpe")
+        if rpe is None:
+            rpe = parse_rpe(remarque)
         cleaned.append({
             "Semaine": week,
             "Séance": r.get("seance") or "",
@@ -138,67 +179,105 @@ def get_hist(user_id: str) -> list[dict]:
             "Série": int(r.get("serie") or 1),
             "Reps": int(r.get("reps") or 0),
             "Poids": float(r.get("poids") or 0),
-            "Remarque": r.get("remarque") or "",
+            "Remarque": remarque,
             "Muscle": r.get("muscle") or "",
             "Date": date_str,
+            "RPE": float(rpe) if rpe is not None else None,
         })
     _cache_set(key, cleaned)
     return [dict(r) for r in cleaned]
 
 
 def save_hist(user_id: str, rows: list[dict]):
-    """Réécrit tout l'historique de l'user (équivalent du write-all
-    clear+update du Sheet). Garde une copie de secours en mémoire :
-    si l'insert échoue après le delete, on tente de restaurer l'ancien
-    historique pour éviter une perte de données."""
+    """Réécrit tout l'historique de l'user (import de sauvegarde, reset).
+
+    Ordre volontairement inversé par rapport à un clear+insert : on INSÈRE
+    d'abord les nouvelles lignes, puis on SUPPRIME les anciennes par id. À
+    aucun moment l'historique n'est vide ; si l'insertion échoue, on efface ce
+    qu'on vient d'ajouter et l'ancien historique est intact."""
     client = get_client()
 
-    # 1. Sauvegarde des anciennes données avant suppression
-    backup_resp = (
-        client.table("history")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("id")
-        .execute()
-    )
-    backup_rows = backup_resp.data or []
+    old_ids = [r["id"] for r in _fetch_all(lambda: (
+        client.table("history").select("id").eq("user_id", user_id).order("id")
+    )) if r.get("id") is not None]
 
-    # 2. Delete + re-insert avec rollback en cas d'échec
+    inserted_ids: list = []
     try:
-        client.table("history").delete().eq("user_id", user_id).execute()
         if rows:
             payload = [_row_to_supabase(user_id, r) for r in rows]
             for i in range(0, len(payload), 500):
-                client.table("history").insert(payload[i:i + 500]).execute()
+                resp = _insert_history(client, payload[i:i + 500])
+                inserted_ids.extend(x["id"] for x in (resp.data or []) if x.get("id") is not None)
     except Exception as e:
-        logger.error("save_hist FAILED user=%s: %s", user_id, e)
+        logger.error("save_hist insert FAILED user=%s: %s", user_id, e)
         try:
-            if backup_rows:
-                for i in range(0, len(backup_rows), 500):
-                    client.table("history").insert(backup_rows[i:i + 500]).execute()
-                logger.info("save_hist rollback ok user=%s rows=%d", user_id, len(backup_rows))
-            else:
-                logger.info("save_hist rollback: backup empty user=%s", user_id)
+            _delete_history_ids(client, inserted_ids)
         except Exception as e2:
-            logger.error("save_hist rollback FAILED user=%s: %s", user_id, e2)
+            logger.error("save_hist cleanup FAILED user=%s: %s", user_id, e2)
         raise
 
+    _delete_history_ids(client, old_ids)
     _cache_invalidate(f"hist:{user_id}")
+
+
+def _delete_history_ids(client, ids: list) -> None:
+    """Supprime des lignes history par id, par paquets (longueur d'URL)."""
+    for i in range(0, len(ids), 200):
+        chunk = ids[i:i + 200]
+        if not chunk:
+            continue
+        q = client.table("history").delete()
+        if hasattr(q, "in_"):
+            q.in_("id", chunk).execute()
+        else:  # client minimal sans in_() : un delete par id
+            for _id in chunk:
+                client.table("history").delete().eq("id", _id).execute()
+
+
+# Colonnes ajoutées par la migration v34 (history.session_id, history.rpe).
+# Tant qu'elle n'est pas appliquée, l'insert les refuse : on les retire et on
+# réessaie, puis on s'en souvient pour ce process.
+_HIST_EXT_COLS = ("session_id", "rpe")
+_hist_ext_supported = True
+
+
+def _insert_history(client, payload: list[dict]):
+    global _hist_ext_supported
+    if not _hist_ext_supported:
+        payload = [{k: v for k, v in p.items() if k not in _HIST_EXT_COLS} for p in payload]
+        return client.table("history").insert(payload).execute()
+    try:
+        return client.table("history").insert(payload).execute()
+    except Exception as e:
+        msg = str(e).lower()
+        if not any(c in msg for c in _HIST_EXT_COLS):
+            raise
+        logger.warning("history: colonnes v34 absentes (%s) — insert sans session_id/rpe", e)
+        _hist_ext_supported = False
+        stripped = [{k: v for k, v in p.items() if k not in _HIST_EXT_COLS} for p in payload]
+        return client.table("history").insert(stripped).execute()
 
 
 def _row_to_supabase(user_id: str, r: dict) -> dict:
     date_val = r.get("Date")
+    remarque = r.get("Remarque") or ""
+    rpe = r.get("RPE")
+    if rpe is None:
+        rpe = parse_rpe(remarque)
+    seance = r.get("Séance") or ""
     return {
         "user_id": user_id,
         "semaine": int(r.get("Semaine") or 1),
-        "seance": r.get("Séance") or "",
+        "seance": seance,
         "exercice": r.get("Exercice") or "",
         "serie": int(r.get("Série") or 1),
         "reps": int(r.get("Reps") or 0),
         "poids": float(r.get("Poids") or 0),
-        "remarque": r.get("Remarque") or "",
+        "remarque": remarque,
         "muscle": r.get("Muscle") or "",
         "date": date_val if date_val else None,
+        "session_id": session_id_for(user_id, str(date_val or ""), seance) if date_val else None,
+        "rpe": float(rpe) if rpe is not None else None,
     }
 
 
@@ -248,6 +327,61 @@ def get_prog(user_id: str) -> dict:
         _cache_set(key, cached)
     _remember_base(user_id, cached["data"], cached["version"])
     return _copy(cached["data"])
+
+
+# ────────────────────────────────────────────────────────────
+# Corps du programme vs données personnelles
+# ────────────────────────────────────────────────────────────
+# `programs.data` mélange DEUX choses : le programme lui-même (séances,
+# planning, dossiers…) et des données personnelles rangées là faute de table
+# dédiée (badges, record de streak, exos perso, défis…).
+#
+# Cinq chemins réécrivaient ce blob en repartant de zéro avec une liste
+# blanche des clés à conserver — listes divergentes, donc perte silencieuse
+# de tout ce qui n'y figurait pas (bilans, badges, exos perso, record…).
+#
+# Désormais un seul sens de lecture : `PROG_BODY_KEYS` décrit ce qui APPARTIENT
+# au programme (donc remplaçable) ; tout le reste est personnel et survit
+# toujours. Une nouvelle clé personnelle n'a rien à déclarer : elle est
+# conservée par défaut.
+PROG_BODY_KEYS = frozenset({
+    "_planning",       # jour de semaine → nom de séance
+    "_name",           # nom du programme
+    "_origin",         # id catalogue d'origine
+    "_programmes",     # dossiers de programmes
+    "_seance_prog",    # séance → dossier
+    "_cardio",         # cardio planifié (générateur IA)
+    "_started_at",     # date de départ du programme
+    "_jours",          # legacy : jours par séance
+    "_reps_hint",      # legacy : indices de reps catalogue
+})
+
+
+def replace_program_body(old: dict, body: dict) -> dict:
+    """Programme complet = nouveau corps + données personnelles de `old`.
+
+    `body` contient les séances (clés sans underscore) et les clés de
+    PROG_BODY_KEYS qu'il veut poser ; les clés de `body` absentes de
+    PROG_BODY_KEYS et commençant par « _ » sont refusées (un appelant ne
+    doit pas écraser une donnée perso par ce chemin).
+    """
+    out: dict = {}
+    # 1. Données personnelles de l'ancien programme (tout ce qui n'est ni une
+    #    séance ni une clé de corps) — conservées telles quelles.
+    for k, v in (old or {}).items():
+        if k.startswith("_") and k not in PROG_BODY_KEYS:
+            out[k] = v
+    # 2. Nouveau corps : séances d'abord (l'ordre du dict = ordre d'affichage).
+    for k, v in (body or {}).items():
+        if not k.startswith("_"):
+            out[k] = v
+    for k, v in (body or {}).items():
+        if k.startswith("_"):
+            if k in PROG_BODY_KEYS:
+                out[k] = v
+            else:
+                logger.warning("replace_program_body: clé personnelle '%s' ignorée", k)
+    return out
 
 
 def _merge_prog(base: dict, ours: dict, theirs: dict, path: str = "") -> dict:
@@ -334,44 +468,42 @@ def save_prog(user_id: str, prog_dict: dict):
 # ────────────────────────────────────────────────────────────
 # Opérations ciblées (remplacement de ligne par exercice / date)
 # ────────────────────────────────────────────────────────────
+# Une séance = (user, DATE, nom de séance). Le ciblage se fait par date exacte :
+# l'ancien ciblage par plage de semaine effaçait la séance du lundi quand on
+# enregistrait la même séance le vendredi (Full Body A/B, 5×5, PPL 5-6 j…).
 
-def _week_bounds(date_str: str):
-    """(lundi, dimanche) ISO de la semaine contenant date_str.
-    Lève ValueError si la date est invalide — les appelants passent toujours
-    une date déjà validée par les routes."""
-    return week_range(_dt.date.fromisoformat(str(date_str)[:10]))
+def _norm_date(date_str: str) -> str:
+    """YYYY-MM-DD validé — lève ValueError si invalide (les routes valident
+    en amont, ceci est un garde-fou)."""
+    return _dt.date.fromisoformat(str(date_str)[:10]).isoformat()
 
 
 def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
-    """Supprime les lignes d'un (semaine-de-date, séance, exercice) précis et
-    réinsère les nouvelles lignes. Le ciblage de la semaine se fait par PLAGE
-    DE DATES (lun→dim) et non par la colonne `semaine` stockée : celle-ci
-    contient des n° ISO historiques qui recommencent chaque année."""
-    monday, sunday = _week_bounds(date_str)
+    """Remplace les séries d'un exercice pour UNE séance (date + nom) :
+    supprime les lignes existantes de cette date puis insère les nouvelles."""
+    date_str = _norm_date(date_str)
     client = get_client()
     (
         client.table("history").delete()
         .eq("user_id", user_id)
-        .gte("date", monday)
-        .lte("date", sunday)
+        .eq("date", date_str)
         .eq("seance", seance)
         .eq("exercice", exercice)
         .execute()
     )
     if new_rows:
-        payload = [_row_to_supabase(user_id, r) for r in new_rows]
-        client.table("history").insert(payload).execute()
+        payload = [_row_to_supabase(user_id, {**r, "Date": date_str}) for r in new_rows]
+        _insert_history(client, payload)
     _cache_invalidate(f"hist:{user_id}")
 
 
 def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str):
-    monday, sunday = _week_bounds(date_str)
+    date_str = _norm_date(date_str)
     client = get_client()
     (
         client.table("history").delete()
         .eq("user_id", user_id)
-        .gte("date", monday)
-        .lte("date", sunday)
+        .eq("date", date_str)
         .eq("seance", seance)
         .eq("exercice", exercice)
         .execute()
@@ -380,17 +512,39 @@ def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str):
 
 
 def delete_session_rows(user_id: str, date_str: str, seance: str):
-    monday, sunday = _week_bounds(date_str)
+    date_str = _norm_date(date_str)
     client = get_client()
     (
         client.table("history").delete()
         .eq("user_id", user_id)
-        .gte("date", monday)
-        .lte("date", sunday)
+        .eq("date", date_str)
         .eq("seance", seance)
         .execute()
     )
     _cache_invalidate(f"hist:{user_id}")
+
+
+def rename_exercise_rows(user_id: str, old_names: list[str], new_name: str,
+                         muscle: str | None = None) -> int:
+    """Renomme un exercice dans tout l'historique par UPDATE ciblé (plus de
+    réécriture complète de la table). Retourne le nombre de lignes touchées."""
+    client = get_client()
+    payload = {"exercice": new_name}
+    if muscle:
+        payload["muscle"] = muscle
+    count = 0
+    for old in old_names:
+        if not old or old == new_name:
+            continue
+        resp = (
+            client.table("history").update(payload)
+            .eq("user_id", user_id)
+            .eq("exercice", old)
+            .execute()
+        )
+        count += len(resp.data or [])
+    _cache_invalidate(f"hist:{user_id}")
+    return count
 
 
 def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: str):
@@ -418,7 +572,7 @@ def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: 
         "Muscle": "Autre",
         "Date": date_str,
     }
-    client.table("history").insert(_row_to_supabase(user_id, row)).execute()
+    _insert_history(client, [_row_to_supabase(user_id, row)])
     _cache_invalidate(f"hist:{user_id}")
 
 
@@ -427,6 +581,13 @@ def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: 
 # ────────────────────────────────────────────────────────────
 
 def get_profile(user_id: str) -> dict:
+    """Profil (tier, prénom, poids, quotas…). Cache court (_PROFILE_TTL) :
+    lu par before_request à chaque requête d'un FREE + par la plupart des
+    pages — sans cache c'était un aller-retour Supabase par appel."""
+    key = f"profile:{user_id}"
+    cached = _cache_get(key, _PROFILE_TTL)
+    if cached is not None:
+        return dict(cached)
     client = get_client()
     resp = (
         client.table("profiles")
@@ -435,16 +596,23 @@ def get_profile(user_id: str) -> dict:
         .maybe_single()
         .execute()
     )
-    return (resp.data if resp else None) or {}
+    data = (resp.data if resp else None) or {}
+    _cache_set(key, data)
+    return dict(data)
+
+
+def _profile_upsert(user_id: str, payload: dict) -> None:
+    """Toute écriture de profil passe ici : upsert + invalidation du cache."""
+    client = get_client()
+    client.table("profiles").upsert({"id": user_id, **payload}).execute()
+    _cache_invalidate(f"profile:{user_id}")
 
 
 def save_profile(user_id: str, fields: dict):
     """Upsert sur public.profiles (id = user_id). Phase 4 : doit pouvoir
     créer la row si elle n'existe pas encore (nouveau user qui passe
     l'onboarding pour la première fois)."""
-    client = get_client()
-    payload = {"id": user_id, **fields}
-    client.table("profiles").upsert(payload).execute()
+    _profile_upsert(user_id, fields)
 
 
 # ────────────────────────────────────────────────────────────
@@ -452,7 +620,12 @@ def save_profile(user_id: str, fields: dict):
 # ────────────────────────────────────────────────────────────
 
 def get_onboarding(user_id: str) -> dict:
-    """Retourne la row onboarding de l'user, ou {} si jamais complétée."""
+    """Retourne la row onboarding de l'user, ou {} si jamais complétée.
+    Cache 60 s (ne change qu'au (re)onboarding)."""
+    key = f"onboarding:{user_id}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return dict(cached)
     client = get_client()
     resp = (
         client.table("onboarding")
@@ -461,7 +634,9 @@ def get_onboarding(user_id: str) -> dict:
         .maybe_single()
         .execute()
     )
-    return (resp.data if resp else None) or {}
+    data = (resp.data if resp else None) or {}
+    _cache_set(key, data)
+    return dict(data)
 
 
 def save_onboarding(user_id: str, fields: dict):
@@ -470,6 +645,7 @@ def save_onboarding(user_id: str, fields: dict):
     client = get_client()
     payload = {"user_id": user_id, **fields}
     client.table("onboarding").upsert(payload).execute()
+    _cache_invalidate(f"onboarding:{user_id}")
 
 
 # ────────────────────────────────────────────────────────────
@@ -593,8 +769,7 @@ def set_user_tier(user_id: str, tier: str) -> None:
     """Upsert profiles.tier pour un user. tier ∈ {'free', 'vip'}."""
     if tier not in ("free", "vip"):
         raise ValueError(f"tier invalide: {tier}")
-    client = get_client()
-    client.table("profiles").upsert({"id": user_id, "tier": tier}).execute()
+    _profile_upsert(user_id, {"tier": tier})
 
 
 # ── Stripe (abonnements Premium) ─────────────────────────────────
@@ -604,10 +779,7 @@ def set_stripe_customer(user_id: str, customer_id: str) -> None:
     profiles.stripe_customer_id (migration v27)."""
     if not customer_id:
         return
-    client = get_client()
-    client.table("profiles").upsert(
-        {"id": user_id, "stripe_customer_id": customer_id}
-    ).execute()
+    _profile_upsert(user_id, {"stripe_customer_id": customer_id})
 
 
 def get_user_by_stripe_customer(customer_id: str) -> Optional[str]:
@@ -662,7 +834,7 @@ def get_or_create_referral_code(user_id: str) -> str:
     import base64 as _b64
     code = _b64.b32encode(digest).decode("ascii").rstrip("=").lower()[:8]
     try:
-        client.table("profiles").upsert({"id": user_id, "referral_code": code}).execute()
+        _profile_upsert(user_id, {"referral_code": code})
     except Exception as e:
         logger.error("get_or_create_referral_code write FAILED user=%s: %s", user_id, e)
     return code
@@ -685,8 +857,7 @@ def get_user_by_referral_code(code: str) -> Optional[str]:
 
 def set_referred_by(user_id: str, referrer_id: str) -> None:
     """Mémorise le parrain d'un filleul (posé une seule fois côté appelant)."""
-    client = get_client()
-    client.table("profiles").upsert({"id": user_id, "referred_by": referrer_id}).execute()
+    _profile_upsert(user_id, {"referred_by": referrer_id})
 
 
 def grant_vip_days(user_id: str, days: int) -> None:
@@ -709,7 +880,7 @@ def grant_vip_days(user_id: str, days: int) -> None:
     except Exception as e:
         logger.error("grant_vip_days read FAILED user=%s: %s", user_id, e)
     new_until = (base + _dt.timedelta(days=int(days))).isoformat()
-    client.table("profiles").upsert({"id": user_id, "vip_until": new_until}).execute()
+    _profile_upsert(user_id, {"vip_until": new_until})
 
 
 def count_referrals(user_id: str) -> int:
@@ -750,11 +921,16 @@ def save_push_subscription(user_id: str, sub: dict) -> None:
     ).execute()
 
 
-def delete_push_subscription(endpoint: str) -> None:
+def delete_push_subscription(endpoint: str, user_id: str | None = None) -> None:
+    """Supprime un abonnement par endpoint. Avec `user_id` (route utilisateur),
+    on ne peut supprimer que les siens ; sans (cron : abonnement mort), libre."""
     if not endpoint:
         return
     client = get_client()
-    client.table("push_subscriptions").delete().eq("endpoint", endpoint).execute()
+    q = client.table("push_subscriptions").delete().eq("endpoint", endpoint)
+    if user_id:
+        q = q.eq("user_id", user_id)
+    q.execute()
 
 
 def _row_to_subscription(row: dict) -> dict:
@@ -788,8 +964,7 @@ def set_newsletter_optin(user_id: str, opt_in: bool, email: str = "") -> None:
         # On garde la date/e-mail tels quels en cas de retrait (historique) —
         # seul le flag passe à false : on n'enverra plus rien.
         pass
-    client = get_client()
-    client.table("profiles").upsert(payload).execute()
+    _profile_upsert(user_id, payload)
 
 
 def list_newsletter_emails() -> list[str]:
@@ -813,47 +988,94 @@ def list_newsletter_emails() -> list[str]:
     return seen
 
 
-def get_inactive_user_ids(min_days: int = 3, max_days: int = 30) -> set:
-    """user_id dont la dernière séance (perf réelle) remonte à entre `min_days`
-    et `max_days` jours — cibles de relance (ni actifs, ni partis depuis trop
-    longtemps). Exclut les comptes sans historique."""
-    import datetime as _dt
+def _last_activity_by_user() -> dict:
+    """{user_id: 'YYYY-MM-DD' de la dernière perf réelle}. Lit la vue SQL
+    `user_last_activity` (migration v34) — un seul agrégat côté base — et
+    retombe sur un parcours paginé de `history` si la vue est absente/vide."""
     client = get_client()
+    out: dict = {}
     try:
-        resp = client.table("history").select("user_id, date, reps, poids").execute()
-        rows = resp.data or []
+        resp = client.table("user_last_activity").select("user_id, last_date").execute()
+        for r in (resp.data or []):
+            uid, d = r.get("user_id"), str(r.get("last_date") or "")[:10]
+            if uid and d:
+                out[uid] = d
     except Exception as e:
-        logger.error("get_inactive_user_ids FAILED: %s", e)
-        return set()
-    last_by_user: dict = {}
+        logger.info("user_last_activity indisponible (%s) — repli sur history", e)
+    if out:
+        return out
+    rows = _fetch_all(lambda: (
+        client.table("history").select("user_id, date, reps, poids").order("id")
+    ))
     for r in rows:
         if int(r.get("reps") or 0) <= 0 and float(r.get("poids") or 0) <= 0:
             continue
         uid = r.get("user_id")
         d = str(r.get("date") or "")[:10]
-        if uid and d and d > last_by_user.get(uid, ""):
-            last_by_user[uid] = d
+        if uid and d and d > out.get(uid, ""):
+            out[uid] = d
+    return out
+
+
+def get_inactive_user_ids(min_days: int = 3, max_days: int = 30) -> set:
+    """user_id dont la dernière séance (perf réelle) remonte à entre `min_days`
+    et `max_days` jours — cibles de relance (ni actifs, ni partis depuis trop
+    longtemps). Exclut les comptes sans historique."""
+    try:
+        last_by_user = _last_activity_by_user()
+    except Exception as e:
+        logger.error("get_inactive_user_ids FAILED: %s", e)
+        return set()
     today = _dt.date.today()
     lo = (today - _dt.timedelta(days=max_days)).isoformat()
     hi = (today - _dt.timedelta(days=min_days)).isoformat()
     return {uid for uid, last in last_by_user.items() if lo <= last <= hi}
 
 
-def list_push_subscriptions_for_users(user_ids: set) -> list[tuple]:
-    """[(user_id, subscription_dict), …] pour un ensemble d'users (envoi groupé)."""
+def list_push_subscriptions_for_users(user_ids: set) -> list[dict]:
+    """Abonnements push des users donnés : [{user_id, sub, endpoint,
+    last_reactivation_at, reactivation_count}]. Les deux derniers champs
+    (migration v34) servent au dédoublonnage des relances ; absents = jamais
+    relancé."""
     if not user_ids:
         return []
     client = get_client()
     try:
-        resp = client.table("push_subscriptions").select("*").execute()
+        rows = _fetch_all(lambda: client.table("push_subscriptions").select("*").order("id"))
         out = []
-        for r in (resp.data or []):
+        for r in rows:
             if r.get("user_id") in user_ids:
-                out.append((r.get("user_id"), _row_to_subscription(r)))
+                out.append({
+                    "user_id": r.get("user_id"),
+                    "endpoint": r.get("endpoint"),
+                    "sub": _row_to_subscription(r),
+                    "last_reactivation_at": r.get("last_reactivation_at"),
+                    "reactivation_count": int(r.get("reactivation_count") or 0),
+                })
         return out
     except Exception as e:
         logger.error("list_push_subscriptions_for_users FAILED: %s", e)
         return []
+
+
+def mark_reactivation_sent(endpoint: str, count: int) -> None:
+    """Mémorise l'envoi d'une relance sur un abonnement (colonnes v34).
+    Best-effort : sans la migration, l'update échoue et on continue."""
+    if not endpoint:
+        return
+    client = get_client()
+    try:
+        (
+            client.table("push_subscriptions")
+            .update({
+                "last_reactivation_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+                "reactivation_count": int(count),
+            })
+            .eq("endpoint", endpoint)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning("mark_reactivation_sent FAILED (migration v34 ?): %s", e)
 
 
 def list_coach_messages(user_id: str, conversation_id: str | None = None,
@@ -976,8 +1198,9 @@ def get_admin_stats() -> dict:
     import datetime as _dt
     client = get_client()
     try:
-        resp = client.table("history").select("user_id, date, seance, reps, poids").execute()
-        rows = resp.data or []
+        rows = _fetch_all(lambda: (
+            client.table("history").select("user_id, date, seance, reps, poids").order("id")
+        ))
     except Exception as e:
         logger.error("get_admin_stats FAILED: %s", e)
         return {"total_rows": 0, "total_tonnage": 0, "total_seances": 0, "active_7d": 0, "active_30d": 0}
@@ -1176,8 +1399,7 @@ def get_user_details(user_id: str) -> dict:
 
 def reset_user_coach_quota(user_id: str) -> None:
     """Remet à 0 le quota coach IA du jour pour un user (admin)."""
-    client = get_client()
-    client.table("profiles").upsert({"id": user_id, "coach_quota_count": 0}).execute()
+    _profile_upsert(user_id, {"coach_quota_count": 0})
 
 
 def auth_user_exists(user_id: str) -> bool:
@@ -1214,6 +1436,8 @@ def delete_user_account(user_id: str) -> None:
         ("coach_messages", "user_id"),
         ("nutrition", "user_id"),
         ("body_weight", "user_id"),
+        ("session_notes", "user_id"),
+        ("push_subscriptions", "user_id"),
         ("history", "user_id"),
         ("programs", "user_id"),
         ("onboarding", "user_id"),
@@ -1228,6 +1452,64 @@ def delete_user_account(user_id: str) -> None:
     clear_user_cache(user_id)
     # Compte auth Supabase (Google OAuth) — en dernier.
     client.auth.admin.delete_user(user_id)
+
+
+# ────────────────────────────────────────────────────────────
+# Bilans de séance (migration v34 : table session_notes, une ligne par
+# (user, date, séance)). Avant la migration, les bilans vivaient dans
+# programs.data["_session_notes"] avec une purge à 84 jours — l'appelant
+# (routes/seance.py) garde ce repli si la table est absente.
+# ────────────────────────────────────────────────────────────
+
+def upsert_session_note(user_id: str, date_str: str, seance: str,
+                        rating: int | None, comment: str | None) -> None:
+    client = get_client()
+    client.table("session_notes").upsert({
+        "user_id": user_id,
+        "date": _norm_date(date_str),
+        "seance": seance,
+        "rating": int(rating) if rating else None,
+        "comment": (comment or "")[:500] or None,
+        "updated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+    }, on_conflict="user_id,date,seance").execute()
+
+
+def get_session_note(user_id: str, date_str: str, seance: str) -> dict | None:
+    """{rating, comment, ts} ou None. Lève si la table est absente (repli
+    géré par l'appelant)."""
+    client = get_client()
+    resp = (
+        client.table("session_notes")
+        .select("rating, comment, updated_at")
+        .eq("user_id", user_id)
+        .eq("date", _norm_date(date_str))
+        .eq("seance", seance)
+        .limit(1)
+        .execute()
+    )
+    rows = resp.data or []
+    if not rows:
+        return None
+    r = rows[0]
+    out = {"ts": str(r.get("updated_at") or "")[:16].replace("T", " ")}
+    if r.get("rating"):
+        out["rating"] = int(r["rating"])
+    if r.get("comment"):
+        out["comment"] = r["comment"]
+    return out
+
+
+def list_session_notes(user_id: str) -> list[dict]:
+    """Tous les bilans de l'user (export, stats) : [{date, seance, rating, comment}]."""
+    client = get_client()
+    rows = _fetch_all(lambda: (
+        client.table("session_notes")
+        .select("date, seance, rating, comment")
+        .eq("user_id", user_id)
+        .order("date")
+    ))
+    return [{"date": str(r.get("date") or "")[:10], "seance": r.get("seance") or "",
+             "rating": r.get("rating"), "comment": r.get("comment")} for r in rows]
 
 
 def sum_nutrition_day(user_id: str, date_str: str) -> dict:

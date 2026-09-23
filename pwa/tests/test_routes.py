@@ -103,9 +103,9 @@ def test_derniere_fois_traverse_le_nouvel_an(fake_db, logged_in):
     assert "80kg" in html  # last_summary "80kg × 8" injecté dans le payload exo
 
 
-def test_save_exo_remplace_les_lignes_legacy_meme_semaine(fake_db, logged_in):
-    """Le remplacement d'un exo cible la semaine PAR DATES : une ligne écrite
-    avant la migration (semaine stockée = n° ISO) doit quand même être
+def test_save_exo_remplace_les_lignes_du_meme_jour(fake_db, logged_in):
+    """Le remplacement d'un exo cible la DATE exacte : une ligne écrite avant
+    la migration (semaine stockée = n° ISO) et datée du même jour doit être
     remplacée, pas dupliquée."""
     from core.dates import continuous_week
     _seed_prog(fake_db)
@@ -136,12 +136,16 @@ def test_save_exo_remplace_les_lignes_legacy_meme_semaine(fake_db, logged_in):
     assert sorted(row["poids"] for row in rows) == [82.5, 85.0]
 
 
-def test_reset_exo_supprime_aussi_les_lignes_legacy(fake_db, logged_in):
+def test_reset_exo_ne_touche_que_la_seance_du_jour(fake_db, logged_in):
+    """« Recommencer cet exercice » efface les séries de CE jour uniquement.
+
+    Une séance du même nom faite un autre jour de la semaine (Full Body A le
+    lundi ET le vendredi, PPL 5-6 j, 5×5…) est une séance distincte : elle doit
+    survivre. L'ancien ciblage par plage de semaine la supprimait aussi."""
     _seed_prog(fake_db)
-    _hist_row(fake_db, MONDAY_W02, semaine=2)          # legacy ISO
-    _hist_row(fake_db, MONDAY_W02 + dt.timedelta(days=1), serie=2, semaine=2)
-    # Une perf d'une AUTRE semaine ne doit pas être touchée.
-    _hist_row(fake_db, MONDAY_W51, serie=1, semaine=51)
+    _hist_row(fake_db, MONDAY_W02, semaine=2)                              # ce jour
+    _hist_row(fake_db, MONDAY_W02 + dt.timedelta(days=4), serie=1, semaine=2)  # vendredi
+    _hist_row(fake_db, MONDAY_W51, serie=1, semaine=51)                    # autre semaine
 
     r = logged_in.post("/seance/reset-exo", data={
         "_csrf": CSRF,
@@ -153,10 +157,12 @@ def test_reset_exo_supprime_aussi_les_lignes_legacy(fake_db, logged_in):
         "name": "Push",
     })
     assert r.status_code == 302
-    remaining = [row for row in fake_db.tables["history"]
-                 if row["exercice"] == "Développé couché"]
-    assert len(remaining) == 1
-    assert remaining[0]["date"] == MONDAY_W51.isoformat()
+    remaining = sorted(row["date"] for row in fake_db.tables["history"]
+                       if row["exercice"] == "Développé couché")
+    assert remaining == sorted([
+        (MONDAY_W02 + dt.timedelta(days=4)).isoformat(),
+        MONDAY_W51.isoformat(),
+    ])
 
 
 def test_streak_traverse_le_nouvel_an(fake_db, logged_in):
@@ -196,7 +202,21 @@ def _finish(client, **extra):
 
 
 def _prog_notes(fake):
-    return (fake.tables["programs"][0]["data"].get("_session_notes") or {})
+    """Bilans de séance, au format historique {« Séance|date »: {...}}.
+
+    Ils vivent désormais dans la table `session_notes` (migration v34) ; on
+    les reprojette ici pour garder ces tests lisibles."""
+    out = {}
+    for r in fake.tables.get("session_notes", []):
+        note = {"ts": str(r.get("updated_at") or "")[:16]}
+        if r.get("rating"):
+            note["rating"] = int(r["rating"])
+        if r.get("comment"):
+            note["comment"] = r["comment"]
+        out[f"{r.get('seance')}|{r.get('date')}"] = note
+    for k, v in (fake.tables["programs"][0]["data"].get("_session_notes") or {}).items():
+        out.setdefault(k, v)
+    return out
 
 
 def test_finish_enregistre_note_et_commentaire(fake_db, logged_in):
@@ -861,11 +881,17 @@ def test_cron_reactivation_runs_with_secret(client, monkeypatch):
     monkeypatch.setenv("CRON_SECRET", "s3cret")
     monkeypatch.setattr(core_push, "run_reactivation_push",
                         lambda **k: {"ok": True, "sent": 2, "expired": 1, "errors": 0, "targets": 3})
-    # Le secret passe aussi via ?token= (schedulers qui ne posent pas d'en-tête).
-    r = client.post("/tasks/reactivation?token=s3cret")
+    r = client.post("/tasks/reactivation", headers={"X-Cron-Secret": "s3cret"})
     assert r.status_code == 200
     data = json.loads(r.data)
     assert data["sent"] == 2 and data["targets"] == 3
+
+
+def test_cron_reactivation_refuse_le_secret_en_query_string(client, monkeypatch):
+    """Un secret en ?token= finirait dans les logs d'accès : refusé."""
+    monkeypatch.setenv("CRON_SECRET", "s3cret")
+    r = client.post("/tasks/reactivation?token=s3cret")
+    assert r.status_code == 401
 
 
 def test_newsletter_optin_saves_consent(fake_db, logged_in):

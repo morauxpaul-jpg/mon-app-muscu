@@ -25,15 +25,16 @@ bp = Blueprint("push", __name__)
 def _cron_authorized() -> bool:
     """Vrai si la requête porte le secret cron (env CRON_SECRET).
 
-    Le secret est accepté via l'en-tête `X-Cron-Secret` ou le paramètre `?token=`
-    (certains schedulers ne savent envoyer que des query params). Comparaison à
-    temps constant. Si CRON_SECRET n'est pas configuré, l'endpoint est fermé.
+    Le secret est accepté via l'en-tête `X-Cron-Secret` UNIQUEMENT (une query
+    string finit dans les logs d'accès). Comparaison à temps constant. Si
+    CRON_SECRET n'est pas configuré, l'endpoint est fermé.
     """
     expected = (os.getenv("CRON_SECRET", "") or "").strip()
     if not expected:
         return False
-    provided = (request.headers.get("X-Cron-Secret")
-                or request.args.get("token") or "").strip()
+    # En-tête uniquement : un secret passé en query string se retrouve dans
+    # les logs d'accès de l'hébergeur et dans les referrers.
+    provided = (request.headers.get("X-Cron-Secret") or "").strip()
     return bool(provided) and hmac.compare_digest(provided, expected)
 
 
@@ -62,7 +63,8 @@ def subscribe():
 def unsubscribe():
     endpoint = (request.get_json(silent=True) or {}).get("endpoint") or ""
     try:
-        core_db.delete_push_subscription(endpoint)
+        # Scopé au propriétaire : on ne peut désabonner que ses propres appareils.
+        core_db.delete_push_subscription(endpoint, user_id=g.user_id)
     except Exception as e:
         logger.error("/push/unsubscribe FAILED: %s", e)
     return ("", 204)
@@ -76,7 +78,7 @@ def cron_reactivation():
     Pas de session — sécurisé par CRON_SECRET (en-tête X-Cron-Secret ou ?token=).
     Public + exempté de CSRF (cf. app.py _PUBLIC_PATHS / _CSRF_EXEMPT_PATHS).
     À appeler par un scheduler externe (Railway cron, cron-job.org, GitHub Actions)
-    une fois par jour, p. ex. :  curl -X POST -H "X-Cron-Secret: …" https://…/tasks/reactivation
+    une fois par jour :  curl -X POST -H "X-Cron-Secret: …" https://…/tasks/reactivation
     """
     if not _cron_authorized():
         return jsonify({"error": "unauthorized"}), 401

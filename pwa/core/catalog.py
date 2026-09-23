@@ -35,8 +35,9 @@ def planning_for(freq: int, seance_names: list[str]) -> dict:
 
 
 # ── Exercices d'un programme (format dict) ───────────────────────────
-def _ex(name, sets, muscle, reps_hint="8-12"):
-    return {"name": name, "sets": sets, "muscle": muscle, "_reps_hint": reps_hint}
+def _ex(name, sets, muscle, reps_hint="8-12", rest=90):
+    return {"name": name, "sets": sets, "muscle": muscle,
+            "_reps_hint": reps_hint, "_rest": rest}
 
 
 # ── Catalogue ────────────────────────────────────────────────────────
@@ -914,7 +915,8 @@ def list_programs(is_vip: bool = True) -> list[dict]:
             seances_preview.append({
                 "name": sname,
                 "exercises": [
-                    {"name": e["name"], "sets": e["sets"], "muscle": e["muscle"]}
+                    {"name": e["name"], "sets": e["sets"], "muscle": e["muscle"],
+                     "reps": e.get("_reps_hint") or ""}
                     for e in exos
                 ],
             })
@@ -1089,7 +1091,7 @@ def build_program(prog_id: str, frequence: int, equipment: list[str] | None = No
         seance_names = catalog_seance_names
 
     prog: dict = {}
-    # Copie des séances (retire le _reps_hint qui reste côté catalogue)
+    # Copie des séances (les cibles _reps_hint/_rest deviennent reps/rest_seconds)
     for seance_name in seance_names:
         exos = src["seances"][seance_name]
         built_exos = []
@@ -1102,7 +1104,11 @@ def build_program(prog_id: str, frequence: int, equipment: list[str] | None = No
                 alt = EXERCISE_SUBSTITUTIONS.get(name)
                 if alt:
                     name = alt
-            built_exos.append({"name": name, "sets": sets, "muscle": muscle})
+            # reps + repos conservés : ce sont les cibles affichées en séance.
+            built_exos.append({
+                "name": name, "sets": sets, "muscle": muscle,
+                "reps": e.get("_reps_hint") or "", "rest_seconds": int(e.get("_rest") or 90),
+            })
         prog[seance_name] = built_exos
 
     prog["_planning"] = planning_for(freq_eff, seance_names)

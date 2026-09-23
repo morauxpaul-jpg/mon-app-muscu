@@ -13,7 +13,7 @@ from flask import (
     Blueprint, render_template, request, redirect, url_for, send_file, jsonify, g
 )
 
-from core.data import get_prog, save_prog, get_onboarding
+from core.data import get_prog, save_prog, save_prog_body, get_onboarding
 from core.dates import DAYS_FR
 from core.muscu import auto_muscles
 from core import catalog
@@ -27,6 +27,24 @@ MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Ava
                "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
 
 EXPORT_FORMAT = "muscutracker_program_v1"
+
+
+def _exo_entry(name, sets, muscle, src=None):
+    """Entrée d'exercice normalisée. `reps` (fourchette cible, ex. « 8-12 ») et
+    `rest_seconds` viennent du catalogue / du générateur / de l'éditeur ; ils
+    sont conservés à chaque réécriture (sans eux, un programme n'est plus une
+    prescription mais une simple liste de noms)."""
+    src = src or {}
+    reps = str(src.get("reps") or "").strip()[:20]
+    try:
+        rest = int(src.get("rest_seconds") or 90)
+    except (TypeError, ValueError):
+        rest = 90
+    out = {"name": name, "sets": sets, "muscle": muscle,
+           "rest_seconds": max(30, min(300, rest))}
+    if reps:
+        out["reps"] = reps
+    return out
 
 
 def _ensure_planning(prog):
@@ -184,10 +202,14 @@ def programme():
             "error.html", code=503,
             message="Impossible de charger le programme. Vérifie ta connexion.",
         ), 503
+    before = json.dumps(prog, sort_keys=True, default=str)
     _ensure_planning(prog)
     programmes, seance_prog = _ensure_programmes(prog)
     profiles, active_profile = _ensure_profiles(prog)
-    save_prog(prog)  # persiste la migration si c'était la première fois
+    # Migration de schéma uniquement : on n'écrit que si elle a réellement
+    # changé quelque chose (un GET ne doit pas écrire à chaque affichage).
+    if json.dumps(prog, sort_keys=True, default=str) != before:
+        save_prog(prog)
     seances = _seance_items(prog)
 
     current_origin = prog.get("_origin")
@@ -206,7 +228,9 @@ def programme():
         "seances": {
             sname: [
                 {"name": e.get("name", ""), "sets": int(e.get("sets") or 3),
-                 "muscle": e.get("muscle") or "Autre"}
+                 "muscle": e.get("muscle") or "Autre",
+                 "reps": e.get("reps") or "",
+                 "rest_seconds": int(e.get("rest_seconds") or 90)}
                 for e in exos
             ]
             for sname, exos in seances
@@ -286,7 +310,7 @@ def save_state():
             except (TypeError, ValueError):
                 sets = 3
             muscle = (e.get("muscle") or "Autre").strip() or "Autre"
-            cleaned.append({"name": ex_name, "sets": sets, "muscle": muscle})
+            cleaned.append(_exo_entry(ex_name, sets, muscle, e))
         new_prog[sname] = cleaned
 
     # Planning nettoyé
@@ -303,9 +327,9 @@ def save_state():
     if new_name:
         new_prog["_name"] = new_name
 
-    # Préserve les données utilisateur qui n'appartiennent pas au programme
-    for key in ("_origin", "_settings", "_archive", "_legacy_volume",
-                "_extras", "_libre_draft", "_started_at"):
+    # _origin et _started_at appartiennent au corps du programme mais ne sont
+    # pas envoyés par l'éditeur : on les reprend tels quels.
+    for key in ("_origin", "_started_at"):
         if key in old:
             new_prog[key] = old[key]
 
@@ -342,9 +366,9 @@ def save_state():
     if not new_programmes:
         new_programmes = old.get("_programmes") or []
 
-    # Limite 2 programmes pour les non-VIP. On tolère l'état existant
-    # (ex: un user qui aurait déjà 3 programmes avant d'être passé free)
-    # mais on bloque toute création d'un nouveau programme au-delà.
+    # Limite : 1 programme en gratuit. On tolère l'état existant (un user qui
+    # avait plusieurs programmes avant de repasser free les garde) mais on
+    # bloque toute création supplémentaire.
     if not getattr(g, "is_vip_full", False):
         old_ids = {p.get("id") for p in (old.get("_programmes") or []) if isinstance(p, dict)}
         added = [p for p in new_programmes if p.get("id") not in old_ids]
@@ -362,14 +386,11 @@ def save_state():
     new_prog["_programmes"] = new_programmes
     new_prog["_seance_prog"] = new_mapping
 
-    # Profils d'entraînement — préserve l'état existant + normalise les profile_id
-    if "_profiles" in old:
-        new_prog["_profiles"] = old["_profiles"]
-    if "_active_profile" in old:
-        new_prog["_active_profile"] = old["_active_profile"]
-    _ensure_profiles(new_prog)
-
-    save_prog(new_prog)
+    # Fusion : le corps remplace les séances/planning/dossiers, TOUT le reste
+    # (badges, record de streak, bilans, exos perso, défis, plats…) survit.
+    merged = save_prog_body(new_prog)
+    _ensure_profiles(merged)
+    save_prog(merged)
     return jsonify({"ok": True})
 
 
@@ -527,7 +548,8 @@ def reset_seance():
     if not src or name not in src["seances"]:
         return redirect(url_for("programme.programme"))
     prog[name] = [
-        {"name": e["name"], "sets": int(e["sets"]), "muscle": e["muscle"]}
+        _exo_entry(e["name"], int(e["sets"]), e["muscle"],
+                   {"reps": e.get("_reps_hint"), "rest_seconds": e.get("_rest")})
         for e in src["seances"][name]
     ]
     save_prog(prog)
@@ -544,7 +566,8 @@ def export_program():
     for sname, exos in _seance_items(prog):
         seances[sname] = [
             {"name": e.get("name", ""), "sets": int(e.get("sets") or 3),
-             "muscle": e.get("muscle") or "Autre"}
+             "muscle": e.get("muscle") or "Autre",
+             "reps": e.get("reps") or "", "rest_seconds": int(e.get("rest_seconds") or 90)}
             for e in exos
         ]
     payload = {
@@ -603,7 +626,7 @@ def import_program():
             except (TypeError, ValueError):
                 sets = 3
             muscle = (e.get("muscle") or "Autre").strip() or "Autre"
-            cleaned.append({"name": ex_name, "sets": sets, "muscle": muscle})
+            cleaned.append(_exo_entry(ex_name, sets, muscle, e))
         new_prog[sname] = cleaned
 
     # Planning : depuis le fichier si présent, sinon vide
@@ -618,14 +641,9 @@ def import_program():
     # Programme importé = plus aucune origine catalogue valide
     new_prog.pop("_origin", None)
 
-    # Préserve les données utilisateur indépendantes du programme
-    for key in ("_settings", "_archive", "_legacy_volume", "_extras"):
-        if key in old:
-            new_prog[key] = old[key]
-
     from core.dates import today_paris_str
     new_prog["_started_at"] = today_paris_str()
-    save_prog(new_prog)
+    save_prog_body(new_prog)
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
 
@@ -643,15 +661,9 @@ def change_program():
         return redirect(url_for("programme.programme"))
 
     if prog_id == "custom":
-        prog = get_prog()
-        for k in list(prog.keys()):
-            if not k.startswith("_"):
-                prog.pop(k)
-        prog.pop("_origin", None)
-        prog.pop("_name", None)
         from core.dates import today_paris_str
-        prog["_started_at"] = today_paris_str()
-        save_prog(prog)
+        save_prog_body({"_planning": {d: "" for d in DAYS_FR},
+                        "_started_at": today_paris_str()})
         return redirect(url_for("programme.programme") + "?program_changed=1")
 
     src = catalog.get_program(prog_id)
@@ -687,21 +699,15 @@ def change_program():
         merged["_planning"] = old.get("_planning") or built.get("_planning", {})
         # Pas d'origine unique après merge — c'est devenu un programme custom
         merged.pop("_origin", None)
-        for key in ("_settings", "_archive", "_legacy_volume", "_extras",
-                    "_libre_draft", "_name"):
-            if key in old:
-                merged[key] = old[key]
-        save_prog(merged)
+        if "_name" in old:
+            merged["_name"] = old["_name"]
+        save_prog_body(merged)
     else:
         new_prog = built
-        for key in ("_settings", "_archive", "_legacy_volume", "_extras",
-                    "_libre_draft"):
-            if key in old:
-                new_prog[key] = old[key]
         # Reset programme start date
         from core.dates import today_paris_str
         new_prog["_started_at"] = today_paris_str()
-        save_prog(new_prog)
+        save_prog_body(new_prog)
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
 
@@ -719,9 +725,15 @@ def add_exo():
         sets = 3
     muscles = f.getlist("muscles")
     muscle = ",".join(muscles) if muscles else (auto_muscles(name) or "Autre")
+    reps = (f.get("reps") or "").strip()[:20]
+    try:
+        rest = int(f.get("rest_seconds") or 90)
+    except ValueError:
+        rest = 90
     prog = get_prog()
     if seance in prog:
-        prog[seance].append({"name": name, "sets": sets, "muscle": muscle})
+        prog[seance].append(_exo_entry(name, sets, muscle,
+                                       {"reps": reps, "rest_seconds": rest}))
         save_prog(prog)
     return redirect(url_for("programme.programme") + f"#s-{seance}")
 
@@ -745,6 +757,17 @@ def update_exo():
     muscles = f.getlist("muscles")
     if muscles:
         ex["muscle"] = ",".join(muscles)
+    if f.get("reps") is not None:
+        reps = (f.get("reps") or "").strip()[:20]
+        if reps:
+            ex["reps"] = reps
+        else:
+            ex.pop("reps", None)
+    if f.get("rest_seconds"):
+        try:
+            ex["rest_seconds"] = max(30, min(300, int(f["rest_seconds"])))
+        except ValueError:
+            pass
     save_prog(prog)
     return redirect(url_for("programme.programme") + f"#s-{seance}")
 

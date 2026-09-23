@@ -18,6 +18,7 @@ from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles, parse_rpe, overload_suggestion
 from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
+from core.hist import is_logged as _is_real_perf
 from core.analytics import track
 
 bp = Blueprint("seance", __name__)
@@ -92,14 +93,6 @@ def _display_week(target_date, prog, hist):
 
 def _date_label(date_):
     return f"{DAYS_FR[date_.weekday()]} {date_.day:02d}/{date_.month:02d}/{date_.year}"
-
-
-def _is_real_perf(r):
-    if r["Exercice"] == "SESSION":
-        return False
-    if r["Poids"] > 0 or r["Reps"] > 0:
-        return True
-    return "SKIP" in (r.get("Remarque") or "")
 
 
 def _find_done_session(date_iso, hist):
@@ -736,7 +729,7 @@ def seance():
             auto_rest_timer=auto_rest_timer,
             show_rpe=show_rpe,
             cardio_done=_build_cardio_done(hist, name, date_iso),
-            session_note=(prog.get("_session_notes") or {}).get(f"{name}|{date_iso}"),
+            session_note=_load_session_note(prog, date_iso, name),
             body_polygons=get_body_polygons(),
         )
 
@@ -787,7 +780,7 @@ def seance():
             auto_rest_timer=auto_rest_timer,
             show_rpe=show_rpe,
             cardio_done=_build_cardio_done(hist, libre_name, date_iso),
-            session_note=(prog.get("_session_notes") or {}).get(f"{libre_name}|{date_iso}"),
+            session_note=_load_session_note(prog, date_iso, libre_name),
             body_polygons=get_body_polygons(),
         )
 
@@ -1244,7 +1237,7 @@ def finish():
     f = request.form
     mode = f["mode"]
     seance_name = f["seance_name"]
-    date_str = f["date"]
+    date_str = _form_date(f)
     key = f"{seance_name}|{date_str}"
     prog = get_prog()
     changed = False
@@ -1255,16 +1248,11 @@ def finish():
         prog["_extras"].pop(key, None)
         changed = True
 
-    # Bilan de séance — stocké dans le programme (JSON), pas de migration de
-    # schéma. Clé « Séance|date », comme les extras et l'ordre personnalisé.
-    # Purge AVANT d'ajouter : un bilan saisi aujourd'hui sur une séance
-    # ancienne (rattrapage) doit être conservé.
-    if _purge_old_session_notes(prog):
-        changed = True
     note = _parse_session_note(f)
     if note:
-        prog.setdefault("_session_notes", {})[key] = note
-        changed = True
+        _save_session_note(prog, date_str, seance_name, note)
+        if prog.get("_session_notes") is not None:
+            changed = True
 
     if changed:
         from core.data import save_prog
@@ -1274,8 +1262,48 @@ def finish():
         "mode": mode, "seance": seance_name,
         "rating": note.get("rating", 0) if note else 0,
         "has_comment": bool(note and note.get("comment")),
+        "duration_min": _session_duration_min(f),
     })
     return redirect(url_for("accueil.index"))
+
+
+def _session_duration_min(form):
+    """Durée de la séance en minutes, mesurée côté client (début = première
+    saisie). Bornée à 8 h pour ignorer un onglet resté ouvert la nuit."""
+    try:
+        return max(0, min(480, int(form.get("duration_min") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _save_session_note(prog, date_str, seance_name, note):
+    """Écrit le bilan dans la table `session_notes` (migration v34). Repli sur
+    l'ancien stockage dans le programme si la table n'existe pas encore."""
+    from core.data import upsert_session_note
+    try:
+        upsert_session_note(date_str, seance_name, note.get("rating"), note.get("comment"))
+        # La table a pris le relais : on purge l'ancien emplacement.
+        if isinstance(prog.get("_session_notes"), dict):
+            prog["_session_notes"].pop(f"{seance_name}|{date_str}", None)
+            if not prog["_session_notes"]:
+                prog.pop("_session_notes", None)
+        return
+    except Exception as e:
+        logger.warning("session_notes indisponible (%s) — repli sur le programme", e)
+    _purge_old_session_notes(prog)
+    prog.setdefault("_session_notes", {})[f"{seance_name}|{date_str}"] = note
+
+
+def _load_session_note(prog, date_str, seance_name):
+    """Bilan d'une séance : table v34 d'abord, ancien stockage ensuite."""
+    from core.data import get_session_note
+    try:
+        note = get_session_note(date_str, seance_name)
+        if note:
+            return note
+    except Exception:
+        pass
+    return (prog.get("_session_notes") or {}).get(f"{seance_name}|{date_str}")
 
 
 def _parse_session_note(form):

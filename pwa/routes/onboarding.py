@@ -16,7 +16,7 @@ exemptées de cette gate pour éviter la boucle de redirection.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, g, session
 
-from core.data import save_onboarding, save_profile, save_prog, get_onboarding, get_prog
+from core.data import save_onboarding, save_profile, save_prog_body, get_onboarding, get_prog
 from core.dates import today_paris_str
 from core import catalog
 from core.analytics import track
@@ -114,22 +114,21 @@ def submit():
     if programme_id and programme_id != "custom" and not is_vip and not catalog.is_free(programme_id):
         programme_id = ""
     if programme_id and programme_id != "custom" and catalog.get_program(programme_id):
-        existing = get_prog() or {}
-        # Conserver les métadonnées privées (_settings, _planning, etc.)
-        meta = {k: v for k, v in existing.items() if k.startswith("_")}
         # Passer l'équipement pour adapter le programme (substitutions)
         equipment_arg = equipment_details if equipement != "salle" else None
         prog = catalog.build_program(programme_id, frequence, equipment=equipment_arg)
-        prog.update(meta)
-        # Stocker l'équipement dans le programme pour le re-onboarding ET
-        # pour filtrer les exos servis en séance même après changement.
-        prog["_equipment_details"] = equipment_details
-        prog["_equipement"] = equipement
         # _started_at = date d'aujourd'hui à l'onboarding initial. Évite que
         # les jours d'entraînement de la semaine en cours antérieurs à
         # l'inscription soient marqués comme manqués dans le calendrier.
         prog.setdefault("_started_at", today_iso)
-        save_prog(prog)
+        # Remplace le corps du programme ; les données personnelles (badges,
+        # record, exos perso…) d'un éventuel re-onboarding sont conservées.
+        merged = save_prog_body(prog)
+        # L'équipement est une donnée personnelle : posé après la fusion.
+        merged["_equipment_details"] = equipment_details
+        merged["_equipement"] = equipement
+        from core.data import save_prog as _sp
+        _sp(merged)
 
     session["onboarded"] = True
     track("onboarding_completed", {

@@ -17,7 +17,7 @@ import logging
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g
 
-from core.data import get_prog, save_prog
+from core.data import save_prog_body
 from core.dates import DAYS_FR, today_paris_str
 from core.db import _env
 from core import db as core_db
@@ -165,11 +165,16 @@ def parse_and_validate(raw) -> dict:
                 sets = 3
             sets = max(1, min(8, sets))
             reps = str(e.get("reps") or "").strip()[:20]
+            try:
+                rest = int(e.get("rest_seconds") or e.get("repos") or 90)
+            except (TypeError, ValueError):
+                rest = 90
             cleaned.append({
                 "name": ex_name,
                 "sets": sets,
                 "muscle": _clean_muscle(e.get("muscle")),
                 "reps": reps,
+                "rest_seconds": max(30, min(300, rest)),
             })
         if cleaned:
             seances[name] = cleaned[:12]
@@ -250,8 +255,9 @@ def _build_prompt(params: dict) -> str:
         "RÈGLES STRICTES :\n"
         f"- Produis EXACTEMENT {params['frequence']} séance(s) distincte(s) "
         "(ou un split cyclé cohérent réparti sur ces jours).\n"
-        "- Pour chaque exercice : un nombre de séries réaliste (3 à 5) et une "
-        "fourchette de répétitions adaptée à l'objectif.\n"
+        "- Pour chaque exercice : un nombre de séries réaliste (3 à 5), une "
+        "fourchette de répétitions adaptée à l'objectif, et un temps de repos "
+        "en secondes (60 à 180 selon l'exercice et l'objectif).\n"
         "- Le champ \"muscle\" DOIT être l'un de ces libellés (ou une combinaison "
         "séparée par des virgules) : " + ", ".join(MUSCLES) + ".\n"
         "- Privilégie autant que possible des exercices de cette liste connue (pour "
@@ -265,7 +271,7 @@ def _build_prompt(params: dict) -> str:
         '  "notes": "2-3 phrases : logique du programme et conseil de progression",\n'
         '  "seances": {\n'
         '    "Nom de séance": [\n'
-        '      {"name": "Nom exercice", "sets": 4, "reps": "8-12", "muscle": "Pecs,Triceps"}\n'
+        '      {"name": "Nom exercice", "sets": 4, "reps": "8-12", "rest_seconds": 90, "muscle": "Pecs,Triceps"}\n'
         "    ]\n"
         "  },\n"
         '  "planning": {"Lundi": "Nom de séance", "Mardi": "", ...}'
@@ -406,23 +412,21 @@ def apply():
     except ValueError:
         return redirect(url_for("generator.index") + "?err=apply")
 
-    old = get_prog() or {}
     new_prog: dict = {}
     for sname, exos in program["seances"].items():
-        # On NE stocke pas les reps (cf. CONTEXT : reps non persistées) — elles
-        # ne servent qu'à l'affichage de la preview.
-        new_prog[sname] = [{"name": e["name"], "sets": e["sets"], "muscle": e["muscle"]} for e in exos]
+        # Les reps ET le repos générés sont conservés : c'est la prescription
+        # qui fait la valeur d'un programme (affichée en cible dans la séance).
+        new_prog[sname] = [{
+            "name": e["name"], "sets": e["sets"], "muscle": e["muscle"],
+            "reps": e.get("reps") or "", "rest_seconds": e.get("rest_seconds") or 90,
+        } for e in exos]
     new_prog["_planning"] = dict(program["planning"])
     if program.get("cardio"):
         new_prog["_cardio"] = program["cardio"]
     new_prog["_name"] = program["name"]
-    new_prog.pop("_origin", None)
-    # Préserve les données utilisateur indépendantes du programme.
-    for key in ("_settings", "_archive", "_legacy_volume", "_extras"):
-        if key in old:
-            new_prog[key] = old[key]
     new_prog["_started_at"] = today_paris_str()
-    save_prog(new_prog)
+    # Remplace le corps du programme, conserve les données personnelles.
+    save_prog_body(new_prog)
 
     track("program_adopted", {"name": program["name"], "seances": len(program["seances"]),
                               "cardio": len(program.get("cardio") or [])})
