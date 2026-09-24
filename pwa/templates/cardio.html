@@ -18,8 +18,10 @@
       <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#heart"/></svg>TYPE D'ACTIVITÉ</div>
       <div class="cardio-activites">
         {% for name, icon, met in activites %}
-          <label class="cardio-activite" :class="activite === '{{ name }}' ? 'selected' : ''">
-            <input type="radio" name="activite" value="{{ name }}" x-model="activite" style="display:none;">
+          {# Pas d'expression Alpine ici : le libellé « Montée d'escaliers »
+             fermait la chaîne sur son apostrophe. L'état vient du radio. #}
+          <label class="cardio-activite">
+            <input type="radio" name="activite" value="{{ name }}" x-model="activite" class="sr-only">
             <svg class="icon icon-md"><use href="/static/img/icons.svg#{{ icon }}"/></svg>
             <span>{{ name }}</span>
           </label>
@@ -71,8 +73,8 @@
       <label class="field-label">Intensité perçue (RPE)</label>
       <div class="rpe-row">
         {% for rpe in rpe_labels %}
-          <label class="rpe-btn" :class="rpe === '{{ rpe }}' ? 'selected' : ''">
-            <input type="radio" name="rpe" value="{{ rpe }}" x-model="rpe" style="display:none;">
+          <label class="rpe-btn">
+            <input type="radio" name="rpe" value="{{ rpe }}" x-model="rpe" class="sr-only">
             <span>{{ rpe }}</span>
           </label>
         {% endfor %}
@@ -135,10 +137,17 @@
       text-align: center;
     }
     .cardio-activite:hover { border-color: var(--accent); }
-    .cardio-activite.selected {
+    .cardio-activite:has(input:checked) {
       background: var(--accent-bg);
       border-color: var(--accent);
       color: var(--accent);
+    }
+    /* Le radio est masqué mais focusable : l'anneau doit apparaître sur la
+       tuile qui le porte, sinon la navigation au clavier est invisible. */
+    .cardio-activite:has(input:focus-visible),
+    .rpe-btn:has(input:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
     .cardio-chrono-display {
       text-align: center;
@@ -178,7 +187,7 @@
       color: var(--text-2);
       transition: all 0.15s ease;
     }
-    .rpe-btn.selected {
+    .rpe-btn:has(input:checked) {
       background: var(--accent-bg);
       border-color: var(--accent);
       color: var(--accent);

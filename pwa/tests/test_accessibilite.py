@@ -198,3 +198,24 @@ def test_les_expressions_alpine_ne_sont_pas_des_blocs():
         for m in re.finditer(r'(x-init|x-show|x-text|x-if|@[\w.]+)="\s*(try|var|function|switch)\b', src):
             fautifs.append(f + " : " + m.group(0))
     assert not fautifs, fautifs
+
+
+@pytest.mark.parametrize("path", PAGES)
+def test_les_expressions_alpine_ont_leurs_apostrophes_equilibrees(fake_db, logged_in, path):
+    """Un libellé français réinjecté dans une expression Alpine délimitée par
+    des apostrophes la coupe en deux : « Montée d'escaliers » rendait le
+    sélecteur d'activité cardio inerte, sans autre symptôme qu'une ligne dans
+    la console. Une apostrophe non échappée en nombre impair = expression
+    invalide, quel que soit le reste."""
+    import html as html_mod
+    page = logged_in.get(path).get_data(as_text=True)
+    casses = []
+    for attr, brut in re.findall(r'\s((?:x-[\w:.-]+)|(?:[:@][\w:.-]+))="([^"]*)"', page):
+        # Jinja échappe l'apostrophe en &#39; : elle ne casse l'expression
+        # qu'APRÈS décodage par le navigateur. C'est donc l'expression
+        # décodée qu'il faut examiner, pas la source.
+        expr = html_mod.unescape(brut)
+        nu = expr.replace("\\'", "")          # apostrophes déjà échappées : OK
+        if nu.count("'") % 2:
+            casses.append(f"{attr}=\"{expr[:70]}\"")
+    assert not casses, f"{path} : {casses}"
