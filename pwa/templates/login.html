@@ -54,6 +54,54 @@
     const GOOGLE_WEB_CLIENT_ID = {{ google_web_client_id|tojson }};
     const errEl = document.getElementById('err');
 
+    /**
+     * Traduit un échec de connexion native en une phrase qui dit quoi faire.
+     * Les causes sont distinctes et se corrigent à des endroits différents :
+     * le téléphone, la console Google, ou Supabase.
+     */
+    function expliquer(brut) {
+      const m = String(brut || '');
+      const bas = m.toLowerCase();
+      if (bas.includes('no credentials available') || bas.includes('nocredential')) {
+        return "Aucun compte Google utilisable sur ce téléphone. Ajoute ton compte "
+             + "dans les réglages Android, puis réessaie.";
+      }
+      if (bas.includes('cancel')) {
+        return "Connexion annulée.";
+      }
+      if (/\b(10|16)\b/.test(m) || bas.includes('matching credential')
+          || bas.includes('developer')) {
+        return "Cette installation n'est pas reconnue par Google. L'app doit être "
+             + "déclarée dans la console Google Cloud (nom du package et empreinte "
+             + "de signature), dans le même projet que l'identifiant web.";
+      }
+      if (bas.includes('audience') || bas.includes('aud')) {
+        return "Supabase refuse le jeton : l'identifiant client web doit figurer "
+             + "dans « Authorized Client IDs » du fournisseur Google.";
+      }
+      if (bas.includes('dependencies are not available')) {
+        return "Version de l'app incomplète : les composants Google manquent. "
+             + "Réinstalle la dernière version.";
+      }
+      if (bas.includes('network') || bas.includes('timeout')) {
+        return "Pas de réseau. Vérifie ta connexion et réessaie.";
+      }
+      return m || "Connexion impossible.";
+    }
+
+    /** Affiche l'explication, et garde le message d'origine en dessous. */
+    function montrerErreur(brut) {
+      const clair = expliquer(brut);
+      errEl.textContent = clair;
+      const m = String(brut || '');
+      if (m && m !== clair) {
+        const petit = document.createElement('div');
+        petit.style.cssText = 'margin-top:6px; font-size:0.72rem; opacity:0.65;';
+        petit.textContent = m;
+        errEl.appendChild(petit);
+      }
+    }
+
     if (!SUPABASE_URL || !SUPABASE_ANON) {
       errEl.textContent = "Config Supabase manquante côté serveur.";
     }
@@ -83,8 +131,8 @@
 
     async function nativeGoogleLogin() {
       const SocialLogin = window.Capacitor?.Plugins?.SocialLogin;
-      if (!SocialLogin) { errEl.textContent = "Plugin de connexion natif indisponible."; return; }
-      if (!GOOGLE_WEB_CLIENT_ID) { errEl.textContent = "Connexion native non configurée."; return; }
+      if (!SocialLogin) { montrerErreur("Plugin de connexion natif indisponible."); return; }
+      if (!GOOGLE_WEB_CLIENT_ID) { montrerErreur("Connexion native non configurée."); return; }
 
       await SocialLogin.initialize({
         google: { webClientId: GOOGLE_WEB_CLIENT_ID, mode: 'online' }
@@ -101,14 +149,14 @@
       });
       // La forme du retour varie selon la version du plugin.
       const idToken = res?.result?.idToken || res?.idToken;
-      if (!idToken) { errEl.textContent = "Aucun jeton Google reçu."; return; }
+      if (!idToken) { montrerErreur("Aucun jeton Google reçu."); return; }
 
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google', token: idToken, nonce: rawNonce
       });
-      if (error) { errEl.textContent = error.message; return; }
+      if (error) { montrerErreur(error.message); return; }
       const accessToken = data?.session?.access_token;
-      if (!accessToken) { errEl.textContent = "Session Supabase introuvable."; return; }
+      if (!accessToken) { montrerErreur("Session Supabase introuvable."); return; }
 
       // Même bridge que le web : on pose la session Flask via /auth/session.
       const r = await fetch('/auth/session', {
@@ -119,7 +167,7 @@
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
-        errEl.textContent = "Erreur : " + (j.error || r.status);
+        montrerErreur("Erreur : " + (j.error || r.status));
         return;
       }
       window.location.replace('/accueil');
@@ -130,15 +178,15 @@
         provider: 'google',
         options: { redirectTo: window.location.origin + '/auth/bridge' }
       });
-      if (error) errEl.textContent = error.message;
+      if (error) montrerErreur(error.message);
     }
 
     document.getElementById('google').addEventListener('click', async () => {
-      errEl.textContent = "";
+      errEl.replaceChildren();
       try {
         await (isNative ? nativeGoogleLogin() : webGoogleLogin());
       } catch (e) {
-        errEl.textContent = (e && e.message) ? e.message : "Connexion impossible.";
+        montrerErreur(e && e.message);
       }
     });
   </script>
