@@ -244,45 +244,113 @@
           var el = this.$refs.scroll;
           if (el) el.scrollTop = el.scrollHeight;
         },
+        // Applique la fin d'un échange (conversation créée, quota restant).
+        _applyDone(data) {
+          if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
+          if (!data.conversation_id) return;
+          if (data.new_conversation && !this.conversations.some(c => c.id === data.conversation_id)) {
+            this.conversations.unshift({
+              id: data.conversation_id,
+              title: data.conversation_title || 'Nouvelle conversation',
+              updated_at: new Date().toISOString(),
+            });
+            try { history.replaceState({}, '', '/coach?c=' + data.conversation_id); } catch (e) {}
+          }
+          this.conversationId = data.conversation_id;
+        },
+
+        // La réponse arrive en flux (Server-Sent Events) et s'écrit au fur et
+        // à mesure dans la bulle. Avant, on fixait un point clignotant pendant
+        // 3 à 8 secondes sans savoir si ça marchait.
         async send(text) {
           const msg = (text || '').trim();
           if (!msg || this.typing || this.quotaLeft <= 0) return;
           this.errorMsg = '';
-          const now = new Date().toISOString();
-          this.messages.push({ role: 'user', content: msg, created_at: now });
+          this.messages.push({ role: 'user', content: msg, created_at: new Date().toISOString() });
           this.draft = '';
           this.typing = true;
           this.$nextTick(() => this.scrollDown());
+
+          // Bulle de réponse créée vide : elle se remplit pendant la lecture.
+          const bubble = { role: 'assistant', content: '', created_at: new Date().toISOString(), streaming: true };
+          let bubbleAdded = false;
+
           try {
             const resp = await fetch('/coach/ask', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
               body: JSON.stringify({ message: msg, conversation_id: this.conversationId }),
             });
-            const data = await resp.json().catch(() => ({}));
-            if (!resp.ok) {
-              this.errorMsg = data.error || 'Erreur lors de l\'envoi.';
-              if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
-            } else {
-              this.messages.push({ role: 'assistant', content: data.reply || '', created_at: new Date().toISOString() });
-              if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
-              // Nouvelle conversation créée côté serveur : on l'ajoute à la
-              // sidebar et on mémorise son id pour la suite du fil.
-              if (data.conversation_id) {
-                if (data.new_conversation && !this.conversations.some(c => c.id === data.conversation_id)) {
-                  this.conversations.unshift({
-                    id: data.conversation_id,
-                    title: data.conversation_title || 'Nouvelle conversation',
-                    updated_at: new Date().toISOString(),
-                  });
-                  try { history.replaceState({}, '', '/coach?c=' + data.conversation_id); } catch (e) {}
+
+            // Repli : quota dépassé, accès refusé, ou serveur sans streaming.
+            const ctype = resp.headers.get('Content-Type') || '';
+            if (!resp.ok || ctype.indexOf('text/event-stream') === -1) {
+              const data = await resp.json().catch(() => ({}));
+              if (!resp.ok) {
+                this.errorMsg = data.error || "Le coach n'a pas pu répondre.";
+                if (typeof data.quota_remaining === 'number') this.quotaLeft = data.quota_remaining;
+              } else {
+                this.messages.push({ role: 'assistant', content: data.reply || '', created_at: new Date().toISOString() });
+                this._applyDone(data);
+              }
+              return;
+            }
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let lastScroll = 0;
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+
+              // Un événement SSE se termine par une ligne vide.
+              let sep;
+              while ((sep = buffer.indexOf('\n\n')) !== -1) {
+                const raw = buffer.slice(0, sep);
+                buffer = buffer.slice(sep + 2);
+                let event = 'message', payload = '';
+                raw.split('\n').forEach(function (line) {
+                  if (line.indexOf('event:') === 0) event = line.slice(6).trim();
+                  else if (line.indexOf('data:') === 0) payload += line.slice(5).trim();
+                });
+                if (!payload) continue;
+                let data;
+                try { data = JSON.parse(payload); } catch (e) { continue; }
+
+                if (event === 'delta') {
+                  if (!bubbleAdded) {
+                    this.messages.push(bubble);
+                    bubbleAdded = true;
+                    this.typing = false;
+                  }
+                  bubble.content += data.text || '';
+                  // Suivre le texte sans saccader : au plus 8 fois par seconde.
+                  const now = Date.now();
+                  if (now - lastScroll > 120) {
+                    lastScroll = now;
+                    this.$nextTick(() => this.scrollDown());
+                  }
+                } else if (event === 'error') {
+                  this.errorMsg = data.error || "Le coach n'a pas pu répondre.";
+                  if (bubbleAdded && !bubble.content) {
+                    this.messages.splice(this.messages.indexOf(bubble), 1);
+                  }
+                } else if (event === 'done') {
+                  this._applyDone(data);
                 }
-                this.conversationId = data.conversation_id;
               }
             }
+            bubble.streaming = false;
           } catch (e) {
             this.errorMsg = 'Réseau indisponible.';
+            if (bubbleAdded && !bubble.content) {
+              this.messages.splice(this.messages.indexOf(bubble), 1);
+            }
           } finally {
+            bubble.streaming = false;
             this.typing = false;
             this.$nextTick(() => this.scrollDown());
           }

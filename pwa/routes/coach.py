@@ -9,19 +9,26 @@ automatique à chaque nouveau jour) — protège le coût API Anthropic.
 """
 import logging
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g
+import json
+
+from flask import (
+    Blueprint, Response, render_template, request, jsonify, redirect, url_for,
+    g, stream_with_context,
+)
+
+from core import db
 
 from core.data import (
     get_prog, get_hist, get_profile, save_profile, get_onboarding,
-    list_coach_messages, insert_coach_message, clear_coach_messages,
-    list_coach_conversations, create_coach_conversation,
-    touch_coach_conversation, delete_coach_conversation,
+    list_coach_messages, clear_coach_messages,
+    list_coach_conversations, delete_coach_conversation,
 )
 from core.dates import today_paris_str
 from core.db import _env
 from core.limiter import limiter
 from core import catalog
 from core.analytics import track, paywall
+from core import coach_memory
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +36,10 @@ bp = Blueprint("coach", __name__)
 
 DAILY_QUOTA = 15  # quota VIP/jour — aligné sur la page Premium (« 15 msg/jour »)
 MODEL = "claude-haiku-4-5-20251001"
-MAX_TOKENS = 500
+# 500 tokens coupaient toute réponse un peu construite en plein milieu — le
+# défaut le plus visible du coach. La réponse étant désormais affichée au fil
+# de l'eau, une réponse plus longue ne fait pas attendre davantage.
+MAX_TOKENS = 1400
 
 SYSTEM_PROMPT_TMPL = (
     "Tu es le coach IA intégré à l'application Muscu Tracker PRO (PWA Flask). "
@@ -51,6 +61,7 @@ SYSTEM_PROMPT_TMPL = (
     "- Pour aider à ajouter une séance précise → lien [nom](/programme#planning) vers le planning.\n\n"
     "## CATALOGUE DES PROGRAMMES DISPONIBLES\n"
     "{catalog_list}\n\n"
+    "{memory_block}"
     "## CONTEXTE UTILISATEUR\n"
     "- Prénom : {prenom}\n"
     "- Âge : {age}\n"
@@ -234,7 +245,7 @@ def index():
         logger.error("/coach load conversations FAILED: %s", e)
         conversations = []
     # ?c=<id> reprend une conversation ; sinon, nouveau chat vide par défaut.
-    conv_id = (request.args.get("c") or "").strip()
+    conv_id = str(request.args.get("c") or "").strip()
     messages = []
     active_conversation = None
     if conv_id and any(str(c.get("id")) == conv_id for c in conversations):
@@ -279,7 +290,7 @@ def delete_conversation():
     if not getattr(g, "is_vip_full", False):
         return jsonify({"error": "réservé aux membres PRO"}), 403
     payload = request.get_json(silent=True) or {}
-    conv_id = (payload.get("conversation_id") or "").strip()
+    conv_id = str(payload.get("conversation_id") or "").strip()
     if not conv_id:
         return jsonify({"error": "conversation_id manquant"}), 400
     try:
@@ -288,6 +299,141 @@ def delete_conversation():
         logger.error("/coach/conversation/delete FAILED: %s", e)
         return jsonify({"error": "suppression échouée"}), 500
     return jsonify({"ok": True})
+
+
+def _wants_stream() -> bool:
+    """Le client demande un flux (Accept: text/event-stream)."""
+    return "text/event-stream" in (request.headers.get("Accept") or "")
+
+
+def _sse(event: str, data) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _persist_turn(user_id, message, reply, conversation_id, profile, api_key):
+    """Enregistre le tour de conversation et met à jour la mémoire du coach.
+
+    Appelé APRÈS que la réponse a été envoyée : ni l'écriture en base ni le
+    résumé de mémoire n'allongent l'attente de l'utilisateur.
+    """
+    new_conversation = False
+    conversation_title = None
+    if not conversation_id:
+        try:
+            conversation_title = _title_from_message(message)
+            conversation_id = db.create_coach_conversation(user_id, conversation_title)
+            new_conversation = bool(conversation_id)
+        except Exception as e:
+            logger.error("coach create conversation FAILED: %s", e)
+            conversation_id = None
+    try:
+        db.insert_coach_message(user_id, "user", message, conversation_id)
+        db.insert_coach_message(user_id, "assistant", reply, conversation_id)
+        if conversation_id:
+            db.touch_coach_conversation(user_id, conversation_id)
+    except Exception as e:
+        logger.error("coach persist FAILED: %s", e)
+
+    # Mémoire : on repart de l'historique complet de la conversation.
+    try:
+        history = db.list_coach_messages(user_id, conversation_id, limit=20) if conversation_id else []
+        if coach_memory.should_update(history):
+            import anthropic  # type: ignore
+            note = coach_memory.build_summary(
+                anthropic.Anthropic(api_key=api_key), MODEL,
+                coach_memory.get_memory(profile), history)
+            if note and note != coach_memory.get_memory(profile):
+                db.save_profile(user_id, {"coach_memory": note})
+    except Exception as e:
+        logger.warning("coach memory update FAILED: %s", e)
+
+    return conversation_id, conversation_title, new_conversation
+
+
+def _stream_reply(api_key, system_prompt, api_messages, message,
+                  conversation_id, limit, count_after, profile):
+    """Réponse envoyée au fil de l'eau (Server-Sent Events).
+
+    Le coach mettait 3 à 8 secondes à afficher quoi que ce soit : on regardait
+    un point clignoter sans savoir si ça marchait. Ici le texte arrive mot à
+    mot, comme dans n'importe quel assistant moderne.
+    """
+    import anthropic  # type: ignore
+    user_id = g.user_id
+
+    def generate():
+        chunks = []
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            with client.messages.stream(
+                model=MODEL,
+                max_tokens=MAX_TOKENS,
+                system=system_prompt,
+                messages=api_messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    if text:
+                        chunks.append(text)
+                        yield _sse("delta", {"text": text})
+        except Exception as e:
+            err_type = type(e).__name__
+            logger.error("/coach/ask stream FAILED (%s): %s", err_type, str(e)[:300])
+            _revert_quota_for(user_id)
+            yield _sse("error", {"error": _user_error(str(e))})
+            return
+
+        reply = "".join(chunks).strip()
+        if not reply:
+            _revert_quota_for(user_id)
+            yield _sse("error", {"error": "Réponse vide, réessaie."})
+            return
+
+        conv_id, title, is_new = _persist_turn(
+            user_id, message, reply, conversation_id, profile, api_key)
+        yield _sse("done", {
+            "conversation_id": conv_id,
+            "conversation_title": title,
+            "new_conversation": is_new,
+            "quota_remaining": max(0, limit - count_after),
+            "quota_limit": limit,
+        })
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",   # pas de tampon côté proxy
+            "Connection": "keep-alive",
+        },
+    )
+
+
+def _user_error(err_msg: str) -> str:
+    """Message affichable. Les détails (fournisseur, hébergeur, clé) restent
+    dans les logs : ils n'apprennent rien à l'utilisateur et font amateur."""
+    lower = (err_msg or "").lower()
+    if "authentication" in lower or ("invalid" in lower and "api" in lower):
+        return "Le coach est momentanément indisponible. Réessaie dans un instant."
+    if "credit" in lower or "billing" in lower or "quota" in lower:
+        return "Le coach est momentanément indisponible. Réessaie plus tard."
+    if "overloaded" in lower or "rate" in lower:
+        return "Le coach est très sollicité. Réessaie dans quelques secondes."
+    return "Le coach n'a pas pu répondre. Réessaie dans un instant."
+
+
+def _revert_quota_for(user_id):
+    """Comme _revert_quota, mais utilisable hors contexte de requête."""
+    try:
+        profile = db.get_profile(user_id) or {}
+        today = today_paris_str()
+        if str(profile.get("coach_quota_date") or "") == today:
+            count = int(profile.get("coach_quota_count") or 0)
+            if count > 0:
+                db.save_profile(user_id, {"coach_quota_date": today,
+                                          "coach_quota_count": count - 1})
+    except Exception as e:
+        logger.error("coach revert_quota (stream) FAILED: %s", e)
 
 
 @bp.route("/coach/ask", methods=["POST"])
@@ -301,7 +447,9 @@ def ask():
         return jsonify({"error": "message vide"}), 400
     if len(message) > 1500:
         message = message[:1500]
-    conversation_id = (payload.get("conversation_id") or "").strip() or None
+    # str() : le client renvoie ce qu'on lui a donné, et rien ne garantit que
+    # ce soit une chaîne (un id numérique faisait planter la route).
+    conversation_id = str(payload.get("conversation_id") or "").strip() or None
 
     # _env() strip les guillemets et `=` parasites souvent injectés par Railway
     api_key = _env("ANTHROPIC_API_KEY")
@@ -347,6 +495,7 @@ def ask():
     taille_str = f"{taille} cm" if taille else "non précisé"
 
     system_prompt = SYSTEM_PROMPT_TMPL.format(
+        memory_block=coach_memory.format_for_prompt(coach_memory.get_memory(profile)),
         prenom=prenom,
         age=age_str,
         poids=poids_str,
@@ -375,6 +524,10 @@ def ask():
     ]
     api_messages.append({"role": "user", "content": message})
 
+    if _wants_stream():
+        return _stream_reply(api_key, system_prompt, api_messages, message,
+                             conversation_id, limit, count_after, profile)
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
@@ -396,44 +549,14 @@ def ask():
         _revert_quota()
         # On log le détail côté serveur et on renvoie un message parlant au
         # client pour faciliter le debug (sans fuiter la clé API).
-        err_type = type(e).__name__
-        err_msg = str(e)[:300]
-        logger.error("/coach/ask anthropic FAILED (%s): %s", err_type, err_msg)
-        # Messages spécifiques pour les erreurs les plus fréquentes
-        lower = err_msg.lower()
-        if "authentication" in lower or ("invalid" in lower and "api" in lower):
-            user_msg = "Clé API Anthropic invalide. Vérifie ANTHROPIC_API_KEY dans Railway."
-        elif "credit" in lower or "billing" in lower or "quota" in lower:
-            user_msg = "Crédit Anthropic épuisé. Ajoute du crédit sur console.anthropic.com."
-        elif "not_found" in lower or ("model" in lower and "not" in lower):
-            user_msg = f"Modèle introuvable côté API. Détail : {err_msg}"
-        else:
-            user_msg = f"Erreur Anthropic ({err_type}) : {err_msg}"
-        return jsonify({"error": user_msg}), 502
+        logger.error("/coach/ask anthropic FAILED (%s): %s",
+                     type(e).__name__, str(e)[:300])
+        return jsonify({"error": _user_error(str(e))}), 502
 
-    # Crée la conversation au 1er message réussi (titre = début du message).
-    # On le fait après l'appel API pour ne pas créer de conversation vide en
-    # cas d'échec.
-    new_conversation = False
-    conversation_title = None
-    if not conversation_id:
-        try:
-            conversation_title = _title_from_message(message)
-            conversation_id = create_coach_conversation(conversation_title)
-            new_conversation = bool(conversation_id)
-        except Exception as e:
-            logger.error("/coach/ask create conversation FAILED: %s", e)
-            conversation_id = None
-
-    # Persiste le tour de conversation (user puis assistant) pour que
-    # l'historique survive aux rechargements et aux autres sessions.
-    try:
-        insert_coach_message("user", message, conversation_id)
-        insert_coach_message("assistant", reply, conversation_id)
-        if conversation_id:
-            touch_coach_conversation(conversation_id)
-    except Exception as e:
-        logger.error("/coach/ask persist FAILED: %s", e)
+    # Conversation créée et tour persisté APRÈS l'appel API (pas de
+    # conversation vide si l'IA échoue), mémoire mise à jour au passage.
+    conversation_id, conversation_title, new_conversation = _persist_turn(
+        g.user_id, message, reply, conversation_id, profile, api_key)
 
     return jsonify({
         "reply": reply,

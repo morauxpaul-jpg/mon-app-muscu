@@ -1,6 +1,18 @@
 {
-  "current": "v50",
+  "current": "v51",
   "entries": [
+    {
+      "version": "v51",
+      "date": "2026-09-24",
+      "title": "Nouveauté : ton coach parle en direct et se souvient de toi",
+      "changes": [
+        "Le coach répond au fil de l'eau : le texte s'écrit devant toi au lieu de te faire fixer trois points pendant plusieurs secondes",
+        "Ses réponses ne sont plus coupées en plein milieu — il peut enfin te détailler un plan",
+        "Il se souvient de l'essentiel d'une conversation à l'autre : ta blessure à l'épaule, tes horaires, les exercices que tu ne supportes pas — plus besoin de tout redire",
+        "Après chaque séance, il te donne son debrief en trois phrases sur l'écran d'accueil : ce qui a marché avec les chiffres, ce qui coince, quoi viser la prochaine fois",
+        "Les membres gratuits reçoivent un debrief par semaine pour se faire une idée"
+      ]
+    },
     {
       "version": "v50",
       "date": "2026-09-23",

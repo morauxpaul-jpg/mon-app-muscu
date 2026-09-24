@@ -105,10 +105,21 @@ class FakeQuery:
         return self
 
     # exec
+    # Tables dont la clé primaire est un uuid en production. La fausse base
+    # doit produire le même TYPE, sinon un code correct échoue ici (ou pire,
+    # un code cassé passe) à cause d'une comparaison int/str.
+    _UUID_PK = {"coach_conversations"}
+
     def _apply_defaults(self, row):
         """Valeurs par défaut du schéma SQL (migration v32 : programs.version)."""
         if self._table == "programs":
             row.setdefault("version", 1)
+
+    def _next_pk(self):
+        if self._table in self._UUID_PK:
+            import uuid as _uuid
+            return str(_uuid.uuid4())
+        return self._db.next_id()
 
     def _match(self, row):
         for op, col, val in self._filters:
@@ -125,27 +136,34 @@ class FakeQuery:
         rows = self._db.tables.setdefault(self._table, [])
         if self._op == "insert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]
+            # PostgREST renvoie les lignes INSÉRÉES (avec leur id généré) :
+            # plusieurs appels s'en servent (création de conversation, save_hist).
+            inserted = []
             for p in payload:
                 p = dict(p)
-                p.setdefault("id", self._db.next_id())
+                p.setdefault("id", self._next_pk())
                 self._apply_defaults(p)
                 rows.append(p)
-            return FakeResponse(payload)
+                inserted.append(dict(p))
+            return FakeResponse(inserted)
         if self._op == "upsert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]
             key = self._on_conflict or ("id" if self._table == "profiles" else "user_id")
             keys = [k.strip() for k in key.split(",")]
+            written = []
             for p in payload:
                 p = dict(p)
                 existing = next((r for r in rows
                                  if all(r.get(k) == p.get(k) for k in keys)), None)
                 if existing:
                     existing.update(p)
+                    written.append(dict(existing))
                 else:
-                    p.setdefault("id", p.get("id") or self._db.next_id())
+                    p.setdefault("id", p.get("id") or self._next_pk())
                     self._apply_defaults(p)
                     rows.append(p)
-            return FakeResponse(payload)
+                    written.append(dict(p))
+            return FakeResponse(written)
         matched = [r for r in rows if self._match(r)]
         if self._op == "delete":
             self._db.tables[self._table] = [r for r in rows if not self._match(r)]

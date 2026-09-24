@@ -64,6 +64,43 @@
     </div>
   </div>
 
+  {# ── Debrief de la séance qui vient d'être terminée ──────────── #}
+  {% if last_workout %}
+  <div class="card debrief-card" x-data="debriefCard({{ last_workout|tojson }})" x-init="load()">
+    <div class="card-label label-icon" style="margin-bottom:8px;">
+      <svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#message-circle"/></svg>
+      TON COACH A REGARDÉ TA SÉANCE
+    </div>
+
+    <template x-if="loading">
+      <div class="debrief-loading">
+        <span class="debrief-dot"></span><span class="debrief-dot"></span><span class="debrief-dot"></span>
+      </div>
+    </template>
+
+    <template x-if="text">
+      <div>
+        <p class="debrief-text" x-text="text"></p>
+        <template x-if="trial">
+          <a href="/premium" class="debrief-trial">
+            Aperçu PRO · un debrief offert par semaine — passe en PRO pour l'avoir après chaque séance
+          </a>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="locked">
+      <a href="/premium" class="debrief-locked">
+        <div>
+          <strong>Ton debrief après chaque séance</strong>
+          <p>Ce qui a marché, ce qui coince, quoi viser la prochaine fois — en trois phrases.</p>
+        </div>
+        <span class="badge-pro">PRO</span>
+      </a>
+    </template>
+  </div>
+  {% endif %}
+
   {% if next_session %}
     <a href="/seance?date={{ next_session.date_iso }}" class="card next-session-card">
       <div class="card-label">PROCHAINE SÉANCE</div>
@@ -286,6 +323,29 @@
   <script type="application/json" id="precache-urls">{{ precache_urls|default([])|tojson }}</script>
 
   <script>
+    // Debrief : appelé une seule fois, juste après une séance terminée.
+    function debriefCard(info) {
+      return {
+        loading: true, text: '', trial: false, locked: false,
+        async load() {
+          try {
+            const r = await fetch('/seance/debrief', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(info),
+            });
+            const d = await r.json();
+            if (d.ok) { this.text = d.text; this.trial = !!d.trial; }
+            else if (d.locked) { this.locked = true; }
+            else { this.$el.remove(); }   // rien à dire : on n'encombre pas
+          } catch (e) {
+            this.$el.remove();
+          } finally {
+            this.loading = false;
+          }
+        },
+      };
+    }
     document.getElementById('page-loader').style.display = 'none';
     {% if not error %}
     if (typeof checkDailyNotifications === 'function') {

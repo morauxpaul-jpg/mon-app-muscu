@@ -601,10 +601,26 @@ def get_profile(user_id: str) -> dict:
     return dict(data)
 
 
+# Colonnes de `profiles` ajoutées par des migrations récentes. Si l'une manque
+# (migration pas encore appliquée), l'upsert entier échouerait — on la retire
+# et on réessaie plutôt que de perdre l'écriture.
+_PROFILE_OPTIONAL_COLS = ("coach_memory",)
+
+
 def _profile_upsert(user_id: str, payload: dict) -> None:
     """Toute écriture de profil passe ici : upsert + invalidation du cache."""
     client = get_client()
-    client.table("profiles").upsert({"id": user_id, **payload}).execute()
+    try:
+        client.table("profiles").upsert({"id": user_id, **payload}).execute()
+    except Exception as e:
+        missing = [c for c in _PROFILE_OPTIONAL_COLS
+                   if c in payload and c in str(e).lower()]
+        if not missing:
+            raise
+        logger.warning("profiles : colonne(s) %s absente(s) — écriture partielle", missing)
+        reduced = {k: v for k, v in payload.items() if k not in missing}
+        if reduced:
+            client.table("profiles").upsert({"id": user_id, **reduced}).execute()
     _cache_invalidate(f"profile:{user_id}")
 
 

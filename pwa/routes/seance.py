@@ -5,7 +5,7 @@ Logique portée depuis app.py lignes 1555-1722 (choix_seance) et 2048-2676 (ma s
 import json
 import logging
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify, g
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ from core.exercises_data import get_exercise_info, filter_exos_by_equipment, det
 from core.body_map import get_body_polygons
 from core.hist import is_logged as _is_real_perf, is_muscu_perf, tonnage
 from core.analytics import track
+from flask import session
 
 bp = Blueprint("seance", __name__)
 
@@ -1361,6 +1362,8 @@ def finish():
         from core.data import save_prog
         save_prog(prog)
         clear_user_cache()
+    # L'accueil (écran suivant) propose le debrief de CETTE séance.
+    session["last_workout"] = {"seance": seance_name, "date": date_str}
     track("workout_finished", {
         "mode": mode, "seance": seance_name,
         "rating": note.get("rating", 0) if note else 0,
@@ -1428,6 +1431,72 @@ def _parse_session_note(form):
     if comment:
         note["comment"] = comment
     return note
+
+
+# ── Debrief de fin de séance ────────────────────────────────────
+# Le coach est une page qu'il faut penser à ouvrir. Ce debrief va au-devant,
+# au seul moment où l'attention est garantie : l'écran qui suit la séance.
+# PRO complet ; un aperçu gratuit par semaine sert de démonstration honnête
+# (on montre le produit réel, pas une capture).
+FREE_DEBRIEFS_PER_WEEK = 1
+
+
+def _debrief_allowed(prog) -> tuple[bool, str]:
+    """(autorisé, raison). La raison sert à l'UI : « PRO » ou « quota »."""
+    if getattr(g, "is_vip_full", False):
+        return True, "vip"
+    from core.dates import continuous_week
+    week = continuous_week(logical_today_paris())
+    used = (prog.get("_debrief_free") or {}).get(str(week), 0)
+    if used < FREE_DEBRIEFS_PER_WEEK:
+        return True, "free_trial"
+    return False, "quota"
+
+
+@bp.route("/seance/debrief", methods=["POST"])
+@limiter.limit("10 per hour")
+def debrief():
+    """Trois phrases sur la séance qui vient d'être terminée."""
+    from core import debrief as core_debrief
+    from core.db import _env
+
+    data = request.get_json(silent=True) or {}
+    seance = str(data.get("seance") or "").strip()
+    date_str = _form_date({"date": data.get("date")})
+    if not seance:
+        return jsonify({"ok": False, "error": "séance manquante"}), 400
+
+    prog = get_prog()
+    allowed, reason = _debrief_allowed(prog)
+    if not allowed:
+        return jsonify({"ok": False, "locked": True,
+                        "message": "Le debrief après séance fait partie de PRO."}), 200
+
+    hist, _ = _normalize_hist(get_hist(), prog)
+    facts = core_debrief.collect_facts(
+        hist, seance, date_str, _load_session_note(prog, date_str, seance))
+    if not facts:
+        return jsonify({"ok": False, "error": "aucune série enregistrée"}), 200
+
+    text = core_debrief.generate(_env("ANTHROPIC_API_KEY"), facts)
+    if not text:
+        return jsonify({"ok": False, "error": "indisponible"}), 200
+
+    # Consomme l'aperçu gratuit seulement si la génération a abouti.
+    if reason == "free_trial":
+        from core.dates import continuous_week
+        week = str(continuous_week(logical_today_paris()))
+        store = prog.setdefault("_debrief_free", {})
+        store[week] = int(store.get(week, 0)) + 1
+        # Fenêtre glissante : on ne garde que les 4 dernières semaines.
+        for k in sorted(store)[:-4]:
+            store.pop(k, None)
+        from core.data import save_prog
+        save_prog(prog)
+
+    track("debrief_generated", {"seance": seance, "tier": reason})
+    return jsonify({"ok": True, "text": text, "trial": reason == "free_trial",
+                    "volume": facts["volume"], "records": len(facts["records"])})
 
 
 @bp.route("/seance/api/variant-history", methods=["POST"])

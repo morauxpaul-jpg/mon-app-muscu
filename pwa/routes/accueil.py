@@ -3,7 +3,7 @@
 Logique portée depuis app.py (lignes 1499-1865).
 """
 from datetime import timedelta
-from flask import Blueprint, render_template, g, request
+from flask import Blueprint, render_template, g, request, session
 
 from datetime import date as _date, datetime as _datetime
 
@@ -516,9 +516,21 @@ def index():
     except Exception:
         challenge = None
 
+    # Séance tout juste terminée : l'accueil propose le debrief une fois.
+    # Consommé UNIQUEMENT sur une vraie navigation : le prefetch des liens
+    # (prefetch.js, au survol) chargerait l'accueil en arrière-plan et
+    # brûlerait la proposition sans que personne ne la voie — même piège que
+    # l'upsell post-séance juste au-dessus.
+    last_workout = session.get("last_workout")
+    if last_workout and is_navigation:
+        session.pop("last_workout", None)
+    elif not is_navigation:
+        last_workout = None
+
     return render_template(
         "accueil.html",
         active="accueil",
+        last_workout=last_workout,
         challenge=challenge,
         challenge_just_won=challenge_just_won,
         challenges_won=challenges_won,
