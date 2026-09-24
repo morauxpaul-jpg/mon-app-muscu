@@ -125,11 +125,9 @@ h1, h2, h3, h4, h5, h6,
   border: 0;
 }
 
-/* ── Achat dans l'app native ──────────────────────────────────
-   Le serveur retire déjà tarifs et boutons d'achat quand il reconnaît la
-   coquille native à son User-Agent. Cette règle ne sert qu'aux versions
-   installées avant l'ajout de ce marqueur : elle cache le bloc avant la
-   peinture, sans attendre qu'un script s'exécute. */
-html.is-native .billing-only {
-  display: none !important;
-}
+/* Pas de règle masquant le parcours d'achat ici.
+   Il y en a eu une (`html.is-native .billing-only`) le temps où le masquage
+   en natif était la règle. Elle a survécu à son motif et cachait les boutons
+   que le serveur venait de rétablir — invisible aux tests de rendu, puisque
+   le HTML était bien là. C'est le serveur qui décide (`hide_billing`), et
+   quand il masque, il n'émet simplement pas le bloc. */

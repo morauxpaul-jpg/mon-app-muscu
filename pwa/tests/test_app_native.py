@@ -117,6 +117,27 @@ def test_lapp_native_previent_que_le_paiement_peut_sortir_de_lapp(fake_db, gratu
     assert "s'active tout seul" not in web, "inutile sur le web"
 
 
+def test_aucune_feuille_de_style_ne_masque_le_parcours_dachat():
+    """Une règle CSS qui cache ce que le serveur vient de rendre est
+    **invisible** à tous les tests ci-dessus : le HTML est bien là. C'est
+    exactement comme ça que les boutons d'achat sont restés introuvables
+    dans l'app après avoir été rétablis côté serveur. Le serveur décide seul :
+    quand il masque, il n'émet pas le bloc.
+    """
+    import glob
+    import io
+    import re
+    fautifs = []
+    for f in glob.glob("static/css/*.css"):
+        src = io.open(f, encoding="utf-8").read()
+        # On ignore les commentaires : ils racontent justement cette histoire.
+        sans_commentaires = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+        for regle in re.finditer(r"([^{}]*billing-only[^{}]*)\{([^}]*)\}", sans_commentaires):
+            if "display" in regle.group(2) and "none" in regle.group(2):
+                fautifs.append(f + " : " + regle.group(1).strip())
+    assert not fautifs, fautifs
+
+
 def test_la_webview_autorise_stripe():
     """Sans ces domaines, la redirection vers le paiement est refusée par la
     coquille : le bouton semble ne rien faire."""
