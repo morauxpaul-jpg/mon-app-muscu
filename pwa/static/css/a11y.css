@@ -1,0 +1,126 @@
+/* ═══════════════════════════════════════════════════════
+   MUSCU — Accessibilité
+   Chargé en DERNIER : ces règles corrigent des tailles définies
+   dans components.css / glass.css / tutorial.css sans !important.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Cibles tactiles ──────────────────────────────────────────
+   WCAG 2.2 (critère 2.5.8) exige 24×24 px ; on vise 44 px, la cible
+   confortable au pouce, partout où la mise en page le permet.
+   Là où elle ne le permet pas (tableau de séries, colonne de
+   réordonnancement), on agrandit la surface sensible SANS toucher au
+   visuel : l'élément garde sa taille, un pseudo-élément invisible
+   capte le doigt autour. Les dimensions retenues viennent de mesures
+   réelles dans la page, pour que deux zones voisines ne se recouvrent
+   jamais — un tap qui atterrit sur le mauvais bouton serait pire que
+   la petite cible qu'on corrige. */
+
+.btn,
+button.btn,
+.tuto-btn {
+  min-height: 44px;
+}
+
+/* Boutons volontairement compacts : ils vivent dans des grilles denses
+   et passent déjà le seuil de 24 px. */
+.btn.mini,
+.btn.mini.icon-btn {
+  min-height: 36px;
+}
+
+/* Lien d'évitement : atteint au clavier, mais cliquable aussi. */
+.skip-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* « Passer » du tutoriel — discret par nature, mais plus 24×24 px. */
+#tuto-skip {
+  min-height: 32px;
+  padding: 7px 12px;
+}
+
+/* Champs du tableau de séries : le sélecteur de RPE était 10 px plus
+   bas que les cases reps/poids de la même ligne. */
+.cell-input {
+  min-height: 40px;
+}
+
+/* Suppression d'une série (×) — 26×25 px visibles, 40×44 px sensibles.
+   Deux × consécutifs sont espacés de 45 px : au-delà de 44 les zones se
+   chevaucheraient et une ligne supprimerait sa voisine. */
+.mini-btn {
+  position: relative;
+}
+.mini-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+/* Colonne monter / glisser / descendre : les trois contrôles se touchent
+   verticalement, impossible de leur donner 44 px de haut sans doubler la
+   hauteur de l'en-tête de carte. On élargit la colonne et on remonte
+   chaque contrôle au-dessus du seuil WCAG. */
+.exo-move-btn {
+  width: 40px;
+  height: 28px;
+}
+.exo-drag-handle,
+.exo-reorder .exo-drag-handle {
+  width: 40px;
+  height: 28px;
+}
+
+/* Cases à cocher et boutons radio visibles : 13 px par défaut sous Chrome,
+   la taille d'un grain de riz au doigt. Les cases cachées (.sr-only, dont
+   celles de l'onboarding) gardent leur taille : c'est leur étiquette qui
+   sert de cible. */
+input[type="checkbox"]:not(.sr-only),
+input[type="radio"]:not(.sr-only) {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+/* Ligne de réglage : toute l'étiquette bascule la case, elle doit donc
+   être aussi haute qu'une cible confortable. */
+.muscle-check {
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Sélection de texte ───────────────────────────────────────
+   theme.css coupe la sélection sur <body> pour l'effet « application »
+   (pas de menu « Rechercher sur le web » au clic long). L'effet est
+   conservé sur l'ossature, mais le CONTENU redevient sélectionnable :
+   sans ça, impossible de copier un nom d'exercice, une note ou un
+   chiffre, ni de le faire lire par un outil tiers. */
+p, li, td, th, dd, dt, blockquote, code, pre,
+h1, h2, h3, h4, h5, h6,
+.card-text, .exo-title, .exo-meta, .stat-value, .debrief-text {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* ── Annonces aux lecteurs d'écran ────────────────────────────
+   Visible par la synthèse vocale, jamais à l'écran. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

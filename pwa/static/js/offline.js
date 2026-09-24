@@ -159,7 +159,7 @@
     var c = TOAST_COLORS[kind] || TOAST_COLORS.info;
     var t = document.createElement("div");
     t.setAttribute("role", "status");
-    t.textContent = msg;
+    t.setAttribute("aria-live", "polite");
     t.style.cssText =
       "position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));" +
       "margin:0 auto;max-width:420px;text-align:center;" +
@@ -167,6 +167,10 @@
       "padding:11px 18px;border-radius:12px;font-size:0.88rem;font-weight:500;" +
       "z-index:9999;backdrop-filter:blur(12px);";
     document.body.appendChild(t);
+    // Le texte est posé APRÈS l'insertion : un lecteur d'écran n'annonce une
+    // zone live que si elle existait déjà au moment où son contenu change.
+    // Toast inséré texte compris = message muet pour la synthèse vocale.
+    requestAnimationFrame(function () { t.textContent = msg; });
     setTimeout(function () { t.remove(); }, 4000);
   }
   window.showToast = showToast;

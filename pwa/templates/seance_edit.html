@@ -12,8 +12,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  /* 26 px visibles (seuil WCAG 2.2 : 24) ; la zone sensible fait 30×40
+     grâce au ::after plus bas. Deux boutons voisins sont espacés de
+     32 px : on ne dépasse pas cette largeur, sinon ils se marchent
+     dessus. */
+  position: relative;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 0.5px solid var(--border-default);
   background: var(--bg-elevated);
@@ -25,6 +30,15 @@
   margin-left: 6px;
   padding: 0;
   line-height: 1;
+}
+.exo-info-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 40px;
+  transform: translate(-50%, -50%);
 }
 .exo-chrono-btn { color: var(--accent); }
 .exo-chrono-btn .icon { width: 13px; height: 13px; }
@@ -209,9 +223,11 @@
         </div>
         <div style="flex:1; min-width:0;">
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
-              <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)" title="Info exercice">?</button>
+              <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)"
+                      title="Info exercice" aria-label="Fiche technique de l'exercice {{ exo.base }}">?</button>
               <button type="button" class="exo-info-btn exo-chrono-btn" data-tuto-seance="chrono"
-                      @click.stop="manualRestTimer()" title="Lancer le chrono de repos"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clock"/></svg></button>
+                      @click.stop="manualRestTimer()" title="Lancer le chrono de repos"
+                      aria-label="Lancer le chrono de repos"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#clock"/></svg></button>
           </div>
           <div class="exo-meta">
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
@@ -359,7 +375,7 @@
             <button type="button" class="btn label-icon" style="width:100%; margin-top:6px; justify-content:center;" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
             <button type="button" @click="clearWeights()"
                     title="Efface les poids pré-remplis de la dernière séance"
-                    style="background:none; border:none; color:var(--text-mute); font-size:0.72rem; padding:4px 0; margin-top:2px; cursor:pointer; text-decoration:underline;">
+                    style="background:none; border:none; color:var(--text-mute); font-size:0.78rem; padding:10px 0; margin-top:2px; min-height:32px; cursor:pointer; text-decoration:underline;">
               Réinitialiser les poids
             </button>
           </div>
@@ -683,8 +699,10 @@
         </div>
       </div>
       <div x-show="activite === 'Course' || activite === 'Marche'" style="margin-top:8px;">
-        <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Inclinaison (<span x-text="incline"></span>%)</label>
-        <input type="range" name="incline" min="0" max="20" step="0.5" x-model.number="incline" style="width:100%; accent-color: var(--accent);">
+        <label for="seance-incline" style="display:block; font-size:0.78rem; color:var(--text-mute);">Inclinaison (<span x-text="incline"></span>%)</label>
+        <input type="range" id="seance-incline" name="incline" min="0" max="20" step="0.5"
+               x-model.number="incline" :aria-valuetext="incline + ' %'"
+               style="width:100%; height:28px; accent-color: var(--accent);">
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div>

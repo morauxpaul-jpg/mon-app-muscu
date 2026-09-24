@@ -33,10 +33,18 @@
   --glow-accent: 0 0 24px rgba(120,200,255,0.12);
   --glow-success: 0 0 20px rgba(52,199,89,0.10);
 
-  /* ── Texte — 4 niveaux ── */
+  /* ── Texte — 4 niveaux ──
+     Opacités choisies pour que les TROIS niveaux de contenu passent 4,5:1
+     (WCAG AA, texte normal) sur le fond de carte comme sur le fond de page :
+     0,92 → 15:1   0,68 → 8,7:1   0,48 → 5,0:1.
+     L'ancien --text-3 à 0,35 tombait à 3,2:1 alors qu'il porte les en-têtes
+     du tableau de séries et les libellés de stats — illisible en plein soleil
+     ou avec la luminosité baissée, c'est-à-dire en salle.
+     --text-disabled reste bas exprès : un contrôle inactif n'est pas soumis
+     au critère de contraste, et le distinguer est justement le but. */
   --text-1: rgba(255,255,255,0.92);
-  --text-2: rgba(255,255,255,0.55);
-  --text-3: rgba(255,255,255,0.35);
+  --text-2: rgba(255,255,255,0.68);
+  --text-3: rgba(255,255,255,0.48);
   --text-disabled: rgba(255,255,255,0.20);
 
   /* ── Accent — blanc-bleu lumineux (signature) ── */

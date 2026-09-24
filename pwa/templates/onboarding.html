@@ -21,6 +21,9 @@
     font-size: .9rem; color: var(--text-1); transition: border-color var(--ease-fast), background var(--ease-fast);
   }
   .opt:hover { border-color: var(--border-hover); }
+  /* Le bouton radio est masqué visuellement (.sr-only) mais reste focusable :
+     l'anneau de focus doit donc apparaître sur l'étiquette qui le porte. */
+  .opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
   .opt.sel { border-color: var(--accent); background: var(--accent-bg); }
   .opt .emoji { display:block; font-size:1.6rem; margin-bottom:4px; }
   .field-label { display:block; font-size:.8rem; color: var(--text-3); margin: 10px 0 4px; text-transform:uppercase; letter-spacing:.05em; }
@@ -45,12 +48,14 @@
   /* ── Info tooltip ── */
   .info-tip {
     display:inline-flex; align-items:center; justify-content:center;
-    width:20px; height:20px; border-radius:50%;
+    width:24px; height:24px; border-radius:50%; padding:0;
     background: var(--accent-bg); border: 0.5px solid var(--border-default);
     color: var(--accent); font-size:.7rem; font-weight:500; cursor:pointer;
     position:absolute; top:6px; right:6px; z-index:2;
   }
-  .info-tip:hover + .info-bubble, .info-bubble:hover { display:block; }
+  .info-tip:hover + .info-bubble,
+  .info-tip:focus-visible + .info-bubble,
+  .info-bubble:hover { display:block; }
   .info-bubble {
     display:none; position:absolute; top:-4px; right:28px; z-index:10;
     background: var(--bg-surface); border: 0.5px solid var(--border-default);
@@ -221,10 +226,19 @@
     <input class="field" type="number" x-model.number="form.age" min="10" max="99" placeholder="25">
 
     <label class="field-label">Sexe</label>
-    <div class="opt-grid three">
-      <div class="opt" :class="{ sel: form.sexe === 'homme' }" @click="form.sexe = 'homme'"><span class="emoji">♂️</span>Homme</div>
-      <div class="opt" :class="{ sel: form.sexe === 'femme' }" @click="form.sexe = 'femme'"><span class="emoji">♀️</span>Femme</div>
-      <div class="opt" :class="{ sel: form.sexe === 'autre' }" @click="form.sexe = 'autre'"><span class="emoji">⚧️</span>Autre</div>
+    <div class="opt-grid three" role="radiogroup" aria-label="Sexe">
+      <label class="opt" :class="{ sel: form.sexe === 'homme' }">
+        <input type="radio" class="sr-only" name="ob-sexe" value="homme" x-model="form.sexe">
+        <span class="emoji" aria-hidden="true">♂️</span>Homme
+      </label>
+      <label class="opt" :class="{ sel: form.sexe === 'femme' }">
+        <input type="radio" class="sr-only" name="ob-sexe" value="femme" x-model="form.sexe">
+        <span class="emoji" aria-hidden="true">♀️</span>Femme
+      </label>
+      <label class="opt" :class="{ sel: form.sexe === 'autre' }">
+        <input type="radio" class="sr-only" name="ob-sexe" value="autre" x-model="form.sexe">
+        <span class="emoji" aria-hidden="true">⚧️</span>Autre
+      </label>
     </div>
 
     <div class="onboard-actions">
@@ -238,30 +252,41 @@
     <p class="onboard-step-sub">Étape 2 sur 4</p>
 
     <label class="field-label">Expérience</label>
-    <div class="opt-grid three">
-      <div class="opt" :class="{ sel: form.niveau === 'débutant' }" @click="form.niveau = 'débutant'">
-        <span class="emoji">🌱</span>Débutant
-        <span class="info-tip" @click.stop>?</span>
-        <div class="info-bubble">Tu débutes la musculation ou tu n'as jamais suivi de programme structuré.</div>
-      </div>
-      <div class="opt" :class="{ sel: form.niveau === 'intermédiaire' }" @click="form.niveau = 'intermédiaire'">
-        <span class="emoji">🔥</span>Intermédiaire
-        <span class="info-tip" @click.stop>?</span>
-        <div class="info-bubble">Tu connais les mouvements de base et tu t'entraînes régulièrement depuis plusieurs mois.</div>
-      </div>
-      <div class="opt" :class="{ sel: form.niveau === 'avancé' }" @click="form.niveau = 'avancé'">
-        <span class="emoji">⚡</span>Avancé
-        <span class="info-tip" @click.stop>?</span>
-        <div class="info-bubble">Tu maîtrises la technique et tu cherches à optimiser tes performances.</div>
-      </div>
+    <div class="opt-grid three" role="radiogroup" aria-label="Expérience">
+      <label class="opt" :class="{ sel: form.niveau === 'débutant' }">
+        <input type="radio" class="sr-only" name="ob-niveau" value="débutant" x-model="form.niveau">
+        <span class="emoji" aria-hidden="true">🌱</span>Débutant
+        <button type="button" class="info-tip" @click.stop.prevent
+                aria-label="En savoir plus sur le niveau débutant">?</button>
+        <span class="info-bubble" role="tooltip">Tu débutes la musculation ou tu n'as jamais suivi de programme structuré.</span>
+      </label>
+      <label class="opt" :class="{ sel: form.niveau === 'intermédiaire' }">
+        <input type="radio" class="sr-only" name="ob-niveau" value="intermédiaire" x-model="form.niveau">
+        <span class="emoji" aria-hidden="true">🔥</span>Intermédiaire
+        <button type="button" class="info-tip" @click.stop.prevent
+                aria-label="En savoir plus sur le niveau intermédiaire">?</button>
+        <span class="info-bubble" role="tooltip">Tu connais les mouvements de base et tu t'entraînes régulièrement depuis plusieurs mois.</span>
+      </label>
+      <label class="opt" :class="{ sel: form.niveau === 'avancé' }">
+        <input type="radio" class="sr-only" name="ob-niveau" value="avancé" x-model="form.niveau">
+        <span class="emoji" aria-hidden="true">⚡</span>Avancé
+        <button type="button" class="info-tip" @click.stop.prevent
+                aria-label="En savoir plus sur le niveau avancé">?</button>
+        <span class="info-bubble" role="tooltip">Tu maîtrises la technique et tu cherches à optimiser tes performances.</span>
+      </label>
     </div>
 
     <label class="field-label">Fréquence (séances / semaine)</label>
-    <div class="opt-grid" style="grid-template-columns: repeat(5, 1fr);">
+    <div class="opt-grid" style="grid-template-columns: repeat(5, 1fr);"
+         role="radiogroup" aria-label="Séances par semaine">
       <template x-for="n in [2,3,4,5,6]" :key="n">
-        <div class="opt" :class="{ sel: form.frequence === n }" @click="form.frequence = n">
-          <span class="emoji" x-text="n"></span>j
-        </div>
+        <label class="opt" :class="{ sel: form.frequence === n }">
+          {# .number : sans lui x-model renverrait la chaîne "3" et la
+             comparaison form.frequence === n serait toujours fausse. #}
+          <input type="radio" class="sr-only" name="ob-frequence" :value="n" x-model.number="form.frequence"
+                 :aria-label="n + ' séances par semaine'">
+          <span class="emoji" aria-hidden="true" x-text="n"></span>j
+        </label>
       </template>
     </div>
 
@@ -277,19 +302,43 @@
     <p class="onboard-step-sub">Étape 3 sur 4</p>
 
     <label class="field-label">Objectif principal</label>
-    <div class="opt-grid">
-      <div class="opt" :class="{ sel: form.objectif === 'prise de masse' }" @click="form.objectif = 'prise de masse'"><span class="emoji">📈</span>Prise de masse</div>
-      <div class="opt" :class="{ sel: form.objectif === 'force' }" @click="form.objectif = 'force'"><span class="emoji">🏋️</span>Force</div>
-      <div class="opt" :class="{ sel: form.objectif === 'sèche' }" @click="form.objectif = 'sèche'"><span class="emoji">🔪</span>Sèche</div>
-      <div class="opt" :class="{ sel: form.objectif === 'forme' }" @click="form.objectif = 'forme'"><span class="emoji">💫</span>Forme générale</div>
+    <div class="opt-grid" role="radiogroup" aria-label="Objectif principal">
+      <label class="opt" :class="{ sel: form.objectif === 'prise de masse' }">
+        <input type="radio" class="sr-only" name="ob-objectif" value="prise de masse" x-model="form.objectif">
+        <span class="emoji" aria-hidden="true">📈</span>Prise de masse
+      </label>
+      <label class="opt" :class="{ sel: form.objectif === 'force' }">
+        <input type="radio" class="sr-only" name="ob-objectif" value="force" x-model="form.objectif">
+        <span class="emoji" aria-hidden="true">🏋️</span>Force
+      </label>
+      <label class="opt" :class="{ sel: form.objectif === 'sèche' }">
+        <input type="radio" class="sr-only" name="ob-objectif" value="sèche" x-model="form.objectif">
+        <span class="emoji" aria-hidden="true">🔪</span>Sèche
+      </label>
+      <label class="opt" :class="{ sel: form.objectif === 'forme' }">
+        <input type="radio" class="sr-only" name="ob-objectif" value="forme" x-model="form.objectif">
+        <span class="emoji" aria-hidden="true">💫</span>Forme générale
+      </label>
     </div>
 
     <label class="field-label">Équipement disponible</label>
-    <div class="opt-grid">
-      <div class="opt" :class="{ sel: form.equipement === 'salle' }" @click="form.equipement = 'salle'"><span class="emoji">🏟️</span>Salle complète</div>
-      <div class="opt" :class="{ sel: form.equipement === 'home gym' }" @click="form.equipement = 'home gym'"><span class="emoji">🏠</span>Home gym</div>
-      <div class="opt" :class="{ sel: form.equipement === 'maison' }" @click="form.equipement = 'maison'"><span class="emoji">🛋️</span>Peu d'équipement</div>
-      <div class="opt" :class="{ sel: form.equipement === 'aucun' }" @click="form.equipement = 'aucun'"><span class="emoji">✊</span>Poids du corps</div>
+    <div class="opt-grid" role="radiogroup" aria-label="Équipement disponible">
+      <label class="opt" :class="{ sel: form.equipement === 'salle' }">
+        <input type="radio" class="sr-only" name="ob-equipement" value="salle" x-model="form.equipement">
+        <span class="emoji" aria-hidden="true">🏟️</span>Salle complète
+      </label>
+      <label class="opt" :class="{ sel: form.equipement === 'home gym' }">
+        <input type="radio" class="sr-only" name="ob-equipement" value="home gym" x-model="form.equipement">
+        <span class="emoji" aria-hidden="true">🏠</span>Home gym
+      </label>
+      <label class="opt" :class="{ sel: form.equipement === 'maison' }">
+        <input type="radio" class="sr-only" name="ob-equipement" value="maison" x-model="form.equipement">
+        <span class="emoji" aria-hidden="true">🛋️</span>Peu d'équipement
+      </label>
+      <label class="opt" :class="{ sel: form.equipement === 'aucun' }">
+        <input type="radio" class="sr-only" name="ob-equipement" value="aucun" x-model="form.equipement">
+        <span class="emoji" aria-hidden="true">✊</span>Poids du corps
+      </label>
     </div>
 
     <!-- Sous-question équipement maison -->
@@ -299,9 +348,11 @@
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
           <template x-for="eq in equipmentOptions" :key="eq.id">
             <label class="opt" style="display:flex; align-items:center; gap:8px; text-align:left; padding:10px 12px; cursor:pointer;"
-                   :class="{ sel: form.equipment_details.includes(eq.id) }"
-                   @click.prevent="toggleEquipment(eq.id)">
-              <input type="checkbox" :checked="form.equipment_details.includes(eq.id)" style="display:none;">
+                   :class="{ sel: form.equipment_details.includes(eq.id) }">
+              {# La case pilote la sélection : @change plutôt que @click, sinon
+                 le clavier (Espace) coche sans rien changer au formulaire. #}
+              <input type="checkbox" class="sr-only" :checked="form.equipment_details.includes(eq.id)"
+                     @change="toggleEquipment(eq.id)" :aria-label="eq.label">
               <span style="font-size:1.2rem;" x-text="eq.icon"></span>
               <span style="font-size:0.82rem;" x-text="eq.label"></span>
             </label>

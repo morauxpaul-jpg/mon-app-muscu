@@ -63,6 +63,7 @@
 
     <div x-show="renaming" x-transition class="flex-show" style="gap:6px; margin-bottom:10px;">
       <input type="text" class="rn-input field" x-model="newName" style="flex:1;" maxlength="60"
+             :aria-label="'Nouveau nom pour ' + sname"
              @keydown.enter.prevent="renameSeance(sname, newName); renaming=false"
              @keydown.escape="renaming=false">
       <button type="button" class="btn primary" @click="renameSeance(sname, newName); renaming=false">OK</button>
@@ -79,7 +80,8 @@
           </div>
           <div class="prog-exo-fields">
             <label class="field-label" style="margin-top:4px;">Séries</label>
-            <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()">
+            <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()"
+                   aria-label="Nombre de séries">
             <label class="field-label">Muscle(s)</label>
             <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
               <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">
@@ -166,7 +168,8 @@
 
       <input type="text" x-model="newExo.name" class="field" placeholder="Nom de l'exercice">
       <label class="field-label">Séries</label>
-      <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15">
+      <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15"
+             aria-label="Nombre de séries">
       <label class="field-label">Muscle(s) — vide = auto-détection</label>
       <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
         <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">

@@ -33,7 +33,7 @@
         </div>
         <a href="/seance" class="btn primary" style="flex-shrink:0; padding:8px 14px;" data-haptic="1">Reprendre</a>
         <button type="button" @click="show = false; sessionStorage.setItem('reac_hidden','1')" aria-label="Masquer"
-                style="flex-shrink:0; background:none; border:none; color:var(--text-dim); font-size:1.3rem; line-height:1; cursor:pointer; padding:0 2px;">×</button>
+                style="flex-shrink:0; background:none; border:none; color:var(--text-dim); font-size:1.3rem; line-height:1; cursor:pointer; padding:0; min-width:44px; min-height:44px;">×</button>
       </div>
     </div>
   {% endif %}

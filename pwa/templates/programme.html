@@ -272,7 +272,8 @@
       <p style="font-size:0.78rem; color:var(--text-2); text-align:center; margin-top:8px;">Réservé aux membres <span class="badge-pro">PRO</span></p>
     {% else %}
     <form method="post" action="/programme/import" enctype="multipart/form-data" x-data="{ c:false }">
-      <input type="file" name="file" accept="application/json,.json" class="field" required
+      <label class="field-label" for="import-programme">Fichier du programme (.json)</label>
+      <input type="file" id="import-programme" name="file" accept="application/json,.json" class="field" required
              @change="
                const f = $event.target.files[0];
                if (f) {
@@ -305,8 +306,10 @@
   </details>
 
   {# ── Changer de programme (catalogue) ────────────── #}
-  <details class="card" style="padding:14px; margin-bottom:10px;" x-data="{ applyFromUrl: false }"
-           x-init="try { var sp=new URLSearchParams(window.location.search); if ((sp.get('apply')||'').trim()) { $el.setAttribute('open',''); } } catch(e) {}">
+  {# x-init évalue une EXPRESSION, pas un bloc : un `try { ... }` ici lève
+     SyntaxError et le panneau ne s'ouvrait jamais après un « Appliquer ». #}
+  <details class="card" style="padding:14px; margin-bottom:10px;"
+           x-init="(new URLSearchParams(location.search).get('apply') || '').trim() && $el.setAttribute('open', '')">
     <summary style="cursor:pointer; font-weight:500; color:var(--text-1); display:flex; align-items:center; gap:8px;">
       <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme (catalogue)
     </summary>
@@ -455,8 +458,8 @@
       <h4 class="label-icon" style="color:var(--text-1); margin:0 0 12px; font-weight:500;">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#edit"/></svg>Renommer le programme
       </h4>
-      <label class="field-label" style="margin-top:0;">Nouveau nom</label>
-      <input x-ref="renameInput" type="text" class="field" maxlength="80"
+      <label class="field-label" style="margin-top:0;" for="rename-programme">Nouveau nom</label>
+      <input x-ref="renameInput" id="rename-programme" type="text" class="field" maxlength="80"
              x-model="renameModal.name"
              style="margin:0 0 14px; font-size:1rem;"
              @keydown.enter.prevent="confirmRenameModal()">
@@ -482,8 +485,8 @@
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>
         <span x-text="profileModal.mode === 'add' ? 'Nouveau profil' : 'Renommer le profil'"></span>
       </h4>
-      <label class="field-label" style="margin-top:0;">Nom (ex: Maison, Salle…)</label>
-      <input x-ref="profileInput" type="text" class="field" maxlength="40"
+      <label class="field-label" style="margin-top:0;" for="profil-nom">Nom (ex: Maison, Salle…)</label>
+      <input x-ref="profileInput" id="profil-nom" type="text" class="field" maxlength="40"
              x-model="profileModal.name"
              style="margin:0 0 14px; font-size:1rem;"
              @keydown.enter.prevent="confirmProfileModal()">
