@@ -66,7 +66,10 @@
 
   {# ── Debrief de la séance qui vient d'être terminée ──────────── #}
   {% if last_workout %}
-  <div class="card debrief-card" x-data="debriefCard({{ last_workout|tojson }})" x-init="load()">
+  {# Attribut délimité par des apostrophes : |tojson produit des guillemets
+     doubles, qui fermeraient l'attribut en plein milieu de l'expression.
+     Jinja échappe les apostrophes du JSON, pas les guillemets. #}
+  <div class="card debrief-card" x-data='debriefCard({{ last_workout|tojson }})' x-init="load()">
     <div class="card-label label-icon" style="margin-bottom:8px;">
       <svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#message-circle"/></svg>
       TON COACH A REGARDÉ TA SÉANCE

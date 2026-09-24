@@ -45,4 +45,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Caméra : uniquement le scan de code-barres de la page Nutrition.
+         Rien n'est enregistré ni envoyé — l'image reste dans le WebView, seul
+         le numéro lu part vers le serveur. La permission est demandée par
+         Android au premier scan, pas au lancement de l'app. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- required=false : un appareil sans caméra doit pouvoir installer l'app,
+         il lui reste la saisie manuelle du code. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 </manifest>

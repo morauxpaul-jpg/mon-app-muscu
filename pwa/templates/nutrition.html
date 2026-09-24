@@ -229,7 +229,7 @@
 
     <div class="meal-grid">
       {% for mt_val, mt_label in meal_types %}
-        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = 'aliments'; items = []; basket = []; q = ''; results = [];">
+        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="stopScan(); open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = 'aliments'; items = []; basket = []; q = ''; results = []; scanError = '';">
           <div class="meal-count">{{ meals_by_type.get(mt_val, []) | length }}</div>
           <div>{{ mt_label }}</div>
         </button>
@@ -240,10 +240,11 @@
       <div x-show="open_meal === mt" x-cloak style="margin-top: 12px;">
         {# Mode toggle #}
         <div class="mode-toggle">
-          <button type="button" class="mode-btn" :class="mode === 'aliments' ? 'active' : ''" @click="mode = 'aliments'; $nextTick(() => $refs['food-q-' + mt] && $refs['food-q-' + mt].focus())">Aliments</button>
-          {% if meal_plan.plats %}<button type="button" class="mode-btn" :class="mode === 'plats' ? 'active' : ''" @click="mode = 'plats'">Mes plats</button>{% endif %}
-          <button type="button" class="mode-btn" :class="mode === 'quick' ? 'active' : ''" @click="mode = 'quick'">Saisie rapide</button>
-          <button type="button" class="mode-btn" :class="mode === 'compose' ? 'active' : ''" @click="mode = 'compose'">Composition</button>
+          <button type="button" class="mode-btn" :class="mode === 'aliments' ? 'active' : ''" @click="stopScan(); mode = 'aliments'; $nextTick(() => $refs['food-q-' + mt] && $refs['food-q-' + mt].focus())">Aliments</button>
+          <button type="button" class="mode-btn" :class="mode === 'scan' ? 'active' : ''" @click="openScan(mt)">Scanner</button>
+          {% if meal_plan.plats %}<button type="button" class="mode-btn" :class="mode === 'plats' ? 'active' : ''" @click="stopScan(); mode = 'plats'">Mes plats</button>{% endif %}
+          <button type="button" class="mode-btn" :class="mode === 'quick' ? 'active' : ''" @click="stopScan(); mode = 'quick'">Saisie rapide</button>
+          <button type="button" class="mode-btn" :class="mode === 'compose' ? 'active' : ''" @click="stopScan(); mode = 'compose'">Composition</button>
         </div>
 
         {% if meal_plan.plats %}
@@ -270,6 +271,38 @@
         </div>
         {% endif %}
 
+        {# Mode « Scanner » : code-barres du paquet → macros exactes du produit.
+           La base maison donne des moyennes ; un skyr ou une barre protéinée
+           varient trop d'une marque à l'autre pour s'en contenter. #}
+        <div x-show="mode === 'scan'" x-cloak style="margin-top: 10px;">
+          <template x-if="scanSupported">
+            <div>
+              <div class="scan-frame">
+                <video :id="'scan-video-' + mt" playsinline muted></video>
+                <div class="scan-reticle" aria-hidden="true"></div>
+              </div>
+              <p class="scan-hint" x-text="scanLive ? 'Cadre le code-barres au dos du paquet.' : 'Ouverture de la caméra…'"></p>
+            </div>
+          </template>
+          <template x-if="!scanSupported">
+            <p class="scan-hint">Ce navigateur ne lit pas les codes-barres. Tape les chiffres imprimés sous le code.</p>
+          </template>
+
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <input type="text" inputmode="numeric" class="field" x-model="scanCode" maxlength="14"
+                   placeholder="Chiffres du code-barres" autocomplete="off"
+                   style="margin:0; flex:1;" aria-label="Code-barres"
+                   @keydown.enter.prevent="lookupCode(scanCode)">
+            <button type="button" class="btn" @click="lookupCode(scanCode)" :disabled="scanBusy"
+                    x-text="scanBusy ? 'Recherche…' : 'Chercher'"></button>
+          </div>
+
+          <template x-if="scanError">
+            <p class="scan-error" x-text="scanError"></p>
+          </template>
+          <p style="font-size:0.68rem; color:var(--text-3); margin:8px 0 0;">Valeurs lues sur Open Food Facts, base collaborative : vérifie l'étiquette si un chiffre te surprend.</p>
+        </div>
+
         {# Mode « Aliments » : recherche dans la base d'aliments courants, portions usuelles #}
         <div x-show="mode === 'aliments'" style="margin-top: 10px;">
           <input type="search" class="field" :x-ref="'food-q-' + mt" x-model="q" @input.debounce.120ms="search()"
@@ -293,7 +326,7 @@
               <template x-for="(b, idx) in basket" :key="idx">
                 <div class="food-item">
                   <div class="food-item-head">
-                    <span class="food-name" x-text="b.food.n"></span>
+                    <span class="food-name"><span x-text="b.food.n"></span><template x-if="b.food.brand"><span class="food-cat" x-text="b.food.brand"></span></template></span>
                     <span class="food-item-kcal"><b x-text="Math.round(macro(b, 'k'))"></b> kcal</span>
                     <button type="button" class="mini-btn" @click="basket.splice(idx, 1)" title="Retirer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
                   </div>
@@ -461,6 +494,7 @@
     {% endif %}
   {% endfor %}
 
+  <script src="/static/js/barcode.js"></script>
   <script>
     // Base d'aliments (core/foods_data.py) — hors composant Alpine : pas besoin
     // de réactivité sur 270 entrées. Index normalisé (sans accents) pour la recherche.
@@ -519,6 +553,66 @@
           var l = (MEAL_LABELS[mt] || mt).toLowerCase();
           return mt === 'collation' ? 'en ' + l : 'au ' + l;
         },
+        // ── Scanner ──
+        // BarcodeDetector n'existe que sur Chrome/Android (donc l'app native et
+        // la PWA Android). Ailleurs on garde la saisie des chiffres à la main
+        // plutôt que d'embarquer 250 ko de décodeur pour tout le monde.
+        scanSupported: !!(window.BarcodeScan && window.BarcodeScan.supported()),
+        scanLive: false,
+        scanBusy: false,
+        scanError: '',
+        scanCode: '',
+        openScan(mt) {
+          this.mode = 'scan';
+          this.scanError = '';
+          this.scanCode = '';
+          if (!this.scanSupported) return;
+          var self = this;
+          this.$nextTick(function () {
+            var v = document.getElementById('scan-video-' + mt);
+            if (!v) return;
+            window.BarcodeScan.start(v, function (code) {
+              self.scanLive = false;
+              self.lookupCode(code);
+            }).then(function (err) {
+              self.scanError = err || '';
+              self.scanLive = !err;
+            });
+          });
+        },
+        stopScan() {
+          this.scanLive = false;
+          if (window.BarcodeScan) window.BarcodeScan.stop();
+        },
+        lookupCode(code) {
+          var clean = String(code || '').replace(/[^0-9]/g, '');
+          if (clean.length < 8) {
+            this.scanError = 'Un code-barres fait 8 à 13 chiffres.';
+            return;
+          }
+          var self = this;
+          this.scanBusy = true;
+          this.scanError = '';
+          fetch('/nutrition/barcode/' + clean, { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              self.scanBusy = false;
+              if (!d || !d.ok) {
+                self.scanError = (d && d.error) || 'Produit introuvable.';
+                return;
+              }
+              // Le produit rejoint le panier « Aliments » : mêmes réglages de
+              // portion, même bouton d'ajout, rien de nouveau à apprendre.
+              self.stopScan();
+              self.basket.push({ food: d.food, qty: 1, u: 0 });
+              self.scanCode = '';
+              self.mode = 'aliments';
+            })
+            .catch(function () {
+              self.scanBusy = false;
+              self.scanError = 'Pas de réseau — réessaie, ou passe en saisie rapide.';
+            });
+        },
         // ── Composition ──
         items: [],
         cur: { name: '', calories: 0, protein: 0, carbs: 0, fat: 0 },
@@ -541,6 +635,47 @@
   </script>
 
   <style>
+    .scan-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      max-height: 320px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #000;
+      border: 0.5px solid var(--border-default);
+    }
+    .scan-frame video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Repère visuel : on ne recadre pas l'image analysée (le décodeur lit
+       toute la vidéo), c'est une aide au cadrage, pas une zone de capture. */
+    .scan-reticle {
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 34%;
+      height: 32%;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+    }
+    .scan-hint {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin: 8px 0 0;
+      text-align: center;
+    }
+    .scan-error {
+      font-size: 0.8rem;
+      color: #FF9F0A;
+      margin: 8px 0 0;
+      line-height: 1.45;
+    }
     .obj-btn.selected {
       background: var(--accent-bg) !important;
       border-color: var(--accent) !important;

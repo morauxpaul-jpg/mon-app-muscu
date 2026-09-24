@@ -198,6 +198,24 @@ def test_laccueil_propose_le_debrief_apres_une_seance(fake_db, logged_in, monkey
     assert "TON COACH A REGARDÉ TA SÉANCE" in html
 
 
+def test_la_seance_est_passee_au_script_en_javascript_valide(fake_db, logged_in, monkeypatch):
+    """|tojson produit des guillemets doubles : dans un attribut lui-même
+    délimité par des guillemets, l'expression Alpine est coupée en deux et la
+    carte ne charge jamais rien."""
+    import re
+    _install(monkeypatch)
+    _seed(fake_db)
+    _series(fake_db, D_NOW, 80.0)
+    logged_in.post("/seance/finish", data={
+        "_csrf": CSRF, "mode": "prefaite", "seance_name": "Push",
+        "date": D_NOW.isoformat(), "rating": "", "comment": "",
+    })
+    html = logged_in.get("/accueil").get_data(as_text=True)
+    m = re.search(r"x-data='debriefCard\((.*?)\)'", html)
+    assert m, "x-data doit être délimité par des apostrophes"
+    assert json.loads(m.group(1)) == {"seance": "Push", "date": D_NOW.isoformat()}
+
+
 def test_laccueil_ne_propose_rien_sans_seance_terminee(fake_db, logged_in):
     _seed(fake_db)
     html = logged_in.get("/accueil").get_data(as_text=True)

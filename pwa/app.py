@@ -349,7 +349,10 @@ def _security_headers(response):
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+    # camera=(self) : le scan de code-barres (Nutrition) ouvre la caméra depuis
+    # notre propre page. Les iframes tierces restent bloquées, comme le micro et
+    # la géolocalisation qui ne servent nulle part.
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(self), microphone=()")
 
     if os.getenv("CSP_DISABLED", "").strip().lower() in ("1", "true", "yes", "on"):
         return response

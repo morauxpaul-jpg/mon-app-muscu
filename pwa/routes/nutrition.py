@@ -9,7 +9,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, g
+from flask import Blueprint, render_template, request, redirect, url_for, g, jsonify
 
 from core.data import (
     get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition,
@@ -383,6 +383,32 @@ def add_meal():
     except Exception as e:
         logger.error("add_meal FAILED: %s", e)
     return redirect(url_for("nutrition.index", date=date_iso))
+
+
+@bp.route("/nutrition/barcode/<code>")
+@limiter.limit("40 per hour")
+def barcode(code):
+    """Macros d'un produit emballé à partir de son code-barres.
+
+    Le scan se fait dans le navigateur ; cette route ne fait que l'appel à
+    Open Food Facts. Le faire côté serveur plutôt que depuis la page évite
+    d'exposer l'utilisateur à un tiers (son adresse IP et ses scans ne sortent
+    pas de l'app) et permet de mutualiser le cache entre tous les comptes.
+    """
+    from core.openfoodfacts import clean_code, lookup
+
+    if _require_vip():
+        return jsonify({"ok": False,
+                        "error": "Le scan de code-barres fait partie de PRO."}), 403
+    clean = clean_code(code)
+    if not clean:
+        return jsonify({"ok": False, "error": "code invalide"}), 400
+
+    food = lookup(clean)
+    if not food:
+        return jsonify({"ok": False, "code": clean,
+                        "error": "Produit inconnu d'Open Food Facts."}), 200
+    return jsonify({"ok": True, "food": food})
 
 
 @bp.route("/nutrition/plats/import", methods=["POST"])
