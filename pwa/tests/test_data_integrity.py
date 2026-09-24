@@ -293,3 +293,55 @@ def test_planning_ignore_une_seance_inexistante(fake_db, logged_in):
     pl = fake_db.tables["programs"][0]["data"]["_planning"]
     assert pl["Lundi"] == "Full Body A"
     assert pl["Mercredi"] == ""
+
+
+# ── R4 : troncature silencieuse au-delà de `max-rows` ────────────
+# PostgREST plafonne ses réponses à 1000 lignes SANS le dire. Un historique
+# plus long était donc lu amputé, et la première réécriture figeait la
+# troncature dans la base : les séances les plus anciennes disparaissaient
+# pour de bon. La fausse base reproduit ce plafond (conftest, MAX_ROWS).
+
+
+def _bulk_history(fake, n, start=MONDAY):
+    """n séries réparties sur n jours — au-delà d'une page PostgREST."""
+    rows = []
+    for i in range(n):
+        d = start - dt.timedelta(days=i)
+        rows.append({
+            "user_id": USER_ID, "semaine": continuous_week(d), "seance": "Full Body A",
+            "exercice": "Squat", "serie": 1, "reps": 8, "poids": 60.0,
+            "remarque": "", "muscle": "Quadriceps", "date": d.isoformat(),
+        })
+    fake.table("history").insert(rows).execute()
+    return rows
+
+
+def test_un_historique_de_plus_de_mille_lignes_est_lu_en_entier(fake_db):
+    import core.db as core_db
+    _seed_full_body(fake_db)
+    _bulk_history(fake_db, 1250)
+    core_db._data_cache.clear()
+    hist = core_db.get_hist(USER_ID)
+    assert len(hist) == 1250, "lecture tronquée à la première page"
+
+
+def test_la_fausse_base_plafonne_comme_postgrest():
+    """Garde-fou sur le garde-fou : si ce plafond disparaît, le test
+    ci-dessus passerait même avec une lecture non paginée."""
+    from conftest import FakeQuery, FakeSupabase
+    fake = FakeSupabase()
+    fake.table("history").insert(
+        [{"user_id": USER_ID, "date": "2026-01-01"} for _ in range(1200)]
+    ).execute()
+    brut = fake.table("history").select("*").eq("user_id", USER_ID).execute()
+    assert len(brut.data) == FakeQuery.MAX_ROWS
+
+
+def test_les_pages_suivantes_ne_repetent_pas_la_premiere(fake_db):
+    """Une erreur de borne sur .range() dupliquerait ou sauterait des lignes."""
+    import core.db as core_db
+    _seed_full_body(fake_db)
+    _bulk_history(fake_db, 2100)
+    core_db._data_cache.clear()
+    dates = [r["Date"] for r in core_db.get_hist(USER_ID)]
+    assert len(dates) == len(set(dates)) == 2100

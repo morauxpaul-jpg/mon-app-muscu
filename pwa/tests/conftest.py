@@ -53,6 +53,7 @@ class FakeQuery:
         self._limit = None
         self._maybe_single = False
         self._on_conflict = None
+        self._range = None
 
     # builders
     def select(self, *_args, **_kwargs):
@@ -104,11 +105,19 @@ class FakeQuery:
         self._maybe_single = True
         return self
 
+    def range(self, start, end):
+        """Pagination PostgREST (bornes incluses)."""
+        self._range = (int(start), int(end))
+        return self
+
     # exec
     # Tables dont la clé primaire est un uuid en production. La fausse base
     # doit produire le même TYPE, sinon un code correct échoue ici (ou pire,
     # un code cassé passe) à cause d'une comparaison int/str.
     _UUID_PK = {"coach_conversations"}
+
+    # Valeur par défaut de `max-rows` côté PostgREST/Supabase.
+    MAX_ROWS = 1000
 
     def _apply_defaults(self, row):
         """Valeurs par défaut du schéma SQL (migration v32 : programs.version)."""
@@ -178,6 +187,16 @@ class FakeQuery:
                              reverse=self._order_desc)
         if self._limit is not None:
             matched = matched[: self._limit]
+        # PostgREST plafonne les réponses à `max-rows` SANS le signaler : au-delà,
+        # la liste est simplement tronquée. Le reproduire ici est le seul moyen
+        # qu'un test remarque une lecture non paginée (sinon la fausse base
+        # renvoie tout, et le bug n'apparaît qu'en production, une fois
+        # l'historique assez long).
+        if self._range is not None:
+            start, end = self._range
+            matched = matched[start:end + 1][:self.MAX_ROWS]
+        else:
+            matched = matched[:self.MAX_ROWS]
         if self._maybe_single:
             return FakeResponse(matched[0] if matched else None)
         return FakeResponse(matched)
