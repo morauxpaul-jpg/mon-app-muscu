@@ -83,6 +83,10 @@ public class MainActivity extends BridgeActivity {
         // « App Open » au retour au premier plan. Appelé à chaque page par
         // base.html. ──
         webView.addJavascriptInterface(new AdsBridge(this), "MTAds");
+
+        // ── Chrono de repos : compte à rebours qui défile dans la barre de
+        // notification, même app fermée. Appelé depuis rest-timer.js. ──
+        webView.addJavascriptInterface(new TimerBridge(this), "MTTimer");
     }
 
     /**
@@ -109,6 +113,33 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception e) {
                 // silencieux : sans écriture, adsDisabled() reste à true
             }
+        }
+    }
+
+    /**
+     * Affiche / retire le compte à rebours dans la barre de notification.
+     *
+     * L'échéance traversée est ABSOLUE (epoch ms), pas une durée : c'est ce qui
+     * permet au compteur de rester juste après une mise en veille, une
+     * navigation, ou la destruction de la WebView par Android.
+     */
+    public static class TimerBridge {
+        private final Context ctx;
+        private final Handler handler = new Handler(Looper.getMainLooper());
+
+        TimerBridge(Context context) {
+            this.ctx = context.getApplicationContext();
+        }
+
+        /** @param endAtMillis échéance absolue ; JavaScript envoie un double. */
+        @JavascriptInterface
+        public void start(final double endAtMillis, final String exercice) {
+            handler.post(() -> RestTimerNotification.show(ctx, (long) endAtMillis, exercice));
+        }
+
+        @JavascriptInterface
+        public void stop() {
+            handler.post(() -> RestTimerNotification.hide(ctx));
         }
     }
 

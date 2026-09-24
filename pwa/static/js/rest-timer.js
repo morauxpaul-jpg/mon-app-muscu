@@ -178,8 +178,36 @@
       }
     } catch (e) {}
   }
+  // ── Compte à rebours dans la barre de notification (app native) ──
+  // Le minuteur de l'Horloge fait défiler ses chiffres sans que l'app tourne :
+  // c'est le système qui anime le compteur à partir d'une échéance absolue.
+  // On lui envoie la nôtre. Impossible sur le web : aucune API ne permet de
+  // faire défiler une notification.
+  function _nativeTimer() {
+    return (window.MTTimer && typeof window.MTTimer.start === "function")
+      ? window.MTTimer : null;
+  }
+  function _nativeTimerShow(endAt) {
+    var t = _nativeTimer();
+    if (!t) return;
+    try { t.start(endAt, _currentExerciseName()); } catch (e) {}
+  }
+  function _nativeTimerHide() {
+    var t = _nativeTimer();
+    if (!t) return;
+    try { t.stop(); } catch (e) {}
+  }
+  /** Nom de l'exercice en cours, pour la 2e ligne de la notification. */
+  function _currentExerciseName() {
+    try {
+      var el = document.querySelector(".exo-card.open .exo-title, .exo-card .exo-title");
+      return el ? el.textContent.replace(/\s+/g, " ").trim().slice(0, 60) : "";
+    } catch (e) { return ""; }
+  }
+
   function cancelNotifications() {
     _postSW({ type: "CANCEL_TIMER" });
+    _nativeTimerHide();
     var ln = _capLN();
     if (ln) { try { ln.cancel({ notifications: [{ id: NOTIF_ID }] }); } catch (e) {} }
   }
@@ -193,6 +221,7 @@
   }
   function _scheduleNotif(seconds) {
     cancelNotifications();
+    _nativeTimerShow(Date.now() + seconds * 1000);
     var ln = _capLN();
     if (ln) {
       try {
@@ -490,6 +519,10 @@
       _show();
       _paint();
       _loop();
+      // La notification système survit à la navigation et même à la mort du
+      // processus — mais pas à un balayage de l'utilisateur. On la repose :
+      // notifier deux fois le même identifiant remplace, ça ne duplique pas.
+      _nativeTimerShow(stored.end);
       return;
     }
     // Le repos s'est terminé pendant l'absence : on le signale s'il vient
