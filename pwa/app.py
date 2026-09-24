@@ -367,6 +367,27 @@ def _security_headers(response):
     return response
 
 
+# Marqueur ajouté au User-Agent par la coquille Capacitor
+# (capacitor.config.json → android.appendUserAgent). C'est le seul signal
+# fiable AVANT le rendu : le JavaScript, lui, arrive après la peinture, donc
+# un prix aurait le temps d'apparaître une fraction de seconde.
+NATIVE_UA_MARKER = "MuscuTrackerApp"
+
+
+def _is_native_app() -> bool:
+    """True dans l'application Android/iOS, False sur le web et la PWA.
+
+    Google Play interdit de vendre un bien numérique consommé dans l'app
+    autrement que par Play Billing — mentionner un prix suffit à tomber sous
+    la règle. Tant que Play Billing n'est pas intégré, l'app native ne montre
+    ni tarif ni bouton d'achat.
+    """
+    try:
+        return NATIVE_UA_MARKER in (request.headers.get("User-Agent") or "")
+    except Exception:
+        return False
+
+
 @app.context_processor
 def _inject_user():
     # is_premium : exposé à tous les templates pour gater des features (Coach
@@ -386,6 +407,7 @@ def _inject_user():
         "is_vip": premium,
         "is_vip_full": premium_full,
         "is_admin": bool(email) and email in admin_emails,
+        "is_native": _is_native_app(),
         "csrf_token": _get_or_create_csrf() if uid else "",
         # IDs AdMob (app native Capacitor, comptes Free uniquement). Défauts =
         # IDs de TEST officiels Google — à remplacer par les vrais via l'env

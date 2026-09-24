@@ -64,6 +64,19 @@
     }
   })();
   </script>
+  <script>
+  // Filet de sécurité : si la coquille native n'a pas le marqueur d'User-Agent
+  // (vieille version installée), le serveur a rendu les tarifs. On les cache
+  // par CSS avant la peinture plutôt qu'avec du JavaScript après coup.
+  (function () {
+    try {
+      var C = window.Capacitor;
+      if (C && C.isNativePlatform && C.isNativePlatform()) {
+        document.documentElement.classList.add("is-native");
+      }
+    } catch (e) {}
+  })();
+  </script>
   {% if is_authenticated and not is_vip %}
   <script>
   // Réserve l'espace du bandeau AdMob AVANT le rendu (évite tout saut de layout

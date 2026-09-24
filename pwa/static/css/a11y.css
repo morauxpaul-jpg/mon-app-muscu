@@ -124,3 +124,12 @@ h1, h2, h3, h4, h5, h6,
   white-space: nowrap;
   border: 0;
 }
+
+/* ── Achat dans l'app native ──────────────────────────────────
+   Le serveur retire déjà tarifs et boutons d'achat quand il reconnaît la
+   coquille native à son User-Agent. Cette règle ne sert qu'aux versions
+   installées avant l'ajout de ce marqueur : elle cache le bloc avant la
+   peinture, sans attendre qu'un script s'exécute. */
+html.is-native .billing-only {
+  display: none !important;
+}
