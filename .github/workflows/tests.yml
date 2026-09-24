@@ -1,0 +1,67 @@
+# Barrière avant déploiement.
+#
+# Railway déploie automatiquement depuis `main`. Sans ce garde-fou, les 337
+# tests ne protègent que celui qui pense à les lancer — et quatre défauts ont
+# atteint l'utilisateur en trois jours faute de les exécuter au bon moment.
+#
+# ⚠ Ce fichier produit un SIGNAL. Pour en faire une vraie barrière, activer
+# « Wait for CI » dans Railway → service → Settings → Source. Sans cette
+# option, Railway déploie sans attendre le résultat.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Un push qui en remplace un autre annule le job devenu inutile.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Python + JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # La version doit être celle de la production (runtime.txt), sinon on
+      # teste autre chose que ce qui tourne.
+      - name: Vérifie l'accord avec runtime.txt
+        run: |
+          prod=$(sed 's/^python-//' runtime.txt | cut -d. -f1,2)
+          if [ "$prod" != "3.11" ]; then
+            echo "runtime.txt annonce Python $prod, ce workflow teste 3.11."
+            echo "Mettre les deux d'accord avant de continuer."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # requirements.txt EXACTEMENT comme en production : si une dépendance y
+      # manque, le job échoue ici plutôt qu'au démarrage du serveur.
+      - name: Dépendances
+        run: pip install -r requirements.txt pytest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Tests Python
+        working-directory: pwa
+        run: python -m pytest tests -q
+
+      # tests/test_js.py lance déjà cette suite, mais il s'IGNORE si Node est
+      # absent. Une étape dédiée garantit qu'un silence ne passe pas pour un
+      # succès.
+      - name: Tests JavaScript
+        working-directory: pwa
+        run: node tests/js/run.js

@@ -405,6 +405,12 @@ pwa/
 - Icônes : sprite SVG `static/img/icons.svg` consommé via `<svg><use href="/static/img/icons.svg#name"/></svg>`
 - Font : système (sans-serif)
 
+## Intégration continue
+- `.github/workflows/tests.yml` — à chaque push sur `main` et sur chaque PR : `pytest` (306) puis `node tests/js/run.js` (31), sur **Python 3.11** comme en production. Une étape refuse de démarrer si `runtime.txt` et le workflow ne sont plus d'accord sur la version.
+- Les dépendances sont installées depuis `requirements.txt` **tel quel** : une dépendance oubliée fait échouer la CI au lieu du serveur.
+- La suite JS a **sa propre étape** : `tests/test_js.py` s'ignore quand Node est absent, et un test ignoré passerait pour un succès.
+- ⚠ **C'est un signal, pas encore une barrière.** Railway déploie depuis `main` sans attendre. Pour bloquer un déploiement quand la CI échoue : Railway → service → Settings → Source → **Wait for CI**.
+
 ## Git
 - **Branche unique** : `main` — tout commit/push se fait ici, Railway redéploie automatiquement
 - **Pas de branches de feature**
