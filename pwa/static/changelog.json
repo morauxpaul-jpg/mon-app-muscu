@@ -1,6 +1,16 @@
 {
-  "current": "v53",
+  "current": "v54",
   "entries": [
+    {
+      "version": "v54",
+      "date": "2026-09-24",
+      "title": "Nouveauté : ton temps de repos défile dans la barre de notification",
+      "changes": [
+        "Dans l'app Android, le compte à rebours s'affiche et défile en haut de l'écran, comme le minuteur de ton Horloge — tu peux ranger ton téléphone ou passer sur une autre app, le temps reste juste",
+        "Quitter l'app et revenir n'interrompt plus rien : le chrono affiche toujours le bon temps",
+        "Sur le navigateur, l'écran reste allumé pendant le repos pour que le bip de fin arrive à l'heure"
+      ]
+    },
     {
       "version": "v53",
       "date": "2026-09-24",

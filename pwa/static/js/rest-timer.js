@@ -205,6 +205,34 @@
     } catch (e) { return ""; }
   }
 
+  // ── Écran maintenu allumé pendant le repos (web uniquement) ──
+  // Quand l'écran s'éteint, le navigateur gèle la page : le décompte se fige
+  // et le bip de fin arrive en retard, voire jamais. L'app native n'en a pas
+  // besoin (son compteur vit dans la barre de notification), et l'y forcer
+  // irait contre l'usage : on pose son téléphone pendant le repos.
+  var _wakeLock = null;
+
+  function _wakeLockSupported() {
+    return !_nativeTimer() && navigator.wakeLock && typeof navigator.wakeLock.request === "function";
+  }
+  function _keepScreenOn() {
+    if (_wakeLock || !_wakeLockSupported() || document.hidden) return;
+    try {
+      navigator.wakeLock.request("screen").then(function (lock) {
+        // Le repos a pu se terminer pendant la demande.
+        if (!_state) { try { lock.release(); } catch (e) {} return; }
+        _wakeLock = lock;
+        lock.addEventListener("release", function () { _wakeLock = null; });
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function _releaseScreen() {
+    var lock = _wakeLock;
+    _wakeLock = null;
+    if (!lock) return;
+    try { lock.release(); } catch (e) {}
+  }
+
   function cancelNotifications() {
     _postSW({ type: "CANCEL_TIMER" });
     _nativeTimerHide();
@@ -440,6 +468,7 @@
   function _onFinished() {
     if (_finished) return; // idempotent (tick + retour au premier plan)
     _finished = true;
+    _releaseScreen();
     var bar = _build();
     if (bar) {
       bar.hidden = false;
@@ -471,6 +500,7 @@
     _paint();
     _loop();
     unlockAudio();          // le lancement vient d'un geste : on débloque l'audio
+    _keepScreenOn();
     _ensureNotifPermission();
     _scheduleNotif(total);
   }
@@ -485,6 +515,7 @@
   function skip() {
     clearInterval(_interval);
     _interval = null;
+    _releaseScreen();
     _state = null;
     _finished = false;
     _doneUntil = 0;
@@ -523,6 +554,9 @@
       // processus — mais pas à un balayage de l'utilisateur. On la repose :
       // notifier deux fois le même identifiant remplace, ça ne duplique pas.
       _nativeTimerShow(stored.end);
+      // Le verrou d'écran est libéré d'office dès que l'onglet passe en
+      // arrière-plan : on le reprend puisque le repos court toujours.
+      _keepScreenOn();
       return;
     }
     // Le repos s'est terminé pendant l'absence : on le signale s'il vient

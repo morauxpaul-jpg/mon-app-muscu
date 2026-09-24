@@ -19,17 +19,29 @@ function makeElement(tag) {
     tagName: (tag || 'div').toUpperCase(),
     id: '',
     textContent: '',
+    innerHTML: '',
     title: '',
+    hidden: false,
+    value: '',
     style: { cssText: '', setProperty() {} },
     children: [],
     attributes: {},
     setAttribute(k, v) { this.attributes[k] = String(v); },
     getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attributes, k) ? this.attributes[k] : null; },
     appendChild(c) { this.children.push(c); return c; },
+    insertBefore(c) { this.children.push(c); return c; },
     remove() {},
     addEventListener() {},
+    removeEventListener() {},
+    // Un élément factice rend d'autres éléments factices : le code testé peut
+    // chercher ses sous-parties sans qu'on décrive le gabarit.
+    querySelector() { return makeElement('div'); },
     querySelectorAll() { return []; },
-    classList: { add() {}, remove() {}, contains() { return false; } },
+    getBoundingClientRect() { return { top: 0, left: 0, width: 0, height: 0 }; },
+    focus() {},
+    click() {},
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    dataset: {},
   };
   return el;
 }
@@ -44,7 +56,9 @@ function createEnv(options) {
   const listeners = { document: {}, window: {} };
   const captures = { document: {}, window: {} };   // phase déclarée par écouteur
   const timers = [];
+  const intervals = [];
   const calls = [];              // requêtes fetch observées
+  const nativeLog = [];          // appels au pont natif (MTTimer)
 
   const localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
@@ -54,11 +68,29 @@ function createEnv(options) {
   };
   if (opts.corruptQueue) store.set('muscu_offline_queue', '{pas du json');
 
+  // Verrou d'écran : on note les prises et les relâches plutôt que de simuler
+  // l'API complète — c'est la séquence qui compte, pas l'objet.
+  const wakeLog = [];
+  const wakeLock = {
+    request(type) {
+      wakeLog.push('request:' + type);
+      return Promise.resolve({
+        type,
+        release() { wakeLog.push('release'); return Promise.resolve(); },
+        addEventListener() {},
+      });
+    },
+  };
+
   const document = {
     readyState: 'complete',
+    hidden: false,
+    visibilityState: 'visible',
+    title: '',
     body: makeElement('body'),
     createElement: makeElement,
     getElementById: () => null,
+    querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener(type, fn, capture) {
       (listeners.document[type] ||= []).push(fn);
@@ -80,12 +112,18 @@ function createEnv(options) {
   };
 
   const navigator = { onLine: opts.online !== false };
+  if (opts.wakeLock !== false) navigator.wakeLock = wakeLock;
+  if (opts.nativeTimer) {
+    window.MTTimer = { start(...a) { nativeLog.push(['start', ...a]); }, stop() { nativeLog.push(['stop']); } };
+  }
 
   const sandbox = {
     window, document, navigator, localStorage,
     URL, URLSearchParams, FormData: FakeFormData, Promise, Date, Error, JSON, console,
     setTimeout: (fn) => { timers.push(fn); return timers.length; },
     clearTimeout() {},
+    setInterval: (fn) => { intervals.push(fn); return intervals.length; },
+    clearInterval() {},
     requestAnimationFrame: (fn) => { timers.push(fn); return timers.length; },
     fetch(url, init) {
       calls.push({ url, body: init && init.body ? String(init.body) : '' });
@@ -113,6 +151,12 @@ function createEnv(options) {
     },
     /** Phases déclarées pour un type d'événement (true = capture). */
     phases(target, type) { return (captures[target][type] || []).slice(); },
+    /** Historique des prises/relâches du verrou d'écran. */
+    wakeLog,
+    /** Historique des appels au pont natif du chrono. */
+    nativeLog,
+    /** Laisse tourner les promesses en attente. */
+    settle() { return new Promise((r) => setImmediate(r)); },
     queue() {
       try { return JSON.parse(localStorage.getItem('muscu_offline_queue') || '[]'); }
       catch (e) { return null; }
