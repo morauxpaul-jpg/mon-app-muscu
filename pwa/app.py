@@ -295,7 +295,7 @@ def _csrf_protect():
 
 # Content-Security-Policy — stratégie en deux couches (décidée après audit du
 # code : ~700 styles inline, handlers onclick, scripts inline, + dépendances
-# externes Google Fonts, jsDelivr/Supabase sur le login, Plotly).
+# externes Google Fonts, jsDelivr/Supabase sur le login).
 #
 # Couche 1 — TOUJOURS bloquante (_CSP_ENFORCED) : uniquement les directives
 #   prouvées sans impact sur les ressources réellement chargées. Elles ne
@@ -303,8 +303,8 @@ def _csrf_protect():
 #   l'app, tout en bloquant clickjacking, injection de <base>, exfiltration de
 #   formulaire vers un tiers, et plugins.
 # Couche 2 — Report-Only (_CSP_REPORT) : politique complète, corrigée avec les
-#   vraies dépendances (jsDelivr pour supabase-js, Google Fonts, Plotly, le
-#   domaine Supabase pour connect-src). N'bloque rien ; sert de base pour un
+#   vraies dépendances (jsDelivr pour supabase-js, Google Fonts, le domaine
+#   Supabase pour connect-src). Ne bloque rien ; sert de base pour un
 #   futur durcissement total via CSP_ENFORCE=1. CSP_DISABLED=1 retire tout.
 # form-action liste TOUTES les cibles vers lesquelles un <form> peut partir,
 # y compris APRÈS une redirection 3xx. Le paiement Stripe POST /billing/checkout
@@ -330,11 +330,11 @@ def _csp_report_policy() -> str:
     connect_extra = f" {supa}" if supa else ""
     return (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.plot.ly https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self' data: blob:; "
         "font-src 'self' data: https://fonts.gstatic.com; "
-        f"connect-src 'self' https://cdn.plot.ly https://cdn.jsdelivr.net{connect_extra}; "
+        f"connect-src 'self' https://cdn.jsdelivr.net{connect_extra}; "
         "frame-ancestors 'self'; "
         "base-uri 'self'; "
         f"form-action 'self' https://accounts.google.com {_STRIPE_FORM_ACTION}; "

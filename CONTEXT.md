@@ -6,9 +6,10 @@ PWA Flask (Python) avec Supabase (PostgreSQL) en backend, déployée sur Railway
 - **Framework** : Flask avec Blueprints + Flask-Limiter (rate limiting)
 - **Frontend** : Jinja2 templates + Alpine.js + CSS custom (refonte UI dark minimal style Strong/Hevy)
 - **Auth** : Supabase Google OAuth → bridge JWT → session Flask (cookie 30 jours)
-- **Data** : Supabase tables (history, programs, profiles, onboarding, nutrition, coach_messages) via `service_role` key
-- **PWA** : Service Worker (Network First), manifest.json, offline support
-- **IA** : Coach via API Anthropic (Claude Haiku 4.5)
+- **Data** : Supabase tables (history, programs, profiles, onboarding, nutrition, coach_messages, coach_conversations, session_notes, body_weight, push_subscriptions, events) via `service_role` key. **Toutes les lectures de listes sont paginées** (`_fetch_all`) : PostgREST plafonne silencieusement à 1000 lignes.
+- **PWA** : Service Worker (network-first sur les pages, stale-while-revalidate sur `/static`), manifest.json, séance du jour pré-chargée pour l'usage hors-ligne
+- **Serveur** : gunicorn `-k gthread --threads 8` (`railway.json`) — un appel IA lent ne gèle plus l'app pour tout le monde ; `ProxyFix` devant, sans quoi le rate-limit « 60/min par IP » comptait l'IP du proxy, donc tout le monde ensemble
+- **IA** : Coach via API Anthropic (Claude Haiku 4.5), réponses diffusées en flux (SSE)
 - **Coquille native** : Capacitor (`android/`, `capacitor.config.json` à la racine) — webview sur l'URL de prod + plugin AdMob. Pubs (Free uniquement, app native uniquement) : `pwa/static/js/ads.js`, IDs via env `ADMOB_BANNER_ID`/`ADMOB_INTERSTITIAL_ID`. Docs : `docs/CAPACITOR.md` + `docs/PLAY_STORE.md`. Login Google natif **branché côté code** (2026-06-15) : `login.html` détecte Capacitor → `@capgo/capacitor-social-login` (idToken + nonce) → `supabase.auth.signInWithIdToken` → `/auth/session` (OAuth webview interdit, 403 disallowed_useragent). Reste à faire côté toi : env `GOOGLE_WEB_CLIENT_ID` + ID client OAuth Android (SHA-1) dans Google Cloud + test sur téléphone (voir CAPACITOR.md).
 
 ## Structure des fichiers
@@ -18,17 +19,28 @@ pwa/
 ├── app.py                         # Flask app, blueprints, auth gate (g.user_id, g.is_vip), landing, /service-worker.js (CACHE_VERSION + SHA du commit)
 ├── run_local_fake.py              # App en local sur fausse DB (FakeSupabase des tests) + /test-seed — voir « Preview local »
 ├── cron_reactivation.py           # Cron CLI de relance push des inactifs
+├── cron_reminders.py              # Cron CLI du rappel de séance à l'heure choisie (à lancer toutes les heures)
 ├── capture_screens.py / capture_assets.py  # Captures PNG (fiche store, motion design) via le serveur fake
 ├── compress_icon.py / generate_icons.py / rebuild_program_from_history.py  # Scripts utilitaires (non commités pour partie)
 ├── supabase_schema_v23.sql … v31  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
+├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
+├── supabase_schema_v35_session_duration.sql # session_notes.duration_min
+├── supabase_schema_v36_coach_memory.sql # profiles.coach_memory (note du coach entre conversations)
 ├── tests/                         # pytest — conftest = fake Supabase en mémoire (cd pwa && python -m pytest tests -q)
 ├── core/
 │   ├── db.py                      # Accès Supabase (service_role), cache LRU TTL 60s, verrou optimiste programs
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
 │   ├── dates.py                   # Helpers dates (timezone Paris), DAYS_FR, MONTHS_FR
 │   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name, overload_suggestion)
+│   ├── hist.py                    # Prédicats UNIQUES sur l'historique (is_perf, is_muscu_perf, is_session_marker, tonnage) — une seule définition de « séance faite »
+│   ├── strength.py                # Standards de force relatifs au poids de corps (ratios par muscle × sexe, niveaux)
+│   ├── exercise_stats.py          # Fiche par exercice : variantes, séances, records, séries, sparkline SVG
+│   ├── reminders.py               # Rappel de séance à l'heure choisie (ciblage, payload, run_reminders)
+│   ├── coach_memory.py            # Note persistante du coach sur l'utilisateur (700 car. max)
+│   ├── debrief.py                 # Debrief de fin de séance : collecte des chiffres réels + rédaction IA
+│   ├── openfoodfacts.py           # Produit emballé par code-barres (kJ→kcal, portion, cache mémoire)
 │   ├── catalog.py                 # Catalogue de 19 programmes prédéfinis (onboarding)
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
 │   ├── foods_data.py              # Base de ~270 aliments courants (kcal/macros pour 100 g + portions) pour la recherche Nutrition
@@ -48,7 +60,7 @@ pwa/
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
 │   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas (recherche aliments, plats de la semaine, saisie rapide, composition)
-│   ├── coach.py                   # Chat IA (Claude Haiku 4.5), réservé VIP, quota 15 msg/jour
+│   ├── coach.py                   # Chat IA (Claude Haiku 4.5) en flux SSE, réservé VIP, quota 15 msg/jour, mémoire entre conversations
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
 │   ├── generator.py               # Générateur de programme IA (VIP) — Claude → JSON validé → save_prog
@@ -68,7 +80,8 @@ pwa/
 │   ├── seance_choix.html          # Choix de séance du jour
 │   ├── seance_edit.html           # Saisie exercices (Alpine, chrono, RPE, inline history)
 │   ├── programme.html             # Gestion programme + profils + planning
-│   ├── progres.html               # Progression (body map, calendrier, volume, zoom)
+│   ├── progres.html               # Progression (body map, calendrier, volume, standards de force)
+│   ├── exercice.html              # Fiche d'un exercice : records, courbes, variantes, toutes les séances
 │   ├── gestion.html               # Paramètres, export/import, reset, notifications, newsletter
 │   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Arcade, Gestion, Tutoriel
 │   ├── premium.html               # Page de présentation des tiers
@@ -93,7 +106,8 @@ pwa/
 │   │   ├── glass.css              # Liquid glass (chargé après components.css)
 │   │   ├── icons.css              # Tailles et couleurs d'icônes (.icon, .icon-sm, .icon-accent…)
 │   │   ├── timer.css / rest-timer.css  # Chrono de repos (local à la séance / barre globale)
-│   │   └── tutorial.css           # Overlay tutoriel
+│   │   ├── tutorial.css           # Overlay tutoriel
+│   │   └── a11y.css               # **Chargé en dernier** : cibles tactiles, cases à cocher, sélection de texte, masquage des tarifs en natif
 │   ├── js/
 │   │   ├── alpine.min.js / alpine-sort.min.js  # Alpine.js + plugin sort bundlés localement
 │   │   ├── sw-register.js         # Enregistrement SW + auto-update
@@ -108,7 +122,10 @@ pwa/
 │   │   ├── tutorial.js / tuto-seance.js  # Tutoriels accueil / saisie de séance
 │   │   ├── ui-fx.js               # Effets UI (toasts, micro-animations)
 │   │   ├── prefetch.js            # Prefetch des pages clés
-│   │   └── exercise-library.js    # Bibliothèque d'exercices (search/picker)
+│   │   ├── exercise-library.js    # Bibliothèque d'exercices (search/picker)
+│   │   ├── seance.js              # Saisie de séance (extrait de seance_edit.html) : enregistrement JSON, file hors-ligne, records, réordonnancement
+│   │   ├── exo-info.js            # Modale « fiche exercice » de la séance
+│   │   └── barcode.js             # Scan de code-barres via BarcodeDetector (Nutrition), repli saisie manuelle
 │   ├── img/
 │   │   ├── icons.svg              # Sprite SVG (lucide-like) référencé via <use href="…#name"/>
 │   │   └── exercises/             # SVG illustrations exercices
@@ -140,7 +157,7 @@ pwa/
 - **Mur VIP** : `templates/partials/vip_lock.html` (inline) ou `vip_wall.html` (plein écran).
 - **Badge PRO** affiché dans la topbar pour les VIP.
 - **Admin** (`ADMIN_EMAILS` env, séparateur virgule) peut basculer manuellement le tier d'un user via `/admin/set-tier`.
-- **Paiement Stripe** (`routes/billing.py`) : Checkout (prix inline `price_data`, pas d'ID à pré-créer) pour mensuel 4,99€ / annuel 39,99€ / lifetime 79,99€. Webhook `/billing/webhook` (public + CSRF-exempt, signé) = source de vérité du tier ; `/billing/success` active aussi le VIP en filet ; `/billing/portal` = gestion/annulation. Boutons masqués dans l'app native (règle stores, détection Capacitor). Env : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Migration : `supabase_schema_v27_stripe.sql` (colonne `profiles.stripe_customer_id`).
+- **Paiement Stripe** (`routes/billing.py`) : Checkout (prix inline `price_data`, pas d'ID à pré-créer) pour mensuel 4,99€ / annuel 39,99€ / lifetime 79,99€. Webhook `/billing/webhook` (public + CSRF-exempt, signé) = source de vérité du tier ; `/billing/success` active aussi le VIP en filet ; `/billing/portal` = gestion/annulation. Tarifs ET boutons absents du rendu dans l'app native (cf. « App native : parcours d'achat »). Env : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Migration : `supabase_schema_v27_stripe.sql` (colonne `profiles.stripe_customer_id`).
 - **Upgrades de plan** : `billing.detect_current_plan()` lit l'abonnement actif (mensuel/annuel/None) ; la page Premium propose les paliers supérieurs aux abonnés. À l'upgrade, l'ancien abonnement est **supersédé** (`metadata.superseded=1`) puis annulé — le webhook `subscription.deleted` ignore alors la rétrogradation (pas de perte de VIP ni de double facturation). Réutilise le même `customer` Stripe.
 
 ## Fonctionnalités clés
@@ -153,6 +170,10 @@ pwa/
 - Progression indicator (« EXERCICE 3/7 »)
 - Inline-confirm pour actions destructives (jamais `prompt()`/`confirm()`/`alert()`, jamais hors-carte)
 - Ajout cardio dans la séance via `/seance/add-cardio`
+- **Enregistrement sans rechargement** (`/seance/save-exo` répond en JSON si `Accept: application/json`) : la carte se met à jour sur place et la suivante s'ouvre. Le POST classique reste le repli sans JavaScript.
+- **Record annoncé en direct** : `_pr_check()` compare la série à tout l'historique de l'exercice et renvoie le type de record (première fois / charge / reps / reps à charge égale) ; la carte l'affiche au moment où il tombe.
+- **Bilan de séance** (`session_notes`, migrations v34/v35) : ressenti, commentaire, durée. `history.session_id` (uuid5 déterministe user|date|séance) relie les lignes d'une même séance.
+- Une même séance peut être faite **deux fois dans la semaine** : les opérations ciblent la date exacte, plus la semaine (cf. « Semaine continue »).
 
 ### Cardio
 - Activités : Course, Vélo, Rameur, Natation, Corde, HIIT, Marche (avec MET pour estimation calories)
@@ -162,13 +183,24 @@ pwa/
 - Profil métabolique : BMR Mifflin-St Jeor, TDEE × facteur d'activité (5 niveaux : sédentaire → athlète)
 - Objectif calorique ajusté selon objectif (Masse / Maintien / Sèche), macros recommandés en %
 - Table Supabase `nutrition` : un repas par ligne (date, meal_type, macros, note)
+- **Scan de code-barres** (mode « Scanner » du formulaire de repas) : `BarcodeDetector` du navigateur (Chrome/Android, donc l'app native et la PWA Android), repli par saisie des chiffres ailleurs — aucun décodeur JavaScript embarqué. Le produit est cherché côté **serveur** (`GET /nutrition/barcode/<code>` → `core/openfoodfacts.py` → Open Food Facts) : l'IP et les scans de l'utilisateur ne sortent pas de l'app et le cache est mutualisé. Le produit rejoint le panier « Aliments », donc mêmes réglages de portion et même bouton d'ajout.
+- Caméra : `Permissions-Policy: camera=(self)` (app.py) + `android.permission.CAMERA` dans le manifeste Android ; Capacitor demande la permission au premier scan.
 
 ### Coach IA
-- Modèle : `claude-haiku-4-5-20251001`, max 500 tokens
+- Modèle : `claude-haiku-4-5-20251001`, max **1400** tokens (500 coupait les réponses en plein milieu)
+- **Réponse en flux** : `/coach/ask` répond en Server-Sent Events (`stream_with_context`, `X-Accel-Buffering: no`) quand le client le demande ; le texte s'écrit au fur et à mesure au lieu de faire patienter plusieurs secondes. Repli JSON si le flux n'est pas accepté.
+- **Mémoire entre conversations** (`core/coach_memory.py`, migration v36) : après quelques échanges, le coach réécrit une note de 700 caractères max sur l'utilisateur (blessures, contraintes, préférences) dans `profiles.coach_memory` ; elle est injectée dans les conversations suivantes. Sans la colonne, l'écriture échoue en silence et l'app fonctionne sans mémoire.
 - Accès réservé VIP (mur `vip_wall.html` pour les free)
-- Quota VIP : 15 msg/jour (champs `profiles.coach_quota_date` + `coach_quota_count`, reset auto à chaque nouveau jour) — protège le coût API
-- Historique conversation persisté dans `coach_messages`, effaçable via `/coach/clear`
-- Le system prompt inclut le profil utilisateur, le programme, et l'historique récent
+- Quota VIP : 15 msg/jour (champs `profiles.coach_quota_date` + `coach_quota_count`, reset auto à chaque nouveau jour) — protège le coût API. Le quota est **rendu** si la génération échoue.
+- Historique persisté dans `coach_messages` / `coach_conversations`, effaçable via `/coach/clear`
+- Le system prompt inclut le profil utilisateur, le programme, l'historique récent et la note de mémoire
+- Les erreurs techniques ne remontent plus au client (avant : « Vérifie ANTHROPIC_API_KEY dans Railway »)
+
+### Debrief de fin de séance
+- Le coach est une page qu'il faut **penser** à ouvrir. Le debrief va au-devant, sur l'écran qui suit la séance : `/seance/finish` mémorise la séance en session, l'accueil affiche une carte qui appelle `POST /seance/debrief`.
+- `core/debrief.py` : `collect_facts()` calcule volume, séries, reps, RPE moyen, records battus et comparaison avec la dernière séance du même nom ; l'IA **rédige** trois phrases à partir de ces chiffres, elle ne les invente pas (~250 tokens).
+- PRO complet ; **un aperçu gratuit par semaine** (`prog._debrief_free`, fenêtre glissante de 4 semaines) sert de démonstration honnête. L'aperçu n'est consommé que si la génération aboutit.
+- La proposition est consommée une seule fois et **pas par le préchargement** de `prefetch.js` (garde `Sec-Fetch-Mode: navigate`) : sinon le survol du lien la brûlait avant que l'utilisateur la voie.
 
 ### Générateur de programme IA (VIP, 2026-06-14)
 - **Route** `routes/generator.py` : `GET /generator` (form, VIP-gated via `paywall`), `POST /generator/generate` (prompt structuré → Claude Haiku 4.5, `max_tokens=2600` → **JSON strict** → `parse_and_validate`), `POST /generator/apply` (re-validation + `save_prog`, même chemin sûr que l'import ; reps NON persistées, cf. semaine continue).
@@ -205,8 +237,9 @@ pwa/
 - **Calendrier mensuel** : cases colorées (vert=fait, rouge=manqué, bleu=à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
 - **Volume par semaine** : graphique SVG verrouillé (8 dernières semaines)
 - **Body map** : carte musculaire SVG interactive (polygones depuis `core/body_map.py`) avec % de standard
+- **Standards de force relatifs au gabarit** (`core/strength.py`) : les paliers sont des multiples du poids de corps par muscle et par sexe (bornés 35–200 kg), pas des valeurs absolues — 60 kg au développé ne veut pas dire la même chose à 55 kg qu'à 95 kg. Repli absolu si le poids est inconnu.
 - **Hall of Fame** : top 3 exercices par 1RM
-- **Zoom mouvement** : évolution par semaine (Plotly)
+- **Fiche par exercice** (`/progres/exercice?nom=…`, `templates/exercice.html`, `core/exercise_stats.py`) : records, évolution par métrique (charge, volume, 1RM estimé), variantes, toutes les séances, table des RM (PRO). Courbes en **SVG maison** — Plotly (≈3 Mo depuis un CDN) a été retiré.
 
 ### Streak
 - Affiché en gros sur l'accueil avec icône flamme
@@ -216,15 +249,16 @@ pwa/
 
 ### Mode Offline
 - Bandeau « Mode hors-ligne » affiché automatiquement
-- Les formulaires de séance sont interceptés et stockés dans localStorage
-- Synchronisation automatique au retour de la connexion avec toast
+- Les formulaires de séance sont interceptés et stockés dans localStorage (écoute en phase **bulle** : en phase capture, une série était mise deux fois en file)
+- Synchronisation **séquentielle** au retour du réseau (`_syncing` + `step()` récursif), avec toast typé
 - Badge orange « X action(s) en attente » en bas à droite
-- Pages principales en cache SW (accueil, séance)
+- **La séance du jour est pré-chargée** : le SW reçoit un message `PRECACHE` avec ses URLs, donc en sous-sol on ouvre sa séance au lieu d'être renvoyé sur une page d'erreur. `CACHE_VERSION` en tête de `static/service-worker.js`.
 
 ### Notifications
 - **Universelles (free + PRO)** depuis 2026-06-15 : la case « Notifications de rappel & relances » dans Gestion n'est plus réservée au VIP (rétention = on veut surtout faire revenir les gratuits). Un seul contrôle : cocher la case demande la permission ET abonne au push (`handleNotifToggle` → `window.enablePush`).
 - Rappels **locaux** (notifications.js) : matin (jour d'entraînement, <14 h), soir (séance non faite, ≥18 h), streak en danger (≥19 h, streak > 2). Ne se déclenchent que si l'app est ouverte.
-- Relances **push** (app fermée) : cf. section « Push web » plus haut.
+- **Rappel de séance à l'heure choisie** (`core/reminders.py`) : réglage `_settings.reminder_hour` (6→22 h, 0 = aucun) dans Gestion. `POST /tasks/reminders` (même secret `CRON_SECRET`) est appelé **toutes les heures** par un cron externe et ne notifie que les comptes dont l'heure correspond ET qui ont une séance prévue non faite. Script équivalent : `pwa/cron_reminders.py`.
+- Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Un envoi par utilisateur au maximum tous les 27 jours (`push_subscriptions.last_reactivation_at`, migration v34) — avant, un inactif recevait la même relance 27 jours d'affilée.
 - Désactivable dans Gestion > Paramètres.
 
 ### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
@@ -242,6 +276,19 @@ pwa/
 - **Consentement in-app** : case « Recevoir les nouveautés par e-mail » dans Gestion > Paramètres (universelle free + PRO). Stockée dans `profiles` (migration `supabase_schema_v31_newsletter.sql`) : `newsletter_opt_in` (bool), `newsletter_opt_in_at` (date du consentement = preuve RGPD), `newsletter_email` (e-mail du compte au moment de l'opt-in, pour l'export sans appeler l'API auth). Helpers `db.set_newsletter_optin` / `db.list_newsletter_emails` ; façade `data.set_newsletter_optin` ; enregistrée dans `gestion.update_settings` (best-effort).
 - **Export** : `GET /admin/newsletter-emails` (réservé admin) → liste texte brut (un e-mail/ligne) à copier-coller dans l'outil d'emailing (**Brevo**). Lien depuis `/admin` (carte « Newsletter »).
 - L'envoi des e-mails se fait **hors app** (Brevo) — l'app ne fait que collecter le consentement + fournir la liste. Les annonces *in-app* passent, elles, par le push (cf. relance).
+
+### Accessibilité
+- **Contraste** : les trois niveaux de texte (`--text-1/2/3` dans `tokens.css`) passent 4,5:1 (WCAG AA) sur le fond de page comme sur le fond de carte. `--text-3` était à 3,2:1 alors qu'il porte les en-têtes du tableau de séries et les libellés de stats — illisible en salle, luminosité baissée. `--text-disabled` reste bas exprès : un contrôle inactif n'est pas soumis au critère.
+- **Cibles tactiles** (`static/css/a11y.css`, chargé en dernier donc sans `!important`) : boutons à 44 px, cases à cocher à 20 px, lignes de réglage à 44 px. Là où la mise en page l'interdit (tableau de séries, colonne monter/glisser/descendre), un pseudo-élément agrandit la surface sensible **sans toucher au visuel** ; les dimensions viennent de mesures réelles pour que deux zones voisines ne se recouvrent jamais.
+- **Onboarding** : les choix sont de vrais `<input type=radio>` masqués sous l'étiquette (flèches directionnelles, annonce « 2 sur 3 »), plus des `<div @click>`.
+- **Noms accessibles** : chaque contrôle a un nom annonçable (`for`/`id` quand l'étiquette existe, `aria-label` quand une boucle interdit un id unique). `tests/test_accessibilite.py` parcourt 9 pages et refuse tout contrôle muet, recalcule les contrastes, et refuse un bloc (`try { … }`) dans une directive Alpine — Alpine évalue une **expression**, un bloc lève SyntaxError en silence.
+- Focus clavier visible (`:focus-visible`), lien d'évitement, `prefers-reduced-motion` global : déjà en place dans `theme.css`.
+
+### App native : parcours d'achat
+- Google Play interdit de vendre un bien numérique consommé dans l'app autrement que par Play Billing, et **un tarif affiché suffit** à tomber sous la règle. Tant que Play Billing n'est pas intégré, l'app native ne montre ni prix ni bouton d'achat.
+- Détection **côté serveur** : la coquille Capacitor ajoute `MuscuTrackerApp/1` à son User-Agent (`capacitor.config.json` → `android.appendUserAgent`) ; `app.py:_is_native_app()` expose `is_native` aux gabarits, qui ne rendent alors ni tarif ni formulaire `/billing/*`. Le masquage JavaScript précédent laissait le prix dans le DOM et le temps d'apparaître.
+- Filet pour une version installée sans le marqueur : `html.is-native .billing-only { display:none }` (classe posée très tôt par `base.html`).
+- La page PRO explique au lieu de rester muette, et le mur de fonctionnalité dit « Voir ce que PRO apporte » plutôt que « Passer en PRO ». L'abonnement suit le compte Google : rien à « restaurer ». Le web et la PWA gardent tout le parcours.
 
 ### Export / Import
 - **Gestion** : « Exporter tout » (historique + programme + profil) ou « Programme seul » — gated VIP
@@ -284,25 +331,42 @@ pwa/
 
 ### Settings utilisateur (`prog._settings`)
 ```python
+# Valeurs par défaut : routes/gestion.py:DEFAULT_SETTINGS
 {
-    "auto_collapse": True,      # Replier exercices terminés
-    "show_1rm": True,           # Afficher estimation 1RM
-    "theme_animations": True,   # Animations CSS
-    "auto_rest_timer": True,    # Chrono repos auto
-    "show_previous_weeks": 2,   # Semaines d'historique affichées
-    "notifications": False,     # Rappels de séance
+    "auto_collapse": True,        # Replier exercices terminés
+    "show_1rm": True,             # Afficher estimation 1RM
+    "theme_animations": True,     # Animations CSS
+    "auto_rest_timer": True,      # Chrono repos auto
+    "auto_prefill_weight": True,  # Pré-remplir les charges de la dernière fois
+    "show_rpe": True,             # Colonne RPE dans le tableau de séries
+    "show_overload_hint": True,   # Suggestion de surcharge
+    "show_previous_weeks": 2,     # Semaines d'historique affichées
+    "notifications": False,       # Rappels de séance
+    "reminder_hour": 18,          # Heure du rappel push (6-22, 0 = aucun)
 }
 ```
 
 ### Semaine continue (migration 2026-06-10)
 - `Semaine` est un **index continu** ancré au lundi 2024-01-01 (`core/dates.py:continuous_week`), recalculé **à la lecture** depuis `Date` dans `db.get_hist()` — la colonne `semaine` stockée (n° ISO legacy) n'est plus une source de vérité.
-- Les opérations ciblées (`replace_exo_rows`, `delete_exo_rows`, `delete_session_rows`) ciblent la semaine par **plage de dates lun→dim** dérivée du paramètre `date_str` — jamais par la colonne `semaine`.
+- Les opérations ciblées (`replace_exo_rows`, `delete_exo_rows`, `delete_session_rows`) ciblent la **date exacte** (`.eq("date", date_str)`) — ni la colonne `semaine`, ni une plage lun→dim. La plage effaçait la séance précédente dès qu'on refaisait la même séance dans la semaine, ce qui concernait 9 des 20 programmes du catalogue (dont les trois programmes débutants par défaut).
 - Le n° affiché à l'utilisateur reste **relatif** au début du programme (`_display_week` / `_rel_week`).
 - Raison : le n° ISO recommençait chaque année → collision des données au-delà d'un an, streak/« dernière fois » cassés au Nouvel An.
 
+### Migrations Supabase
+- Le code a **toujours un repli** quand une colonne manque (upsert sans la colonne, warning loggué) : rien ne signale à l'exécution qu'une migration a été oubliée. Vérifier l'état réel par un `select exists(…)` sur `information_schema` dans le SQL Editor.
+- Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`).
+
 ### Tests (pwa/tests)
-- `cd pwa && python -m pytest tests -q` — fake Supabase en mémoire (conftest), couvre passage d'année, remplacement de séries, suppression de compte, validation import.
+- `cd pwa && python -m pytest tests -q` — **280 tests**, fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`).
+- Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
+
+### Lecture paginée (core/db.py)
+- PostgREST plafonne silencieusement les réponses à `max-rows` (1000). Un historique dépassant ce seuil était **tronqué sans erreur**, et une réécriture ultérieure figeait la troncature dans la base. Toutes les lectures de listes passent par `_fetch_all(build)`, qui enchaîne les pages via `.range()` jusqu'à épuisement.
+
+### Prédicats d'historique (core/hist.py)
+- `is_perf(row)` : au moins une répétition **ou** une charge. Le poids seul ne peut pas servir de critère — pompes, tractions et gainage sont à 0 kg, et toutes les vues qui exigeaient `Poids > 0` ignoraient purement et simplement les séances au poids du corps (streak, compteur de séances, défis).
+- Une seule définition partagée par l'accueil, les progrès, les défis et le debrief : avant, chaque vue avait la sienne.
 
 ### Cache mémoire (core/db.py)
 - TTL : 60 secondes, LRU borné à 200 entrées (`_CACHE_MAX`)
@@ -313,6 +377,7 @@ pwa/
 - 2 workers gunicorn × cache 60 s → deux requêtes peuvent partir du même blob et s'écraser. `save_prog()` fait donc `update … eq(user_id).eq(version)` ; si 0 ligne touchée, relecture + `_merge_prog()` (fusion 3 voies par clé : seules NOS clés modifiées sont réappliquées sur la version DB), 3 tentatives, puis upsert brut loggué en `error`.
 - Base de comparaison = dernier `get_prog()` du process (`_prog_base`). Sans lecture préalable ou sans colonne `version` (migration pas appliquée) → upsert comme avant.
 - `_session_notes` (bilans de séance) : fenêtre glissante de 84 jours purgée à chaque `/seance/finish` (`routes/seance.py`), comme `_extras`/`_libre_draft`.
+- **`replace_program_body(old, body)`** + `PROG_BODY_KEYS` : l'autosave du programme envoie le corps (séances, planning, cardio…) et **conserve** toutes les autres clés personnelles (`_settings`, `_streak_record`, `_meal_plan`, `_challenges_won`…). Avant, une seule liste blanche recopiait 3 clés sur 11 : un autosave effaçait les réglages, le record de streak et les plats de la semaine. Toute clé personnelle reçue dans le corps est ignorée et loggée.
 
 ### Suggestion de surcharge (core/muscu.py → routes/seance.py)
 - `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE est lu depuis le token `@RPE8` de la remarque.
@@ -331,7 +396,7 @@ pwa/
 - Sur-limites ajoutées via `@limiter.limit(...)` sur les actions sensibles
 
 ## Thème (refonte UI dark minimal — style Strong / Hevy)
-- Background : `#111318` (dark slate, défini via `theme-color`)
+- Background : `#0a0a0f` (`--bg-base`, repris par `theme-color` dans `base.html`)
 - Tokens dans `static/css/tokens.css` (palette, espacements, radius)
 - Accent : bleu doux ; Gold pour VIP ; rouge pour danger
 - Icônes : sprite SVG `static/img/icons.svg` consommé via `<svg><use href="/static/img/icons.svg#name"/></svg>`
@@ -342,7 +407,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v120` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
+- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v123` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm
