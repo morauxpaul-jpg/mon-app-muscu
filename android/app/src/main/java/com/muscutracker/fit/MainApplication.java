@@ -2,6 +2,8 @@ package com.muscutracker.fit;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -21,17 +23,24 @@ import com.google.android.gms.ads.appopen.AppOpenAd;
  * - Pas d'affichage au démarrage à froid (l'annonce n'est pas prête à temps et
  *   c'est plus propre) : on n'affiche qu'au retour depuis l'arrière-plan.
  * - Plafonné à 1 affichage / 4 h, et on ignore les allers-retours < 30 s.
- * - L'identifiant de bloc est dans res/values/strings.xml (admob_app_open_id),
- *   actuellement l'ID de TEST Google.
+ * - L'identifiant de bloc est dans res/values/strings.xml (admob_app_open_id) :
+ *   c'est l'ID de PRODUCTION du compte AdMob, pas un ID de test.
  *
- * Limite connue : cette couche native ne connaît pas le statut VIP (il vit dans
- * la WebView). Le gating VIP sera branché en même temps que Google Play Billing.
+ * Statut PRO : la WebView le recopie dans les préférences via le pont
+ * `window.MTAds.setTier(…)` (cf. MainActivity.AdsBridge). Tant qu'elle n'a
+ * rien dit, aucune pub n'est chargée ni affichée : rater une impression coûte
+ * moins cher que d'en imposer une à quelqu'un qui paie.
  */
 public class MainApplication extends Application
         implements Application.ActivityLifecycleCallbacks {
 
     private static final long SHOW_INTERVAL_MS = 4 * 60 * 60 * 1000L; // 1 / 4 h max
     private static final long MIN_BACKGROUND_MS = 30 * 1000L;         // ignore < 30 s
+
+    /** Partagé avec MainActivity.AdsBridge (écrit par la WebView). */
+    static final String ADS_PREFS = "mt_ads";
+    static final String KEY_NO_ADS = "no_ads";
+    static final String KEY_TIER_AT = "tier_at";
 
     private AppOpenAd appOpenAd = null;
     private boolean isLoadingAd = false;
@@ -47,6 +56,9 @@ public class MainApplication extends Application
         super.onCreate();
         registerActivityLifecycleCallbacks(this);
         MobileAds.initialize(this, status -> {});
+        // Au démarrage à froid le statut n'est pas encore connu : loadAd() sort
+        // aussitôt. Le préchargement repart au premier retour au premier plan,
+        // quand la WebView a eu le temps de dire qui est l'utilisateur.
         loadAd();
     }
 
@@ -54,8 +66,24 @@ public class MainApplication extends Application
         return appOpenAd != null;
     }
 
+    /**
+     * True s'il ne faut ni charger ni afficher de pub : membre PRO, ou statut
+     * encore inconnu (première ouverture, avant le premier rendu de page).
+     */
+    private boolean adsDisabled() {
+        try {
+            SharedPreferences p = getSharedPreferences(ADS_PREFS, Context.MODE_PRIVATE);
+            if (p.getLong(KEY_TIER_AT, 0L) == 0L) {
+                return true; // la WebView n'a pas encore parlé
+            }
+            return p.getBoolean(KEY_NO_ADS, false);
+        } catch (Exception e) {
+            return true; // dans le doute, pas de pub
+        }
+    }
+
     private void loadAd() {
-        if (isLoadingAd || isAdAvailable()) {
+        if (isLoadingAd || isAdAvailable() || adsDisabled()) {
             return;
         }
         isLoadingAd = true;
@@ -79,7 +107,7 @@ public class MainApplication extends Application
     }
 
     private void showAdIfAvailable() {
-        if (isShowingAd) {
+        if (isShowingAd || adsDisabled()) {
             return;
         }
         if (System.currentTimeMillis() - lastShownAt < SHOW_INTERVAL_MS) {
@@ -124,6 +152,7 @@ public class MainApplication extends Application
                 showAdIfAvailable();
             }
         }
+        loadAd(); // no-op tant que adsDisabled()
     }
 
     @Override

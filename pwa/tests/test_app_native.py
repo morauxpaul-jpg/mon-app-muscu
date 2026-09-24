@@ -81,3 +81,47 @@ def test_la_coquille_capacitor_annonce_son_user_agent():
     from app import NATIVE_UA_MARKER
     cfg = json.load(io.open("../capacitor.config.json", encoding="utf-8"))
     assert NATIVE_UA_MARKER in cfg["android"]["appendUserAgent"]
+
+
+# ── Publicités ───────────────────────────────────────────────────
+# La pub « App Open » est en Java : elle ne peut pas lire la session. La page
+# lui recopie le statut à chaque chargement (window.MTAds.setTier). Sans cet
+# appel, un membre payant reçoit une pub plein écran au retour dans l'app.
+
+
+def test_le_statut_pro_est_annonce_a_la_couche_native(fake_db, logged_in):
+    html = logged_in.get("/accueil").get_data(as_text=True)
+    assert 'window.MTAds.setTier("vip")' in html
+
+
+def test_le_statut_gratuit_est_annonce_aussi(fake_db, gratuit):
+    html = gratuit.get("/accueil").get_data(as_text=True)
+    assert 'window.MTAds.setTier("free")' in html
+
+
+def test_lannonce_du_statut_precede_le_script_de_pub(fake_db, gratuit):
+    """ads.js gère bandeau et interstitiel ; la pub App Open, elle, part du
+    Java. Les deux doivent connaître le statut avant de faire quoi que ce
+    soit."""
+    html = gratuit.get("/accueil").get_data(as_text=True)
+    assert html.index("MTAds.setTier") < html.index("/static/js/ads.js")
+
+
+def test_les_scripts_de_pub_restent_absents_pour_un_membre_pro(fake_db, logged_in):
+    html = logged_in.get("/accueil").get_data(as_text=True)
+    assert "/static/js/ads.js" not in html
+    assert "__ADS__" not in html
+
+
+def test_la_couche_java_consulte_le_statut_avant_dafficher():
+    """Garde-fou sur le code natif : sans ces trois éléments, la pub
+    redeviendrait aveugle au statut, et aucun test Python ne le verrait."""
+    import io
+    app = io.open("../android/app/src/main/java/com/muscutracker/fit/MainApplication.java",
+                  encoding="utf-8").read()
+    act = io.open("../android/app/src/main/java/com/muscutracker/fit/MainActivity.java",
+                  encoding="utf-8").read()
+    assert "adsDisabled()" in app
+    assert "if (isShowingAd || adsDisabled())" in app, "showAdIfAvailable ne filtre plus"
+    assert "isAdAvailable() || adsDisabled()" in app, "loadAd ne filtre plus"
+    assert '"MTAds"' in act, "le pont JS a disparu de MainActivity"

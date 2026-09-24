@@ -147,6 +147,18 @@
     <a href="/plus"    data-tuto="plus"      class="{% if active == 'plus'    %}active{% endif %}" {% if active == 'plus' %}aria-current="page"{% endif %}><svg class="icon nav-icon" aria-hidden="true"><use href="/static/img/icons.svg#grid"/></svg>Plus</a>
   </nav>
 
+  {# Statut annoncé à la coquille native : la pub « App Open » est en Java,
+     elle ne peut pas lire la session. Sans cet appel, un membre PRO voyait
+     une pub plein écran au retour dans l'app. No-op sur le web. #}
+  <script>
+  (function () {
+    try {
+      if (window.MTAds && typeof window.MTAds.setTier === "function") {
+        window.MTAds.setTier("{{ 'vip' if is_vip else 'free' }}");
+      }
+    } catch (e) {}
+  })();
+  </script>
   {% if is_authenticated and not is_vip %}
   {# Pubs AdMob — uniquement dans l'app native Capacitor (no-op sur web/PWA). #}
   <script>window.__ADS__ = {{ {"banner": admob_banner_id, "interstitial": admob_interstitial_id} | tojson }};</script>

@@ -2,6 +2,7 @@ package com.muscutracker.fit;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -76,6 +77,39 @@ public class MainActivity extends BridgeActivity {
         // l'alerte de fin de repos. Appelé depuis rest-timer.js via
         // window.MTAudio.duckAudio(ms). ──
         webView.addJavascriptInterface(new AudioBridge(this), "MTAudio");
+
+        // ── Statut PRO : la couche native ne peut pas lire la session, elle
+        // vit dans la WebView. Sans ce pont, un membre PRO voyait la pub
+        // « App Open » au retour au premier plan. Appelé à chaque page par
+        // base.html. ──
+        webView.addJavascriptInterface(new AdsBridge(this), "MTAds");
+    }
+
+    /**
+     * Recopie le statut de l'utilisateur (PRO ou gratuit) dans les préférences,
+     * où MainApplication le lit avant d'afficher une pub. Volontairement
+     * minimal : un booléen et une date, rien d'identifiant.
+     */
+    public static class AdsBridge {
+        private final Context ctx;
+
+        AdsBridge(Context context) {
+            this.ctx = context.getApplicationContext();
+        }
+
+        @JavascriptInterface
+        public void setTier(String tier) {
+            try {
+                SharedPreferences p = ctx.getSharedPreferences(
+                        MainApplication.ADS_PREFS, Context.MODE_PRIVATE);
+                p.edit()
+                        .putBoolean(MainApplication.KEY_NO_ADS, "vip".equals(tier))
+                        .putLong(MainApplication.KEY_TIER_AT, System.currentTimeMillis())
+                        .apply();
+            } catch (Exception e) {
+                // silencieux : sans écriture, adsDisabled() reste à true
+            }
+        }
     }
 
     /** Baisse temporairement la musique des autres apps (audio focus). */
