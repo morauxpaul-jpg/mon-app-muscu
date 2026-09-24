@@ -7,7 +7,12 @@
     "cleartext": false,
     "allowNavigation": [
       "accounts.google.com",
-      "*.supabase.co"
+      "*.supabase.co",
+      "checkout.stripe.com",
+      "billing.stripe.com",
+      "hooks.stripe.com",
+      "*.stripe.com",
+      "*.stripe.network"
     ]
   },
   "android": {

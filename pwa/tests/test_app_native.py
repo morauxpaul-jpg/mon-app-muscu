@@ -108,6 +108,26 @@ def test_sans_publication_sur_play_lachat_est_possible_en_natif(fake_db, gratuit
     assert html.count("/billing/checkout") >= 3
 
 
+def test_lapp_native_previent_que_le_paiement_peut_sortir_de_lapp(fake_db, gratuit):
+    """Une validation 3-D Secure bascule parfois sur le navigateur. Mieux vaut
+    l'annoncer que laisser croire à un échec."""
+    html = gratuit.get("/premium", headers=UA_NATIF).get_data(as_text=True)
+    assert "s'active tout seul" in html
+    web = gratuit.get("/premium", headers=UA_WEB).get_data(as_text=True)
+    assert "s'active tout seul" not in web, "inutile sur le web"
+
+
+def test_la_webview_autorise_stripe():
+    """Sans ces domaines, la redirection vers le paiement est refusée par la
+    coquille : le bouton semble ne rien faire."""
+    import io
+    import json
+    cfg = json.load(io.open("../capacitor.config.json", encoding="utf-8"))
+    autorises = cfg["server"]["allowNavigation"]
+    for hote in ("checkout.stripe.com", "billing.stripe.com"):
+        assert hote in autorises, hote
+
+
 def test_linterrupteur_ne_touche_jamais_le_web(fake_db, gratuit, play_store):
     """Même en position « Play Store », le navigateur garde tout : c'est le
     seul endroit où l'app encaisse."""

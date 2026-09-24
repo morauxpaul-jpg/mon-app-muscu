@@ -49,6 +49,17 @@
     </div>
   {% endif %}
 
+  {# Le paiement traverse la webview jusqu'à Stripe. Si la banque impose une
+     validation 3-D Secure sur son propre domaine, Android bascule vers le
+     navigateur : le paiement aboutit quand même, mais l'utilisateur ne revient
+     pas tout seul. Autant le dire avant plutôt que de le laisser douter. #}
+  {% if is_native and not hide_billing %}
+    <p style="font-size:0.76rem; color:var(--text-2); text-align:center; margin:0 0 12px; line-height:1.5;">
+      Le paiement passe par Stripe. S'il s'ouvre dans ton navigateur, termine-le
+      là-bas puis reviens ici&nbsp;: ton accès PRO s'active tout seul.
+    </p>
+  {% endif %}
+
   <div class="tier-grid">
 
     <!-- FREE -->
