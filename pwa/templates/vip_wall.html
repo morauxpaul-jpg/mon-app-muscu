@@ -36,9 +36,9 @@
   </ul>
 
   <a href="/premium" class="btn vipw-cta label-icon">
-    <svg class="icon icon-sm"><use href="/static/img/icons.svg#gem"/></svg>{% if is_native %}Voir ce que PRO apporte{% else %}Passer en PRO{% endif %}
+    <svg class="icon icon-sm"><use href="/static/img/icons.svg#gem"/></svg>{% if hide_billing %}Voir ce que PRO apporte{% else %}Passer en PRO{% endif %}
   </a>
-  {% if not is_native %}
+  {% if not hide_billing %}
   <div class="vipw-price billing-only">À partir de 4,99€/mois · annulable à tout moment</div>
   {% endif %}
   <a href="{{ url_for('accueil.index') }}" class="vipw-later">Plus tard</a>

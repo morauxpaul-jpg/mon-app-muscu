@@ -375,17 +375,28 @@ NATIVE_UA_MARKER = "MuscuTrackerApp"
 
 
 def _is_native_app() -> bool:
-    """True dans l'application Android/iOS, False sur le web et la PWA.
-
-    Google Play interdit de vendre un bien numérique consommé dans l'app
-    autrement que par Play Billing — mentionner un prix suffit à tomber sous
-    la règle. Tant que Play Billing n'est pas intégré, l'app native ne montre
-    ni tarif ni bouton d'achat.
-    """
+    """True dans l'application Android/iOS, False sur le web et la PWA."""
     try:
         return NATIVE_UA_MARKER in (request.headers.get("User-Agent") or "")
     except Exception:
         return False
+
+
+def _hide_native_billing() -> bool:
+    """True s'il faut retirer tarifs et boutons d'achat du rendu natif.
+
+    Google Play interdit de vendre un bien numérique consommé dans l'app
+    autrement que par Play Billing — mentionner un prix suffit à tomber sous
+    la règle. Mais cette règle ne lie que les apps DISTRIBUÉES par Play : un
+    APK installé à la main n'y est pas soumis, et masquer le parcours n'y
+    protège de rien — ça laisse juste l'utilisateur devant une porte fermée.
+
+    D'où l'interrupteur, éteint par défaut. ⚠ À poser à 1 sur Railway AVANT
+    tout dépôt sur le Play Store, sinon rejet à la revue.
+    """
+    if os.getenv("HIDE_NATIVE_BILLING", "").strip().lower() not in ("1", "true", "yes", "on"):
+        return False
+    return _is_native_app()
 
 
 @app.context_processor
@@ -408,6 +419,7 @@ def _inject_user():
         "is_vip_full": premium_full,
         "is_admin": bool(email) and email in admin_emails,
         "is_native": _is_native_app(),
+        "hide_billing": _hide_native_billing(),
         "csrf_token": _get_or_create_csrf() if uid else "",
         # IDs AdMob (app native Capacitor, comptes Free uniquement). Défauts =
         # IDs de TEST officiels Google — à remplacer par les vrais via l'env

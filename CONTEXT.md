@@ -285,7 +285,8 @@ pwa/
 - Focus clavier visible (`:focus-visible`), lien d'évitement, `prefers-reduced-motion` global : déjà en place dans `theme.css`.
 
 ### App native : parcours d'achat
-- Google Play interdit de vendre un bien numérique consommé dans l'app autrement que par Play Billing, et **un tarif affiché suffit** à tomber sous la règle. Tant que Play Billing n'est pas intégré, l'app native ne montre ni prix ni bouton d'achat.
+- Google Play interdit de vendre un bien numérique consommé dans l'app autrement que par Play Billing, et **un tarif affiché suffit** à tomber sous la règle. Mais cette règle ne lie que les apps **distribuées par Play** : l'APK étant installé à la main, le parcours d'achat y est visible.
+- **Interrupteur `HIDE_NATIVE_BILLING`** (env, éteint par défaut) : à 1, tarifs et formulaires `/billing/*` disparaîssent du rendu natif. ⚠ **À poser sur Railway AVANT tout dépôt sur le Play Store**, sinon rejet à la revue. Les gabarits testent `hide_billing`, pas `is_native` : la condition porte sur la distribution, pas sur la plateforme.
 - Détection **côté serveur** : la coquille Capacitor ajoute `MuscuTrackerApp/1` à son User-Agent (`capacitor.config.json` → `android.appendUserAgent`) ; `app.py:_is_native_app()` expose `is_native` aux gabarits, qui ne rendent alors ni tarif ni formulaire `/billing/*`. Le masquage JavaScript précédent laissait le prix dans le DOM et le temps d'apparaître.
 - Filet pour une version installée sans le marqueur : `html.is-native .billing-only { display:none }` (classe posée très tôt par `base.html`).
 - La page PRO explique au lieu de rester muette, et le mur de fonctionnalité dit « Voir ce que PRO apporte » plutôt que « Passer en PRO ». L'abonnement suit le compte Google : rien à « restaurer ». Le web et la PWA gardent tout le parcours.
@@ -327,6 +328,7 @@ pwa/
 - `FLASK_SECRET_KEY` — Secret pour signer les cookies de session (active aussi `SESSION_COOKIE_SECURE` en prod)
 - `ANTHROPIC_API_KEY` — Clé API Claude pour le coach IA
 - `ADMIN_EMAILS` — Liste séparée par virgules des emails admin
+- `HIDE_NATIVE_BILLING` — à `1`, retire tarifs et boutons d'achat du rendu dans l'app native. Inutile tant que l'APK est installé à la main ; **obligatoire avant un dépôt sur le Play Store**.
 - `GOOGLE_WEB_CLIENT_ID` — ID client OAuth Web Google (PUBLIC), requis par le login natif Capacitor (`login.html` → `@capgo/capacitor-social-login`). Inutile sur le web.
 
 ### Settings utilisateur (`prog._settings`)

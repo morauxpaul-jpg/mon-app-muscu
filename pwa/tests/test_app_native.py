@@ -2,17 +2,25 @@
 
 Google Play interdit de vendre un bien numérique consommé dans l'app
 autrement que par Play Billing. Afficher un tarif ou un bouton « S'abonner »
-qui mène vers Stripe suffit à tomber sous la règle — et se paye au moment de
-la revue, quand l'app est déjà prête à publier.
+qui mène vers Stripe suffit à tomber sous la règle — et se paye à la revue,
+quand l'app est déjà prête à publier.
 
-Tant que Play Billing n'est pas intégré : aucun tarif, aucun bouton d'achat
-dans l'app native. Sur le web et la PWA, rien ne change.
+Mais la règle ne lie que les apps DISTRIBUÉES par Play. L'APK est installé
+à la main : le parcours d'achat y est donc visible, et `HIDE_NATIVE_BILLING`
+le retire le jour d'un dépôt sur le Store. Ces tests vérifient les deux
+positions de l'interrupteur — celle d'aujourd'hui et celle de la revue.
 """
 import time
 
 import pytest
 
 from conftest import USER_ID
+
+
+@pytest.fixture()
+def play_store(monkeypatch):
+    """Simule la distribution par Play : tarifs masqués en natif."""
+    monkeypatch.setenv("HIDE_NATIVE_BILLING", "1")
 
 # Ajouté par la coquille Capacitor (capacitor.config.json → appendUserAgent).
 UA_NATIF = {"User-Agent": "Mozilla/5.0 (Linux; Android 14) Chrome/120 MuscuTrackerApp/1"}
@@ -30,13 +38,13 @@ def gratuit(client):
 
 
 @pytest.mark.parametrize("path", PAGES_AVEC_UPSELL)
-def test_aucun_tarif_dans_lapp_native(fake_db, gratuit, path):
+def test_aucun_tarif_dans_lapp_native(fake_db, gratuit, play_store, path):
     html = gratuit.get(path, headers=UA_NATIF).get_data(as_text=True)
     assert "€" not in html, f"{path} affiche un tarif dans l'app native"
 
 
 @pytest.mark.parametrize("path", PAGES_AVEC_UPSELL)
-def test_aucun_bouton_dachat_dans_lapp_native(fake_db, gratuit, path):
+def test_aucun_bouton_dachat_dans_lapp_native(fake_db, gratuit, play_store, path):
     html = gratuit.get(path, headers=UA_NATIF).get_data(as_text=True)
     assert "/billing/checkout" not in html
     assert "/billing/portal" not in html
@@ -55,7 +63,7 @@ def test_le_web_garde_ses_boutons_dachat(fake_db, gratuit):
     assert html.count("/billing/checkout") >= 3     # mensuel, annuel, à vie
 
 
-def test_lapp_native_explique_au_lieu_de_laisser_un_cul_de_sac(fake_db, gratuit):
+def test_lapp_native_explique_au_lieu_de_laisser_un_cul_de_sac(fake_db, gratuit, play_store):
     """Un bouton « Passer en PRO » menant à une page sans bouton, c'est pire
     que pas de bouton du tout."""
     html = gratuit.get("/premium", headers=UA_NATIF).get_data(as_text=True)
@@ -65,7 +73,7 @@ def test_lapp_native_explique_au_lieu_de_laisser_un_cul_de_sac(fake_db, gratuit)
     assert "Passer en PRO" not in mur
 
 
-def test_un_membre_pro_garde_son_acces_dans_lapp_native(fake_db, logged_in):
+def test_un_membre_pro_garde_son_acces_dans_lapp_native(fake_db, logged_in, play_store):
     """L'abonnement pris sur le web suit le compte : rien à « restaurer »."""
     html = logged_in.get("/premium", headers=UA_NATIF).get_data(as_text=True)
     assert "Tu es VIP" in html
@@ -81,6 +89,30 @@ def test_la_coquille_capacitor_annonce_son_user_agent():
     from app import NATIVE_UA_MARKER
     cfg = json.load(io.open("../capacitor.config.json", encoding="utf-8"))
     assert NATIVE_UA_MARKER in cfg["android"]["appendUserAgent"]
+
+
+# ── Hors Play Store : le parcours d'achat reste ouvert ──
+
+
+@pytest.mark.parametrize("path", PAGES_AVEC_UPSELL)
+def test_sans_publication_sur_play_lapp_native_affiche_les_tarifs(fake_db, gratuit, path):
+    """C'est l'état par défaut : l'APK est installé à la main, la règle de
+    Play ne s'y applique pas, et masquer l'achat ne ferait que fermer une
+    porte sans rien protéger."""
+    html = gratuit.get(path, headers=UA_NATIF).get_data(as_text=True)
+    assert "€" in html
+
+
+def test_sans_publication_sur_play_lachat_est_possible_en_natif(fake_db, gratuit):
+    html = gratuit.get("/premium", headers=UA_NATIF).get_data(as_text=True)
+    assert html.count("/billing/checkout") >= 3
+
+
+def test_linterrupteur_ne_touche_jamais_le_web(fake_db, gratuit, play_store):
+    """Même en position « Play Store », le navigateur garde tout : c'est le
+    seul endroit où l'app encaisse."""
+    html = gratuit.get("/premium", headers=UA_WEB).get_data(as_text=True)
+    assert "€" in html and "/billing/checkout" in html
 
 
 # ── Publicités ───────────────────────────────────────────────────

@@ -39,7 +39,7 @@
       <svg class="icon icon-lg" style="color:var(--gold);"><use href="/static/img/icons.svg#shield-check"/></svg>
       <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Tu es VIP</h3>
       <p style="margin:0 0 12px; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app 🙏</p>
-      {% if not is_native %}
+      {% if not hide_billing %}
       <form method="post" action="/billing/portal" class="billing-cta billing-only" style="margin:0;">
         <button type="submit" class="btn label-icon" style="display:inline-flex; justify-content:center;">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Gérer mon abonnement
@@ -55,7 +55,7 @@
     <div class="tier-card">
       <div class="tier-header">
         <div class="tier-name">Gratuit</div>
-{% if not is_native %}
+{% if not hide_billing %}
         <div class="tier-price"><span class="amount">0€</span><span class="period">/mois</span></div>
         {% endif %}
       </div>
@@ -75,7 +75,7 @@
       <div class="tier-ribbon">POPULAIRE</div>
       <div class="tier-header">
         <div class="tier-name">Premium</div>
-{% if not is_native %}
+{% if not hide_billing %}
         <div class="tier-price"><span class="amount">4,99€</span><span class="period">/mois</span></div>
         <div class="tier-sub">ou 39,99€/an <span class="tier-save">-33%</span></div>
         {% endif %}
@@ -93,7 +93,7 @@
         {% if current_plan == 'monthly' %}
           {# Abonné mensuel : son plan actuel + upgrade vers l'annuel. #}
           <button class="btn tier-cta" disabled style="opacity:0.6;">✓ Ton plan actuel</button>
-          {% if not is_native %}
+          {% if not hide_billing %}
           <div class="billing-cta billing-only" style="margin-top:8px;">
             <form method="post" action="/billing/checkout" style="margin:0;">
               <input type="hidden" name="plan" value="annual">
@@ -107,7 +107,7 @@
           <button class="btn tier-cta" disabled style="opacity:0.5;">Inclus dans ton accès</button>
         {% endif %}
       {% else %}
-        {% if not is_native %}
+        {% if not hide_billing %}
         <div class="billing-cta billing-only">
           <form method="post" action="/billing/checkout" style="margin:0;">
             <input type="hidden" name="plan" value="monthly">
@@ -132,7 +132,7 @@
       <div class="tier-ribbon ribbon-gold">LIFETIME</div>
       <div class="tier-header">
         <div class="tier-name">À vie</div>
-{% if not is_native %}
+{% if not hide_billing %}
         <div class="tier-price"><span class="amount">79,99€</span><span class="period">une fois</span></div>
         <div class="tier-sub">≈ 16 mois d'abonnement</div>
         {% endif %}
@@ -147,7 +147,7 @@
       {% if is_premium %}
         {% if current_plan in ('monthly', 'annual') %}
           {# Abonné : peut passer au « à vie » (on annule l'abonnement en cours). #}
-          {% if not is_native %}
+          {% if not hide_billing %}
           <div class="billing-cta billing-only">
             <form method="post" action="/billing/checkout" style="margin:0;">
               <input type="hidden" name="plan" value="lifetime">
@@ -159,7 +159,7 @@
           <button class="btn tier-cta" disabled style="opacity:0.5;">✓ Débloqué à vie</button>
         {% endif %}
       {% else %}
-        {% if not is_native %}
+        {% if not hide_billing %}
         <div class="billing-cta billing-only">
           <form method="post" action="/billing/checkout" style="margin:0;">
             <input type="hidden" name="plan" value="lifetime">
@@ -173,7 +173,7 @@
 
   </div>
 
-  {% if not is_native %}
+  {% if not hide_billing %}
   <div class="card billing-only" style="margin-top:14px; font-size:0.78rem; color:var(--text-2); line-height:1.5;">
     <strong style="color:var(--text-1);">FAQ rapide</strong><br><br>
     <strong>Paiement sécurisé ?</strong> Oui — le paiement est traité par Stripe (leader mondial). Carte, Apple Pay et Google Pay acceptés. L'app ne voit jamais ton numéro de carte.<br><br>
