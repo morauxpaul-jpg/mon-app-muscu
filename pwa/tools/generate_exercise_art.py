@@ -140,7 +140,11 @@ def _demander(cle, prompt, reference, modele=MODELE):
         parties.insert(0, {"text": "Use the reference image ONLY for the "
                                    "rendering style, the mannequin's look and "
                                    "materials, the lighting and the background. "
-                                   "Do NOT copy its pose. The reference has "
+                                   "The reference shows a STANDING figure: "
+                                   "your pose comes from the instructions "
+                                   "below and will usually be completely "
+                                   "different. Do NOT copy its pose. "
+                                   "The reference has "
                                    "no coloured muscle; the red area is "
                                    "described in the instructions below and "
                                    "nowhere else."})

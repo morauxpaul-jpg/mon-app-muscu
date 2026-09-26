@@ -68,7 +68,47 @@ GESTES = {
                       "floor, legs swapping in mid-air",
     "Élévations latérales haltères": "standing, arms raised straight out "
                                      "sideways to shoulder height, a light "
-                                     "dumbbell in each hand",
+                                     "dumbbell in each hand. The arms are NOT "
+                                     "hanging down and there is NO barbell",
+    # ── Les huit que la référence a tirés vers sa propre pose ──────
+    # La référence montre un mannequin DEBOUT, une barre à hauteur de
+    # poitrine. Huit exercices sont ressortis exactement comme ça, alors que
+    # leur fiche disait autre chose : les tractions « suspendu à une barre
+    # fixe » ont donné un homme debout, barre derrière la nuque. Interdire
+    # la pose de la référence en général n'a pas suffi ; ici on la nomme.
+    "Tractions": "HANGING from a high horizontal bar by both hands, palms "
+                 "facing forward, arms overhead, FEET OFF THE GROUND and "
+                 "clear of it, pulling the chin up to the bar. The mannequin "
+                 "is NOT standing and there is NO barbell across the "
+                 "shoulders",
+    "Tractions (ou tirage vertical)": "HANGING from a high horizontal bar by "
+                                      "both hands, arms overhead, FEET OFF "
+                                      "THE GROUND, pulling the chin up to "
+                                      "the bar. The mannequin is NOT standing",
+    "Tractions lestées": "HANGING from a high horizontal bar by both hands, "
+                         "arms overhead, FEET OFF THE GROUND, a weight plate "
+                         "hanging from a belt at the waist. The mannequin is "
+                         "NOT standing",
+    "Rowing barre": "standing but BENT FORWARD at the hips to about 45 "
+                    "degrees, back flat, the barbell hanging from straight "
+                    "arms and pulled up to the navel. The torso is NOT "
+                    "upright",
+    "Tirage vertical": "SEATED at a lat pulldown machine, thighs under the "
+                       "pads, both hands gripping a wide bar hanging from "
+                       "the cable above, pulling it down to the upper chest. "
+                       "The mannequin is NOT standing",
+    "Tirage horizontal poulie": "SEATED on the floor pad of a low cable row "
+                                "machine, legs out in front and slightly "
+                                "bent, pulling a handle back to the stomach, "
+                                "torso upright. The mannequin is NOT standing",
+    "Développé incliné haltères": "lying back on a bench inclined at 30-45 "
+                                   "degrees, pressing ONE DUMBBELL IN EACH "
+                                   "HAND straight up above the upper chest. "
+                                   "The mannequin is NOT standing and there "
+                                   "is NO barbell",
+    "Développé militaire haltères": "standing, pressing ONE DUMBBELL IN EACH "
+                                    "HAND from shoulder height up to full "
+                                    "extension overhead. There is NO barbell",
 }
 
 # Le rouge ne peut pas être « le muscle de la fiche » tel quel : « Dos (grand
