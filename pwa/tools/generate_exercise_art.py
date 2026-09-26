@@ -6,11 +6,18 @@ de copier-coller — et la cohérence se perd en route, parce qu'on oublie de
 rejoindre l'image de référence. Ici la référence est jointe à CHAQUE appel :
 c'est elle qui tient le style sur 87 images.
 
-    # 1. Une clé gratuite sur https://aistudio.google.com/apikey
-    # 2. La première image sert de référence à toutes les autres
+En DEUX temps, et pas autrement : la référence gouverne les 86 autres
+images, donc elle se regarde avant de lancer la série.
+
+    # 1. Une clé sur https://aistudio.google.com/apikey
+    # 2. Une image SEULE, sans référence — c'est elle qui fixera le style
     cd pwa
     python tools/generate_exercise_art.py --cle VOTRE_CLE \\
-        --reference static/img/exercises/arnold-press.webp \\
+        --un "Arnold press" --sortie ../art_genere
+
+    # 3. On la REGARDE. Si elle convient, elle sert de modèle au reste
+    python tools/generate_exercise_art.py --cle VOTRE_CLE \\
+        --reference ../art_genere/arnold-press.png \\
         --sortie ../art_genere
 
 Le script est REPRENABLE : il saute ce qui existe déjà. Coupez-le, relancez-
@@ -82,11 +89,14 @@ def _demander(cle, prompt, reference, modele=MODELE):
     """Renvoie les octets de l'image, ou lève une erreur explicite."""
     parties = [{"text": prompt}]
     if reference:
-        # La consigne de cohérence accompagne la référence : sans elle, le
-        # modèle s'inspire de l'image au lieu d'en reprendre le style.
-        parties.insert(0, {"text": "Same character, same style, same lighting, "
-                                   "same framing and same background as the "
-                                   "reference image."})
+        # La référence doit gouverner le STYLE, rien d'autre. Sans ce cadrage,
+        # le modèle recopiait aussi sa pose et sa zone musclée en rouge : tous
+        # les exercices ressortaient avec les épaules en rouge.
+        parties.insert(0, {"text": "Use the reference image ONLY for the "
+                                   "rendering style, the mannequin's look and "
+                                   "materials, the lighting and the background. "
+                                   "Do NOT copy its pose, and do NOT copy any "
+                                   "coloured or highlighted body part from it."})
         parties.append(reference)
 
     corps = json.dumps({"contents": [{"parts": parties}]}).encode()

@@ -121,3 +121,82 @@ def test_les_illustrations_livrees_restent_legeres():
         if ko > 60:
             lourdes.append(f"{os.path.basename(f)} : {ko} ko")
     assert not lourdes, lourdes
+
+
+# ── Prompts de génération ────────────────────────────────────────
+# Les illustrations sont générées à partir de `tools/exercise_prompts.json`.
+# Un prompt faux coûte de l'argent ET apprend un mauvais geste : ces
+# vérifications valent d'être automatiques.
+
+
+def _prompts():
+    import io
+    import json
+    import os
+    import sys
+    sys.path.insert(0, "tools")
+    from build_exercise_prompts import construire
+    return {e["nom"]: e for e in construire()}
+
+
+def test_le_prompt_decrit_le_mouvement_pas_seulement_la_position_de_depart():
+    """Le bug qui a produit un développé couché au lieu d'une barre au front.
+
+    La description de « Barre au front » commence par « Allongé sur un banc,
+    barre tenue à bout de bras au-dessus de la poitrine » — c'est la position
+    de départ, et c'est mot pour mot celle du développé couché. Le prompt ne
+    gardait que cette première phrase : le modèle a dessiné un développé
+    couché, red flag invisible tant qu'on ne regarde pas l'image.
+    """
+    p = _prompts()["Barre au front"]["prompt"]
+    assert "vers le front" in p, "le mouvement a été tronqué, seule la " \
+                                 "position de départ est décrite"
+
+
+def test_aucune_description_nest_tronquee_en_chemin():
+    """Généralise le cas « barre au front » aux 87 fiches.
+
+    Chaque fiche décrit le départ PUIS le mouvement. Ne garder qu'un bout,
+    c'est laisser le modèle inventer la moitié du geste — et une illustration
+    fausse apprend un mauvais mouvement à celui qui la regarde pendant sa
+    série.
+    """
+    from build_exercise_prompts import GESTES
+    from core.exercises_data import EXERCISES_INFO
+    tronquees = []
+    for nom, entree in _prompts().items():
+        if nom in GESTES:          # geste écrit à la main, la fiche ne sert plus
+            continue
+        description = " ".join((EXERCISES_INFO[nom].get("description") or "").split())
+        if description and description not in entree["prompt"]:
+            tronquees.append(nom)
+    assert not tronquees, f"description coupée dans le prompt : {tronquees}"
+
+
+def test_les_fiches_qui_ne_decrivent_aucun_geste_en_recoivent_un():
+    """« Même principe que le curl classique mais avec une barre droite ou EZ.
+    La barre permet de charger plus lourd. » — rien, dans ces trois phrases,
+    ne dit à quoi ressemble un curl. Le modèle avait dessiné les bras le long
+    du corps, épaules en rouge.
+    """
+    p = _prompts()["Curl barre"]["prompt"].lower()
+    assert "elbows" in p and "curling" in p,         "le geste du curl n'est décrit nulle part dans le prompt"
+
+
+def test_aucun_prompt_ne_demande_de_muscle_en_couleur():
+    """La fiche affiche déjà une carte anatomique juste, calculée à partir
+    des muscles déclarés. Le modèle d'image, lui, recopiait la zone rouge de
+    l'image de référence : tous les exercices ressortaient avec les épaules
+    en rouge, curl compris. Deux sources pour la même information, dont une
+    fausse."""
+    fautifs = [n for n, e in _prompts().items()
+               if "highlight the" in e["prompt"].lower()
+               or "in soft red" in e["prompt"].lower()]
+    assert not fautifs, fautifs
+
+
+def test_le_nom_de_fichier_du_prompt_est_celui_que_lapp_ira_chercher():
+    """Les deux viennent de `illustration_slug` : un fichier généré sous un
+    autre nom ne serait jamais affiché, sans aucune erreur nulle part."""
+    for nom, entree in _prompts().items():
+        assert entree["fichier"] == illustration_slug(nom) + ".png"
