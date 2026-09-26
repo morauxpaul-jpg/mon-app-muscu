@@ -46,6 +46,28 @@ ATTENTE_QUOTA = 65   # secondes après un 429
 ESSAIS = 3
 
 
+def _resume_quota(corps):
+    """Traduit le corps d'un 429 en une phrase utile."""
+    try:
+        erreur = json.loads(corps).get("error", {})
+    except ValueError:
+        return "quota atteint (réponse illisible)"
+    message = erreur.get("message", "")
+    details = " ".join(json.dumps(d) for d in erreur.get("details", []))
+    # Les libellés de quota s'écrivent tantôt « per minute », tantôt
+    # « per_minute » : on normalise avant de chercher.
+    blob = (message + " " + details).lower().replace("_", " ")
+    if "per day" in blob or "perday" in blob or "daily" in blob:
+        return ("quota JOURNALIER atteint : inutile d'attendre, il repart "
+                "demain (ou activez la facturation).")
+    if "per minute" in blob or "perminute" in blob:
+        return "quota par minute atteint : l'attente suffit."
+    if "billing" in blob or "not available" in blob or "free" in blob:
+        return ("ce modèle n'est pas accessible sur le palier gratuit de ce "
+                "projet : il faut activer la facturation.")
+    return "quota atteint : " + (message[:160] or "sans détail")
+
+
 def _reference(chemin):
     """L'image de style, encodée pour être jointe à chaque requête."""
     if not chemin:
@@ -112,7 +134,21 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None):
                 break
             except urllib.error.HTTPError as e:
                 if e.code == 429:
-                    print(f"  quota atteint, pause de {ATTENTE_QUOTA} s…")
+                    # Un 429 ne dit pas la même chose selon le quota touché :
+                    # « par minute » s'attend, « par jour » ou « modèle non
+                    # disponible » ne s'attendent pas. Sans le détail, on
+                    # relance indéfiniment une requête qui ne passera jamais.
+                    detail = e.read().decode(errors="replace")
+                    if essai == 1:
+                        print("  " + _resume_quota(detail))
+                    if essai == ESSAIS:
+                        print("  Abandon : ce quota ne se libère pas en attendant.")
+                        print("  Réponse complète de Google :")
+                        print(detail[:900])
+                        echecs += 1
+                        break
+                    print(f"  nouvelle tentative dans {ATTENTE_QUOTA} s "
+                          f"({essai}/{ESSAIS - 1})…")
                     time.sleep(ATTENTE_QUOTA)
                     continue
                 detail = e.read().decode(errors="replace")[:400]
