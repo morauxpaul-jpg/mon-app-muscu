@@ -283,3 +283,22 @@ def test_le_nom_de_fichier_du_prompt_est_celui_que_lapp_ira_chercher():
     autre nom ne serait jamais affiché, sans aucune erreur nulle part."""
     for nom, entree in _prompts().items():
         assert entree["fichier"] == illustration_slug(nom) + ".png"
+
+
+def test_le_nom_du_muscle_ne_se_repete_pas_dans_sa_description():
+    """L'ancre porte le nom, la description porte l'ENDROIT.
+
+    Quand les deux portaient le nom, la phrase sortait bancale : « Paint
+    ONLY the biceps — the bulge on the FRONT of each upper arm, strictly
+    BETWEEN the shoulder joint and the elbow **in a flat soft red-orange
+    overlay** ». La couleur se retrouvait à dix mots de son verbe.
+    """
+    from build_exercise_prompts import ZONES
+    doublons = []
+    for libelle, zone in ZONES.items():
+        if zone is None:
+            continue
+        ancre, description, _ = zone
+        if description.lower().startswith(ancre.lower()):
+            doublons.append(libelle)
+    assert not doublons, f"le nom du muscle ouvre sa propre description : {doublons}"
