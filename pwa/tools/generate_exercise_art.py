@@ -108,7 +108,7 @@ def _demander(cle, prompt, reference, modele=MODELE):
                        + json.dumps(charge)[:600])
 
 
-def generer(cle, sortie, reference=None, modele=MODELE, seulement=None):
+def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=None):
     os.makedirs(sortie, exist_ok=True)
     entrees = json.loads(io.open(PROMPTS, encoding="utf-8").read())
     if seulement:
@@ -119,6 +119,9 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None):
     faits = ignores = echecs = 0
 
     for i, entree in enumerate(entrees, 1):
+        if limite and faits >= limite:
+            print(f"  limite de {limite} image(s) atteinte, arrêt volontaire.")
+            break
         chemin = os.path.join(sortie, entree["fichier"])
         if os.path.exists(chemin):
             ignores += 1
@@ -176,6 +179,9 @@ if __name__ == "__main__":
     p.add_argument("--modele", default=MODELE)
     p.add_argument("--un", action="append", dest="seulement",
                    help="ne générer que cet exercice (répétable) — pour essayer")
+    p.add_argument("--limite", type=int,
+                   help="s'arrêter après N images — pour vérifier le coût réel "
+                        "avant de lancer tout le catalogue")
     a = p.parse_args()
 
     if not a.cle:
@@ -183,7 +189,8 @@ if __name__ == "__main__":
         print("Une clé gratuite s'obtient sur https://aistudio.google.com/apikey")
         raise SystemExit(1)
 
-    faits, ignores, echecs = generer(a.cle, a.sortie, a.reference, a.modele, a.seulement)
+    faits, ignores, echecs = generer(a.cle, a.sortie, a.reference, a.modele,
+                                     a.seulement, a.limite)
     print(f"\n{faits} générée(s), {ignores} déjà présente(s), {echecs} en échec")
     print(f"Images dans {os.path.abspath(a.sortie)}")
     if faits:
