@@ -75,6 +75,17 @@ def _resume_quota(corps):
     return "quota atteint : " + (message[:160] or "sans détail")
 
 
+class CleRefusee(Exception):
+    """Google a refusé la clé : rien ne sert de continuer la file."""
+
+
+def _resume_cle(corps):
+    if "TA_CLE" in corps or "VOTRE_CLE" in corps:
+        return "la commande a été lancée avec le modèle de clé, pas la vôtre."
+    return ("clé refusée par Google. Vérifiez --cle, ou laissez tomber "
+            "l'option si GEMINI_API_KEY est déjà dans l'environnement.")
+
+
 def _reference(chemin):
     """L'image de style, encodée pour être jointe à chaque requête."""
     if not chemin:
@@ -164,8 +175,13 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
                           f"({essai}/{ESSAIS - 1})…")
                     time.sleep(ATTENTE_QUOTA)
                     continue
-                detail = e.read().decode(errors="replace")[:400]
-                print(f"  ÉCHEC {entree['nom']} : HTTP {e.code} {detail}")
+                detail = e.read().decode(errors="replace")
+                if e.code in (400, 401, 403) and "API_KEY" in detail:
+                    # La clé ne deviendra pas valide à l'exercice suivant.
+                    # Répéter l'erreur 87 fois noie le message utile.
+                    raise CleRefusee(_resume_cle(detail))
+                print(f"  ÉCHEC {entree['nom']} : HTTP {e.code} "
+                      + detail[:400])
                 echecs += 1
                 break
             except Exception as e:
@@ -196,11 +212,23 @@ if __name__ == "__main__":
 
     if not a.cle:
         print("Clé manquante : --cle, ou GEMINI_API_KEY dans l'environnement.")
-        print("Une clé gratuite s'obtient sur https://aistudio.google.com/apikey")
+        print("Une clé s'obtient sur https://aistudio.google.com/apikey")
         raise SystemExit(1)
 
-    faits, ignores, echecs = generer(a.cle, a.sortie, a.reference, a.modele,
-                                     a.seulement, a.limite)
+    # Un modèle de commande collé tel quel se reconnaît sans rien demander
+    # à Google : autant le dire tout de suite.
+    if a.cle in ("TA_CLE", "VOTRE_CLE", "CLE", "cle"):
+        print(f"« {a.cle} » est le modèle de la commande, pas votre clé.")
+        print("Remplacez-le, ou retirez --cle si GEMINI_API_KEY est déjà")
+        print("dans l'environnement — le script la prend tout seul.")
+        raise SystemExit(1)
+
+    try:
+        faits, ignores, echecs = generer(a.cle, a.sortie, a.reference, a.modele,
+                                         a.seulement, a.limite)
+    except CleRefusee as e:
+        print("Arrêt immédiat :", e)
+        raise SystemExit(1)
     print(f"\n{faits} générée(s), {ignores} déjà présente(s), {echecs} en échec")
     print(f"Images dans {os.path.abspath(a.sortie)}")
     if faits:
