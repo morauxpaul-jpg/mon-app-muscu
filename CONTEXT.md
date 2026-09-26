@@ -22,6 +22,10 @@ pwa/
 ├── cron_reminders.py              # Cron CLI du rappel de séance à l'heure choisie (à lancer toutes les heures)
 ├── capture_screens.py / capture_assets.py  # Captures PNG (fiche store, motion design) via le serveur fake
 ├── compress_icon.py / generate_icons.py / rebuild_program_from_history.py  # Scripts utilitaires (non commités pour partie)
+├── tools/                          # Outils de développement (hors chemin d'exécution de l'app)
+│   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
+│   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
+│   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
 ├── supabase_schema_v23.sql … v31  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)

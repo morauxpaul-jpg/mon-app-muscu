@@ -1,0 +1,437 @@
+[
+  {
+    "nom": "Arnold press",
+    "fichier": "arnold-press.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Arnold press (Variante du développé haltères : commencer paumes face à soi (haltères devant la poitrine), puis pivoter les poignets pendant la poussée jusqu'à finir paumes vers l'avant). Highlight the Épaules (3 faisceaux) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Barre au front",
+    "fichier": "barre-au-front.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Barre au front (Allongé sur un banc, barre tenue à bout de bras au-dessus de la poitrine). Highlight the Triceps (3 chefs) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Burpees",
+    "fichier": "burpees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Burpees (Enchaîner : squat au sol → extension des jambes en planche → pompe → retour squat → saut vertical). Highlight the Corps entier in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Crunch",
+    "fichier": "crunch.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Crunch (Allongé au sol, genoux fléchis, enrouler le buste pour rapprocher les côtes du bassin). Highlight the Abdominaux (grand droit) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Curl barre",
+    "fichier": "curl-barre.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Curl barre (Même principe que le curl classique mais avec une barre droite ou EZ). Highlight the Biceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Curl biceps",
+    "fichier": "curl-biceps.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Curl biceps (Debout, bras tendus le long du corps, fléchir les coudes pour amener la charge vers les épaules). Highlight the Biceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Curl haltères",
+    "fichier": "curl-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Curl haltères (Debout, un haltère dans chaque main, bras le long du corps). Highlight the Biceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Curl haltères (ou élastique)",
+    "fichier": "curl-halteres-ou-elastique.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Curl haltères (ou élastique) (Curl classique avec haltères ou un élastique passé sous les pieds). Highlight the Biceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Curl incliné haltères",
+    "fichier": "curl-incline-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Curl incliné haltères (Assis sur un banc incliné à ~45°, bras pendant le long du corps, curler les haltères). Highlight the Biceps (longue portion) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Curl marteau",
+    "fichier": "curl-marteau.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Curl marteau (Curl avec les haltères en prise neutre (pouces vers le haut)). Highlight the Biceps (brachial) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Dips",
+    "fichier": "dips.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Dips (Sur des barres parallèles, se soulever bras tendus puis descendre en fléchissant les coudes). Highlight the Pectoraux (bas) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Dips (ou pompes lestées)",
+    "fichier": "dips-ou-pompes-lestees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Dips (ou pompes lestées) (Dips sur barres parallèles ou pompes avec un sac lesté si pas de barres). Highlight the Pectoraux (bas) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Dips lestés",
+    "fichier": "dips-lestes.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Dips lestés (Dips classiques aux barres parallèles avec un poids additionnel (ceinture de lest ou haltère entre les pieds)). Highlight the Pectoraux (bas) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Dips machine",
+    "fichier": "dips-machine.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Dips machine (Machine qui reproduit le mouvement des dips avec une charge réglable (assistance ou résistance)). Highlight the Pectoraux (bas) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Dips sur chaise",
+    "fichier": "dips-sur-chaise.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Dips sur chaise (Assis au bord d'une chaise, mains derrière au bord du siège, fesses décollées devant la chaise). Highlight the Triceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé couché",
+    "fichier": "developpe-couche.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé couché (Allongé sur un banc plat, saisir la barre au-dessus de la poitrine). Highlight the Pectoraux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé haltères",
+    "fichier": "developpe-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé haltères (Développé couché avec des haltères au lieu d'une barre : amplitude plus grande et chaque bras travaille indépendamment). Highlight the Pectoraux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé haltères assis",
+    "fichier": "developpe-halteres-assis.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé haltères assis (Assis sur un banc incliné à 90°, pousser deux haltères du niveau des épaules jusqu'à l'extension des bras au-dessus de la tête). Highlight the Épaules in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé incliné",
+    "fichier": "developpe-incline.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé incliné (Même principe que le développé couché mais sur un banc incliné à 30-45°). Highlight the Pectoraux (haut) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé incliné haltères",
+    "fichier": "developpe-incline-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé incliné haltères (Développé incliné réalisé avec des haltères au lieu d'une barre). Highlight the Pectoraux (haut) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé militaire",
+    "fichier": "developpe-militaire.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé militaire (Debout ou assis, pousser la barre ou les haltères au-dessus de la tête jusqu'à l'extension complète des bras). Highlight the Épaules (deltoïdes) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Développé militaire haltères",
+    "fichier": "developpe-militaire-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Développé militaire haltères (Debout, pousser deux haltères du niveau des épaules jusqu'à l'extension au-dessus de la tête). Highlight the Épaules (deltoïdes) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Extension triceps haltère",
+    "fichier": "extension-triceps-haltere.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Extension triceps haltère (Assis ou debout, tenir un haltère des deux mains au-dessus de la tête, coudes près des oreilles). Highlight the Triceps (longue portion) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Extensions triceps",
+    "fichier": "extensions-triceps.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Extensions triceps (Étendre les bras en gardant les coudes fixes, que ce soit à la poulie, avec haltère au-dessus de la tête ou allongé (skullcrusher)). Highlight the Triceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Extensions triceps poulie",
+    "fichier": "extensions-triceps-poulie.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Extensions triceps poulie (Face à la poulie haute, pousser la barre ou la corde vers le bas en gardant les coudes collés au corps). Highlight the Triceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Extensions triceps poulie corde",
+    "fichier": "extensions-triceps-poulie-corde.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Extensions triceps poulie corde (À la poulie haute avec une corde : tendre les bras vers le bas en écartant les extrémités de la corde à la fin). Highlight the Triceps (3 chefs) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Face pull",
+    "fichier": "face-pull.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Face pull (À la poulie haute avec une corde, tirer vers le visage en écartant les mains). Highlight the Épaules (deltoïdes postérieurs) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Fentes",
+    "fichier": "fentes.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Fentes (Faire un grand pas en avant et descendre le genou arrière vers le sol). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Fentes alternées",
+    "fichier": "fentes-alternees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Fentes alternées (Version dynamique des fentes : alterner jambe gauche et jambe droite à chaque répétition). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Fentes haltères",
+    "fichier": "fentes-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Fentes haltères (Fentes classiques avec un haltère dans chaque main). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Fentes latérales",
+    "fichier": "fentes-laterales.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Fentes latérales (Debout, faire un grand pas de côté puis fléchir le genou du côté chargé tandis que l'autre jambe reste tendue). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "Fentes marchées",
+    "fichier": "fentes-marchees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Fentes marchées (Enchaîner des fentes en marchant : à chaque pas, descendre en fente avant puis remonter en posant l'autre pied devant). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Fentes sautées",
+    "fichier": "fentes-sautees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Fentes sautées (Version explosive des fentes : depuis la position basse, sauter pour changer de jambe en l'air). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Floor press haltères",
+    "fichier": "floor-press-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Floor press haltères (Développé haltères effectué allongé au sol au lieu d'un banc). Highlight the Pectoraux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Front squat",
+    "fichier": "front-squat.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Front squat (Squat avec la barre posée sur le haut des deltoïdes, devant la clavicule). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Gainage",
+    "fichier": "gainage.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Gainage (En appui sur les avant-bras et les pieds, maintenir le corps parfaitement aligné). Highlight the Abdominaux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Gainage latéral",
+    "fichier": "gainage-lateral.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Gainage latéral (En appui sur un avant-bras et un pied, corps aligné sur le côté). Highlight the Obliques in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "High knees",
+    "fichier": "high-knees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: High knees (Sur place, lever alternativement les genoux au niveau de la hanche à rythme rapide). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Hip thrust",
+    "fichier": "hip-thrust.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Hip thrust (Dos appuyé sur un banc, barre sur les hanches, pousser les hanches vers le plafond en contractant fort les fessiers). Highlight the Fessiers in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Hip thrust (sol)",
+    "fichier": "hip-thrust-sol.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Hip thrust (sol) (Allongé au sol, pieds à plat, pousser les hanches vers le plafond en serrant les fessiers). Highlight the Fessiers in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Jump squats",
+    "fichier": "jump-squats.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Jump squats (Squat explosif : descendre en squat classique puis sauter aussi haut que possible en tendant les jambes). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Kickback triceps",
+    "fichier": "kickback-triceps.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Kickback triceps (Penché en avant, bras collé au flanc, coude fléchi à 90°). Highlight the Triceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Leg curl",
+    "fichier": "leg-curl.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Leg curl (Allongé sur la machine face au sol, fléchir les genoux pour amener les talons vers les fessiers). Highlight the Ischio-jambiers in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Leg extension",
+    "fichier": "leg-extension.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Leg extension (Assis sur la machine, étendre les genoux pour soulever le coussin avec les tibias). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Mollets assis",
+    "fichier": "mollets-assis.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Mollets assis (Assis sur la machine à mollets, résistance sur les genoux, monter sur la pointe des pieds). Highlight the Mollets (soléaire) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Mollets debout",
+    "fichier": "mollets-debout.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Mollets debout (Debout, monter sur la pointe des pieds contre une résistance (machine, marche avec haltères)). Highlight the Mollets (gastrocnémiens) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Mollets unilatéral",
+    "fichier": "mollets-unilateral.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Mollets unilatéral (Debout sur une jambe (l'autre croisée derrière), monter sur la pointe du pied). Highlight the Mollets (gastrocnémiens) in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "Mountain climbers",
+    "fichier": "mountain-climbers.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Mountain climbers (En position de pompe, ramener alternativement les genoux vers la poitrine rapidement). Highlight the Abdominaux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Oiseau",
+    "fichier": "oiseau.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Oiseau (Penché en avant à 90°, écarter les bras sur les côtés avec des haltères légers). Highlight the Épaules (deltoïdes postérieurs) in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "Pike push-ups",
+    "fichier": "pike-push-ups.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Pike push-ups (Position en V inversé (hanches hautes, tête vers le sol), faire des pompes en descendant le sommet du crâne vers le sol). Highlight the Épaules in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Planche",
+    "fichier": "planche.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Planche (En appui sur les avant-bras et les pieds, maintenir le corps parfaitement aligné). Highlight the Abdominaux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Pompes",
+    "fichier": "pompes.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Pompes (En appui sur les mains (largeur d'épaules) et les pieds, fléchir les bras pour descendre le buste jusqu'à effleurer le sol). Highlight the Pectoraux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Pompes diamant",
+    "fichier": "pompes-diamant.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Pompes diamant (Pompes avec les mains rapprochées, pouces et index formant un losange (diamant)). Highlight the Triceps in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Pompes déclinées (pieds surélevés)",
+    "fichier": "pompes-declinees-pieds-sureleves.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Pompes déclinées (pieds surélevés) (Variante des pompes classiques avec les pieds surélevés sur un banc ou une chaise). Highlight the Pectoraux (haut) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Pompes lestées",
+    "fichier": "pompes-lestees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Pompes lestées (Pompes classiques avec une charge dans le dos (sac à dos lesté, disque posé sur les omoplates)). Highlight the Pectoraux in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Presse à cuisses",
+    "fichier": "presse-a-cuisses.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Presse à cuisses (Assis sur la machine, pieds sur la plateforme à largeur d'épaules, pousser pour étendre les jambes puis revenir en fléchissant). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Push press",
+    "fichier": "push-press.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Push press (Développé militaire avec une petite flexion des jambes pour aider à lancer la barre vers le haut). Highlight the Épaules in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Relevé de jambes",
+    "fichier": "releve-de-jambes.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Relevé de jambes (Allongé au sol ou suspendu à une barre, lever les jambes tendues vers le plafond). Highlight the Abdominaux (partie basse) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Rowing barre",
+    "fichier": "rowing-barre.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Rowing barre (Debout, penché en avant à environ 45°, tirer la barre vers le nombril en serrant les omoplates). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Rowing haltère",
+    "fichier": "rowing-haltere.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Rowing haltère (Un genou et une main en appui sur un banc, tirer l'haltère vers la hanche avec le bras libre). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Rowing haltère (ou élastique)",
+    "fichier": "rowing-haltere-ou-elastique.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Rowing haltère (ou élastique) (Penché en avant, tirer un haltère ou un élastique vers la hanche). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Rowing inversé",
+    "fichier": "rowing-inverse.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Rowing inversé (Allongé sous une barre basse, corps droit talons au sol, se tirer jusqu'à ce que la poitrine touche la barre). Highlight the Dos (milieu) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Rowing machine",
+    "fichier": "rowing-machine.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Rowing machine (Assis à la machine de rowing assis, tirer la poignée vers l'abdomen en rapprochant les omoplates). Highlight the Dos (milieu) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Rowing unilatéral haltère",
+    "fichier": "rowing-unilateral-haltere.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Rowing unilatéral haltère (Un genou et une main en appui sur un banc, l'autre main tire un haltère vers la hanche). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "Shrug",
+    "fichier": "shrug.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Shrug (Debout, haltères ou barre en main, hausser les épaules vers les oreilles en contractant les trapèzes). Highlight the Trapèzes (supérieurs) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Shrugs",
+    "fichier": "shrugs.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Shrugs (Debout, haltères ou barre le long du corps). Highlight the Trapèzes (partie haute) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Soulevé de terre",
+    "fichier": "souleve-de-terre.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Soulevé de terre (Debout devant une barre au sol, saisir la barre et soulever en poussant dans le sol avec les jambes tout en redressant le dos). Highlight the Dos (érecteurs) in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Soulevé de terre roumain",
+    "fichier": "souleve-de-terre-roumain.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Soulevé de terre roumain (Debout, barre en main, pencher le buste vers l'avant en poussant les fesses en arrière, jambes quasi tendues). Highlight the Ischio-jambiers in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Soulevé de terre roumain haltères",
+    "fichier": "souleve-de-terre-roumain-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Soulevé de terre roumain haltères (Un haltère dans chaque main, jambes légèrement fléchies, descendre les haltères le long des jambes en pliant les hanches (pas les genoux)). Highlight the Ischio-jambiers in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Squat",
+    "fichier": "squat.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Squat (Barre sur les trapèzes, descendre en fléchissant hanches et genoux simultanément). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Squat (poids du corps ou lesté)",
+    "fichier": "squat-poids-du-corps-ou-leste.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Squat (poids du corps ou lesté) (Squat sans barre : descendre en fléchissant hanches et genoux, bras devant pour l'équilibre). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Squat bulgare",
+    "fichier": "squat-bulgare.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Squat bulgare (Fente avec le pied arrière surélevé sur un banc). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Squat gobelet",
+    "fichier": "squat-gobelet.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Squat gobelet (Debout, tenir un haltère ou un kettlebell verticalement contre la poitrine, puis descendre en squat). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Squats",
+    "fichier": "squats.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Squats (Squat sans matériel : descendre en fléchissant hanches et genoux, bras devant pour l'équilibre). Highlight the Quadriceps in soft red-orange, the rest of the body stays grey. Camera angle: side view, 3/4 angle."
+  },
+  {
+    "nom": "Superman",
+    "fichier": "superman.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Superman (Allongé sur le ventre, bras tendus devant, soulever simultanément les bras et les jambes du sol pour former un arc). Highlight the Lombaires in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tirage horizontal poulie",
+    "fichier": "tirage-horizontal-poulie.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tirage horizontal poulie (Assis à la poulie basse, tirer la poignée vers l'abdomen en gardant le buste quasi vertical). Highlight the Dos (milieu) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tirage vertical",
+    "fichier": "tirage-vertical.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tirage vertical (Assis à la poulie haute, tirer la barre vers le haut de la poitrine en rapprochant les omoplates). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tirage vertical prise serrée",
+    "fichier": "tirage-vertical-prise-serree.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tirage vertical prise serrée (Tirage à la poulie haute avec une poignée serrée (en V ou supination, mains proches)). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tirage élastique",
+    "fichier": "tirage-elastique.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tirage élastique (Élastique fixé à hauteur de poitrine (poignée de porte, poteau) : tirer les deux extrémités vers soi comme un rowing horizontal). Highlight the Dos (milieu) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tractions",
+    "fichier": "tractions.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tractions (Suspendu à une barre fixe en prise pronation (paumes vers l'avant), se hisser jusqu'à ce que le menton dépasse la barre). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tractions (ou tirage vertical)",
+    "fichier": "tractions-ou-tirage-vertical.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tractions (ou tirage vertical) (Tractions à la barre fixe ou tirage vertical à la poulie haute selon l'équipement). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tractions australiennes",
+    "fichier": "tractions-australiennes.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tractions australiennes (Identique au rowing inversé : allongé sous une barre basse (table robuste ou barre TRX), se tirer jusqu'à toucher la barre). Highlight the Dos (milieu) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tractions australiennes (ou tirage élastique)",
+    "fichier": "tractions-australiennes-ou-tirage-elastique.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tractions australiennes (ou tirage élastique) (Allongé sous une barre basse (ou un TRX), tirer le buste vers la barre en gardant le corps gainé). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Tractions lestées",
+    "fichier": "tractions-lestees.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Tractions lestées (Tractions classiques avec une charge additionnelle attachée à la ceinture ou tenue entre les pieds). Highlight the Dos (grand dorsal) in soft red-orange, the rest of the body stays grey. Camera angle: side view."
+  },
+  {
+    "nom": "Écartés poulie",
+    "fichier": "ecartes-poulie.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Écartés poulie (Entre deux poulies hautes, tirer les poignées vers l'avant en cercle jusqu'à ce que les mains se croisent devant la taille). Highlight the Pectoraux (milieu + intérieur) in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "Élévations latérales",
+    "fichier": "elevations-laterales.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Élévations latérales (Debout, bras le long du corps avec haltères légers, monter les bras sur les côtés jusqu'à hauteur d'épaules). Highlight the Épaules (deltoïdes latéraux) in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  },
+  {
+    "nom": "Élévations latérales haltères",
+    "fichier": "elevations-laterales-halteres.png",
+    "prompt": "clean 3D render, neutral grey matte mannequin, no facial features, plain very dark navy background, soft studio lighting, centered full body, square 1:1, minimal, no text, no watermark, no logo, no floor grid. The mannequin is performing: Élévations latérales haltères (Identique aux élévations latérales classiques, réalisées avec des haltères légers). Highlight the Épaules (deltoïdes latéraux) in soft red-orange, the rest of the body stays grey. Camera angle: front view, slight 3/4."
+  }
+]

@@ -23,6 +23,10 @@ import io
 import os
 import sys
 
+# La console Windows est en cp1252 : sans ça, un simple accent dans un
+# message fait planter le script après que le travail est fait.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 from PIL import Image, ImageChops, ImageFilter
 
 DESTINATION = os.path.join(os.path.dirname(__file__), "..", "static", "img", "exercises")
