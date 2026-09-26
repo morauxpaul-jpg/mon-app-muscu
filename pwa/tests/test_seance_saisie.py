@@ -203,3 +203,83 @@ def test_le_template_ne_contient_plus_de_gros_script_inline(fake_db, logged_in):
     assert '/static/js/seance.js' in html
     assert 'id="seance-config"' in html
     assert "function exoBlock" not in html
+
+
+# ── Séries non faites : marquées passées, pas inventées ──────────
+# Enregistrer un exercice après n'avoir rempli qu'une série sur trois
+# stockait les deux autres avec leur charge PRÉ-REMPLIE et zéro répétition.
+# « 82,5 kg × 0 » n'est pas une performance : c'est une série qui n'a pas eu
+# lieu. Elle polluait « Dernière fois » et comptait comme un entraînement.
+
+
+def _lignes(fake, exo="Développé couché"):
+    return sorted(
+        (r for r in fake.tables["history"] if r.get("exercice") == exo),
+        key=lambda r: r.get("serie") or 0,
+    )
+
+
+def test_une_serie_sans_repetition_est_marquee_passee(fake_db, logged_in):
+    _seed(fake_db)
+    _save(logged_in, [{"reps": 10, "poids": 75},
+                      {"reps": "", "poids": 82.5},
+                      {"reps": "", "poids": 82.5}])
+    faite, passee1, passee2 = _lignes(fake_db)
+    assert (faite["reps"], faite["poids"]) == (10, 75.0)
+    for r in (passee1, passee2):
+        assert "SKIP" in r["remarque"], "la série non faite doit être marquée passée"
+        assert r["poids"] == 0, "la charge pré-remplie ne doit pas être conservée"
+        assert r["reps"] == 0
+
+
+def test_une_serie_passee_ne_compte_pas_comme_entrainement(fake_db, logged_in):
+    from core.hist import is_muscu_perf, tonnage
+    _seed(fake_db)
+    _save(logged_in, [{"reps": 10, "poids": 75}, {"reps": "", "poids": 82.5}])
+    import core.db as core_db
+    core_db._data_cache.clear()
+    hist = core_db.get_hist(USER_ID)
+    assert sum(1 for r in hist if is_muscu_perf(r)) == 1
+    assert tonnage(hist) == 750
+
+
+def test_lexercice_reste_marque_traite(fake_db, logged_in):
+    """La trace doit rester : on a ouvert l'exercice et on l'a enregistré."""
+    d = json.loads(_save(logged_in, [{"reps": "", "poids": 82.5}]).data)
+    assert d["completed"] is True
+
+
+def test_le_commentaire_de_la_serie_survit_au_marquage(fake_db, logged_in):
+    _seed(fake_db)
+    _save(logged_in, [{"reps": "", "poids": 80, "remarque": "épaule douloureuse"}])
+    ligne = _lignes(fake_db)[0]
+    assert "SKIP" in ligne["remarque"]
+    assert "épaule douloureuse" in ligne["remarque"]
+
+
+def test_derniere_fois_ignore_les_series_a_zero_repetition(fake_db, logged_in):
+    """Vaut aussi pour les lignes déjà en base avant ce correctif : le filtre
+    est à la lecture, donc pas de migration à passer."""
+    from routes.seance import _last_session_sets
+    import core.db as core_db
+    _seed(fake_db)
+    _hist(fake_db, MONDAY, reps=10, poids=75.0, serie=1)
+    _hist(fake_db, MONDAY, reps=0, poids=82.5, serie=2)   # ancienne ligne fantôme
+    core_db._data_cache.clear()
+    hist, _ = __import__("routes.seance", fromlist=["_normalize_hist"])._normalize_hist(
+        core_db.get_hist(USER_ID), core_db.get_prog(USER_ID))
+    series = _last_session_sets(hist, "Développé couché", "Push", FRIDAY.isoformat())
+    assert [(s["reps"], s["poids"]) for s in series] == [(10, 75.0)]
+
+
+def test_une_seance_au_poids_du_corps_a_enfin_une_derniere_fois(fake_db, logged_in):
+    """Effet de bord du correctif : le filtre était `Poids > 0`, donc les
+    exercices au poids du corps n'avaient jamais de « Dernière fois »."""
+    from routes.seance import _last_session_sets, _normalize_hist
+    import core.db as core_db
+    _seed(fake_db)
+    _hist(fake_db, MONDAY, exercice="Pompes", reps=20, poids=0.0)
+    core_db._data_cache.clear()
+    hist, _ = _normalize_hist(core_db.get_hist(USER_ID), core_db.get_prog(USER_ID))
+    series = _last_session_sets(hist, "Pompes", "Push", FRIDAY.isoformat())
+    assert [s["reps"] for s in series] == [20]

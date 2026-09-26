@@ -263,7 +263,11 @@ def _recent_sessions_sets(hist, exo_final, seance, date_str, n=2):
     surcharge se calculait sur ces données périmées.
     """
     def _avant(r):
-        return bool(r.get("Date")) and r["Date"] < date_str and r["Poids"] > 0
+        # Reps > 0 : une série à zéro répétition n'a pas été faite, elle ne
+        # peut pas servir de référence pour la suivante. (Les anciennes lignes
+        # « charge pré-remplie, 0 rep » sont ainsi écartées sans migration.)
+        return (bool(r.get("Date")) and r["Date"] < date_str
+                and int(r.get("Reps") or 0) > 0)
 
     matches = [r for r in hist
                if _norm(r["Exercice"]) == _norm(exo_final)
@@ -961,6 +965,18 @@ def _rows_from_sets(sets, *, semaine, seance, exo_final, muscle, date_str, is_bw
             rpe = float(s.get("rpe")) if s.get("rpe") not in (None, "") else None
         except (ValueError, TypeError):
             rpe = None
+        remarque = (s.get("remarque") or "").strip()
+        # Série sans répétition = série non faite. La charge affichée venait du
+        # pré-remplissage : la conserver inventait une performance « 82,5 kg × 0 »
+        # qui polluait « Dernière fois » et comptait comme un entraînement.
+        # On la marque SKIP, comme le bouton « Passer » d'un exercice entier :
+        # la trace reste (l'exercice a été traité), la performance non.
+        passee = reps <= 0
+        if passee:
+            poids = 0.0
+            rpe = None
+            remarque = ("SKIP " + remarque).strip()[:200]
+
         rows.append({
             "Semaine": semaine,
             "Séance": seance,
@@ -968,7 +984,7 @@ def _rows_from_sets(sets, *, semaine, seance, exo_final, muscle, date_str, is_bw
             "Série": i,
             "Reps": max(0, reps),
             "Poids": max(0.0, poids),
-            "Remarque": (s.get("remarque") or "")[:200],
+            "Remarque": remarque[:200],
             "Muscle": muscle,
             "Date": date_str,
             "RPE": rpe if (rpe is None or 1 <= rpe <= 10) else None,
