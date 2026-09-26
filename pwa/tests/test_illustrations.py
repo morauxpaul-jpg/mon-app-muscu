@@ -185,16 +185,97 @@ def test_les_fiches_qui_ne_decrivent_aucun_geste_en_recoivent_un():
         "le geste du curl n'est décrit nulle part dans le prompt"
 
 
-def test_aucun_prompt_ne_demande_de_muscle_en_couleur():
-    """La fiche affiche déjà une carte anatomique juste, calculée à partir
-    des muscles déclarés. Le modèle d'image, lui, recopiait la zone rouge de
-    l'image de référence : tous les exercices ressortaient avec les épaules
-    en rouge, curl compris. Deux sources pour la même information, dont une
-    fausse."""
-    fautifs = [n for n, e in _prompts().items()
-               if "highlight the" in e["prompt"].lower()
-               or "in soft red" in e["prompt"].lower()]
-    assert not fautifs, fautifs
+def test_chaque_exercice_sait_quel_muscle_peindre():
+    """« Dos (grand dorsal) » ne dit rien à un modèle d'image, et « Triceps »
+    sans précision finit régulièrement peint sur les biceps. Chaque libellé
+    doit être traduit en une zone anatomique située sur le corps — sinon
+    l'exercice part sans rouge, silencieusement."""
+    from build_exercise_prompts import ZONES
+    from core.exercises_data import EXERCISES_INFO
+    inconnus = sorted({(f.get("muscles") or ["(aucun)"])[0]
+                       for f in EXERCISES_INFO.values()
+                       if (f.get("muscles") or ["(aucun)"])[0] not in ZONES})
+    assert not inconnus, f"muscle sans zone anatomique : {inconnus}"
+
+
+def test_le_prompt_ne_designe_quune_seule_zone_rouge():
+    """Deux zones rouges dans une image, c'est deux muscles désignés comme
+    cibles alors que la fiche n'en annonce qu'un."""
+    for nom, entree in _prompts().items():
+        p = entree["prompt"]
+        assert p.lower().count("red-orange") <= 1, nom
+
+
+def test_un_exercice_global_ne_se_colorie_pas():
+    """Les burpees sollicitent tout : un corps entièrement rouge ne désigne
+    plus rien, et le reste du catalogue devient illisible par contraste."""
+    p = _prompts()["Burpees"]["prompt"].lower()
+    assert "red-orange" not in p
+    assert "no coloured muscle" in p
+
+
+def test_le_rouge_de_la_reference_est_efface_avant_lenvoi(tmp_path):
+    """La référence part avec les 86 autres appels pour tenir le style. Le
+    modèle en recopiait AUSSI la zone rouge : tous les exercices sortaient
+    avec les épaules en rouge, curl compris. La phrase le lui interdisant
+    n'a pas suffi, donc le rouge est retiré de l'image elle-même — il ne
+    reste rien à recopier."""
+    import io as _io
+    import sys
+    from PIL import Image
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import _sans_rouge
+
+    source = Image.new("RGB", (40, 40), (150, 150, 150))
+    for y in range(10, 20):
+        for x in range(10, 20):
+            source.putpixel((x, y), (210, 90, 70))       # le muscle colorié
+    chemin = tmp_path / "ref.png"
+    source.save(chemin)
+
+    octets, efface = _sans_rouge(str(chemin))
+    assert efface == 100, efface
+    sortie = Image.open(_io.BytesIO(octets)).convert("RGB")
+    px = sortie.load()
+    rouges = [(x, y) for y in range(40) for x in range(40)
+              if px[x, y][0] - max(px[x, y][1], px[x, y][2]) > 8]
+    assert not rouges, rouges
+    # Le mannequin autour n'a pas bougé : on efface le coloriage, pas l'image.
+    assert px[0, 0] == (150, 150, 150)
+
+
+def test_la_consigne_de_reference_ne_gouverne_que_le_style(monkeypatch):
+    """Sans ce cadrage, la référence imposait aussi sa pose : les cinq
+    premières images avaient toutes la même. On inspecte ce qui part
+    vraiment sur le réseau, pas ce que le code a l'air de dire."""
+    import base64
+    import contextlib
+    import io as flux
+    import json
+    import sys
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    envoye = {}
+
+    @contextlib.contextmanager
+    def _faux_appel(requete, timeout=None):
+        envoye["corps"] = json.loads(requete.data.decode())
+        image = base64.b64encode(b"PNG").decode()
+        yield flux.BytesIO(json.dumps({"candidates": [{"content": {
+            "parts": [{"inline_data": {"data": image}}]}}]}).encode())
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _faux_appel)
+    g._demander("cle", "PROMPT DE L'EXERCICE",
+                {"inline_data": {"mime_type": "image/png", "data": "eA=="}})
+
+    parties = envoye["corps"]["contents"][0]["parts"]
+    cadrage = parties[0]["text"]
+    assert "ONLY for the" in cadrage, "la référence n'est pas cadrée au style"
+    assert "Do NOT copy its pose" in cadrage
+    # Le prompt de l'exercice passe après le cadrage, l'image en dernier.
+    assert parties[1]["text"] == "PROMPT DE L'EXERCICE"
+    assert "inline_data" in parties[-1]
 
 
 def test_le_nom_de_fichier_du_prompt_est_celui_que_lapp_ira_chercher():

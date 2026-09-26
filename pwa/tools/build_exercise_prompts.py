@@ -69,13 +69,81 @@ GESTES = {
 # la zone rouge de l'image de référence : tous les exercices ressortaient avec
 # les épaules en rouge, y compris le curl. Un seul rôle par image : celle-ci
 # montre le GESTE.
+# Le rouge ne peut pas être « le muscle de la fiche » tel quel : « Dos (grand
+# dorsal) » ne dit pas à un modèle d'image où peindre, et « Triceps » sans
+# précision se retrouve régulièrement peint sur les biceps. Chaque libellé est
+# traduit en une ZONE : le nom anatomique, puis où elle se trouve sur le corps.
+ZONES = {
+    "Quadriceps": "quadriceps, on the FRONT of both thighs",
+    "Ischio-jambiers": "hamstrings, on the BACK of both thighs",
+    "Fessiers": "gluteal muscles of the buttocks",
+    "Mollets (gastrocnémiens)": "calf muscles on the BACK of both lower legs",
+    "Mollets (soléaire)": "lower calf, on the BACK of both lower legs just "
+                           "above the ankle",
+    "Pectoraux": "pectoral muscles across the chest",
+    "Pectoraux (bas)": "LOWER pectoral muscles, the bottom edge of the chest",
+    "Pectoraux (haut)": "UPPER pectoral muscles, just below the collarbones",
+    "Pectoraux (milieu + intérieur)": "INNER pectoral muscles, along the "
+                                       "middle of the chest",
+    "Dos (grand dorsal)": "latissimus dorsi, the broad fan-shaped muscles on "
+                          "both sides of the BACK, below the armpits",
+    "Dos (milieu)": "mid-back muscles between the shoulder blades",
+    "Dos (érecteurs)": "erector spinae, the two columns running along the "
+                       "lower spine",
+    "Lombaires": "lower back muscles either side of the lumbar spine",
+    "Trapèzes (supérieurs)": "upper trapezius, the slope between the neck and "
+                               "the shoulders",
+    "Trapèzes (partie haute)": "upper trapezius, the slope between the neck "
+                                "and the shoulders",
+    "Épaules": "deltoid muscles capping both shoulders",
+    "Épaules (deltoïdes)": "deltoid muscles capping both shoulders",
+    "Épaules (3 faisceaux)": "deltoid muscles capping both shoulders",
+    "Épaules (deltoïdes latéraux)": "SIDE deltoids, on the outer edge of both "
+                                      "shoulders",
+    "Épaules (deltoïdes postérieurs)": "REAR deltoids, at the BACK of both "
+                                         "shoulders",
+    "Biceps": "biceps, on the FRONT of both upper arms",
+    "Biceps (brachial)": "biceps, on the FRONT of both upper arms",
+    "Biceps (longue portion)": "biceps, on the FRONT of both upper arms",
+    "Triceps": "triceps, on the BACK of both upper arms",
+    "Triceps (3 chefs)": "triceps, on the BACK of both upper arms",
+    "Triceps (longue portion)": "triceps, on the BACK of both upper arms",
+    "Abdominaux": "rectus abdominis, the front of the stomach",
+    "Abdominaux (grand droit)": "rectus abdominis, the front of the stomach",
+    "Abdominaux (partie basse)": "LOWER abdominals, below the navel",
+    "Obliques": "oblique muscles on both sides of the waist",
+    # Un corps entier tout rouge ne désigne rien : pas de coloriage.
+    "Corps entier": None,
+}
+
+
+def _zone(fiche):
+    """Le muscle à peindre en rouge, décrit pour un modèle d'image.
+
+    Renvoie None quand il n'y a rien à désigner — mieux vaut pas de rouge
+    du tout qu'un rouge au mauvais endroit, qui apprend une anatomie fausse.
+    """
+    muscles = fiche.get("muscles") or []
+    return ZONES.get(muscles[0]) if muscles else None
+
+
 GABARIT = (
     "{style}. The mannequin is performing: {geste}. "
     "Show the single most RECOGNISABLE instant of this movement — the "
     "position that makes it impossible to confuse with any other exercise, "
     "not necessarily the starting position. "
-    "Camera angle: {angle}. "
-    "The entire body stays plain matte grey — no coloured or highlighted muscle."
+    "Camera angle: {angle}.{muscle}"
+)
+
+# Le coloriage est une phrase à part : elle disparaît entièrement quand il
+# n'y a pas de zone à désigner, plutôt que de laisser un « highlight the None ».
+COLORIAGE = (
+    " Paint ONLY the {zone} in a flat soft red-orange overlay. "
+    "Every other part of the body stays plain matte grey — exactly one "
+    "red area in the whole image, and it must be the {zone}."
+)
+SANS_COLORIAGE = (
+    " The entire body stays plain matte grey — no coloured muscle anywhere."
 )
 
 
@@ -118,6 +186,8 @@ def construire():
                 style=STYLE,
                 geste=_geste(nom, fiche),
                 angle=_angle(nom),
+                muscle=(COLORIAGE.format(zone=_zone(fiche))
+                        if _zone(fiche) else SANS_COLORIAGE),
             ),
         })
     return entrees

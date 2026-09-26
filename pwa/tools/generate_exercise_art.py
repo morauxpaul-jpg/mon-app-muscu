@@ -43,6 +43,8 @@ import time
 import urllib.error
 import urllib.request
 
+from PIL import Image
+
 RACINE = os.path.dirname(__file__)
 PROMPTS = os.path.join(RACINE, "exercise_prompts.json")
 MODELE = "gemini-2.5-flash-image"
@@ -86,14 +88,46 @@ def _resume_cle(corps):
             "l'option si GEMINI_API_KEY est déjà dans l'environnement.")
 
 
+def _sans_rouge(chemin):
+    """L'image de référence, son muscle rouge effacé.
+
+    La référence est jointe aux 86 autres appels pour tenir le style. Mais
+    le modèle recopiait aussi sa zone rouge : tous les exercices sortaient
+    avec les épaules en rouge, curl compris. Une phrase le lui interdisant
+    n'a pas suffi — alors on enlève le rouge de l'image elle-même. Il ne
+    reste rien à recopier, et la seule consigne de couleur qui subsiste est
+    celle de l'exercice en cours.
+
+    Le mannequin est gris (r ≈ v ≈ b) : un pixel dont le rouge domine
+    franchement les deux autres canaux est du coloriage, pas une ombre.
+    """
+    im = Image.open(chemin).convert("RGB")
+    px = im.load()
+    largeur, hauteur = im.size
+    efface = 0
+    for y in range(hauteur):
+        for x in range(largeur):
+            r, v, b = px[x, y]
+            if r - max(v, b) > 8:
+                # Le rouge est un canal lumineux : le remplacer par la
+                # luminance laisserait une zone plus claire que le reste.
+                # Le vert porte déjà la forme sous le coloriage.
+                gris = min(int(0.299 * r + 0.587 * v + 0.114 * b), v + 10)
+                px[x, y] = (gris, gris, gris)
+                efface += 1
+    tampon = io.BytesIO()
+    im.save(tampon, "PNG")
+    return tampon.getvalue(), efface
+
+
 def _reference(chemin):
     """L'image de style, encodée pour être jointe à chaque requête."""
     if not chemin:
         return None
-    mime = mimetypes.guess_type(chemin)[0] or "image/png"
-    with open(chemin, "rb") as f:
-        return {"inline_data": {"mime_type": mime,
-                                "data": base64.b64encode(f.read()).decode()}}
+    octets, efface = _sans_rouge(chemin)
+    print(f"  référence : {efface} pixels de coloriage effacés avant envoi")
+    return {"inline_data": {"mime_type": "image/png",
+                            "data": base64.b64encode(octets).decode()}}
 
 
 def _demander(cle, prompt, reference, modele=MODELE):
@@ -106,8 +140,10 @@ def _demander(cle, prompt, reference, modele=MODELE):
         parties.insert(0, {"text": "Use the reference image ONLY for the "
                                    "rendering style, the mannequin's look and "
                                    "materials, the lighting and the background. "
-                                   "Do NOT copy its pose, and do NOT copy any "
-                                   "coloured or highlighted body part from it."})
+                                   "Do NOT copy its pose. The reference has "
+                                   "no coloured muscle; the red area is "
+                                   "described in the instructions below and "
+                                   "nowhere else."})
         parties.append(reference)
 
     corps = json.dumps({"contents": [{"parts": parties}]}).encode()
