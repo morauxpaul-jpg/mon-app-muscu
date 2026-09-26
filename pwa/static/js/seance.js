@@ -263,6 +263,7 @@
             exo_base: data.base,
             variant: newVariant,
             seance: CONFIG.seance,
+            date: CONFIG.date,
             s_act: Number(CONFIG.semaine),
             week_offset: Number(CONFIG.weekOffset),
           }),

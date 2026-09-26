@@ -172,7 +172,7 @@ Ce qui reste : 11 déclarations sous 12 px, des emoji comme contenu porteur de s
 
 | Gravité initiale | Constat | État |
 |---|---|---|
-| CRITIQUE | Même séance 2×/semaine écrasée | **Corrigé** — ciblage par date (`core/db.py:489`), 3 tests dédiés |
+| CRITIQUE | Même séance 2×/semaine écrasée | **ÉCRITURE corrigée, LECTURE non — voir l'erratum ci-dessous** |
 | CRITIQUE | Autosave effaçant les métadonnées | **Corrigé** — `replace_program_body`, 5 tests de survie |
 | CRITIQUE | Cardio : une séance par activité et par semaine | **Partiel** — voir N1 |
 | CRITIQUE | Historique tronqué à 1 000 lignes | **Corrigé** — `_fetch_all` (`core/db.py:35-51`), plafond simulé dans la fausse base, 3 tests |
@@ -195,6 +195,29 @@ Ce qui reste : 11 déclarations sous 12 px, des emoji comme contenu porteur de s
 | MINEUR | IDs AdMob de test par défaut | **Non corrigé** (`app.py:427-428`) |
 
 **Bilan** : 15 corrigés, 3 partiels, 3 non corrigés, 4 nouveaux.
+
+### Erratum (2026-09-26) — ce rapport s'est trompé
+
+Ce rapport a conclu que « même séance 2×/semaine » était corrigé et a noté
+l'axe 2 à **7/10** sur cette base. C'était faux : seule l'écriture l'était.
+
+`_exo_curr_rows` (`routes/seance.py:119`) comparait encore la **semaine**.
+Ouvrir « Push » le jeudi après l'avoir fait le lundi affichait donc la
+séance du lundi déjà cochée, ses séries dedans, impossible à refaire —
+signalé par l'utilisateur, pas par cet audit. Les données étaient saines,
+l'écran mentait. Le correctif du premier audit nommait pourtant cette moitié
+(« adapter `_exo_curr_rows`/`_exo_completed` pour comparer sur `Date` ») ;
+elle n'avait pas été faite, et la vérification n'est pas allée plus loin que
+le chemin d'écriture et le résultat des tests.
+
+**Leçon méthodologique** : vérifier qu'une donnée est bien écrite ne dit rien
+de ce que l'utilisateur voit. Les quatre reproductions de ce rapport portent
+sur la base ; aucune n'ouvrait un écran.
+
+Corrigé depuis (lecture par date dans toute la vue séance, « dernière fois »
+groupée par date et non par semaine), avec 4 tests sur le rendu de la page
+vérifiés par mutation. L'axe 2 reste à 7/10 : la note était juste, la
+justification ne l'était pas.
 
 ---
 

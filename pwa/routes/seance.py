@@ -116,9 +116,15 @@ def _norm(s):
     return (s or "").strip().casefold()
 
 
-def _exo_curr_rows(hist, semaine, seance, exercice):
+def _exo_curr_rows(hist, date_str, seance, exercice):
+    """Séries de CE jour pour cet exercice.
+
+    Par date et non par semaine : deux séances du même nom dans une semaine
+    sont deux séances distinctes. Comparer la semaine rouvrait le jeudi la
+    séance du lundi, cochée et remplie, donc impossible à refaire.
+    """
     return [r for r in hist
-            if r["Semaine"] == semaine and _norm(r["Séance"]) == _norm(seance)
+            if r.get("Date") == date_str and _norm(r["Séance"]) == _norm(seance)
             and _norm(r["Exercice"]) == _norm(exercice)]
 
 
@@ -247,48 +253,58 @@ def _recup_status(hist, s_act):
     return out
 
 
-def _recent_sessions_sets(hist, exo_final, seance, s_act, n=2):
-    """Séries des `n` dernières semaines où cet exo a été réalisé, de la plus
-    récente à la plus ancienne : liste de listes de dicts {reps, poids, rpe}."""
+def _recent_sessions_sets(hist, exo_final, seance, date_str, n=2):
+    """Séries des `n` dernières SÉANCES où cet exo a été réalisé, de la plus
+    récente à la plus ancienne : liste de listes de dicts {reps, poids, rpe}.
+
+    Groupé par date : quand on fait Push le lundi et le jeudi, « la dernière
+    fois » c'est lundi. Par semaine, on proposait les charges d'il y a sept
+    jours en ignorant la séance de l'avant-veille — et la suggestion de
+    surcharge se calculait sur ces données périmées.
+    """
+    def _avant(r):
+        return bool(r.get("Date")) and r["Date"] < date_str and r["Poids"] > 0
+
     matches = [r for r in hist
-               if _norm(r["Exercice"]) == _norm(exo_final) and _norm(r["Séance"]) == _norm(seance)
-               and r["Semaine"] < s_act and r["Poids"] > 0]
+               if _norm(r["Exercice"]) == _norm(exo_final)
+               and _norm(r["Séance"]) == _norm(seance) and _avant(r)]
     if not matches:
-        # Chercher dans toutes les séances si pas trouvé dans la même séance
+        # Repli toutes séances confondues : un exo déplacé d'un créneau à
+        # l'autre garde son historique.
         matches = [r for r in hist
-                   if _norm(r["Exercice"]) == _norm(exo_final)
-                   and r["Semaine"] < s_act and r["Poids"] > 0]
+                   if _norm(r["Exercice"]) == _norm(exo_final) and _avant(r)]
     if not matches:
         return []
-    weeks = sorted({r["Semaine"] for r in matches}, reverse=True)[:n]
+    dates = sorted({r["Date"] for r in matches}, reverse=True)[:n]
     out = []
-    for w in weeks:
-        rows = [r for r in matches if r["Semaine"] == w]
+    for d in dates:
+        rows = [r for r in matches if r["Date"] == d]
         rows.sort(key=lambda r: int(r["Série"] or 0))
         out.append([{"reps": int(r["Reps"]), "poids": float(r["Poids"]),
                      "rpe": parse_rpe(r.get("Remarque"))} for r in rows])
     return out
 
 
-def _last_session_sets(hist, exo_final, seance, s_act):
-    """Retourne les séries de la dernière semaine où cet exo a été réalisé,
-    sous forme de liste de dicts {reps, poids, rpe}. Utilisé pour le
-    pré-remplissage des poids et l'affichage inline 'Dernière fois'."""
-    recent = _recent_sessions_sets(hist, exo_final, seance, s_act, n=1)
+def _last_session_sets(hist, exo_final, seance, date_str):
+    """Séries de la dernière séance où cet exo a été réalisé, sous forme de
+    liste de dicts {reps, poids, rpe}. Utilisé pour le pré-remplissage des
+    poids et l'affichage inline « Dernière fois »."""
+    recent = _recent_sessions_sets(hist, exo_final, seance, date_str, n=1)
     return recent[0] if recent else []
 
 
-def _suggestion_for(hist, exo_final, seance, s_act, is_bw):
+def _suggestion_for(hist, exo_final, seance, date_str, is_bw):
     """Suggestion de surcharge (cf. core.muscu.overload_suggestion) à partir
     des deux dernières séances de cet exo."""
-    recent = _recent_sessions_sets(hist, exo_final, seance, s_act, n=2)
+    recent = _recent_sessions_sets(hist, exo_final, seance, date_str, n=2)
     if not recent:
         return None
     return overload_suggestion(recent[0], recent[1] if len(recent) > 1 else None, is_bw=is_bw)
 
 
-def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_weight=True,
-                       forced_variant=None, exo_index=0, show_overload_hint=True):
+def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
+                       prefill_weight=True, forced_variant=None, exo_index=0,
+                       show_overload_hint=True):
     """Construit le dict passé au template pour un exercice."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
@@ -302,18 +318,18 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
     exo_final = f"{base} ({var})" if var != "Standard" else base
     is_bw = base in BW_EXOS and var != "Lesté"
 
-    curr = _exo_curr_rows(hist, s_act, seance, exo_final)
+    curr = _exo_curr_rows(hist, date_str, seance, exo_final)
     curr.sort(key=lambda r: int(r["Série"] or 0))
     completed = _exo_completed(curr)
     record = _best_record(hist, exo_final, is_bw)
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
 
     # Dernière séance pour pré-remplissage poids + affichage inline
-    last_sets = _last_session_sets(hist, exo_final, seance, s_act)
+    last_sets = _last_session_sets(hist, exo_final, seance, date_str)
     is_iso, target_sec = detect_isometric(base)
     suggestion = None
     if show_overload_hint and not is_iso:
-        suggestion = _suggestion_for(hist, exo_final, seance, s_act, is_bw)
+        suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw)
 
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
     n_rows = max(p_sets, len(curr)) if curr else p_sets
@@ -389,7 +405,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, is_extra=False, prefill_wei
     }
 
 
-def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight, show_overload_hint=True):
+def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefill_weight,
+                            show_overload_hint=True):
     """Construit les contextes pour tous les exercices d'une séance, en
     assignant des variantes distinctes quand le même base name apparaît
     plusieurs fois (ex : 'Développé incliné' en Haltères ET en Barre)."""
@@ -411,15 +428,15 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, prefill_weight, 
         if it is not None:
             forced = next(it, "Standard")
         out.append(_build_exo_context(
-            hist, e, seance_name, s_act, is_extra=is_extra,
+            hist, e, seance_name, s_act, date_str, is_extra=is_extra,
             prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
             show_overload_hint=show_overload_hint,
         ))
     return out
 
 
-def _reconstruct_history_exos(hist, seance_name, s_act, covered_finals, start_index):
-    """Reconstruit les exercices présents dans l'historique d'une (séance, semaine)
+def _reconstruct_history_exos(hist, seance_name, s_act, date_str, covered_finals, start_index):
+    """Reconstruit les exercices présents dans l'historique d'une (séance, date)
     mais absents de la liste déjà affichée (programme + extras live).
 
     Indispensable pour consulter une vieille séance : les exos ajoutés à la volée
@@ -437,7 +454,7 @@ def _reconstruct_history_exos(hist, seance_name, s_act, covered_finals, start_in
     ordered_finals = []
     meta = {}
     for r in hist:
-        if _norm(r.get("Séance")) != _norm(seance_name) or r.get("Semaine") != s_act:
+        if _norm(r.get("Séance")) != _norm(seance_name) or r.get("Date") != date_str:
             continue
         exo_final = (r.get("Exercice") or "").strip()
         if not exo_final or exo_final == "SESSION" or exo_final.startswith("CARDIO:"):
@@ -462,7 +479,7 @@ def _reconstruct_history_exos(hist, seance_name, s_act, covered_finals, start_in
         muscle = meta[exo_final]["muscle"] or auto_muscles(base) or "Autre"
         exo_obj = {"name": base, "muscle": muscle, "sets": max(1, meta[exo_final]["count"])}
         out.append(_build_exo_context(
-            hist, exo_obj, seance_name, s_act, is_extra=False,
+            hist, exo_obj, seance_name, s_act, date_str, is_extra=False,
             prefill_weight=False, forced_variant=variant, exo_index=start_index + i,
         ))
     return out
@@ -672,12 +689,13 @@ def seance():
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
-        exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, auto_prefill_weight, show_overload_hint)
+        exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, date_iso,
+                                           auto_prefill_weight, show_overload_hint)
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).
         covered = {_norm(e["exo_final"]) for e in exos_ctx}
-        recon = _reconstruct_history_exos(hist, name, s_act, covered, len(exos_ctx))
+        recon = _reconstruct_history_exos(hist, name, s_act, date_iso, covered, len(exos_ctx))
         if recon:
             n_extras = len(extras)
             if n_extras:
@@ -743,12 +761,14 @@ def seance():
         libre_name = name or "Séance Libre"
         libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
         all_exos = [(e, False) for e in libre_exos]
-        exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, auto_prefill_weight, show_overload_hint)
+        exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, date_iso,
+                                           auto_prefill_weight, show_overload_hint)
 
         # Reconstruit depuis l'historique : le brouillon libre est effacé au
         # finish, donc une séance libre passée n'a plus que son historique.
         covered = {_norm(e["exo_final"]) for e in exos_ctx}
-        exos_ctx = exos_ctx + _reconstruct_history_exos(hist, libre_name, s_act, covered, len(exos_ctx))
+        exos_ctx = exos_ctx + _reconstruct_history_exos(
+            hist, libre_name, s_act, date_iso, covered, len(exos_ctx))
 
         # Ordre personnalisé (drag dans la séance en cours)
         exos_ctx = _apply_seance_order(prog, f"{libre_name}|{date_iso}", exos_ctx)
@@ -1055,7 +1075,7 @@ def save_exo():
 
     hist, _ = _normalize_hist(get_hist(), get_prog())
     totals = _session_totals(hist, seance, date_str)
-    completed = _exo_completed(_exo_curr_rows(hist, semaine, seance, exo_final))
+    completed = _exo_completed(_exo_curr_rows(hist, date_str, seance, exo_final))
     return jsonify({
         "ok": True,
         "completed": completed,
@@ -1063,7 +1083,7 @@ def save_exo():
         "volume": totals["volume"],
         "sets_done": totals["sets"],
         "record": _best_record(hist, exo_final, is_bw),
-        "suggestion": _suggestion_for(hist, exo_final, seance, semaine, is_bw),
+        "suggestion": _suggestion_for(hist, exo_final, seance, date_str, is_bw),
         "last_summary": ", ".join(
             "%gkg × %d" % (r["Poids"], r["Reps"]) for r in new_rows if r["Reps"] > 0
         ),
@@ -1508,6 +1528,10 @@ def api_variant_history():
     seance = data.get("seance", "")
     s_act = int(data.get("s_act", 0))
     week_offset = int(data.get("week_offset", 0))
+    # La date de la séance consultée : « dernière fois » et suggestion se
+    # calculent par rapport à elle, pas à la semaine. Repli sur aujourd'hui
+    # pour un client servi depuis un cache antérieur à ce champ.
+    date_str = _form_date({"date": data.get("date")})
 
     hist = get_hist()
     prog = get_prog()
@@ -1516,12 +1540,12 @@ def api_variant_history():
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
     is_bw = exo_base in BW_EXOS and variant != "Lesté"
 
-    last_sets = _last_session_sets(hist, exo_final, seance, s_act)
+    last_sets = _last_session_sets(hist, exo_final, seance, date_str)
     record = _best_record(hist, exo_final, is_bw)
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
     suggestion = None
     if prog.get("_settings", {}).get("show_overload_hint", True) and not detect_isometric(exo_base)[0]:
-        suggestion = _suggestion_for(hist, exo_final, seance, s_act, is_bw)
+        suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw)
 
     last_summary = ""
     if last_sets:

@@ -295,6 +295,79 @@ def test_planning_ignore_une_seance_inexistante(fake_db, logged_in):
     assert pl["Mercredi"] == ""
 
 
+# ── R1bis : l'ÉCRAN de la deuxième séance de la semaine ──────
+# L'écriture ciblait déjà la date exacte, donc les deux séances coexistaient
+# en base. Mais la LECTURE comparait encore la semaine : en ouvrant « Full
+# Body A » le vendredi, on retrouvait la séance du lundi déjà cochée, ses
+# séries dedans. Les données étaient saines, l'écran mentait.
+
+
+def _contextes_exos(html):
+    """Dicts passés à exoBlock() — un par carte d'exercice affichée."""
+    import html as H
+    blocs = re.findall(r"exoBlock\(\d+,\s*(\{.*?\})\)", html, re.S)
+    assert blocs, "aucune carte d'exercice dans la page"
+    return [json.loads(H.unescape(b)) for b in blocs]
+
+
+def _contexte_exo(html, index=0):
+    return _contextes_exos(html)[index]
+
+
+def _ouvrir(client, jour):
+    return client.get(
+        f"/seance?mode=prefaite&name=Full+Body+A&date={jour.isoformat()}"
+    ).get_data(as_text=True)
+
+
+def test_la_seconde_seance_de_la_semaine_souvre_vierge(fake_db, logged_in):
+    _seed_full_body(fake_db)
+    _save_squat(logged_in, MONDAY, 80.0)
+    ctx = _contexte_exo(_ouvrir(logged_in, FRIDAY))
+    assert ctx["completed"] is False, "le vendredi héritait du lundi"
+    assert all(s.get("reps") in (None, "", 0) for s in ctx["sets"]),         "les répétitions du lundi ne doivent pas être pré-saisies vendredi"
+
+
+def test_la_seance_du_jour_reste_marquee_faite(fake_db, logged_in):
+    """Le garde-fou du correctif : on ne doit pas avoir rendu TOUT vierge."""
+    _seed_full_body(fake_db)
+    _save_squat(logged_in, MONDAY, 80.0)
+    ctx = _contexte_exo(_ouvrir(logged_in, MONDAY))
+    assert ctx["completed"] is True
+
+
+def test_la_derniere_fois_du_vendredi_est_le_lundi(fake_db, logged_in):
+    """Groupé par semaine, « la dernière fois » sautait la séance de
+    l'avant-veille pour proposer les charges d'il y a sept jours — et la
+    suggestion de surcharge se calculait dessus."""
+    _seed_full_body(fake_db)
+    _save_squat(logged_in, MONDAY - dt.timedelta(days=7), 60.0)
+    _save_squat(logged_in, MONDAY, 80.0)
+    ctx = _contexte_exo(_ouvrir(logged_in, FRIDAY))
+    poids = [s.get("poids") for s in ctx["sets"] if s.get("poids")]
+    assert poids and poids[0] == 80.0, f"pré-remplissage attendu à 80, reçu {poids}"
+
+
+def test_un_exo_fait_lundi_seulement_napparait_pas_vendredi(fake_db, logged_in):
+    """La reconstruction depuis l'historique ciblait la semaine : un exercice
+    ajouté à la volée le lundi se rematerialisait dans la séance du vendredi."""
+    _seed_full_body(fake_db)
+    logged_in.post("/seance/save-exo", data={
+        "_csrf": CSRF, "semaine": str(continuous_week(MONDAY)),
+        "seance_name": "Full Body A", "exo_base": "Face pull", "variant": "Standard",
+        "muscle": "Dos", "date": MONDAY.isoformat(), "mode": "prefaite",
+        "name": "Full Body A",
+        "sets_json": json.dumps([{"reps": 12, "poids": 20}]),
+    })
+    # On regarde les CARTES, pas la page : « Face pull » figure aussi dans la
+    # liste d'auto-complétion des noms connus, ce qui est normal.
+    def cartes(jour):
+        return [c["exo_final"] for c in _contextes_exos(_ouvrir(logged_in, jour))]
+
+    assert "Face pull" not in cartes(FRIDAY),         "exo du lundi reconstruit dans la séance du vendredi"
+    assert "Face pull" in cartes(MONDAY), "mais il doit rester visible le lundi"
+
+
 # ── R4 : troncature silencieuse au-delà de `max-rows` ────────────
 # PostgREST plafonne ses réponses à 1000 lignes SANS le dire. Un historique
 # plus long était donc lu amputé, et la première réécriture figeait la
