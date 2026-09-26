@@ -221,9 +221,9 @@
         <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
         <span>Animations du thème (cartes, glow, pulse) {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
-        <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
-        <span>Pré-remplir les poids de la dernière séance {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.6rem; padding:1px 5px;">PRO</span>{% endif %}</span>
+      <label class="muscle-check" style="display:flex; margin:6px 0;">
+        <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
+        <span>Pré-remplir les poids de la dernière séance</span>
       </label>
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this); var r=document.getElementById('reminder-hour-row'); if(r) r.hidden = !this.checked;">

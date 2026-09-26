@@ -222,8 +222,28 @@
     <label class="field-label">Prénom</label>
     <input class="field" type="text" x-model="form.prenom" placeholder="Ton prénom" maxlength="40">
 
-    <label class="field-label">Âge</label>
-    <input class="field" type="number" x-model.number="form.age" min="10" max="99" placeholder="25">
+    <label class="field-label" for="onb-age">Âge</label>
+    <input class="field" id="onb-age" type="number" x-model.number="form.age" min="10" max="99" placeholder="25">
+
+    {# Poids et taille : ils servent aux standards de force (comparés au
+       gabarit et non à des valeurs absolues), au calcul des calories, et
+       ouvrent la courbe de poids. Sans eux ces trois écrans tournent à vide. #}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div>
+        <label class="field-label" for="onb-poids">Poids (kg)</label>
+        <input class="field" id="onb-poids" type="number" inputmode="decimal" step="0.1"
+               x-model.number="form.poids_kg" min="30" max="300" placeholder="75">
+      </div>
+      <div>
+        <label class="field-label" for="onb-taille">Taille (cm)</label>
+        <input class="field" id="onb-taille" type="number" inputmode="numeric"
+               x-model.number="form.taille_cm" min="100" max="250" placeholder="178">
+      </div>
+    </div>
+    <p style="font-size:0.72rem; color:var(--text-2); margin:6px 0 0; line-height:1.45;">
+      Pour comparer tes performances à ton gabarit plutôt qu'à une moyenne, et
+      suivre ton poids. Modifiable à tout moment.
+    </p>
 
     <label class="field-label">Sexe</label>
     <div class="opt-grid three" role="radiogroup" aria-label="Sexe">
@@ -503,6 +523,8 @@ function onboardingFlow() {
     form: {
       prenom: EXISTING.prenom || "",
       age: EXISTING.age || null,
+      poids_kg: EXISTING.poids_kg || null,
+      taille_cm: EXISTING.taille_cm || null,
       sexe: EXISTING.sexe || "",
       niveau: EXISTING.niveau || "",
       frequence: EXISTING.frequence || 3,
@@ -531,7 +553,13 @@ function onboardingFlow() {
     previewProg: null,
 
     init() {},
-    canNext1() { return this.form.prenom.trim().length >= 2 && this.form.age >= 10 && this.form.sexe; },
+    canNext1() {
+      return this.form.prenom.trim().length >= 2
+        && this.form.age >= 10
+        && this.form.sexe
+        && this.form.poids_kg >= 30 && this.form.poids_kg <= 300
+        && this.form.taille_cm >= 100 && this.form.taille_cm <= 250;
+    },
     canNext2() { return this.form.niveau && this.form.frequence >= 2; },
     canNext3() { return this.form.objectif && this.form.equipement; },
 

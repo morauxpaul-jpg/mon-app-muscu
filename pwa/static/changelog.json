@@ -1,6 +1,15 @@
 {
-  "current": "v54",
+  "current": "v55",
   "entries": [
+    {
+      "version": "v55",
+      "date": "2026-09-26",
+      "title": "Le pré-remplissage des charges pour tout le monde",
+      "changes": [
+        "Le pré-remplissage des poids de la dernière séance n'est plus réservé aux membres PRO : c'est la fonction la plus utilisée de la saisie, elle revient à tous les comptes",
+        "À l'inscription, l'app demande désormais ton poids et ta taille : tes performances sont comparées à ton gabarit plutôt qu'à une moyenne, et ta courbe de poids démarre tout de suite"
+      ]
+    },
     {
       "version": "v54",
       "date": "2026-09-24",

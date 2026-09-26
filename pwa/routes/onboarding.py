@@ -16,10 +16,15 @@ exemptées de cette gate pour éviter la boucle de redirection.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, g, session
 
-from core.data import save_onboarding, save_profile, save_prog_body, get_onboarding, get_prog
+from core.data import (save_onboarding, save_profile, save_prog_body, get_onboarding,
+                       get_prog, get_profile, upsert_body_weight)
 from core.dates import today_paris_str
 from core import catalog
 from core.analytics import track
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("onboarding", __name__, url_prefix="/onboarding")
 
@@ -33,6 +38,15 @@ def index():
     if "equipment_details" not in existing:
         prog = get_prog() or {}
         existing["equipment_details"] = prog.get("_equipment_details", [])
+    # Poids et taille vivent dans `profiles`, pas dans `onboarding` : on les
+    # rapatrie pour qu'un re-onboarding ne les redemande pas à blanc.
+    try:
+        profil = get_profile() or {}
+        for cle in ("poids_kg", "taille_cm"):
+            if profil.get(cle):
+                existing.setdefault(cle, profil[cle])
+    except Exception as e:
+        logger.warning("onboarding: profil illisible (%s)", e)
     is_vip = bool(getattr(g, "is_vip_full", False))
     return render_template(
         "onboarding.html",
@@ -68,6 +82,19 @@ def submit():
     except ValueError:
         age = None
     sexe = (f.get("sexe") or "").strip()[:20]
+
+    def _mesure(champ, mini, maxi):
+        """Nombre borné, ou None. Un gabarit hors bornes vaut mieux absent :
+        `core/strength.py` retombe alors sur ses seuils absolus au lieu de
+        calculer des ratios avec une valeur abérrante."""
+        try:
+            v = float(str(f.get(champ) or "").replace(",", "."))
+        except (TypeError, ValueError):
+            return None
+        return round(v, 1) if mini <= v <= maxi else None
+
+    poids_kg = _mesure("poids_kg", 30, 300)
+    taille_cm = _mesure("taille_cm", 100, 250)
     niveau = (f.get("niveau") or "").strip()[:20]
     try:
         frequence = max(2, min(6, int(f.get("frequence") or 3)))
@@ -91,6 +118,7 @@ def submit():
     # manquée une séance planifiée AVANT la création du compte (calendrier,
     # dashboard).
     today_iso = today_paris_str()
+
     save_onboarding({
         "prenom": prenom,
         "age": age,
@@ -101,7 +129,33 @@ def submit():
         "equipement": equipement,
         "completed_at": today_iso,
     })
-    save_profile({"prenom": prenom})
+    # Le profil porte le gabarit : les standards de force le comparent au
+    # poids de corps, la page Nutrition en tire le TDEE. Sans lui, les deux
+    # basculent sur des valeurs génériques — le calcul existe mais ne sert
+    # à personne.
+    profil = {"prenom": prenom}
+    if poids_kg:
+        profil["poids_kg"] = poids_kg
+    if taille_cm:
+        profil["taille_cm"] = taille_cm
+    if age:
+        profil["age"] = age
+    if sexe:
+        # `profiles.sexe` attend H/F ; l'onboarding propose aussi « autre »,
+        # qui reste sans valeur ici (les standards retombent sur le masculin).
+        initiale = sexe.strip().upper()[:1]
+        if initiale in ("H", "F"):
+            profil["sexe"] = initiale
+    save_profile(profil)
+
+    # Première pesée : la courbe de poids démarre avec un point au lieu d'un
+    # écran vide, et la pesée du jour est celle que l'utilisateur vient de
+    # donner.
+    if poids_kg:
+        try:
+            upsert_body_weight(today_iso, poids_kg)
+        except Exception as e:
+            logger.warning("onboarding: première pesée non enregistrée (%s)", e)
 
     # 2. Si l'user a choisi un programme du catalogue, on le clone.
     #    S'il a choisi "custom" (créer mon propre) → on ne touche pas à programs,

@@ -299,13 +299,16 @@ def update_settings():
     from core.reminders import clean_hour
     s["reminder_hour"] = clean_hour(request.form.get("reminder_hour"),
                                     s.get("reminder_hour", 18))
-    # Options VIP : en Free on force à off quoi qu'il arrive.
+    # Le pré-remplissage des charges n'est PAS une option payante : c'est la
+    # fonction la plus utilisée de la saisie. La couper aux comptes gratuits
+    # dès qu'ils touchaient un réglage ne faisait pas payer, ça faisait partir
+    # — et sans le moindre message pour l'expliquer.
+    s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
+    # Les animations de thème restent PRO : c'est du confort, pas de l'usage.
     if is_vip:
         s["theme_animations"] = request.form.get("theme_animations") == "on"
-        s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
     else:
         s["theme_animations"] = False
-        s["auto_prefill_weight"] = False
     try:
         weeks = int(request.form.get("show_previous_weeks", 2))
     except (ValueError, TypeError):
