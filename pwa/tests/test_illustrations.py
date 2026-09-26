@@ -148,9 +148,10 @@ def test_le_prompt_decrit_le_mouvement_pas_seulement_la_position_de_depart():
     gardait que cette première phrase : le modèle a dessiné un développé
     couché, red flag invisible tant qu'on ne regarde pas l'image.
     """
-    p = _prompts()["Barre au front"]["prompt"]
-    assert "vers le front" in p, "le mouvement a été tronqué, seule la " \
-                                 "position de départ est décrite"
+    p = _prompts()["Barre au front"]["prompt"].lower()
+    assert "forehead" in p or "vers le front" in p, \
+        "le prompt ne dit pas où va la barre : bras tendus au-dessus de " \
+        "la poitrine, c'est un développé couché — et c'est ce qui est sorti"
 
 
 def test_aucune_description_nest_tronquee_en_chemin():
@@ -180,7 +181,8 @@ def test_les_fiches_qui_ne_decrivent_aucun_geste_en_recoivent_un():
     du corps, épaules en rouge.
     """
     p = _prompts()["Curl barre"]["prompt"].lower()
-    assert "elbows" in p and "curling" in p,         "le geste du curl n'est décrit nulle part dans le prompt"
+    assert "barbell" in p and "elbows" in p, \
+        "le geste du curl n'est décrit nulle part dans le prompt"
 
 
 def test_aucun_prompt_ne_demande_de_muscle_en_couleur():

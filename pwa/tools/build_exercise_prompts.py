@@ -25,8 +25,10 @@ SORTIE = os.path.join(os.path.dirname(__file__), "exercise_prompts.json")
 STYLE = (
     "clean 3D render of ONE single mannequin — exactly one figure, one single "
     "frozen pose, never a sequence and never two figures in the same image. "
-    "Neutral grey matte body, no facial features, smooth featureless anatomy "
-    "wearing plain fitted dark grey shorts. Pure black background, soft studio "
+    "Shop-window mannequin made of flat matte grey clay: completely smooth "
+    "blank egg-shaped head with NO face at all — no eyes, no nose, no mouth, "
+    "no ears, no hair. Smooth featureless torso, no skin texture, no nipples, "
+    "no navel, wearing plain fitted dark grey shorts. Pure black background, soft studio "
     "lighting, the figure fills the frame, square 1:1, minimal, no text, "
     "no watermark, no logo, no floor grid"
 )
@@ -36,9 +38,19 @@ STYLE = (
 # inutilisable pour un modèle d'image, qui dessine alors n'importe quoi.
 # Pour celles-là seulement, le geste est écrit ici.
 GESTES = {
-    "Curl barre": "standing, holding a straight barbell with both hands, palms "
-                  "facing up, elbows pinned to the sides, forearms curling the "
-                  "bar up towards the chest",
+    # Le depart d'un Arnold press, c'est deux halteres devant la poitrine :
+    # exactement un curl. Seule la fin du mouvement le distingue.
+    "Arnold press": "standing, both arms fully extended STRAIGHT UP overhead, "
+                    "one dumbbell locked out above each shoulder, palms facing "
+                    "forward at the top of a shoulder press",
+    # Premier essai : allonge par terre, sans banc, avec une barre bancale.
+    "Barre au front": "lying flat on their back on a weight bench, upper arms "
+                      "pointing straight up and STILL, elbows bent so that the "
+                      "barbell is lowered down to just above the forehead",
+    # Premier essai : un seul haltere court tenu d'une main.
+    "Curl barre": "standing, both hands gripping ONE long straight barbell, "
+                  "one hand near each end of the bar, palms facing up, elbows "
+                  "pinned to the sides, the bar curled up to chest height",
     "Développé incliné": "lying back on a bench inclined at 30-45 degrees, "
                             "pressing a barbell straight up above the upper chest",
     "Fentes alternées": "mid-lunge, one leg forward with the knee bent at 90 "
@@ -59,6 +71,9 @@ GESTES = {
 # montre le GESTE.
 GABARIT = (
     "{style}. The mannequin is performing: {geste}. "
+    "Show the single most RECOGNISABLE instant of this movement — the "
+    "position that makes it impossible to confuse with any other exercise, "
+    "not necessarily the starting position. "
     "Camera angle: {angle}. "
     "The entire body stays plain matte grey — no coloured or highlighted muscle."
 )
