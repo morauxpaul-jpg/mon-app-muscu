@@ -93,7 +93,13 @@
     // Image
     var imgEl = document.getElementById('exo-info-image');
     if (info.image) {
-      imgEl.innerHTML = '<img src="/static/img/exercises/' + info.image + '" alt="" style="width:80px; height:80px; opacity:0.85;">';
+      // Une illustration rendue mérite plus que 80 px ; le dessin au trait,
+      // lui, ne gagne rien à être agrandi.
+      var grande = info.illustration === true;
+      var taille = grande ? 168 : 80;
+      imgEl.innerHTML = '<img src="/static/img/exercises/' + info.image +
+        '" alt="" style="width:' + taille + 'px; height:' + taille + 'px;' +
+        (grande ? '' : ' opacity:0.85;') + '">';
     } else {
       imgEl.innerHTML = '';
     }

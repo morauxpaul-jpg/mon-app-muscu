@@ -11,7 +11,43 @@ Contient aussi :
 - EQUIPMENT_FOR_EXERCISE : matériel requis par exercice
 - EXERCISE_SUBSTITUTIONS : remplacement si le matériel manque
 """
+import os
 import re
+import unicodedata
+
+
+# ── Illustrations ────────────────────────────────────────────────
+# Une illustration se branche par CONVENTION DE NOM : « Arnold press » est
+# illustré par `arnold-press.webp`. Rien à déclarer, rien à éditer ici ;
+# déposer le fichier suffit. Sans fichier, le dessin au trait de la fiche
+# reste affiché — les 87 exercices ne s'illustrent pas en un jour.
+_DOSSIER_ART = os.path.join(os.path.dirname(__file__), "..", "static", "img", "exercises")
+
+
+def illustration_slug(nom: str) -> str:
+    """« Développé couché » → « developpe-couche »."""
+    sans_accent = "".join(c for c in unicodedata.normalize("NFKD", nom or "")
+                          if not unicodedata.combining(c))
+    return re.sub(r"[^a-zA-Z0-9]+", "-", sans_accent).strip("-").lower()
+
+
+def _illustrations_presentes() -> set:
+    try:
+        return {f[:-5] for f in os.listdir(_DOSSIER_ART) if f.endswith(".webp")}
+    except OSError:
+        return set()
+
+
+# Scanné une fois au démarrage : un listing de dossier par exercice et par
+# affichage de séance coûterait plus cher que tout le reste de la page.
+_ILLUSTRATIONS = _illustrations_presentes()
+
+
+def _avec_illustration(cle: str, fiche: dict) -> dict:
+    slug = illustration_slug(cle)
+    if slug in _ILLUSTRATIONS:
+        return {**fiche, "image": slug + ".webp", "illustration": True}
+    return fiche
 
 
 EXERCISES_INFO = {
@@ -1067,18 +1103,18 @@ def get_exercise_info(name):
         return None
     # 1. Exact match
     if name in EXERCISES_INFO:
-        return EXERCISES_INFO[name]
+        return _avec_illustration(name, EXERCISES_INFO[name])
     # 2. Strip parenthetical notes: "Tractions (ou tirage vertical)" → "Tractions"
     clean = re.sub(r"\s*\(.*?\)", "", name).strip()
     if clean in EXERCISES_INFO:
-        return EXERCISES_INFO[clean]
+        return _avec_illustration(clean, EXERCISES_INFO[clean])
     # 3. Strip equipment suffixes
     for suffix in ("haltères", "haltère", "barre", "poulie", "machine",
                     "élastique", "élastiques", "sol"):
         if clean.endswith(" " + suffix):
             base = clean[: -(len(suffix) + 1)].strip()
             if base in EXERCISES_INFO:
-                return EXERCISES_INFO[base]
+                return _avec_illustration(base, EXERCISES_INFO[base])
     # 4. Longest matching prefix
     name_lower = name.lower()
     best_key = None
@@ -1088,7 +1124,7 @@ def get_exercise_info(name):
             best_key = key
             best_len = len(key)
     if best_key:
-        return EXERCISES_INFO[best_key]
+        return _avec_illustration(best_key, EXERCISES_INFO[best_key])
     return None
 
 

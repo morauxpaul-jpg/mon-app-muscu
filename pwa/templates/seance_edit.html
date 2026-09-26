@@ -40,6 +40,22 @@
   height: 40px;
   transform: translate(-50%, -50%);
 }
+.exo-vignette {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  margin-right: 10px;
+  padding: 0;
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  overflow: hidden;
+}
+.exo-vignette img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Carte repliée une fois l'exercice fait : la vignette cède la place aux
+   chiffres, qui sont alors ce qu'on vient relire. */
+.exo-card.done .exo-vignette { width: 40px; height: 40px; }
 .exo-chrono-btn { color: var(--accent); }
 .exo-chrono-btn .icon { width: 13px; height: 13px; }
 .exo-info-modal {
@@ -221,6 +237,14 @@
             <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-down"/></svg>
           </button>
         </div>
+        {# L'illustration à côté du nom, pas cachée derrière le « ? » : on
+           reconnaît un mouvement d'un coup d'œil, on ne le cherche pas. #}
+        {% if exo.info and exo.info.illustration %}
+          <button type="button" class="exo-vignette" @click.stop="showExoInfo(exoInfo)"
+                  aria-label="Agrandir l'illustration de {{ exo.base }}">
+            <img src="/static/img/exercises/{{ exo.info.image }}" alt="" loading="lazy" decoding="async">
+          </button>
+        {% endif %}
         <div style="flex:1; min-width:0;">
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)"
