@@ -86,7 +86,13 @@
 .exo-info-box .info-section { margin-bottom: 6px; }
 .exo-info-box .info-label { font-size: 0.68rem; color: var(--text-3); letter-spacing: 0.8px; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
 .exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; color: var(--text-2); }
-.exo-info-box #exo-info-image img { max-height: 90px; }
+/* Deux tailles, deux plafonds. Le dessin au trait reste petit ;
+   l'illustration rendue mérite sa place. Un plafond unique à 90 px
+   écrasait la hauteur fixée en ligne à 168 px et l'image sortait
+   étirée en largeur. `object-fit` garde les proportions quoi qu'il
+   arrive, même si une illustration n'est pas carrée. */
+.exo-info-box #exo-info-image img { max-width: 100%; max-height: 90px; object-fit: contain; }
+.exo-info-box #exo-info-image img.illustration { max-height: 168px; }
 .exo-info-box .mini-bodymap { margin-bottom: 6px !important; }
 .exo-info-box #exo-info-tips { padding-left: 16px; margin: 2px 0 0; font-size: 0.8rem !important; line-height: 1.35 !important; }
 .exo-info-box #exo-info-tips li { margin-bottom: 2px; }

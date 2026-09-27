@@ -1095,36 +1095,107 @@ EXERCISE_SUBSTITUTIONS = {
 
 # ── Lookup avec correspondance floue ───────────────────────────────────
 
+def _cle(nom: str) -> str:
+    """Forme comparable d'un nom d'exercice.
+
+    « Développé couché », « DEVELOPPE COUCHE » et « developpe-couche »
+    désignent le même mouvement. Toute la reconnaissance passe par ici :
+    sans ça, elle était sensible aux accents, et un programme importé ou
+    saisi sans accents ne retrouvait NI sa fiche NI son illustration.
+    """
+    sans_accent = "".join(c for c in unicodedata.normalize("NFKD", nom or "")
+                          if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^a-zA-Z0-9]+", " ", sans_accent).lower().split())
+
+
+# Index normalisé, construit une fois : la reconnaissance tourne à chaque
+# exercice de chaque séance affichée.
+_PAR_CLE = {_cle(nom): nom for nom in EXERCISES_INFO}
+
+def _alias_du_catalogue():
+    """Les noms alternatifs sont déjà dans les fiches, entre parenthèses.
+
+    Le champ `name` les annonce : « Presse à cuisses (Leg press) »,
+    « Barre au front (skull crusher) », « Soulevé de terre roumain (RDL) »,
+    « Hip thrust (Glute bridge) ». Les lire évite d'entretenir à côté une
+    table de synonymes qui divergerait de la fiche.
+
+    Pas les CLÉS, en revanche : leurs parenthèses à elles ne portent que des
+    variantes (« sol », « ou élastique », « poids du corps ou lesté »),
+    qui ne désignent aucun exercice et feraient de mauvais surnoms.
+    """
+    alias = {}
+    for nom_cle, fiche in EXERCISES_INFO.items():
+        for morceau in re.findall(r"\(([^)]*)\)", fiche.get("name") or ""):
+            cle = _cle(morceau)
+            # Ce qui empêche « Planche (Gainage) » et « Gainage (Planche) »
+            # de s'échanger leurs fiches, c'est l'ORDRE des étapes : un vrai
+            # nom est reconnu avant qu'on regarde les surnoms. Les deux
+            # conditions ici servent à autre chose — ne pas encombrer
+            # l'index de surnoms inatteignables, et donner la main au
+            # premier arrivé quand deux fiches revendiquent le même.
+            if cle and cle not in _PAR_CLE and cle not in alias:
+                alias[cle] = nom_cle
+    return alias
+
+
+_PAR_ALIAS = _alias_du_catalogue()
+
+# Suffixes de matériel à retirer quand le nom complet ne donne rien.
+_SUFFIXES = ("halteres", "haltere", "barre", "poulie", "machine",
+             "elastique", "elastiques", "sol", "smith", "ez")
+
+
 def get_exercise_info(name):
-    """Retourne la fiche d'un exercice. Essaie une correspondance exacte,
-    puis supprime les parenthèses et suffixes d'équipement pour trouver
-    une fiche de base. Retourne None si rien ne correspond."""
+    """Retourne la fiche d'un exercice, ou None.
+
+    Les noms viennent d'une saisie libre ou d'un import : accents, casse,
+    ponctuation et matériel en suffixe varient. La comparaison se fait donc
+    sur une forme normalisée (`_cle`), du plus strict au plus large.
+    """
     if not name:
         return None
-    # 1. Exact match
+
+    def _fiche(cle_catalogue):
+        return _avec_illustration(cle_catalogue, EXERCISES_INFO[cle_catalogue])
+
+    # 1. Nom exact, le cas courant.
     if name in EXERCISES_INFO:
-        return _avec_illustration(name, EXERCISES_INFO[name])
-    # 2. Strip parenthetical notes: "Tractions (ou tirage vertical)" → "Tractions"
-    clean = re.sub(r"\s*\(.*?\)", "", name).strip()
-    if clean in EXERCISES_INFO:
-        return _avec_illustration(clean, EXERCISES_INFO[clean])
-    # 3. Strip equipment suffixes
-    for suffix in ("haltères", "haltère", "barre", "poulie", "machine",
-                    "élastique", "élastiques", "sol"):
-        if clean.endswith(" " + suffix):
-            base = clean[: -(len(suffix) + 1)].strip()
-            if base in EXERCISES_INFO:
-                return _avec_illustration(base, EXERCISES_INFO[base])
-    # 4. Longest matching prefix
-    name_lower = name.lower()
-    best_key = None
-    best_len = 0
-    for key in EXERCISES_INFO:
-        if name_lower.startswith(key.lower()) and len(key) > best_len:
-            best_key = key
-            best_len = len(key)
-    if best_key:
-        return _avec_illustration(best_key, EXERCISES_INFO[best_key])
+        return _fiche(name)
+
+    # 2. Même nom à la casse, aux accents et à la ponctuation près.
+    cle = _cle(name)
+    if cle in _PAR_CLE:
+        return _fiche(_PAR_CLE[cle])
+
+    # 3. Sans la parenthèse : « Tractions (ou tirage vertical) » → « Tractions ».
+    cle_nu = _cle(re.sub(r"\s*\(.*?\)", "", name))
+    if cle_nu in _PAR_CLE:
+        return _fiche(_PAR_CLE[cle_nu])
+
+    # 4. Sans le matériel en suffixe : « Curl biceps haltères » → « Curl biceps ».
+    for suffixe in _SUFFIXES:
+        if cle_nu.endswith(" " + suffixe):
+            base = cle_nu[: -(len(suffixe) + 1)].strip()
+            if base in _PAR_CLE:
+                return _fiche(_PAR_CLE[base])
+
+    # 5. Nom alternatif annoncé par le catalogue : « Leg press » désigne
+    #    « Presse à cuisses (Leg press) ».
+    for candidat in (cle, cle_nu):
+        if candidat in _PAR_ALIAS:
+            return _fiche(_PAR_ALIAS[candidat])
+
+    # 6. Le plus long nom de catalogue dont le nom reçu est une extension :
+    #    « Rowing barre buste penché » → « Rowing barre ». Le plus long
+    #    l'emporte, sinon « Squat » capterait tous les squats.
+    meilleur, longueur = None, 0
+    for cle_cat, nom_cat in _PAR_CLE.items():
+        if len(cle_cat) > longueur and (cle.startswith(cle_cat + " ")
+                                        or cle == cle_cat):
+            meilleur, longueur = nom_cat, len(cle_cat)
+    if meilleur:
+        return _fiche(meilleur)
     return None
 
 

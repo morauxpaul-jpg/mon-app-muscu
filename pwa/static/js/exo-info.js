@@ -97,7 +97,11 @@
       // lui, ne gagne rien à être agrandi.
       var grande = info.illustration === true;
       var taille = grande ? 168 : 80;
-      imgEl.innerHTML = '<img src="/static/img/exercises/' + info.image +
+      // La classe porte la taille côté CSS : sans elle, le plafond de
+      // hauteur de la feuille de style écrasait la hauteur posée ici et
+      // l'illustration sortait aplatie.
+      imgEl.innerHTML = '<img class="' + (grande ? 'illustration' : '') +
+        '" src="/static/img/exercises/' + info.image +
         '" alt="" style="width:' + taille + 'px; height:' + taille + 'px;' +
         (grande ? '' : ' opacity:0.85;') + '">';
     } else {
