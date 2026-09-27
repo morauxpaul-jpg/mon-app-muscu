@@ -235,6 +235,12 @@ ZONES = {
     "Abdominaux (partie basse)": ("lower abdominals",
                                   "below the navel", ""),
     "Obliques": ("obliques", "both sides of the waist", ""),
+    "Adducteurs": ("inner thighs",
+                   "the INNER side of both thighs, between the groin and "
+                   "the knee", ""),
+    "Fessiers (moyen fessier)": ("outer glutes",
+                                 "the OUTER side of the hips, just below the "
+                                 "waist", ""),
     # Un corps entier tout rouge ne désigne rien : pas de coloriage.
     "Corps entier": None,
 }

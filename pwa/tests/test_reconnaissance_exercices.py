@@ -110,7 +110,8 @@ def test_chaque_exercice_du_catalogue_garde_sa_propre_fiche():
     ("ÉCARTÉ POULIE VIS À VIS HAUTE", "Écartés poulie"),   # singulier + précisions
     ("ELÉVATION LATÉRALE", "Élévations latérales"),        # singulier des deux mots
     ("TRICEPS EXTENSION", "Extensions triceps"),           # ordre inversé
-    ("PEC FLY", "Écartés poulie"),                         # anglais, aucun mot commun
+    # Un pec fly, c'est la machine à pectoraux — pas la poulie vis-à-vis.
+    ("PEC FLY", "Écarté machine"),
     ("OVERHEAD TRICEPS EXTENSION", "Extension triceps haltère"),
 ])
 def test_les_noms_releves_dans_un_vrai_programme(saisi, attendu):
@@ -176,3 +177,82 @@ def test_les_variantes_voisines_ne_se_confondent_pas():
     # base, pas à une fiche jumelle.
     assert (get_exercise_info("Élévations latérales haltères")["name"]
             == get_exercise_info("Élévations latérales")["name"])
+
+
+# ── Les huit derniers noms du vrai programme ─────────────────────
+# Relevés dans le fichier exporté, après la première passe. Chacun tombait
+# pour une raison différente ; aucun n'était un nom fantaisiste.
+
+
+@pytest.mark.parametrize("saisi,attendu", [
+    ("Tirage verticale", "Tirage vertical"),                  # accord féminin
+    ("Tirage verticale prise  neutre", "Tirage vertical"),    # accord + mots en trop
+])
+def test_laccord_en_genre_ne_fait_pas_perdre_lexercice(saisi, attendu):
+    """Le catalogue écrit « Tirage vertical », l'utilisateur « verticale ».
+    La règle de faute de frappe ne rattrape que le premier cas : elle exige
+    le même nombre de mots, et « prise neutre » en ajoute deux."""
+    info = get_exercise_info(saisi)
+    assert info is not None, saisi
+    assert info["name"].startswith(attendu)
+
+
+@pytest.mark.parametrize("saisi,attendu", [
+    ("Tirage horizontal", "Tirage horizontal"),
+    ("Curl incliné", "Curl incliné haltères"),
+    ("Adducteur", "Machine adducteurs"),
+])
+def test_un_nom_plus_court_retrouve_le_seul_exercice_qui_le_contient(saisi, attendu):
+    """L'inverse du cas habituel : ce n'est pas l'utilisateur qui en dit
+    trop, c'est le catalogue."""
+    info = get_exercise_info(saisi)
+    assert info is not None, saisi
+    assert info["name"].startswith(attendu)
+
+
+@pytest.mark.parametrize("ambigu", ["Mollet", "Développé", "Curl", "Fentes"])
+def test_un_nom_trop_court_pour_trancher_ne_devine_pas(ambigu):
+    """« Mollet » désigne trois exercices (debout, assis, unilatéral) et
+    « Développé » cinq. Deviner reviendrait à montrer la fiche, les conseils
+    et l'illustration d'un exercice qu'on ne fait pas."""
+    from core.exercises_data import resoudre
+    cle, niveau = resoudre(ambigu)
+    assert niveau != "nom_court", f"« {ambigu} » a été deviné vers {cle}"
+
+
+def test_une_faute_de_frappe_ne_coute_pas_la_fiche():
+    """« Hip Trust » pour « Hip thrust » : une lettre."""
+    info = get_exercise_info("Hip  Trust")
+    assert info is not None
+    assert info["name"].startswith("Hip thrust")
+
+
+def test_un_surnom_anglais_se_retrouve_sous_le_materiel():
+    """« Reverse fly machine » : le surnom est là, caché derrière un mot
+    d'équipement que le catalogue ne porte pas."""
+    info = get_exercise_info("Reverse fly  machine")
+    assert info is not None
+    assert info["name"].startswith("Oiseau")
+
+
+def test_une_faute_de_frappe_ne_transforme_pas_un_exercice_en_un_autre():
+    """Le flou est le dernier recours, et il ne doit pas rapprocher deux
+    exercices réellement distincts."""
+    from core.exercises_data import resoudre
+    for nom in EXERCISES_INFO:
+        cle, niveau = resoudre(nom)
+        assert cle == nom or EXERCISES_INFO[cle]["name"] == EXERCISES_INFO[nom]["name"], \
+            f"{nom} se résout vers {cle}"
+
+
+@pytest.mark.parametrize("machine", ["Machine adducteurs", "Machine abducteurs",
+                                     "Écarté machine"])
+def test_les_machines_courantes_ont_leur_fiche(machine):
+    """Elles étaient dans la bibliothèque du créateur de programme mais pas
+    au catalogue : leurs séries n'avaient ni fiche, ni illustration, ni
+    historique rattaché."""
+    assert machine in EXERCISES_INFO
+    fiche = EXERCISES_INFO[machine]
+    assert fiche.get("muscles"), machine
+    assert len(fiche.get("description") or "") > 80, machine
+    assert len(fiche.get("tips") or []) >= 2, machine

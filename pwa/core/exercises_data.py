@@ -1025,6 +1025,53 @@ EXERCISES_INFO = {
         ],
         "image": "bench-press.svg",
     },
+    # ── MACHINES GUIDÉES ───────────────────────────────────────────────
+    # Présentes dans toutes les salles et dans la bibliothèque du créateur
+    # de programme, elles manquaient au catalogue : leurs séries n'avaient
+    # donc ni fiche, ni illustration, ni historique rattaché.
+    "Machine adducteurs": {
+        "name": "Machine adducteurs",
+        "muscles": ["Adducteurs"],
+        "description": "Assis à la machine, genoux écartés contre les "
+                       "coussinets, resserrer les cuisses l'une vers l'autre "
+                       "en contrôlant, puis laisser revenir lentement. "
+                       "Renforce l'intérieur des cuisses et stabilise le "
+                       "bassin.",
+        "tips": [
+            "Dos plaqué au dossier, ne tire pas avec le buste",
+            "Amplitude complète mais sans forcer en fin d'ouverture",
+            "Temps de retour contrôlé : c'est là que le muscle travaille",
+        ],
+        "image": "legs.svg",
+    },
+    "Machine abducteurs": {
+        "name": "Machine abducteurs",
+        "muscles": ["Fessiers (moyen fessier)"],
+        "description": "Assis à la machine, genoux serrés contre les "
+                       "coussinets, écarter les cuisses vers l'extérieur puis "
+                       "revenir en contrôlant. Cible le moyen fessier, "
+                       "essentiel pour la stabilité de la hanche.",
+        "tips": [
+            "Léger penché en avant pour mieux sentir le moyen fessier",
+            "Ne claque pas les coussinets au retour",
+            "Charge modérée : c'est un petit muscle",
+        ],
+        "image": "legs.svg",
+    },
+    "Écarté machine": {
+        "name": "Écarté machine (pec deck)",
+        "muscles": ["Pectoraux"],
+        "description": "Assis à la machine, avant-bras ou poignées écartés, "
+                       "rapprocher les bras devant la poitrine en gardant les "
+                       "coudes légèrement fléchis, puis revenir en contrôlant. "
+                       "Isolation des pectoraux sans solliciter les triceps.",
+        "tips": [
+            "Coudes à hauteur d'épaules, pas plus haut",
+            "Serre les pectoraux une seconde en fin de mouvement",
+            "Ouverture contrôlée : ne laisse pas les bras partir en arrière",
+        ],
+        "image": "chest.svg",
+    },
 }
 
 
@@ -1208,7 +1255,15 @@ def _jetons(nom: str) -> frozenset:
             continue
         # On ne désingularise qu'à partir de 4 lettres : sinon « dos » et
         # « bras » se feraient amputer.
-        mots.add(mot[:-1] if len(mot) > 3 and mot.endswith(("s", "x")) else mot)
+        if len(mot) > 3 and mot.endswith(("s", "x")):
+            mot = mot[:-1]
+        # Accord en genre : « tirage verticaLE » pour « tirage vertical ».
+        # Appliqué des deux côtés, donc « barre » et « poulie » se réduisent
+        # aussi — sans conséquence tant qu'aucun exercice n'en rejoint un
+        # autre. Vérifié : la règle n'ajoute aucune collision.
+        if len(mot) > 4 and mot.endswith("e"):
+            mot = mot[:-1]
+        mots.add(mot)
     return frozenset(mots)
 
 
@@ -1256,6 +1311,14 @@ _ANGLAIS = {
     "walking lunges": "Fentes marchées",
     "side plank": "Gainage latéral",
     "leg raise": "Relevé de jambes",
+    "pec deck": "Écarté machine",
+    "pec fly": "Écarté machine",
+    "chest fly": "Écarté machine",
+    "butterfly": "Écarté machine",
+    "adductor machine": "Machine adducteurs",
+    "abductor machine": "Machine abducteurs",
+    "hip abduction": "Machine abducteurs",
+    "hip adduction": "Machine adducteurs",
 }
 
 def _index_par_jetons():
@@ -1280,6 +1343,11 @@ _SUFFIXES = ("halteres", "haltere", "barre", "poulie", "machine",
 # réversible d'un rechargement, RENOMMER un historique ne l'est pas. La
 # migration ne coche d'office que les quatre premiers.
 NIVEAUX_SURS = ("exact", "orthographe", "parenthese", "materiel")
+
+# Les rattrapages larges, dans l'ordre où ils sont tentés. Aucun n'est
+# sûr : ils servent à afficher une fiche, jamais à renommer tout seul.
+NIVEAUX_APPROXIMATIFS = ("surnom", "anglais", "mots", "sous_ensemble",
+                         "nom_court", "faute_de_frappe")
 
 
 def resoudre(name):
@@ -1307,11 +1375,12 @@ def resoudre(name):
         return _PAR_CLE[cle_nu], "parenthese"
 
     # 4. Sans le matériel en suffixe : « Curl biceps haltères » → « Curl biceps ».
+    sans_materiel = cle_nu
     for suffixe in _SUFFIXES:
-        if cle_nu.endswith(" " + suffixe):
-            base = cle_nu[: -(len(suffixe) + 1)].strip()
-            if base in _PAR_CLE:
-                return _PAR_CLE[base], "materiel"
+        if sans_materiel.endswith(" " + suffixe):
+            sans_materiel = sans_materiel[: -(len(suffixe) + 1)].strip()
+            if sans_materiel in _PAR_CLE:
+                return _PAR_CLE[sans_materiel], "materiel"
 
     # 5. Nom alternatif annoncé par la fiche : « Leg press » désigne
     #    « Presse à cuisses (Leg press) ».
@@ -1321,7 +1390,8 @@ def resoudre(name):
 
     # 6. Nom anglais courant en salle : « pec fly » n'a aucun mot en
     #    commun avec « Écartés poulie », rien d'automatique ne les relie.
-    for candidat in (cle, cle_nu):
+    # « Reverse fly machine » : le surnom anglais se cache sous le matériel.
+    for candidat in (cle, cle_nu, sans_materiel):
         if candidat in _ANGLAIS:
             return _ANGLAIS[candidat], "anglais"
 
@@ -1347,7 +1417,52 @@ def resoudre(name):
             meilleur, couverture = nom_cat, len(jetons_cat)
     if meilleur:
         return meilleur, "sous_ensemble"
+
+    # 9. L'inverse : le nom reçu est plus COURT que celui du catalogue.
+    #    « Tirage horizontal » pour « Tirage horizontal poulie », « Curl
+    #    incliné » pour « Curl incliné haltères ». Uniquement si UN SEUL
+    #    exercice contient ces mots : « Mollet » en désigne trois (debout,
+    #    assis, unilatéral) et « Développé » cinq — deviner reviendrait à
+    #    montrer la fiche d'un exercice qu'on ne fait pas.
+    candidats = [nom_cat for jetons_cat, nom_cat in _PAR_JETONS.items()
+                 if jetons and jetons < jetons_cat]
+    if len(candidats) == 1:
+        return candidats[0], "nom_court"
+
+    # 10. En dernier : la faute de frappe. « Hip Trust » pour « Hip thrust ».
+    #     Même nombre de mots, chacun proche du sien — le flou n'est fiable
+    #     qu'à partir de 4 lettres, en deçà trop de mots courts se
+    #     ressemblent.
+    proche = _plus_proche(jetons)
+    if proche:
+        return proche, "faute_de_frappe"
     return None, ""
+
+
+def _plus_proche(jetons):
+    """L'exercice dont les mots correspondent un à un, à une faute près."""
+    from difflib import SequenceMatcher
+
+    def _mots_proches(a, b):
+        if a == b:
+            return True
+        if len(a) < 4 or len(b) < 4:
+            return False
+        return SequenceMatcher(None, a, b).ratio() >= 0.82
+
+    for jetons_cat, nom_cat in _PAR_JETONS.items():
+        if len(jetons_cat) != len(jetons):
+            continue
+        restants = list(jetons_cat)
+        for mot in jetons:
+            trouve = next((i for i, autre in enumerate(restants)
+                           if _mots_proches(mot, autre)), None)
+            if trouve is None:
+                break
+            restants.pop(trouve)
+        else:
+            return nom_cat
+    return None
 
 
 _PAR_CLE_ABSORBES = {_cle(n): v for n, v in _ABSORBES.items()}
