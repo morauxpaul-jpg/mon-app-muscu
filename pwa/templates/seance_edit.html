@@ -57,6 +57,60 @@
    chiffres, qui sont alors ce qu'on vient relire. */
 .exo-card.done .exo-vignette { width: 40px; height: 40px; }
 .exo-chrono-btn { color: var(--accent); }
+.exo-swap-btn { color: var(--text-2); font-size: 1rem; line-height: 1; }
+.exo-remplace {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.exo-variantes {
+  padding: 10px 12px 12px;
+  border-top: 0.5px solid var(--border-default);
+  background: rgba(255,255,255,0.02);
+}
+.exo-variantes-titre {
+  font-size: 0.7rem;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.exo-variante {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-1);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  /* Cible tactile : on les enchaine vite, en salle, les mains moites. */
+  min-height: 44px;
+}
+.exo-variante img,
+.exo-variante-vide {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+}
+.exo-variante-nom { flex: 1; min-width: 0; }
+.exo-variante-retour { color: var(--text-2); }
+.exo-variantes-note {
+  font-size: 0.7rem;
+  color: var(--text-mute);
+  margin: 8px 0 0;
+}
 .exo-chrono-btn .icon { width: 13px; height: 13px; }
 .exo-info-modal {
   position: fixed;
@@ -230,7 +284,7 @@
     <div class="exo-card {% if exo.completed %}done{% endif %}" :class="{ done: completed }"
          id="exo-anchor-{{ loop.index0 }}"
          data-exo-base="{{ exo.base }}"
-         x-data='exoBlock({{ loop.index0 }}, {{ exo|tojson }})'>
+         x-data='exoBlock({{ loop.index0 }}, {{ exo|sans_prive|tojson }})'>
       <div class="exo-head">
         <div class="exo-reorder">
           <button type="button" class="exo-move-btn" onclick="moveSeanceExo(this,-1)" aria-label="Monter l'exercice" title="Monter">
@@ -258,8 +312,19 @@
               <button type="button" class="exo-info-btn exo-chrono-btn" data-tuto-seance="chrono"
                       @click.stop="manualRestTimer()" title="Lancer le chrono de repos"
                       aria-label="Lancer le chrono de repos"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#clock"/></svg></button>
+              {# Changer d'exercice sans repasser par le formulaire d'ajout :
+                 c'est pour AUJOURD'HUI seulement, le programme ne bouge pas. #}
+              {% if exo._variantes and not exo.completed %}
+              <button type="button" class="exo-info-btn exo-swap-btn"
+                      @click.stop="showVariantes = !showVariantes"
+                      title="Faire une variante aujourd'hui"
+                      aria-label="Remplacer {{ exo.base }} par une variante, pour aujourd'hui">⇄</button>
+              {% endif %}
           </div>
           <div class="exo-meta">
+            {% if exo.remplace %}
+            <span class="exo-remplace">remplace {{ exo.remplace }} aujourd'hui</span>
+            {% endif %}
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
             <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · repos {{ exo.rest_seconds }} s</span>
             <template x-if="completed"><svg class="icon icon-sm icon-success" aria-label="terminé"><use href="/static/img/icons.svg#check-circle"/></svg></template>
@@ -284,6 +349,41 @@
         </div>
         <div class="exo-toggle" @click="open = !open" style="cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;" x-text="open ? '−' : '+'"></div>
       </div>
+
+      {# ── Variantes du jour ─────────────────────────────────────
+         Un formulaire, un bouton par variante : le `value` du bouton
+         cliqué part dans `vers`. Pas de JavaScript pour ça — le geste
+         doit marcher même si un script tombe.
+         Le nom posté est celui du PROGRAMME (`remplace` s'il y en a un
+         déjà), sinon un deuxième échange ne retrouverait plus sa cible. #}
+      {% if exo._variantes and not exo.completed %}
+      <div class="exo-variantes" x-show="showVariantes" x-transition.duration.200ms x-cloak>
+        <form method="post" action="/seance/substitute">
+          <input type="hidden" name="mode" value="{{ mode }}">
+          <input type="hidden" name="name" value="{{ seance_name }}">
+          <input type="hidden" name="date" value="{{ date_iso }}">
+          <input type="hidden" name="seance_name" value="{{ seance_name }}">
+          <input type="hidden" name="exo_name" value="{{ exo.remplace or exo.base }}">
+          <div class="exo-variantes-titre">Aujourd'hui, à la place :</div>
+          {% for v in exo._variantes %}
+          <button type="submit" name="vers" value="{{ v.nom }}" class="exo-variante">
+            {% if v.illustration %}
+            <img src="/static/img/exercises/{{ v.image }}" alt="" loading="lazy" decoding="async">
+            {% else %}<span class="exo-variante-vide"></span>{% endif %}
+            <span class="exo-variante-nom">{{ v.titre }}</span>
+          </button>
+          {% endfor %}
+          {% if exo.remplace %}
+          <button type="submit" name="vers" value="" class="exo-variante exo-variante-retour">
+            <span class="exo-variante-vide">↩</span>
+            <span class="exo-variante-nom">Revenir à {{ exo.remplace }}</span>
+          </button>
+          {% endif %}
+          <p class="exo-variantes-note">Le programme ne change pas : la prochaine
+             fois, {{ exo.remplace or exo.base }} revient.</p>
+        </form>
+      </div>
+      {% endif %}
 
       <div class="exo-body" x-show="open" x-transition.duration.200ms>
 

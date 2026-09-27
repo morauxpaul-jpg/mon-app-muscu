@@ -1,6 +1,15 @@
 {
-  "current": "v56",
+  "current": "v57",
   "entries": [
+    {
+      "version": "v57",
+      "date": "2026-09-27",
+      "title": "Nouveauté : changer d'exercice en un geste",
+      "changes": [
+        "Envie de faire ton curl à la poulie plutôt qu'au banc incliné aujourd'hui ? Le bouton ⇄ sur la carte propose les variantes du même muscle : un tap, et la séance suit — mêmes séries, mêmes reps cibles, rien à resaisir",
+        "Ton programme ne bouge pas : la prochaine fois, l'exercice d'origine revient tout seul. Et tu peux faire marche arrière à tout moment"
+      ]
+    },
     {
       "version": "v56",
       "date": "2026-09-27",

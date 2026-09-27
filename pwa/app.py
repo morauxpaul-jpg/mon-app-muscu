@@ -399,6 +399,21 @@ def _hide_native_billing() -> bool:
     return _is_native_app()
 
 
+
+@app.template_filter("sans_prive")
+def _sans_prive(dictionnaire):
+    """Retire les clés préfixées `_` avant de sérialiser pour le navigateur.
+
+    Le contexte d'un exercice sert deux publics : le gabarit Jinja, qui rend
+    la page, et Alpine, qui reçoit le même dict en JSON dans un attribut
+    HTML. Tout ce que seul Jinja utilise n'a rien à faire dans la page — la
+    liste des variantes pèse plus lourd que le reste de la carte réunie.
+    """
+    if not isinstance(dictionnaire, dict):
+        return dictionnaire
+    return {c: v for c, v in dictionnaire.items() if not str(c).startswith("_")}
+
+
 @app.context_processor
 def _inject_user():
     # is_premium : exposé à tous les templates pour gater des features (Coach

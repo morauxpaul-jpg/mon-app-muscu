@@ -1296,6 +1296,66 @@ def get_exercise_info(name):
     return None
 
 
+def famille_musculaire(muscle: str) -> str:
+    """« Biceps (longue portion) » → « Biceps ».
+
+    Les fiches précisent le faisceau ; pour proposer des variantes, c'est le
+    groupe qui compte — un curl incliné et un curl à la poulie ne visent pas
+    le même chef du biceps, mais on remplace volontiers l'un par l'autre.
+    """
+    return (muscle or "").split(" (")[0].strip()
+
+
+def _famille(nom: str) -> str:
+    fiche = EXERCISES_INFO.get(nom) or {}
+    muscles = fiche.get("muscles") or []
+    return famille_musculaire(muscles[0]) if muscles else ""
+
+
+def variantes(nom: str, limite: int = 12) -> list:
+    """Les exercices qu'on peut faire à la place de celui-ci, aujourd'hui.
+
+    Même groupe musculaire, triés du plus proche au plus lointain : ceux qui
+    partagent le premier mot d'abord (« Curl barre », « Curl marteau » pour
+    un curl), le reste du groupe ensuite. Proposer les 87 exercices ferait
+    de l'échange un deuxième formulaire à remplir — exactement ce qu'on
+    cherche à éviter.
+
+    Renvoie une liste de dicts prêts pour l'affichage. Vide si l'exercice
+    n'est pas reconnu : mieux vaut pas de bouton qu'un bouton qui propose
+    n'importe quoi.
+    """
+    fiche = get_exercise_info(nom)
+    if not fiche:
+        return []
+    # On repart de la clé du catalogue, pas du nom tapé : « PEC FLY » doit
+    # proposer les variantes des écartés.
+    reference = next((c for c, f in EXERCISES_INFO.items() if f is fiche
+                      or f.get("name") == fiche.get("name")), None)
+    if not reference:
+        return []
+    famille = _famille(reference)
+    if not famille:
+        return []
+
+    premier_mot = _cle(reference).split()[0] if _cle(reference) else ""
+    propositions = []
+    for cle_cat, f in EXERCISES_INFO.items():
+        if cle_cat == reference or _famille(cle_cat) != famille:
+            continue
+        proche = _cle(cle_cat).startswith(premier_mot + " ") or _cle(cle_cat) == premier_mot
+        propositions.append((0 if proche else 1, cle_cat, f))
+
+    propositions.sort(key=lambda t: (t[0], t[1]))
+    return [{
+        "nom": cle_cat,
+        "titre": f.get("name") or cle_cat,
+        "muscles": f.get("muscles") or [],
+        "image": _avec_illustration(cle_cat, f).get("image"),
+        "illustration": _avec_illustration(cle_cat, f).get("illustration", False),
+    } for _, cle_cat, f in propositions[:limite]]
+
+
 def get_all_exercises_info():
     """Retourne tout le dictionnaire pour le template."""
     return EXERCISES_INFO

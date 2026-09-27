@@ -16,7 +16,8 @@ from core.data import (
 from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles, parse_rpe, overload_suggestion
-from core.exercises_data import get_exercise_info, filter_exos_by_equipment, detect_isometric
+from core.exercises_data import (get_exercise_info, filter_exos_by_equipment,
+                                 detect_isometric, variantes)
 from core.body_map import get_body_polygons
 from core.hist import is_logged as _is_real_perf, is_muscu_perf, tonnage
 from core.analytics import track
@@ -406,6 +407,16 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         "last_summary": last_summary,
         "suggestion": suggestion,
         "info": info,
+        # De quoi échanger l'exercice en un geste, sans repasser par le
+        # formulaire d'ajout. Vide si l'exercice n'est pas au catalogue.
+        #
+        # Le préfixe `_` l'exclut du JSON passé à Alpine (voir `sans_prive`) :
+        # le panneau est rendu côté serveur, Alpine ne lit jamais cette
+        # liste, et l'embarquer ferait grossir chaque carte pour rien.
+        "_variantes": variantes(base),
+        # Renseigné quand cette carte remplace déjà un exercice du programme,
+        # pour pouvoir revenir en arrière.
+        "remplace": exo_obj.get("remplace") or "",
     }
 
 
@@ -690,6 +701,9 @@ def seance():
                     name, [e.get("name") for e in exos_prog])
         # Extras : stockés dans prog sous "_extras" par (seance, date) pour partage entre sessions
         extras_key = f"{name}|{date_iso}"
+        # Échanges du jour : le programme reste intact, seule la séance
+        # d'aujourd'hui voit la variante.
+        exos_prog = _appliquer_substituts(prog, extras_key, exos_prog)
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
@@ -879,6 +893,35 @@ def _build_cardio_done(hist, seance_name, date_iso):
             **parsed,
         })
     return out
+
+
+def _appliquer_substituts(prog_dict, key, exos_prog):
+    """Échange des exercices pour CETTE séance-là, sans toucher au programme.
+
+    « Aujourd'hui je fais mon curl à la poulie » ne doit pas réécrire le
+    programme : la semaine prochaine, le curl incliné revient tout seul. Le
+    calque est donc rangé par séance+date, exactement comme les exos ajoutés
+    à la volée (`_extras`) et l'ordre des cartes (`_seance_order`).
+
+    Le créneau garde ses séries et ses reps cibles : c'est tout l'intérêt
+    de l'échange, on ne resaisit rien.
+    """
+    remplacements = (prog_dict.get("_substituts") or {}).get(key) or {}
+    if not remplacements:
+        return exos_prog
+    sortie = []
+    for exo in exos_prog:
+        nouveau = remplacements.get(_norm(exo.get("name") or ""))
+        if not nouveau:
+            sortie.append(exo)
+            continue
+        fiche = get_exercise_info(nouveau) or {}
+        muscles = fiche.get("muscles") or []
+        sortie.append({**exo,
+                       "name": nouveau,
+                       "muscle": muscles[0] if muscles else exo.get("muscle"),
+                       "remplace": exo.get("name") or ""})
+    return sortie
 
 
 def _update_extras(prog_dict, key, mutate_fn):
@@ -1187,6 +1230,44 @@ def add_extra():
     return _back_to_editor(f)
 
 
+@bp.route("/seance/substitute", methods=["POST"])
+@limiter.limit("60 per minute")
+def substitute_exo():
+    """Échange un exercice du programme contre une variante, pour ce jour.
+
+    Le programme n'est pas touché : la semaine prochaine, l'exercice d'origine
+    revient. Sans ça, « aujourd'hui je le fais à la poulie » réécrirait le
+    programme pour toujours, et il faudrait penser à le remettre.
+    """
+    f = request.form
+    seance_name = f.get("seance_name") or ""
+    date_str = f.get("date") or ""
+    origine = (f.get("exo_name") or "").strip()
+    vers = (f.get("vers") or "").strip()
+    if not origine or not seance_name:
+        return _back_to_editor(f)
+
+    prog = get_prog()
+    key = f"{seance_name}|{date_str}"
+    calque = prog.setdefault("_substituts", {})
+    du_jour = calque.get(key, {})
+    if vers and _norm(vers) != _norm(origine):
+        du_jour[_norm(origine)] = vers
+    else:
+        # Champ vide, ou variante égale à l'original : c'est un retour en
+        # arrière. On efface plutôt que d'écrire un échange neutre, sinon le
+        # calque se remplit d'entrées qui ne font rien.
+        du_jour.pop(_norm(origine), None)
+    if du_jour:
+        calque[key] = du_jour
+    else:
+        calque.pop(key, None)
+
+    from core.data import save_prog
+    save_prog(prog)
+    return _back_to_editor(f)
+
+
 @bp.route("/seance/remove-extra", methods=["POST"])
 def remove_extra():
     f = request.form
@@ -1382,6 +1463,12 @@ def finish():
         changed = True
     if mode == "prefaite" and "_extras" in prog and key in prog["_extras"]:
         prog["_extras"].pop(key, None)
+        changed = True
+    # Comme les extras : le calque d'échanges ne concerne que la séance du
+    # jour. Le garder ferait grossir le blob programme d'une entrée par
+    # séance, à vie — et il est relu et réécrit à chaque interaction.
+    if "_substituts" in prog and key in prog["_substituts"]:
+        prog["_substituts"].pop(key, None)
         changed = True
 
     duration = _session_duration_min(f)

@@ -155,6 +155,9 @@
     return {
       open: !data.completed,
       saving: false,
+      // Panneau « aujourd'hui, à la place : ». Replié par défaut : on
+      // change d'exercice de temps en temps, pas à chaque séance.
+      showVariantes: false,
       exoInfo: data.info || {},
       variant: data.variant,
       _initialVariant: data.variant,
