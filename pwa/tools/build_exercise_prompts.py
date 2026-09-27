@@ -152,6 +152,25 @@ GESTES = {
                                "bar above the chest, pulling the chest up to "
                                "it. Show it from a low side angle so the "
                                "back and shoulder blades are visible",
+    # ── Machines guidees ──────────────────────────────────────────
+    # Une machine ne se devine pas : sans description du bati, le modele
+    # dessine un banc quelconque et des poids qui flottent.
+    "Machine adducteurs": "SEATED on an adductor machine: upright back "
+                          "against a padded backrest, both knees SPREAD "
+                          "APART with the inner side of each thigh pressed "
+                          "against a vertical padded lever, squeezing the "
+                          "thighs back together. The weight stack is visible "
+                          "behind the seat",
+    "Machine abducteurs": "SEATED on an abductor machine: upright back "
+                          "against a padded backrest, both knees pressing "
+                          "OUTWARDS against padded levers placed on the "
+                          "OUTER side of each thigh, thighs spread wide "
+                          "apart. The weight stack is visible behind the seat",
+    "Écarté machine": "SEATED on a pec deck machine: upright back against a "
+                     "padded backrest, both forearms vertical against two "
+                     "padded arms at chest height, bringing them together in "
+                     "front of the chest. The weight stack is visible behind "
+                     "the seat",
     "Pompes diamant": "in a push-up position, the two hands placed close "
                       "together directly under the chest so the thumbs and "
                       "index fingers form a diamond, elbows tucked in "
