@@ -10,6 +10,7 @@ var EXERCISE_LIBRARY = {
     { name: "Écarté couché", muscles: ["Épaules"], defaultSets: 3, defaultReps: "12-15" },
     { name: "Écarté poulie vis-à-vis", alias: "cable fly crossover Écartés poulie Écartés poulie (crossover)", muscles: ["Épaules"], defaultSets: 3, defaultReps: "12-15" },
     { name: "Pompes", alias: "Lesté Pompes lestées push up", muscles: ["Triceps", "Épaules"], defaultSets: 3, defaultReps: "15-20" },
+    { name: "Développé machine", alias: "Développé machine (chest press) chest press developpe pectoraux machine machine chest press presse pectoraux seated chest press", muscles: ["Triceps", "Épaules"], defaultSets: 4, defaultReps: "8-12" },
     { name: "Écarté machine", alias: "butterfly chest fly pec deck pec fly Écarté machine (pec deck)", muscles: [], defaultSets: 3, defaultReps: "12-15" },
     { name: "Dips (pecs)", alias: "Dips lestés Dips machine Lesté Machine", muscles: ["Triceps", "Épaules"], defaultSets: 3, defaultReps: "8-12" },
   ],

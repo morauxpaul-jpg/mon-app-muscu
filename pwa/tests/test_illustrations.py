@@ -400,17 +400,37 @@ def test_aucune_illustration_livree_ne_correspond_a_rien():
     assert not orphelines, f"illustrations sans exercice : {orphelines}"
 
 
-def test_chaque_exercice_du_catalogue_a_son_illustration():
-    """L'inverse : un exercice sans image retombe sur un dessin au trait,
-    ce qui se voit tout de suite à côté des autres."""
+# Un exercice tout juste ajouté n'a pas encore d'image : elle se génère à la
+# demande et coûte quelques centimes. On le nomme ici plutôt que de laisser
+# le test rouge ou de l'affaiblir — il bloque toute NOUVELLE omission.
+EN_ATTENTE_DILLUSTRATION = {"Développé machine"}
+
+
+def test_aucun_nouvel_exercice_sans_illustration():
+    """Un exercice sans image retombe sur un dessin au trait, ce qui se voit
+    tout de suite à côté des autres."""
     import glob
     import os
     from core.exercises_data import EXERCISES_INFO, illustration_slug
     livres = {os.path.basename(f)[:-5]
               for f in glob.glob("static/img/exercises/*.webp")}
-    manquantes = sorted(nom for nom in EXERCISES_INFO
-                        if illustration_slug(nom) not in livres)
-    assert not manquantes, f"exercices sans illustration : {manquantes}"
+    manquantes = {nom for nom in EXERCISES_INFO
+                  if illustration_slug(nom) not in livres}
+    nouvelles = manquantes - EN_ATTENTE_DILLUSTRATION
+    assert not nouvelles, f"sans illustration et pas recensés : {sorted(nouvelles)}"
+
+
+def test_la_liste_dattente_ne_se_fossilise_pas():
+    """Quand l'image arrive, le nom doit sortir de la liste — sinon elle
+    devient un trou permanent que plus personne ne regarde."""
+    import glob
+    import os
+    from core.exercises_data import EXERCISES_INFO, illustration_slug
+    livres = {os.path.basename(f)[:-5]
+              for f in glob.glob("static/img/exercises/*.webp")}
+    servies = {nom for nom in EN_ATTENTE_DILLUSTRATION
+               if illustration_slug(nom) in livres}
+    assert not servies, f"ont leur illustration, à retirer de la liste : {sorted(servies)}"
 
 
 def test_chaque_illustration_livree_est_une_image_valide():

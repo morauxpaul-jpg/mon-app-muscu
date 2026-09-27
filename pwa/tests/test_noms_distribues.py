@@ -206,6 +206,7 @@ def test_un_nom_absorbe_mene_bien_a_SA_base():
 MATERIEL_QUI_EST_LEXERCICE = {
     "Écarté poulie vis-à-vis", "Écarté machine", "Machine adducteurs",
     "Machine abducteurs", "Curl barre EZ", "Curl poulie basse",
+    "Développé machine",
     "Adduction poulie basse", "Abduction poulie basse",
     "Rowing barre", "Rowing haltère", "Pushdown poulie barre",
     "Pushdown poulie corde",

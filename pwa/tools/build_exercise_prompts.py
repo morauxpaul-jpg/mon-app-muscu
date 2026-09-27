@@ -155,6 +155,14 @@ GESTES = {
     # ── Machines guidees ──────────────────────────────────────────
     # Une machine ne se devine pas : sans description du bati, le modele
     # dessine un banc quelconque et des poids qui flottent.
+    "Développé machine": "SITTING DOWN on a chest press machine, back flat "
+                          "against a tall padded backrest, both hands "
+                          "gripping two horizontal handles that come forward "
+                          "from the machine frame at chest height, arms "
+                          "pushing them straight out in front of the chest. "
+                          "The weight stack is visible beside the seat. "
+                          "Nothing is held loose — the handles are part of "
+                          "the machine",
     "Leg curl assis": "SITTING DOWN on a seated leg curl machine, back "
                       "against the backrest, a thick pad clamped across the "
                       "TOPS of both thighs, ankles hooked under a roller pad. "
