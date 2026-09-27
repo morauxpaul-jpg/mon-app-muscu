@@ -360,3 +360,54 @@ def test_un_refus_global_arrete_la_file_au_lieu_de_se_repeter(monkeypatch):
         g.generer("cle", str(__import__("tempfile").mkdtemp()))
     assert "crédits" in str(refus.value).lower()
     assert len(appels) == 1, f"{len(appels)} appels au lieu d'un seul"
+
+
+def test_le_leg_curl_assis_ne_se_colorie_pas():
+    """Assis, les ischio-jambiers sont SOUS la cuisse : aucun angle ne les
+    montre. Trois générations de suite ont mis le rouge sur l'avant de la
+    cuisse — c'est-à-dire sur les quadriceps, le muscle opposé. Un rouge au
+    mauvais endroit apprend une anatomie fausse à qui le regarde pendant sa
+    série.
+
+    La version allongée garde le sien : à plat ventre, l'arrière de la
+    cuisse fait face à la caméra, et son illustration est juste.
+    """
+    prompts = _prompts()
+    assis = prompts["Leg curl assis"]["prompt"].lower()
+    assert "red-orange" not in assis
+    assert "no coloured muscle" in assis
+    couche = prompts["Leg curl"]["prompt"].lower()
+    assert "red-orange" in couche, "l'allongé doit garder son rouge"
+
+
+def test_aucune_illustration_livree_ne_correspond_a_rien():
+    """Un fichier dont le nom ne désigne aucun exercice ne sera jamais
+    affiché. Il pèse dans le dépôt, il part dans le déploiement, et rien
+    ne le signale.
+
+    Ça s'est produit : après la fusion du matériel et les renommages de la
+    bibliothèque, chaque import complet recréait les illustrations des
+    exercices disparus depuis leurs PNG sources. L'outil d'import les
+    ignore désormais, mais ce test garde la porte fermée.
+    """
+    import glob
+    import os
+    from core.exercises_data import EXERCISES_INFO, illustration_slug
+    attendus = {illustration_slug(nom) for nom in EXERCISES_INFO}
+    livres = {os.path.basename(f)[:-5]
+              for f in glob.glob("static/img/exercises/*.webp")}
+    orphelines = sorted(livres - attendus)
+    assert not orphelines, f"illustrations sans exercice : {orphelines}"
+
+
+def test_chaque_exercice_du_catalogue_a_son_illustration():
+    """L'inverse : un exercice sans image retombe sur un dessin au trait,
+    ce qui se voit tout de suite à côté des autres."""
+    import glob
+    import os
+    from core.exercises_data import EXERCISES_INFO, illustration_slug
+    livres = {os.path.basename(f)[:-5]
+              for f in glob.glob("static/img/exercises/*.webp")}
+    manquantes = sorted(nom for nom in EXERCISES_INFO
+                        if illustration_slug(nom) not in livres)
+    assert not manquantes, f"exercices sans illustration : {manquantes}"

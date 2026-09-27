@@ -75,18 +75,33 @@ def preparer(chemin_source, chemin_sortie, taille=TAILLE):
     return decoupe.resize((taille, taille), Image.LANCZOS)
 
 
+def _exercices_connus():
+    """Les noms de fichier que l'app ira réellement chercher."""
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from core.exercises_data import EXERCISES_INFO, illustration_slug
+    return {illustration_slug(nom) for nom in EXERCISES_INFO}
+
+
 def importer(dossier, destination=DESTINATION, taille=TAILLE):
     os.makedirs(destination, exist_ok=True)
-    faits = []
+    connus = _exercices_connus()
+    faits, ignores = [], []
     for nom in sorted(os.listdir(dossier)):
         base, ext = os.path.splitext(nom)
         if ext.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+            continue
+        # Un exercice peut avoir été renommé ou fusionné depuis la
+        # génération. Importer son image quand même crée un fichier que
+        # personne n'ira jamais chercher — et qui revient à chaque import,
+        # sans que rien ne le signale.
+        if base not in connus:
+            ignores.append(base)
             continue
         sortie = os.path.join(destination, base + ".webp")
         img = preparer(os.path.join(dossier, nom), sortie, taille)
         img.save(sortie, "WEBP", quality=QUALITE, method=6)
         faits.append((base + ".webp", os.path.getsize(sortie) // 1024))
-    return faits
+    return faits, ignores
 
 
 if __name__ == "__main__":
@@ -94,10 +109,16 @@ if __name__ == "__main__":
     if not args:
         print(__doc__)
         raise SystemExit(1)
-    resultats = importer(args[0])
-    if not resultats:
+    resultats, ignores = importer(args[0])
+    if not resultats and not ignores:
         print("aucune image trouvée dans", args[0])
     for nom, ko in resultats:
         print(f"  {nom:34} {ko:4} ko")
     total = sum(ko for _, ko in resultats)
     print(f"{len(resultats)} illustration(s), {total} ko au total")
+    if ignores:
+        print("")
+        print(f"{len(ignores)} image(s) ignorée(s) : aucun exercice de ce nom")
+        for base in ignores:
+            print(f"  {base}")
+        print("(exercice renommé ou fusionné depuis la génération)")

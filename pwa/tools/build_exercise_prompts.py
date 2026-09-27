@@ -301,6 +301,12 @@ SANS_ROUGE = {
     "Gainage",
     "Planche",
     "Mountain climbers",
+    # Assis, les ischio-jambiers sont SOUS la cuisse : aucun angle ne les
+    # montre. Trois générations de suite ont mis le rouge sur l'avant de la
+    # cuisse — c'est-à-dire sur les quadriceps, le muscle opposé. La
+    # version allongée, elle, garde son rouge : à plat ventre, l'arrière de
+    # la cuisse fait face à la caméra.
+    "Leg curl assis",
 }
 
 
