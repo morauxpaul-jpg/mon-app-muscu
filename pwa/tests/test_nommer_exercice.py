@@ -109,3 +109,40 @@ def test_les_deux_prises_restent_deux_exercices():
     from core.exercises_data import canoniser
     assert canoniser("Tirage horizontal prise neutre") == (None, "")
     assert canoniser("Tirage horizontal prise large") == (None, "")
+
+
+# ── Le leg curl : deux machines, deux fiches ─────────────────────
+
+
+def test_le_leg_curl_assis_a_sa_propre_fiche():
+    """Partager celle de l'allongé donnerait « allongé sur la machine face
+    au sol » à quelqu'un qui est assis. Ici, contrairement aux prises, le
+    réglage change vraiment : dossier, cuisses bloquées, hanches fléchies."""
+    from core.exercises_data import EXERCISES_INFO, get_exercise_info
+    assert "Leg curl assis" in EXERCISES_INFO
+    assis = get_exercise_info("Leg curl assis")
+    couche = get_exercise_info("Leg curl couché")
+    assert assis["description"] != couche["description"]
+    assert "assis" in assis["description"].lower()
+
+
+def test_le_leg_curl_allonge_dit_quil_est_allonge():
+    """« Leg curl » tout court laissait croire qu'il n'y en avait qu'un."""
+    from core.exercises_data import EXERCISES_INFO
+    assert "allong" in EXERCISES_INFO["Leg curl"]["name"].lower()
+
+
+def test_les_deux_leg_curls_se_choisissent_dans_la_liste():
+    noms = _bibliotheque()
+    assert "Leg curl couché" in noms
+    assert "Leg curl assis" in noms
+
+
+def test_les_deux_leg_curls_ne_sont_jamais_confondus():
+    """Les charges diffèrent : les fusionner rendrait la progression
+    incohérente."""
+    from core.exercises_data import resoudre
+    assert resoudre("Leg curl assis")[0] == "Leg curl assis"
+    assert resoudre("Leg curl couché")[0] == "Leg curl"
+    assert resoudre("Seated leg curl")[0] == "Leg curl assis"
+    assert resoudre("Lying leg curl")[0] == "Leg curl"

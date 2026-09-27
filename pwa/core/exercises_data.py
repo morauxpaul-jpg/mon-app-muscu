@@ -347,7 +347,7 @@ EXERCISES_INFO = {
         "image": "leg-machine.svg",
     },
     "Leg curl": {
-        "name": "Leg curl",
+        "name": "Leg curl (allongé)",
         "muscles": ["Ischio-jambiers"],
         "description": "Allongé sur la machine face au sol, fléchir les genoux pour amener les talons vers les fessiers. Mouvement d'isolation pour l'arrière des cuisses, complémentaire du leg extension.",
         "tips": [
@@ -1087,6 +1087,22 @@ EXERCISES_INFO = {
         ],
         "image": "shoulder.svg",
     },
+    "Leg curl assis": {
+        "name": "Leg curl assis",
+        "muscles": ["Ischio-jambiers"],
+        "description": "Assis à la machine, dossier calé dans le dos et "
+                       "cuisses bloquées sous le coussin, fléchir les genoux "
+                       "pour ramener les talons sous le siège, puis laisser "
+                       "remonter en contrôlant. Hanches fléchies : les "
+                       "ischio-jambiers travaillent en position étirée, ce "
+                       "que la version allongée ne fait pas.",
+        "tips": [
+            "Cale bien les cuisses avant de commencer, sinon le bassin se soulève",
+            "Ne bloque pas les genoux en fin de remontée",
+            "Charge plus légère qu'allongé : la position étirée est exigeante",
+        ],
+        "image": "legs.svg",
+    },
 }
 
 
@@ -1321,6 +1337,10 @@ _ANGLAIS = {
     "push up": "Pompes",
     "calf raise": "Mollets debout",
     "leg curl machine": "Leg curl",
+    "leg curl couche": "Leg curl",
+    "leg curl allonge": "Leg curl",
+    "lying leg curl": "Leg curl",
+    "seated leg curl": "Leg curl assis",
     "goblet squat": "Squat gobelet",
     "bulgarian split squat": "Squat bulgare",
     "walking lunges": "Fentes marchées",

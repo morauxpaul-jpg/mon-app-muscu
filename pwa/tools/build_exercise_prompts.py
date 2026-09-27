@@ -155,6 +155,15 @@ GESTES = {
     # ── Machines guidees ──────────────────────────────────────────
     # Une machine ne se devine pas : sans description du bati, le modele
     # dessine un banc quelconque et des poids qui flottent.
+    "Leg curl assis": "SITTING DOWN on a seated leg curl machine, back "
+                      "against the backrest, a thick pad clamped across the "
+                      "TOPS of both thighs, ankles hooked UNDER a roller pad, "
+                      "knees bending so the heels are pulled back underneath "
+                      "the seat. The mannequin is NOT lying down",
+    "Élévations frontales": "standing, both arms straight and raised "
+                            "FORWARD in front of the body up to shoulder "
+                            "height, a dumbbell in each hand. The arms are "
+                            "raised to the FRONT, not out to the sides",
     "Machine adducteurs": "SEATED on an adductor machine: upright back "
                           "against a padded backrest, both knees SPREAD "
                           "APART with the inner side of each thigh pressed "
