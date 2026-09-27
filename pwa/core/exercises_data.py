@@ -1119,6 +1119,22 @@ EXERCISES_INFO = {
         ],
         "image": "chest.svg",
     },
+    "Reverse fly machine": {
+        "name": "Reverse fly machine (pec deck inversé)",
+        "muscles": ["Épaules (deltoïdes postérieurs)"],
+        "description": "Assis face à la machine, poitrine plaquée contre le "
+                       "dossier et bras tendus devant soi, écarter les bras "
+                       "vers l'arrière en serrant les omoplates, puis revenir "
+                       "en contrôlant. Même cible que l'oiseau, mais le buste "
+                       "est soutenu : plus facile de sentir l'arrière "
+                       "d'épaule sans tirer avec le dos.",
+        "tips": [
+            "Règle le siège pour que les poignées soient à hauteur d'épaules",
+            "Tire avec les coudes, pas avec les mains",
+            "Charge légère : dès que le buste décolle du dossier, c'est trop",
+        ],
+        "image": "shoulder.svg",
+    },
 }
 
 
@@ -1337,7 +1353,6 @@ _ANGLAIS = {
     "lateral raise": "Élévations latérales",
     "side raise": "Élévations latérales",
     "rear delt fly": "Oiseau",
-    "reverse fly": "Oiseau",
     "lat pulldown": "Tirage vertical",
     "pulldown": "Tirage vertical",
     "seated row": "Tirage horizontal poulie",
@@ -1361,6 +1376,9 @@ _ANGLAIS = {
     "machine chest press": "Développé machine",
     "seated chest press": "Développé machine",
     "presse pectoraux": "Développé machine",
+    "pec deck inverse": "Reverse fly machine",
+    "reverse pec deck": "Reverse fly machine",
+    "rear delt machine": "Reverse fly machine",
     "developpe pectoraux machine": "Développé machine",
     "goblet squat": "Squat gobelet",
     "bulgarian split squat": "Squat bulgare",

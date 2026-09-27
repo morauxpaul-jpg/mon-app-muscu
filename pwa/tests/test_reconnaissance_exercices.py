@@ -228,11 +228,15 @@ def test_une_faute_de_frappe_ne_coute_pas_la_fiche():
 
 
 def test_un_surnom_anglais_se_retrouve_sous_le_materiel():
-    """« Reverse fly machine » : le surnom est là, caché derrière un mot
-    d'équipement que le catalogue ne porte pas."""
-    info = get_exercise_info("Reverse fly  machine")
+    """« Pushdown poulie corde » : le surnom « pushdown » est là, caché
+    derrière deux mots d'équipement que le catalogue ne porte pas.
+
+    (« Reverse fly machine » servait d'exemple ici jusqu'à ce qu'il reçoive
+    sa propre fiche : ce n'est plus un surnom, c'est un exercice.)
+    """
+    info = get_exercise_info("Pushdown poulie  corde")
     assert info is not None
-    assert info["name"].startswith("Oiseau")
+    assert info["name"].startswith("Extensions triceps")
 
 
 def test_une_faute_de_frappe_ne_transforme_pas_un_exercice_en_un_autre():

@@ -403,7 +403,7 @@ def test_aucune_illustration_livree_ne_correspond_a_rien():
 # Un exercice tout juste ajouté n'a pas encore d'image : elle se génère à la
 # demande et coûte quelques centimes. On le nomme ici plutôt que de laisser
 # le test rouge ou de l'affaiblir — il bloque toute NOUVELLE omission.
-EN_ATTENTE_DILLUSTRATION = {"Développé machine"}
+EN_ATTENTE_DILLUSTRATION = {"Reverse fly machine"}
 
 
 def test_aucun_nouvel_exercice_sans_illustration():

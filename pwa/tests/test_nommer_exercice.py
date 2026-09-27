@@ -146,3 +146,34 @@ def test_les_deux_leg_curls_ne_sont_jamais_confondus():
     assert resoudre("Leg curl couché")[0] == "Leg curl"
     assert resoudre("Seated leg curl")[0] == "Leg curl assis"
     assert resoudre("Lying leg curl")[0] == "Leg curl"
+
+
+# ── Machines guidées : leur propre fiche, pas celle de l'haltère ──
+
+
+@pytest.mark.parametrize("machine,haltere", [
+    ("Reverse fly machine", "Oiseau"),
+    ("Développé machine", "Développé couché"),
+    ("Leg curl assis", "Leg curl"),
+])
+def test_une_machine_ne_recupere_pas_la_fiche_de_la_version_libre(machine, haltere):
+    """« Oiseau » se fait penché en avant avec des haltères ; le reverse fly
+    machine, assis avec la poitrine contre un dossier. Même muscle, réglage
+    différent — donner la fiche de l'un à l'autre donne des consignes
+    fausses à quelqu'un qui est déjà en position.
+    """
+    from core.exercises_data import EXERCISES_INFO, get_exercise_info
+    assert machine in EXERCISES_INFO, machine
+    a, b = get_exercise_info(machine), get_exercise_info(haltere)
+    assert a["description"] != b["description"], machine
+    assert a["name"] != b["name"], machine
+
+
+def test_reverse_fly_designe_la_machine_pas_loiseau():
+    """En salle, « reverse fly » est le nom écrit sur la machine. L'oiseau
+    garde ses propres surnoms."""
+    from core.exercises_data import resoudre
+    assert resoudre("Reverse fly")[0] == "Reverse fly machine"
+    assert resoudre("Pec deck inversé")[0] == "Reverse fly machine"
+    assert resoudre("Oiseau")[0] == "Oiseau"
+    assert resoudre("Oiseau haltères")[0] == "Oiseau"

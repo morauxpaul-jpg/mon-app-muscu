@@ -155,6 +155,13 @@ GESTES = {
     # ── Machines guidees ──────────────────────────────────────────
     # Une machine ne se devine pas : sans description du bati, le modele
     # dessine un banc quelconque et des poids qui flottent.
+    "Reverse fly machine": "SITTING DOWN on a reverse pec deck machine, "
+                           "FACING the machine with the CHEST pressed "
+                           "against a tall padded chest support, both arms "
+                           "straight out in front gripping two handles, "
+                           "sweeping them back and outwards like opening "
+                           "wings, shoulder blades squeezed together. The "
+                           "mannequin faces the backrest, not away from it",
     "Développé machine": "SITTING DOWN on a chest press machine, back flat "
                           "against a tall padded backrest, both hands "
                           "gripping two horizontal handles that come forward "
