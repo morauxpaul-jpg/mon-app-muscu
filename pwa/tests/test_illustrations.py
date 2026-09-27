@@ -321,3 +321,26 @@ def test_le_bas_des_pectoraux_reste_sur_la_poitrine():
     p = _prompts()["Dips"]["prompt"].lower()
     assert "still on the chest" in p
     assert "do not paint the stomach" in p
+
+
+def test_un_exercice_qui_cache_sa_cible_ne_se_colorie_pas():
+    """À plat ventre, les abdos regardent le sol : aucun angle ne montre à
+    la fois le gainage et sa ceinture abdominale. Deux générations de suite
+    ont mis le rouge sur les LOMBAIRES — l'opposé exact du muscle travaillé.
+    Une anatomie fausse affichée pendant la série est pire que pas de rouge,
+    et la pose, elle, se reconnaît seule."""
+    prompts = _prompts()
+    # Nommés ici, pas parcourus depuis la liste : sinon en retirer un
+    # ferait juste sauter le tour de boucle, sans rien signaler.
+    for nom in ("Gainage", "Planche", "Mountain climbers"):
+        p = prompts[nom]["prompt"].lower()
+        assert "red-orange" not in p, nom
+        assert "no coloured muscle" in p, nom
+
+
+def test_les_halteres_sont_decrits_par_leur_forme_pas_par_une_absence():
+    """« There is NO barbell » a produit une barre trois fois de suite : une
+    absence ne se dessine pas. C'est la géométrie qui la remplace — deux
+    objets courts séparés, rien entre les deux mains."""
+    p = _prompts()["Curl haltères"]["prompt"].lower()
+    assert "two separate" in p and "gap between the two hands" in p

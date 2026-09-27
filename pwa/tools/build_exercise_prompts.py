@@ -137,13 +137,40 @@ GESTES = {
     "Leg curl": "lying FACE DOWN on a leg curl machine, knees BENT so the "
                 "heels are pulled up towards the buttocks against the roller "
                 "pad. The legs are NOT straight",
-    "Curl haltères": "standing, ONE DUMBBELL IN EACH HAND, palms facing up, "
-                     "elbows pinned to the sides, both forearms curled up to "
-                     "chest height. There is NO barbell",
-    "Curl haltères (ou élastique)": "standing, ONE DUMBBELL IN EACH HAND, "
-                                    "palms facing up, elbows pinned to the "
-                                    "sides, both forearms curled up to chest "
-                                    "height. There is NO barbell",
+    "Curl haltères": "standing, holding TWO SEPARATE SHORT DUMBBELLS, "
+                     "one in each hand, with a clear empty gap between the two "
+                     "hands — nothing connects them. Palms facing up, elbows "
+                     "pinned to the sides, both forearms curled up to chest height",
+    "Curl haltères (ou élastique)": "standing, holding TWO SEPARATE "
+                                    "SHORT DUMBBELLS, one in each hand, with a "
+                                    "clear empty gap between the two hands — "
+                                    "nothing connects them. Palms facing up, "
+                                    "elbows pinned to the sides, both forearms "
+                                    "curled up to chest height",
+    "Dips sur chaise": "facing away from a chair, both hands behind them "
+                       "gripping the front edge of the seat, ARMS SUPPORTING "
+                       "THE WHOLE BODY, hips hanging in the air in FRONT of "
+                       "the chair and lowered towards the floor, legs "
+                       "stretched out. The buttocks do not touch the chair "
+                       "and the mannequin is NOT seated",
+    "Squat bulgare": "in a deep split stance, the REAR foot resting on top of "
+                     "a bench BEHIND the mannequin with the toes pointing "
+                     "down, front foot flat on the floor well in front of "
+                     "the bench, front knee bent to 90 degrees, torso "
+                     "upright. The buttocks are in the air, well away from "
+                     "the bench, and the mannequin is NOT seated",
+    "Tractions australiennes": "lying FACE UP under a low horizontal bar, "
+                               "body straight and rigid from heels to head, "
+                               "heels on the floor, both hands gripping the "
+                               "bar above the chest, pulling the chest up to "
+                               "it. Show it from a low side angle so the "
+                               "back and shoulder blades are visible",
+    "Tractions australiennes (ou tirage élastique)": "lying FACE UP under a "
+                               "low horizontal bar, body straight and rigid "
+                               "from heels to head, both hands gripping the "
+                               "bar above the chest, pulling the chest up to "
+                               "it. Show it from a low side angle so the "
+                               "back and shoulder blades are visible",
     "Pompes diamant": "in a push-up position, the two hands placed close "
                       "together directly under the chest so the thumbs and "
                       "index fingers form a diamond, elbows tucked in "
@@ -232,12 +259,27 @@ ZONES = {
 }
 
 
-def _zone(fiche):
+# Exercices dont la cible est physiquement cachée par la pose : à plat
+# ventre, les abdos regardent le sol, et aucun angle ne montre à la fois le
+# gainage et sa ceinture abdominale. Deux générations de suite ont mis le
+# rouge sur les LOMBAIRES — l'opposé exact du muscle travaillé. Une
+# anatomie fausse affichée pendant la série est pire que pas de rouge du
+# tout ; la pose, elle, se reconnaît seule.
+SANS_ROUGE = {
+    "Gainage",
+    "Planche",
+    "Mountain climbers",
+}
+
+
+def _zone(fiche, nom=None):
     """Le muscle à peindre en rouge, décrit pour un modèle d'image.
 
     Renvoie None quand il n'y a rien à désigner — mieux vaut pas de rouge
     du tout qu'un rouge au mauvais endroit, qui apprend une anatomie fausse.
     """
+    if nom in SANS_ROUGE:
+        return None
     muscles = fiche.get("muscles") or []
     return ZONES.get(muscles[0]) if muscles else None
 
@@ -305,8 +347,8 @@ def _geste(nom, fiche):
     return f"{nom} ({description})" if description else nom
 
 
-def _coloriage(fiche):
-    zone = _zone(fiche)
+def _coloriage(fiche, nom=None):
+    zone = _zone(fiche, nom)
     if not zone:
         return SANS_COLORIAGE
     ancre, description, exclusion = zone
@@ -325,7 +367,7 @@ def construire():
                 geste=_geste(nom, fiche),
                 angle=_angle(nom),
                 instant="" if nom in GESTES else INSTANT,
-                muscle=_coloriage(fiche),
+                muscle=_coloriage(fiche, nom),
             ),
         })
     return entrees
