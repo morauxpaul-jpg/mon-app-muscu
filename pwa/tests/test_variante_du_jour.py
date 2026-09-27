@@ -65,9 +65,9 @@ def _prog(fake_db):
 
 
 def test_lexercice_echange_apparait_a_la_place(programme, logged_in):
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     html = _seance(logged_in)
-    assert "Curl barre" in _exos_affiches(html)
+    assert "Curl marteau" in _exos_affiches(html)
     assert "Curl incliné haltères" not in _exos_affiches(html)
     assert "remplace Curl incliné haltères" in html
 
@@ -75,13 +75,13 @@ def test_lexercice_echange_apparait_a_la_place(programme, logged_in):
 def test_le_creneau_garde_ses_series(programme, logged_in):
     """C'est tout l'intérêt : on ne resaisit rien. Le curl incliné était
     prévu en 4 séries, la variante l'est aussi."""
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     html = _seance(logged_in)
     assert "4 séries" in html
 
 
 def test_les_autres_exercices_ne_bougent_pas(programme, logged_in):
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     assert "Développé couché" in _exos_affiches(_seance(logged_in))
 
 
@@ -91,24 +91,24 @@ def test_les_autres_exercices_ne_bougent_pas(programme, logged_in):
 def test_le_programme_nest_pas_reecrit(programme, logged_in):
     """Si l'échange touchait le programme, il faudrait penser à le remettre
     — et « de temps en temps une variante » deviendrait un piège."""
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     noms = [e["name"] for e in _prog(programme)["Push"]]
     assert noms == ["Curl incliné haltères", "Développé couché"]
 
 
 def test_un_autre_jour_retrouve_lexercice_dorigine(programme, logged_in):
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     autre = (MONDAY + dt.timedelta(days=7)).isoformat()
     affiches = _exos_affiches(_seance(logged_in, autre))
     assert "Curl incliné haltères" in affiches
-    assert "Curl barre" not in affiches
+    assert "Curl marteau" not in affiches
 
 
 # ── Revenir en arrière ───────────────────────────────────────────
 
 
 def test_on_peut_revenir_a_lexercice_dorigine(programme, logged_in):
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     _echanger(logged_in, "Curl incliné haltères", "")
     html = _seance(logged_in)
     assert "Curl incliné haltères" in _exos_affiches(html)
@@ -136,18 +136,18 @@ def test_le_formulaire_vise_le_nom_du_programme_pas_celui_affiche(
     programme, lui, contient toujours « Curl incliné haltères ». Si le
     formulaire postait le nom affiché, le deuxième échange chercherait dans
     le programme un exercice qui n'y est pas — et ne ferait rien."""
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     cibles = _cibles_des_formulaires(_seance(logged_in))
     assert "Curl incliné haltères" in cibles, cibles
-    assert "Curl barre" not in cibles, cibles
+    assert "Curl marteau" not in cibles, cibles
 
 
 def test_un_deuxieme_echange_part_toujours_de_loriginal(programme, logged_in):
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
     _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
+    _echanger(logged_in, "Curl incliné haltères", "Curl biceps")
     affiches = _exos_affiches(_seance(logged_in))
-    assert "Curl marteau" in affiches
-    assert "Curl barre" not in affiches
+    assert "Curl biceps" in affiches
+    assert "Curl marteau" not in affiches
 
 
 def test_echanger_un_exercice_contre_lui_meme_neffface_le_calque(programme, logged_in):
@@ -162,7 +162,7 @@ def test_echanger_un_exercice_contre_lui_meme_neffface_le_calque(programme, logg
 def test_le_calque_est_efface_en_fin_de_seance(programme, logged_in):
     """Comme les exos ajoutés à la volée. Le garder ferait grossir d'une
     entrée par séance un blob relu et réécrit à chaque interaction."""
-    _echanger(logged_in, "Curl incliné haltères", "Curl barre")
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
     assert _prog(programme)["_substituts"]
     logged_in.post("/seance/finish", data={
         "mode": "prefaite", "name": "Push", "seance_name": "Push", "date": JOUR,
@@ -188,7 +188,7 @@ def test_les_variantes_proposees_travaillent_le_meme_muscle():
 
 def test_un_exercice_ne_se_propose_pas_lui_meme():
     from core.exercises_data import variantes
-    assert "Curl barre" not in _tous(variantes("Curl barre"))
+    assert "Curl marteau" not in _tous(variantes("Curl marteau"))
 
 
 def test_le_premier_rang_ne_contient_que_le_meme_geste():

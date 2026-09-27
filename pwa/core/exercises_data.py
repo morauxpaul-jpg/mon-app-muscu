@@ -1095,6 +1095,53 @@ EXERCISE_SUBSTITUTIONS = {
 
 # ── Lookup avec correspondance floue ───────────────────────────────────
 
+# ── Matériel : une variante, pas un autre exercice ─────────────
+# L'app pose déjà le matériel à côté du nom — « Élévations latérales
+# (Poulie) ». Tenir EN PLUS une entrée de catalogue par matériel, c'est la
+# même information à deux endroits, et une liste de choix deux fois trop
+# longue au moment de construire un programme : on cherche « élévations
+# latérales à la poulie », on trouve « élévations latérales haltères » et
+# on croit que la poulie n'existe pas.
+#
+# Le Rowing n'est PAS ici : à la barre c'est debout penché à 45°, à
+# l'haltère c'est un genou sur le banc en unilatéral, à la machine c'est
+# assis. Trois positions, pas trois matériels.
+_ABSORBES = {
+    "Dips machine": ("Dips", "Machine"),
+    "Dips lestés": ("Dips", "Lesté"),
+    "Développé incliné haltères": ("Développé incliné", "Haltères"),
+    "Pompes lestées": ("Pompes", "Lesté"),
+    "Tractions lestées": ("Tractions", "Lesté"),
+    "Soulevé de terre roumain haltères": ("Soulevé de terre roumain", "Haltères"),
+    "Développé militaire haltères": ("Développé militaire", "Haltères"),
+    "Élévations latérales haltères": ("Élévations latérales", "Haltères"),
+    "Curl barre": ("Curl biceps", "Barre"),
+    "Curl haltères": ("Curl biceps", "Haltères"),
+    "Extensions triceps poulie": ("Extensions triceps", "Poulie"),
+    "Fentes haltères": ("Fentes", "Haltères"),
+}
+
+# Le matériel qu'on propose pour chacune des bases, dans l'ordre où on le
+# rencontre en salle. La fiche l'affiche, le sélecteur s'y limite.
+_EQUIPEMENTS = {
+    "Dips": ["Standard", "Machine", "Lesté"],
+    "Développé incliné": ["Barre", "Haltères"],
+    "Pompes": ["Standard", "Lesté"],
+    "Tractions": ["Standard", "Lesté"],
+    "Soulevé de terre roumain": ["Barre", "Haltères"],
+    "Développé militaire": ["Barre", "Haltères"],
+    "Élévations latérales": ["Haltères", "Poulie", "Machine"],
+    "Curl biceps": ["Barre", "Haltères", "Poulie"],
+    "Extensions triceps": ["Barre", "Haltères", "Poulie"],
+    "Fentes": ["Standard", "Haltères", "Barre"],
+}
+
+for _absorbe in _ABSORBES:
+    EXERCISES_INFO.pop(_absorbe, None)
+for _base, _materiels in _EQUIPEMENTS.items():
+    EXERCISES_INFO[_base]["equipements"] = _materiels
+
+
 def _cle(nom: str) -> str:
     """Forme comparable d'un nom d'exercice.
 
@@ -1182,8 +1229,8 @@ _ANGLAIS = {
     "overhead press": "Développé militaire",
     "overhead triceps extension": "Extension triceps haltère",
     "french press": "Extension triceps haltère",
-    "triceps pushdown": "Extensions triceps poulie",
-    "pushdown": "Extensions triceps poulie",
+    "triceps pushdown": "Extensions triceps",
+    "pushdown": "Extensions triceps",
     "lateral raise": "Élévations latérales",
     "side raise": "Élévations latérales",
     "front raise": "Élévations latérales",
@@ -1198,7 +1245,7 @@ _ANGLAIS = {
     "deadlift": "Soulevé de terre",
     "romanian deadlift": "Soulevé de terre roumain",
     "hammer curl": "Curl marteau",
-    "barbell curl": "Curl barre",
+    "barbell curl": "Curl biceps",
     "pull up": "Tractions",
     "chin up": "Tractions",
     "push up": "Pompes",
@@ -1303,6 +1350,14 @@ def resoudre(name):
     return None, ""
 
 
+_PAR_CLE_ABSORBES = {_cle(n): v for n, v in _ABSORBES.items()}
+
+
+def _absorbe_connu(nom):
+    """(base, matériel) si ce nom désignait une entrée absorbée, sinon None."""
+    return _PAR_CLE_ABSORBES.get(_cle(nom))
+
+
 def canoniser(nom):
     """Le nom que ce nom d'historique devrait porter, et à quel point c'est sûr.
 
@@ -1318,6 +1373,16 @@ def canoniser(nom):
     """
     from core.muscu import separer_variante
     base, variante = separer_variante(nom)
+
+    # Un nom qui portait le matériel DANS le nom le porte désormais à côté :
+    # « Élévations latérales haltères » → « Élévations latérales (Haltères) ».
+    # Sans ça la fusion perdrait l'information au lieu de la déplacer.
+    absorbe = _absorbe_connu(base)
+    if absorbe:
+        cle, materiel = absorbe
+        nouveau = f"{cle} ({variante or materiel})"
+        return (None, "") if nouveau == (nom or "").strip() else (nouveau, "orthographe")
+
     cle, niveau = resoudre(base)
     if not cle:
         return None, ""

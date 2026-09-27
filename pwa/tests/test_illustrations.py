@@ -180,7 +180,7 @@ def test_les_fiches_qui_ne_decrivent_aucun_geste_en_recoivent_un():
     ne dit à quoi ressemble un curl. Le modèle avait dessiné les bras le long
     du corps, épaules en rouge.
     """
-    p = _prompts()["Curl barre"]["prompt"].lower()
+    p = _prompts()["Curl biceps"]["prompt"].lower()
     assert "barbell" in p and "elbows" in p, \
         "le geste du curl n'est décrit nulle part dans le prompt"
 
@@ -336,14 +336,6 @@ def test_un_exercice_qui_cache_sa_cible_ne_se_colorie_pas():
         p = prompts[nom]["prompt"].lower()
         assert "red-orange" not in p, nom
         assert "no coloured muscle" in p, nom
-
-
-def test_les_halteres_sont_decrits_par_leur_forme_pas_par_une_absence():
-    """« There is NO barbell » a produit une barre trois fois de suite : une
-    absence ne se dessine pas. C'est la géométrie qui la remplace — deux
-    objets courts séparés, rien entre les deux mains."""
-    p = _prompts()["Curl haltères"]["prompt"].lower()
-    assert "two separate" in p and "gap between the two hands" in p
 
 
 def test_un_refus_global_arrete_la_file_au_lieu_de_se_repeter(monkeypatch):

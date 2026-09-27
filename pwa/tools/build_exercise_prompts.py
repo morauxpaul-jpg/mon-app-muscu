@@ -38,6 +38,10 @@ STYLE = (
 # que le curl classique ») : lisible pour un humain qui connaît le curl,
 # inutilisable pour un modèle d'image, qui dessine alors n'importe quoi.
 # Pour celles-là seulement, le geste est écrit ici.
+# Une absence ne se dessine pas : « there is NO barbell », seul, a produit
+# une barre trois fois de suite — le modèle n'avait que le mot « barbell »
+# sous les yeux. Une négation ne vient qu'APRÈS avoir dit ce qu'il faut
+# dessiner, jamais à sa place.
 GESTES = {
     # Le départ d'un Arnold press, c'est deux haltères devant la poitrine :
     # exactement un curl. Seule la fin du mouvement le distingue.
@@ -54,7 +58,7 @@ GESTES = {
                       "out and the bar is NOT above the chest",
     # Deux essais : un haltère court tenu d'une main, puis la bonne barre
     # mais bras quasi tendus, barre à la taille.
-    "Curl barre": "standing, both hands gripping ONE long straight barbell, "
+    "Curl biceps": "standing, both hands gripping ONE long straight barbell, "
                   "one hand near each end, palms facing up, upper arms "
                   "vertical and pinned to the sides, elbows folded so the "
                   "forearms point UP and the bar is already raised to chest "
@@ -66,7 +70,7 @@ GESTES = {
                         "torso upright",
     "Fentes sautées": "jumping upward out of a deep lunge, both feet off the "
                       "floor, legs swapping in mid-air",
-    "Élévations latérales haltères": "standing, arms raised straight out "
+    "Élévations latérales": "standing, arms raised straight out "
                                      "sideways to shoulder height, a light "
                                      "dumbbell in each hand. The arms are NOT "
                                      "hanging down and there is NO barbell",
@@ -85,10 +89,6 @@ GESTES = {
                                       "both hands, arms overhead, FEET OFF "
                                       "THE GROUND, pulling the chin up to "
                                       "the bar. The mannequin is NOT standing",
-    "Tractions lestées": "HANGING from a high horizontal bar by both hands, "
-                         "arms overhead, FEET OFF THE GROUND, a weight plate "
-                         "hanging from a belt at the waist. The mannequin is "
-                         "NOT standing",
     "Rowing barre": "standing but BENT FORWARD at the hips to about 45 "
                     "degrees, back flat, the barbell hanging from straight "
                     "arms and pulled up to the navel. The torso is NOT "
@@ -101,26 +101,11 @@ GESTES = {
                                 "machine, legs out in front and slightly "
                                 "bent, pulling a handle back to the stomach, "
                                 "torso upright. The mannequin is NOT standing",
-    "Développé incliné haltères": "lying back on a bench inclined at 30-45 "
-                                   "degrees, pressing ONE DUMBBELL IN EACH "
-                                   "HAND straight up above the upper chest. "
-                                   "The mannequin is NOT standing and there "
-                                   "is NO barbell",
-    "Développé militaire haltères": "standing, pressing ONE DUMBBELL IN EACH "
-                                    "HAND from shoulder height up to full "
-                                    "extension overhead. There is NO barbell",
-    # ── Poses fausses relevées à la relecture des 78 ─────────────
     "Soulevé de terre roumain": "standing, knees almost straight, HINGED "
                                 "FORWARD at the hips so the torso is close "
                                 "to horizontal, back flat, the barbell "
                                 "sliding down the front of the legs to "
                                 "mid-shin. The torso is NOT upright",
-    "Soulevé de terre roumain haltères": "standing, knees almost straight, "
-                                          "HINGED FORWARD at the hips so the "
-                                          "torso is close to horizontal, back "
-                                          "flat, a dumbbell in each hand "
-                                          "lowered down the front of the "
-                                          "legs. The torso is NOT upright",
     "Développé haltères": "lying FACE UP on a flat bench, one dumbbell in "
                             "each hand pressed straight up above the chest, "
                             "arms extended. The mannequin is NOT face down",
@@ -137,10 +122,6 @@ GESTES = {
     "Leg curl": "lying FACE DOWN on a leg curl machine, knees BENT so the "
                 "heels are pulled up towards the buttocks against the roller "
                 "pad. The legs are NOT straight",
-    "Curl haltères": "standing, holding TWO SEPARATE SHORT DUMBBELLS, "
-                     "one in each hand, with a clear empty gap between the two "
-                     "hands — nothing connects them. Palms facing up, elbows "
-                     "pinned to the sides, both forearms curled up to chest height",
     "Curl haltères (ou élastique)": "standing, holding TWO SEPARATE "
                                     "SHORT DUMBBELLS, one in each hand, with a "
                                     "clear empty gap between the two hands — "

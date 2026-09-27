@@ -166,8 +166,13 @@ def test_la_table_anglaise_ne_recouvre_aucun_nom_francais():
 def test_les_variantes_voisines_ne_se_confondent_pas():
     """Le rattrapage par jeu de mots est large : il ne doit pas faire
     converger deux exercices que l'utilisateur distingue."""
-    assert get_exercise_info("Dips machine")["name"] != get_exercise_info("Dips")["name"]
+    # « Dips machine » n'est plus un exercice à part — c'est la variante
+    # Machine des dips. Il doit mener à la fiche de base.
+    assert get_exercise_info("Dips machine")["name"] == get_exercise_info("Dips")["name"]
     assert (get_exercise_info("Gainage latéral")["name"]
             != get_exercise_info("Gainage")["name"])
+    # « Élévations latérales haltères » n'est plus un exercice à part : le
+    # matériel se choisit à côté du nom. Il doit donc mener à la fiche de
+    # base, pas à une fiche jumelle.
     assert (get_exercise_info("Élévations latérales haltères")["name"]
-            != get_exercise_info("Élévations latérales")["name"])
+            == get_exercise_info("Élévations latérales")["name"])
