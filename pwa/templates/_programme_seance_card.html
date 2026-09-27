@@ -144,7 +144,7 @@
                 <div>
                   <div style="font-size:0.72rem; color:var(--text-3); letter-spacing:1px; font-weight:600; margin:8px 0 4px;" x-text="grp"></div>
                   <template x-for="ex in (typeof EXERCISE_LIBRARY !== 'undefined' ? (EXERCISE_LIBRARY[grp] || []) : [])" :key="grp+'-'+ex.name">
-                    <div x-show="!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0"
+                    <div x-show="typeof exerciseMatches === 'undefined' ? (!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0) : exerciseMatches(ex, libSearch)"
                          style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid var(--border-subtle);">
                       <div>
                         <div style="font-size:0.85rem; color:var(--text-1); font-weight:500;" x-text="ex.name"></div>

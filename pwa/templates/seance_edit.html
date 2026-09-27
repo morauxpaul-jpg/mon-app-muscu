@@ -710,7 +710,7 @@
                 <div>
                   <div style="font-size:0.72rem; color:var(--accent); letter-spacing:1px; font-weight:700; margin:8px 0 4px;" x-text="grp"></div>
                   <template x-for="ex in (typeof EXERCISE_LIBRARY !== 'undefined' ? (EXERCISE_LIBRARY[grp] || []) : [])" :key="grp+'-'+ex.name">
-                    <div x-show="!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0"
+                    <div x-show="typeof exerciseMatches === 'undefined' ? (!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0) : exerciseMatches(ex, libSearch)"
                          style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
                       <div>
                         <div style="font-size:0.85rem; color:#fff; font-weight:600;" x-text="ex.name"></div>

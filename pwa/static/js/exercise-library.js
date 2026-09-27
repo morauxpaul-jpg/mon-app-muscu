@@ -4,15 +4,15 @@
  */
 var EXERCISE_LIBRARY = {
   "Poitrine": [
-    { name: "Développé couché barre", muscles: ["Triceps", "Épaules"], defaultSets: 4, defaultReps: "8-10" },
+    { name: "Développé couché barre", alias: "bench press", muscles: ["Triceps", "Épaules"], defaultSets: 4, defaultReps: "8-10" },
     { name: "Développé couché haltères", muscles: ["Triceps", "Épaules"], defaultSets: 4, defaultReps: "8-12" },
-    { name: "Développé incliné barre", muscles: ["Épaules", "Triceps"], defaultSets: 4, defaultReps: "8-10" },
+    { name: "Développé incliné barre", alias: "incline bench press", muscles: ["Épaules", "Triceps"], defaultSets: 4, defaultReps: "8-10" },
     { name: "Développé incliné haltères", muscles: ["Épaules", "Triceps"], defaultSets: 4, defaultReps: "10-12" },
     { name: "Développé décliné barre", muscles: ["Triceps"], defaultSets: 3, defaultReps: "8-10" },
-    { name: "Écarté couché haltères", muscles: ["Épaules"], defaultSets: 3, defaultReps: "12-15" },
-    { name: "Écarté poulie vis-à-vis", muscles: ["Épaules"], defaultSets: 3, defaultReps: "12-15" },
+    { name: "Écarté couché haltères", alias: "dumbbell fly ecarte", muscles: ["Épaules"], defaultSets: 3, defaultReps: "12-15" },
+    { name: "Écarté poulie vis-à-vis", alias: "cable fly crossover vis a vis poulie haute basse", muscles: ["Épaules"], defaultSets: 3, defaultReps: "12-15" },
     { name: "Pompes", muscles: ["Triceps", "Épaules"], defaultSets: 3, defaultReps: "15-20" },
-    { name: "Pec deck (machine)", muscles: [], defaultSets: 3, defaultReps: "12-15" },
+    { name: "Pec deck (machine)", alias: "pec fly chest fly butterfly ecarte machine", muscles: [], defaultSets: 3, defaultReps: "12-15" },
     { name: "Dips (pecs)", muscles: ["Triceps", "Épaules"], defaultSets: 3, defaultReps: "8-12" },
   ],
   "Dos": [
@@ -75,14 +75,14 @@ var EXERCISE_LIBRARY = {
     { name: "Roue abdominale", muscles: [], defaultSets: 3, defaultReps: "8-12" },
   ],
   "Adducteurs": [
-    { name: "Machine adducteurs", muscles: [], defaultSets: 3, defaultReps: "12-15" },
+    { name: "Machine adducteurs", alias: "adducteur adductor hip adduction", muscles: [], defaultSets: 3, defaultReps: "12-15" },
     { name: "Squat sumo", muscles: ["Fessiers", "Quadriceps"], defaultSets: 4, defaultReps: "8-12" },
     { name: "Adduction poulie basse", muscles: [], defaultSets: 3, defaultReps: "12-15" },
     { name: "Fente latérale", muscles: ["Quadriceps", "Fessiers"], defaultSets: 3, defaultReps: "10-12" },
     { name: "Copenhagen plank", muscles: ["Abdos"], defaultSets: 3, defaultReps: "20-30s" },
   ],
   "Abducteurs": [
-    { name: "Machine abducteurs", muscles: [], defaultSets: 3, defaultReps: "12-15" },
+    { name: "Machine abducteurs", alias: "abducteur abductor hip abduction moyen fessier", muscles: [], defaultSets: 3, defaultReps: "12-15" },
     { name: "Abduction poulie basse", muscles: ["Fessiers"], defaultSets: 3, defaultReps: "12-15" },
     { name: "Marche latérale élastique", muscles: ["Fessiers"], defaultSets: 3, defaultReps: "15-20" },
     { name: "Clam shell", muscles: ["Fessiers"], defaultSets: 3, defaultReps: "15-20" },
@@ -124,3 +124,43 @@ var LIBRARY_TO_MUSCLE = {
   "Mollets": "Mollets",
   "Avant-bras": "Avant-bras",
 };
+
+/**
+ * Recherche dans la bibliothèque.
+ *
+ * L'ancienne version faisait un `indexOf` brut sur le nom. Trois échecs en
+ * découlaient, tous rencontrés à l'usage :
+ *   — taper « ecarte » ne trouvait pas « Écarté » (l'accent) ;
+ *   — « adducteur machine » ne trouvait pas « Machine adducteurs » (l'ordre) ;
+ *   — « pec fly » ne trouvait pas « Pec deck » (le surnom).
+ * Le premier est le plus grave : on cherche sans accents au clavier du
+ * téléphone, et on conclut que l'exercice n'existe pas.
+ */
+function normaliserRecherche(texte) {
+  return (texte || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")   // accents
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function exerciseMatches(ex, requete) {
+  var q = normaliserRecherche(requete);
+  if (!q) return true;
+  var champs = [ex.name, (ex.muscles || []).join(" "), ex.alias || ""];
+  var cible = normaliserRecherche(champs.join(" "));
+  // Chaque mot tapé doit se retrouver : l'ordre n'a pas d'importance, et
+  // un mot en trop ne doit pas faire disparaître le résultat.
+  return q.split(" ").every(function (mot) { return cible.indexOf(mot) >= 0; });
+}
+
+if (typeof window !== "undefined") {
+  window.normaliserRecherche = normaliserRecherche;
+  window.exerciseMatches = exerciseMatches;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { normaliserRecherche: normaliserRecherche,
+                     exerciseMatches: exerciseMatches,
+                     EXERCISE_LIBRARY: EXERCISE_LIBRARY };
+}

@@ -1,6 +1,16 @@
 {
-  "current": "v57",
+  "current": "v58",
   "entries": [
+    {
+      "version": "v58",
+      "date": "2026-09-27",
+      "title": "Trouver un exercice, même mal écrit",
+      "changes": [
+        "La recherche d'exercice ne t'oblige plus aux accents : tape « ecarte », tu trouves « Écarté ». L'ordre des mots n'a plus d'importance non plus, et les noms anglais de salle marchent — « pec fly », « bench press », « lat pulldown »",
+        "Le matériel n'est plus un exercice à part : au lieu de chercher entre « élévations latérales » et « élévations latérales haltères », tu prends l'exercice et tu dis avec quoi tu le fais — barre, haltères, poulie, machine ou lesté",
+        "Machine à adducteurs, machine à abducteurs et écarté machine rejoignent le catalogue, avec leur fiche et leurs conseils"
+      ]
+    },
     {
       "version": "v57",
       "date": "2026-09-27",
