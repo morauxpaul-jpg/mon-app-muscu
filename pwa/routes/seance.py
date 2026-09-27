@@ -27,7 +27,8 @@ bp = Blueprint("seance", __name__)
 
 MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
                "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
-VARIANTS = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
+# Importé de core.muscu, où vit aussi ce qui parse ce format.
+from core.muscu import VARIANTS  # noqa: E402,F401
 BW_EXOS = {"Dips", "Tractions"}
 
 

@@ -1229,71 +1229,108 @@ _SUFFIXES = ("halteres", "haltere", "barre", "poulie", "machine",
              "elastique", "elastiques", "sol", "smith", "ez")
 
 
-def get_exercise_info(name):
-    """Retourne la fiche d'un exercice, ou None.
+# Du plus sûr au plus large. Le niveau compte : afficher une fiche est
+# réversible d'un rechargement, RENOMMER un historique ne l'est pas. La
+# migration ne coche d'office que les quatre premiers.
+NIVEAUX_SURS = ("exact", "orthographe", "parenthese", "materiel")
 
-    Les noms viennent d'une saisie libre ou d'un import : accents, casse,
-    ponctuation et matériel en suffixe varient. La comparaison se fait donc
-    sur une forme normalisée (`_cle`), du plus strict au plus large.
+
+def resoudre(name):
+    """Renvoie (clé du catalogue, niveau de certitude), ou (None, "").
+
+    Un seul chemin de reconnaissance pour toute l'app — l'affichage d'une
+    fiche et la migration de l'historique. Deux chemins divergeraient, et
+    la migration renommerait alors autre chose que ce qui était affiché.
     """
     if not name:
-        return None
-
-    def _fiche(cle_catalogue):
-        return _avec_illustration(cle_catalogue, EXERCISES_INFO[cle_catalogue])
+        return None, ""
 
     # 1. Nom exact, le cas courant.
     if name in EXERCISES_INFO:
-        return _fiche(name)
+        return name, "exact"
 
     # 2. Même nom à la casse, aux accents et à la ponctuation près.
     cle = _cle(name)
     if cle in _PAR_CLE:
-        return _fiche(_PAR_CLE[cle])
+        return _PAR_CLE[cle], "orthographe"
 
     # 3. Sans la parenthèse : « Tractions (ou tirage vertical) » → « Tractions ».
     cle_nu = _cle(re.sub(r"\s*\(.*?\)", "", name))
     if cle_nu in _PAR_CLE:
-        return _fiche(_PAR_CLE[cle_nu])
+        return _PAR_CLE[cle_nu], "parenthese"
 
     # 4. Sans le matériel en suffixe : « Curl biceps haltères » → « Curl biceps ».
     for suffixe in _SUFFIXES:
         if cle_nu.endswith(" " + suffixe):
             base = cle_nu[: -(len(suffixe) + 1)].strip()
             if base in _PAR_CLE:
-                return _fiche(_PAR_CLE[base])
+                return _PAR_CLE[base], "materiel"
 
-    # 5. Nom alternatif annoncé par le catalogue : « Leg press » désigne
+    # 5. Nom alternatif annoncé par la fiche : « Leg press » désigne
     #    « Presse à cuisses (Leg press) ».
     for candidat in (cle, cle_nu):
         if candidat in _PAR_ALIAS:
-            return _fiche(_PAR_ALIAS[candidat])
+            return _PAR_ALIAS[candidat], "surnom"
 
     # 6. Nom anglais courant en salle : « pec fly » n'a aucun mot en
     #    commun avec « Écartés poulie », rien d'automatique ne les relie.
     for candidat in (cle, cle_nu):
         if candidat in _ANGLAIS:
-            return _fiche(_ANGLAIS[candidat])
+            return _ANGLAIS[candidat], "anglais"
 
     # 7. Mêmes mots, écrits autrement : « ELÉVATION LATÉRALE » pour
     #    « Élévations latérales », « Triceps extension » pour
     #    « Extensions triceps ».
     jetons = _jetons(name)
     if jetons in _PAR_JETONS:
-        return _fiche(_PAR_JETONS[jetons])
+        return _PAR_JETONS[jetons], "mots"
 
     # 8. Le nom reçu contient tous les mots d'un exercice, plus d'autres :
-    #    « ÉCARTÉ POULIE VIS À VIS HAUTE » contient « Écartés poulie ».
-    #    Le plus couvrant l'emporte, sinon « Squat » capterait tous les
-    #    squats ; à égalité, l'ordre du catalogue tranche, pour que deux
-    #    affichages de la même séance ne donnent pas deux fiches.
+    #    « ÉCARTÉ POULIE VIS À VIS HAUTE » contient « Écartés poulie ». Le
+    #    plus couvrant l'emporte, sinon « Squat » capterait tous les squats ;
+    #    à égalité, l'ordre du catalogue tranche, pour que deux affichages
+    #    de la même séance ne donnent pas deux fiches.
+    #
+    #    C'est le niveau le plus incertain : les mots en trop peuvent changer
+    #    l'exercice (« développé couché PRISE SERRÉE » n'est pas un développé
+    #    couché). Suffisant pour proposer une fiche, pas pour renommer seul.
     meilleur, couverture = None, 0
     for jetons_cat, nom_cat in _PAR_JETONS.items():
         if len(jetons_cat) > couverture and jetons_cat <= jetons:
             meilleur, couverture = nom_cat, len(jetons_cat)
     if meilleur:
-        return _fiche(meilleur)
-    return None
+        return meilleur, "sous_ensemble"
+    return None, ""
+
+
+def canoniser(nom):
+    """Le nom que ce nom d'historique devrait porter, et à quel point c'est sûr.
+
+    « TRICEPS EXTENSION (Poulie) » → (« Extensions triceps (Poulie) », « mots »).
+
+    La variante entre parenthèses dit avec quel matériel la série a été
+    faite : c'est une donnée, pas une faute d'orthographe. Elle traverse la
+    migration intacte.
+
+    Renvoie (None, "") quand il n'y a rien à changer — nom déjà canonique,
+    ou exercice inconnu du catalogue. La migration n'a ainsi à proposer que
+    de vrais renommages.
+    """
+    from core.muscu import separer_variante
+    base, variante = separer_variante(nom)
+    cle, niveau = resoudre(base)
+    if not cle:
+        return None, ""
+    nouveau = f"{cle} ({variante})" if variante else cle
+    return (None, "") if nouveau == (nom or "").strip() else (nouveau, niveau)
+
+
+def get_exercise_info(name):
+    """Retourne la fiche d'un exercice, ou None."""
+    cle_catalogue, _ = resoudre(name)
+    if not cle_catalogue:
+        return None
+    return _avec_illustration(cle_catalogue, EXERCISES_INFO[cle_catalogue])
 
 
 def famille_musculaire(muscle: str) -> str:
@@ -1344,11 +1381,7 @@ def famille_geste(nom: str) -> str:
 
 def _cle_catalogue(nom: str):
     """La clé du catalogue derrière un nom tapé, ou None."""
-    fiche = get_exercise_info(nom)
-    if not fiche:
-        return None
-    return next((c for c, f in EXERCISES_INFO.items()
-                 if f is fiche or f.get("name") == fiche.get("name")), None)
+    return resoudre(nom)[0]
 
 
 def _carte(cle_cat: str) -> dict:

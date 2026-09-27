@@ -29,9 +29,32 @@ def get_rep_table(one_rm):
     return out
 
 
+# Le matériel avec lequel une série a été faite, stocké entre parenthèses à
+# la suite du nom : « Développé couché (Barre) ». Liste fermée — toute autre
+# parenthèse fait partie du nom de l'exercice (« Hip thrust (sol) »).
+VARIANTS = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
+
+
 def get_base_name(full_name):
     """'Développé couché (Barre)' -> 'Développé couché'."""
     return full_name.split("(")[0].strip() if "(" in full_name else full_name
+
+
+def separer_variante(nom):
+    """« Développé couché (Barre) » → (« Développé couché », « Barre »).
+
+    Seules les variantes CONNUES sont détachées. « Hip thrust (sol) » garde
+    sa parenthèse : c'est le nom de l'exercice, pas le matériel du jour.
+    """
+    nom = (nom or "").strip()
+    if not nom.endswith(")") or "(" not in nom:
+        return nom, None
+    base, _, fin = nom.rpartition("(")
+    candidat = fin[:-1].strip()
+    for v in VARIANTS:
+        if v != "Standard" and candidat.casefold() == v.casefold():
+            return base.strip(), v
+    return nom, None
 
 
 def auto_muscles(name):
