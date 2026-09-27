@@ -57,3 +57,55 @@ def test_aucune_apostrophe_echappee_dans_les_expressions_alpine():
     inutilisable pendant des semaines."""
     for expression in re.findall(r'[:@][\w.-]+="([^"]*)"', CARTE):
         assert chr(92) + chr(39) not in expression, expression
+
+
+# ── Les prises sont proposables, pas seulement saisissables ──────
+
+
+def _bibliotheque():
+    import json
+    import subprocess
+    sortie = subprocess.run(
+        ["node", "-e",
+         "const l=require('./static/js/exercise-library.js');"
+         "console.log(JSON.stringify(Object.values(l.EXERCISE_LIBRARY)"
+         ".flat().map(e=>e.name)))"],
+        capture_output=True, text=True, encoding="utf-8", cwd=RACINE)
+    if sortie.returncode != 0:
+        pytest.skip("node indisponible")
+    return json.loads(sortie.stdout)
+
+
+@pytest.mark.parametrize("entree", [
+    "Tirage horizontal prise neutre",
+    "Tirage horizontal prise large",
+    "Tirage vertical prise large",
+    "Tirage vertical prise serrée",
+])
+def test_les_prises_courantes_se_choisissent_dans_la_liste(entree):
+    """Pouvoir renommer apres coup ne suffit pas : encore faut-il savoir
+    que les deux existent. La bibliotheque distingue deja les prises pour
+    les tractions (pronation / supination) — le dos suit le meme
+    precedent."""
+    assert entree in _bibliotheque()
+
+
+@pytest.mark.parametrize("prise", [
+    "Tirage horizontal prise neutre",
+    "Tirage horizontal prise large",
+])
+def test_une_prise_proposee_trouve_sa_fiche(prise):
+    """Une entrée de bibliothèque sans fiche donne une carte muette dès la
+    première séance."""
+    from core.exercises_data import get_exercise_info
+    info = get_exercise_info(prise)
+    assert info is not None, prise
+    assert info.get("illustration") is True, prise
+
+
+def test_les_deux_prises_restent_deux_exercices():
+    """Même fiche, mais pas le même historique : les charges n'ont rien à
+    voir. Les confondre rendrait la progression illisible."""
+    from core.exercises_data import canoniser
+    assert canoniser("Tirage horizontal prise neutre") == (None, "")
+    assert canoniser("Tirage horizontal prise large") == (None, "")
