@@ -220,6 +220,14 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
                     # La clé ne deviendra pas valide à l'exercice suivant.
                     # Répéter l'erreur 87 fois noie le message utile.
                     raise CleRefusee(_resume_cle(detail))
+                if e.code == 402:
+                    # Crédits épuisés : l'image suivante coûte le même prix.
+                    # Continuer la file ne fait qu'aligner le même refus.
+                    raise CleRefusee(
+                        "crédits Gemini épuisés. Les images déjà produites sont "
+                        "gardées ; rechargez sur https://ai.studio/projects "
+                        "puis relancez, le script reprendra où il s'est "
+                        "arrêté.")
                 print(f"  ÉCHEC {entree['nom']} : HTTP {e.code} "
                       + detail[:400])
                 echecs += 1

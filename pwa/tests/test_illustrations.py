@@ -344,3 +344,27 @@ def test_les_halteres_sont_decrits_par_leur_forme_pas_par_une_absence():
     objets courts séparés, rien entre les deux mains."""
     p = _prompts()["Curl haltères"]["prompt"].lower()
     assert "two separate" in p and "gap between the two hands" in p
+
+
+def test_un_refus_global_arrete_la_file_au_lieu_de_se_repeter(monkeypatch):
+    """Crédits épuisés ou clé refusée : l'exercice suivant coûte le même
+    prix et reçoit le même refus. Continuer la file n'aligne que 87 copies
+    du même message, et le seul utile — que faire — disparaît dedans."""
+    import sys
+    import urllib.error
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    appels = []
+
+    def _refus(requete, timeout=None):
+        appels.append(1)
+        raise urllib.error.HTTPError(
+            "http://x", 402, "Payment Required", {},
+            __import__("io").BytesIO(b'{"error":{"code":402}}'))
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _refus)
+    with pytest.raises(g.CleRefusee) as refus:
+        g.generer("cle", str(__import__("tempfile").mkdtemp()))
+    assert "crédits" in str(refus.value).lower()
+    assert len(appels) == 1, f"{len(appels)} appels au lieu d'un seul"
