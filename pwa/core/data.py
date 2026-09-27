@@ -182,6 +182,10 @@ def list_session_notes():
 
 
 # ── Renommage / fusion d'exercices (UPDATE ciblé, pas de réécriture) ────
+def rename_seance_rows(old_name, new_name):
+    return db.rename_seance_rows(_uid(), old_name, new_name)
+
+
 def rename_exercise_rows(old_names, new_name, muscle=None):
     return db.rename_exercise_rows(_uid(), old_names, new_name, muscle)
 

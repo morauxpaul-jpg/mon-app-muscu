@@ -524,6 +524,26 @@ def delete_session_rows(user_id: str, date_str: str, seance: str):
     _cache_invalidate(f"hist:{user_id}")
 
 
+def rename_seance_rows(user_id: str, old_name: str, new_name: str) -> int:
+    """Renomme une séance dans tout l'historique. Retourne les lignes touchées.
+
+    L'historique est indexé sur le NOM de la séance : renommer le programme
+    sans renommer l'historique couperait la séance de son passé — volume,
+    records et progression repartiraient de zéro, sans erreur nulle part.
+    """
+    if not old_name or old_name == new_name:
+        return 0
+    client = get_client()
+    resp = (
+        client.table("history").update({"seance": new_name})
+        .eq("user_id", user_id)
+        .eq("seance", old_name)
+        .execute()
+    )
+    _cache_invalidate(f"hist:{user_id}")
+    return len(resp.data or [])
+
+
 def rename_exercise_rows(user_id: str, old_names: list[str], new_name: str,
                          muscle: str | None = None) -> int:
     """Renomme un exercice dans tout l'historique par UPDATE ciblé (plus de

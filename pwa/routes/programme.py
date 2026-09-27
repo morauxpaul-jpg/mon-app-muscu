@@ -8,13 +8,16 @@ import json
 import logging
 import re
 import uuid
+from urllib.parse import quote
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for, send_file, jsonify, g
 )
 
-from core.data import get_prog, save_prog, save_prog_body, get_onboarding
+from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
+                       rename_seance_rows)
 from core.dates import DAYS_FR
+from core.limiter import limiter
 from core.muscu import auto_muscles
 from core import catalog
 from core.analytics import paywall
@@ -499,11 +502,121 @@ def new_seance():
     name = (request.form.get("name") or "").strip()
     if not name:
         return redirect(url_for("programme.programme"))
+    if name.startswith("_"):
+        return redirect(url_for("programme.programme") + "?seance=reserve")
     prog = get_prog()
-    if name not in prog:
-        prog[name] = []
+    if name in prog:
+        # Avant, la création échouait EN SILENCE : le formulaire se fermait,
+        # rien n'apparaissait, et on ne pouvait que conclure à un bug.
+        return redirect(url_for("programme.programme")
+                        + f"?seance=pris&par={quote(_programme_de(prog, name))}")
+    prog[name] = []
     save_prog(prog)
     return redirect(url_for("programme.programme") + f"#s-{name}")
+
+
+def _renommer_partout(prog, ancien, nouveau):
+    """Déplace une séance et TOUT ce qui la désigne.
+
+    Sept structures portent le nom d'une séance : le programme lui-même, son
+    rattachement (`_seance_prog`), le planning, et quatre calques rangés par
+    « séance|date » — exos ajoutés, ordre des cartes, brouillon libre, bilans
+    de fin. En oublier un ne casse rien visiblement : ça laisse juste des
+    données orphelines qui ne reviendront jamais, et personne ne saura
+    pourquoi.
+    """
+    ordre = [k for k in prog if not k.startswith("_")]
+    if ancien not in ordre:
+        return False
+    # Le dict garde son ordre : on le reconstruit pour que la séance
+    # renommée reste à sa place dans la liste.
+    technique = {k: v for k, v in prog.items() if k.startswith("_")}
+    refait = {}
+    for nom in ordre:
+        refait[nouveau if nom == ancien else nom] = prog[nom]
+    prog.clear()
+    prog.update(refait)
+    prog.update(technique)
+
+    rattachement = prog.get("_seance_prog")
+    if isinstance(rattachement, dict) and ancien in rattachement:
+        rattachement[nouveau] = rattachement.pop(ancien)
+
+    planning = prog.get("_planning")
+    if isinstance(planning, dict):
+        for jour, seance in planning.items():
+            if seance == ancien:
+                planning[jour] = nouveau
+
+    for calque in ("_extras", "_seance_order", "_libre_draft",
+                   "_session_notes", "_substituts"):
+        store = prog.get(calque)
+        if not isinstance(store, dict):
+            continue
+        for cle in [c for c in store if str(c).rsplit("|", 1)[0] == ancien]:
+            date = str(cle).rsplit("|", 1)[-1]
+            store[f"{nouveau}|{date}"] = store.pop(cle)
+    return True
+
+
+@bp.route("/programme/seance/rename", methods=["POST"])
+@limiter.limit("20 per minute")
+def rename_seance():
+    """Renomme une séance, dans le programme ET dans l'historique.
+
+    Appelée par la page programme, qui est pilotée côté client : elle
+    renommait jusqu'ici en local, donc l'historique restait sous l'ancien
+    nom. La séance repartait à zéro — volume, records, progression — sans
+    que rien ne le signale.
+    """
+    data = request.get_json(silent=True) or request.form
+    ancien = (data.get("name") or "").strip()
+    nouveau = (data.get("new_name") or "").strip()[:80]
+    if not ancien or not nouveau or ancien == nouveau:
+        return jsonify({"ok": False, "error": "vide"}), 400
+    if nouveau.startswith("_"):
+        return jsonify({"ok": False, "error": "reserve"}), 400
+
+    prog = get_prog()
+    if nouveau in prog:
+        # Les séances sont uniques TOUS PROGRAMMES CONFONDUS, parce que
+        # l'historique les retrouve par leur nom. On dit donc qui détient
+        # déjà ce nom, sinon on le cherche au mauvais endroit.
+        return jsonify({"ok": False, "error": "pris",
+                        "programme": _programme_de(prog, nouveau)}), 409
+    if not _renommer_partout(prog, ancien, nouveau):
+        return jsonify({"ok": False, "error": "introuvable"}), 404
+    save_prog(prog)
+    try:
+        lignes = rename_seance_rows(ancien, nouveau)
+    except Exception as e:
+        logger.error("rename_seance historique FAILED user=%s: %s",
+                     getattr(g, "user_id", "?"), e)
+        return jsonify({"ok": False, "error": "historique"}), 500
+    return jsonify({"ok": True, "series": lignes})
+
+
+@bp.route("/programme/seance/disponible", methods=["POST"])
+@limiter.limit("60 per minute")
+def seance_disponible():
+    """Ce nom est-il libre, et sinon qui le détient ?"""
+    data = request.get_json(silent=True) or request.form
+    nom = (data.get("name") or "").strip()
+    prog = get_prog()
+    if not nom or nom.startswith("_"):
+        return jsonify({"libre": False, "error": "reserve"})
+    if nom in prog:
+        return jsonify({"libre": False, "programme": _programme_de(prog, nom)})
+    return jsonify({"libre": True})
+
+
+def _programme_de(prog, seance_name):
+    """Le nom du programme qui contient cette séance, pour le dire à l'écran."""
+    pid = (prog.get("_seance_prog") or {}).get(seance_name)
+    for pg in prog.get("_programmes") or []:
+        if isinstance(pg, dict) and pg.get("id") == pid:
+            return pg.get("name") or "un autre programme"
+    return "un autre programme"
 
 
 @bp.route("/programme/seance/delete", methods=["POST"])

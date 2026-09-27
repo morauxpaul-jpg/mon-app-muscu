@@ -171,6 +171,9 @@
           Aucune séance — ajoute-en une ci-dessous.
         </div>
 
+        <p x-show="seanceMsg" x-cloak x-text="seanceMsg"
+           style="font-size:0.78rem; color:#FF9F0A; margin:8px 0 0; line-height:1.4;"></p>
+
         <div style="display:flex; gap:6px; margin-top:10px;">
           <input type="text" x-model="newSname" class="field" style="flex:1; margin:0;"
                  placeholder="Nouvelle séance (ex: Push)" maxlength="60"
@@ -528,6 +531,8 @@
       renameModal: { open: false, id: null, name: '' },
       profileModal: { open: false, mode: 'add', name: '' },
       confirmDeleteProfile: false,
+      // Pourquoi une séance n'a pas pu être créée ou renommée.
+      seanceMsg: '',
 
       // Alpine applique x-model AVANT que x-for ait créé les <option> : le
       // navigateur ne trouve pas la valeur et retombe sur la première option
@@ -799,7 +804,20 @@
       // ── Séances ──
       addSeance(name, progId) {
         name = (name || '').trim();
-        if (!name || this.prog[name]) return;
+        if (!name) return;
+        if (this.prog[name]) {
+          // Avant, la création échouait EN SILENCE : le champ se vidait,
+          // rien n'apparaissait, et on ne pouvait que conclure à un bug.
+          // Les séances sont uniques tous programmes confondus parce que
+          // l'historique les retrouve par leur nom — donc on dit qui le
+          // détient, sinon on le cherche dans le mauvais programme.
+          this.seanceMsg = "« " + name + " » existe déjà dans "
+            + (this.programmeDe(name) || "un autre programme")
+            + ". Les noms de séance servent à retrouver ton historique : "
+            + "ils doivent rester uniques. Essaie « " + name + " B ».";
+          return;
+        }
+        this.seanceMsg = '';
         this.prog[name] = [];
         this.seanceOrder.push(name);
         if (progId && this.programmes.some(function (p) { return p.id === progId; })) {
@@ -816,27 +834,67 @@
         }
         this.scheduleSave();
       },
+      programmeDe(name) {
+        var pid = this.seanceProg[name];
+        var trouve = this.programmes.filter(function (p) { return p.id === pid; })[0];
+        return trouve ? trouve.name : null;
+      },
+
       renameSeance(oldName, newName) {
         newName = (newName || '').trim();
-        if (!newName || newName === oldName || this.prog[newName]) return;
-        // Reconstruit prog en gardant l'ordre
-        var newProg = {};
-        for (var i = 0; i < this.seanceOrder.length; i++) {
-          var k = this.seanceOrder[i];
-          if (k === oldName) newProg[newName] = this.prog[k];
-          else newProg[k] = this.prog[k];
+        if (!newName || newName === oldName) return;
+        if (this.prog[newName]) {
+          this.seanceMsg = "« " + newName + " » existe déjà dans "
+            + (this.programmeDe(newName) || "un autre programme") + ".";
+          return;
         }
-        this.prog = newProg;
-        this.seanceOrder = this.seanceOrder.map(function (s) { return s === oldName ? newName : s; });
-        if (this.seanceProg[oldName]) {
-          this.seanceProg[newName] = this.seanceProg[oldName];
-          delete this.seanceProg[oldName];
-        }
-        for (var d in this.planning) {
-          if (this.planning[d] === oldName) this.planning[d] = newName;
-        }
-        this.scheduleSave();
+        // Le renommage passe par le serveur : lui seul peut renommer
+        // l'historique. Le faire en local laissait les séries sous l'ancien
+        // nom, et la séance repartait à zéro sans rien dire.
+        var self = this;
+        this.seanceMsg = '';
+        fetch('/programme/seance/rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: oldName, new_name: newName })
+        }).then(function (r) {
+          return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+        }).then(function (res) {
+          if (!res.ok) {
+            self.seanceMsg = res.d && res.d.error === 'pris'
+              ? "« " + newName + " » existe déjà dans " + res.d.programme + "."
+              : "Le renommage a échoué. Rien n'a été modifié.";
+            return;
+          }
+          // Le serveur a déjà tout déplacé : on aligne l'écran dessus
+          // sans redemander une sauvegarde, qui écraserait son travail.
+          var newProg = {};
+          for (var i = 0; i < self.seanceOrder.length; i++) {
+            var k = self.seanceOrder[i];
+            if (k === oldName) newProg[newName] = self.prog[k];
+            else newProg[k] = self.prog[k];
+          }
+          self.prog = newProg;
+          self.seanceOrder = self.seanceOrder.map(function (x) {
+            return x === oldName ? newName : x;
+          });
+          if (self.seanceProg[oldName]) {
+            self.seanceProg[newName] = self.seanceProg[oldName];
+            delete self.seanceProg[oldName];
+          }
+          for (var d in self.planning) {
+            if (self.planning[d] === oldName) self.planning[d] = newName;
+          }
+          self.seanceMsg = res.d.series
+            ? "Séance renommée, et " + res.d.series + " série(s) d'historique "
+              + "ont suivi."
+            : "Séance renommée.";
+          self.syncPlanningSelects();
+        }).catch(function () {
+          self.seanceMsg = "Le renommage a échoué. Rien n'a été modifié.";
+        });
       },
+
       moveSeanceInProg(name, dir) {
         // Déplace la séance parmi ses voisines du même programme
         var pid = this.seanceProg[name] || null;

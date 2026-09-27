@@ -1,6 +1,15 @@
 {
-  "current": "v58",
+  "current": "v59",
   "entries": [
+    {
+      "version": "v59",
+      "date": "2026-09-27",
+      "title": "Renommer une séance sans perdre son historique",
+      "changes": [
+        "Tu peux renommer une séance : ses séries, son volume et ses records la suivent. Avant, le passé restait sous l'ancien nom et la séance repartait de zéro sans rien dire",
+        "Quand un nom de séance est déjà pris, l'app te le dit et te précise dans quel programme il se trouve — utile quand on en construit un deuxième à côté du premier. Les noms servent à retrouver ton historique, ils restent donc uniques"
+      ]
+    },
     {
       "version": "v58",
       "date": "2026-09-27",
