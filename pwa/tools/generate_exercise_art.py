@@ -81,6 +81,24 @@ class CleRefusee(Exception):
     """Google a refusé la clé : rien ne sert de continuer la file."""
 
 
+def _forme_de_cle(cle):
+    """Ce que la clé a l'air d'être, avant de la soumettre à Google.
+
+    Une clé API Gemini commence par « AIza ». Un jeton de session AI Studio
+    commence par « AQ. » et ne donne PAS accès à cette API : Google répond
+    alors 401 « Expected OAuth 2 access token », ce qui n'aide personne à
+    comprendre qu'il faut aller chercher une vraie clé.
+    """
+    cle = (cle or "").strip()
+    if cle.startswith("AIza"):
+        return None
+    if cle.startswith("AQ."):
+        return ("cette valeur est un jeton de session AI Studio, pas une clé "
+                "API : elle commence par « AQ. ».")
+    return ("cette valeur ne ressemble pas à une clé API Gemini, qui "
+            "commence par « AIza ».")
+
+
 def _resume_cle(corps):
     if "TA_CLE" in corps or "VOTRE_CLE" in corps:
         return "la commande a été lancée avec le modèle de clé, pas la vôtre."
@@ -140,6 +158,12 @@ def _demander(cle, prompt, reference, modele=MODELE):
         parties.insert(0, {"text": "Use the reference image ONLY for the "
                                    "rendering style, the mannequin's look and "
                                    "materials, the lighting and the background. "
+                                   "The reference shows a standing figure "
+                                   "holding a BARBELL: neither its pose nor "
+                                   "its equipment apply here. Draw only the "
+                                   "equipment named in the instructions "
+                                   "below — if they say dumbbells, there is "
+                                   "no bar of any kind in the image. "
                                    "The reference shows a STANDING figure: "
                                    "your pose comes from the instructions "
                                    "below and will usually be completely "
@@ -229,7 +253,8 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
                     time.sleep(ATTENTE_QUOTA)
                     continue
                 detail = e.read().decode(errors="replace")
-                if e.code in (400, 401, 403) and "API_KEY" in detail:
+                if e.code == 401 or (e.code in (400, 403)
+                                     and "API_KEY" in detail):
                     # La clé ne deviendra pas valide à l'exercice suivant.
                     # Répéter l'erreur 87 fois noie le message utile.
                     raise CleRefusee(_resume_cle(detail))
@@ -278,6 +303,13 @@ if __name__ == "__main__":
 
     # Un modèle de commande collé tel quel se reconnaît sans rien demander
     # à Google : autant le dire tout de suite.
+    probleme = _forme_de_cle(a.cle)
+    if probleme:
+        print(probleme)
+        print("Une clé s'obtient sur https://aistudio.google.com/apikey,")
+        print("bouton « Create API key ». Elle commence par AIza.")
+        raise SystemExit(1)
+
     if a.cle in ("TA_CLE", "VOTRE_CLE", "CLE", "cle"):
         print(f"« {a.cle} » est le modèle de la commande, pas votre clé.")
         print("Remplacez-le, ou retirez --cle si GEMINI_API_KEY est déjà")

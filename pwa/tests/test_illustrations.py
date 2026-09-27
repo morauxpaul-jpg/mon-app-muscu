@@ -480,3 +480,97 @@ def test_chaque_exercice_du_catalogue_a_son_prompt():
         f"sans prompt : {manquants} — relancer "
         "python tools/build_exercise_prompts.py")
     assert not orphelins, f"prompts sans exercice : {orphelins}"
+
+
+def test_les_exercices_aux_halteres_le_disent_dans_leur_prompt():
+    """La description française dit « haltères », mais le modèle dessinait
+    une barre : l'image de référence en tient une, et la description
+    française n'était pas une consigne pour lui.
+
+    Ce test ne porte que sur les exercices dont le nom nomme explicitement
+    l'haltère — ceux dont la fiche l'évoque en passant (« machine, marche
+    avec haltères ») ne sont pas concernés.
+    """
+    import re
+    from core.exercises_data import EXERCISES_INFO
+    prompts = _prompts()
+    muets = []
+    for nom in EXERCISES_INFO:
+        if not re.search(r"halt[eè]re", nom, re.IGNORECASE):
+            continue
+        if "dumbbell" not in prompts[nom]["prompt"].lower():
+            muets.append(nom)
+    assert not muets, f"aux haltères mais le prompt n'en parle pas : {muets}"
+
+
+def test_la_reference_nimpose_pas_son_materiel(monkeypatch):
+    """Elle montre un homme avec une barre. Sans consigne, tout le
+    catalogue héritait de cette barre — y compris le curl marteau, qui se
+    fait à deux haltères en prise neutre.
+
+    On lit ce qui part vraiment sur le réseau : la consigne est écrite sur
+    plusieurs lignes dans la source, donc aucune recherche de texte dans le
+    fichier ne la trouverait telle quelle.
+    """
+    import base64
+    import contextlib
+    import io as flux
+    import json
+    import sys
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    envoye = {}
+
+    @contextlib.contextmanager
+    def _faux_appel(requete, timeout=None):
+        envoye["corps"] = json.loads(requete.data.decode())
+        image = base64.b64encode(b"PNG").decode()
+        yield flux.BytesIO(json.dumps({"candidates": [{"content": {
+            "parts": [{"inline_data": {"data": image}}]}}]}).encode())
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _faux_appel)
+    g._demander("cle", "PROMPT",
+                {"inline_data": {"mime_type": "image/png", "data": "eA=="}})
+
+    cadrage = envoye["corps"]["contents"][0]["parts"][0]["text"]
+    assert "nor its equipment apply here" in cadrage
+    assert "no bar of any kind" in cadrage
+
+
+def test_le_curl_marteau_precise_sa_prise():
+    """Sa particularité EST la prise : paumes face à face, pouces vers le
+    haut. En supination, c'est un curl classique, pas un curl marteau."""
+    p = _prompts()["Curl marteau"]["prompt"].lower()
+    assert "neutral grip" in p
+    assert "thumbs point up" in p
+    assert "do not face upwards" in p
+
+
+@pytest.mark.parametrize("cle,attendu", [
+    ("AQ.Ab8RN6quelquechose", "jeton de session"),
+    ("nimportequoi", "ne ressemble pas"),
+    ("", None),
+])
+def test_une_cle_mal_formee_est_reconnue_avant_tout_appel(cle, attendu):
+    """Google répond 401 « Expected OAuth 2 access token » quand on lui
+    envoie un jeton de session AI Studio au lieu d'une clé API. Le message
+    n'aide personne à comprendre qu'il faut aller en chercher une vraie —
+    et il coûtait un aller-retour par exercice avant qu'on s'en aperçoive.
+    """
+    import sys
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import _forme_de_cle
+    probleme = _forme_de_cle(cle)
+    if attendu is None:
+        assert probleme is not None, "une clé vide doit être signalée"
+    else:
+        assert probleme and attendu in probleme
+
+
+def test_une_vraie_cle_passe_le_controle_de_forme():
+    """Le contrôle ne doit pas bloquer ce qui marche."""
+    import sys
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import _forme_de_cle
+    assert _forme_de_cle("AIzaSyExempleDeCleQuiRessembleAUneVraie") is None

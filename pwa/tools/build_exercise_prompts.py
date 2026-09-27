@@ -185,6 +185,58 @@ GESTES = {
                             "elbow, raised FORWARD in front of the chest up "
                             "to shoulder height, palms facing down. The "
                             "elbows are not bent at all",
+    # ── Halteres pris pour des barres ─────────────────────────────
+    # La description francaise dit « halteres », mais le modele dessinait
+    # une barre : l'image de reference en tient une, et rien ne lui
+    # interdisait de la recopier. La geometrie est ce qui marche — deux
+    # objets courts, un espace vide entre les mains — la ou « ce n'est pas
+    # une barre » n'avait jamais rien donne.
+    "Curl marteau": "standing, holding TWO SEPARATE SHORT DUMBBELLS, one in "
+                    "each hand, with a clear empty gap between the two hands "
+                    "— nothing connects them. NEUTRAL grip: the palms face "
+                    "EACH OTHER and the thumbs point UP, as if holding two "
+                    "hammers. The palms do NOT face upwards. Elbows pinned "
+                    "to the sides, forearms curled up to chest height",
+    "Curl incliné haltères": "sitting leaning back on a bench inclined at "
+                             "about 45 degrees, holding TWO SEPARATE SHORT "
+                             "DUMBBELLS, one in each hand, with a clear empty "
+                             "gap between the hands — nothing connects them. "
+                             "Arms hang straight down behind the torso, then "
+                             "curl up, palms facing up",
+    "Shrug": "standing upright, holding TWO SEPARATE SHORT DUMBBELLS, one in "
+             "each hand hanging at arm's length beside the hips, with a clear "
+             "empty gap between the hands — nothing connects them. Shoulders "
+             "shrugged straight up towards the ears, elbows straight",
+    "Floor press haltères": "lying FACE UP on the floor, knees bent and feet "
+                            "flat, holding TWO SEPARATE SHORT DUMBBELLS, one "
+                            "in each hand, pressed straight up above the "
+                            "chest. Nothing connects the two hands, and the "
+                            "elbows rest on the floor at the bottom",
+    "Extension triceps haltère": "standing, holding ONE single SHORT DUMBBELL "
+                                 "with BOTH hands together, raised behind the "
+                                 "head; elbows point up and stay close to the "
+                                 "ears while the forearms lower the dumbbell "
+                                 "behind the neck. There is no barbell and no "
+                                 "second dumbbell",
+    # Ceux-la sont sortis JUSTES, mais sur la seule description francaise :
+    # rien ne garantissait le materiel. On l'ecrit pour que ca ne depende
+    # plus de la chance a la prochaine generation.
+    "Rowing haltère": "one knee and one hand resting on a flat bench, torso "
+                      "horizontal, the free arm pulling ONE single SHORT "
+                      "DUMBBELL up towards the hip. Only one dumbbell in the "
+                      "image, and no bar of any kind",
+    "Rowing haltère (ou élastique)": "bent forward at the hips, back flat, "
+                                    "pulling ONE single SHORT DUMBBELL up "
+                                    "towards the hip. No bar of any kind",
+    "Rowing unilatéral haltère": "one knee and one hand resting on a flat "
+                                 "bench, the other hand pulling ONE single "
+                                 "SHORT DUMBBELL up towards the hip. Only "
+                                 "one dumbbell, and no bar of any kind",
+    "Développé haltères assis": "sitting upright on a bench with a vertical "
+                               "backrest, pressing TWO SEPARATE SHORT "
+                               "DUMBBELLS from shoulder height straight up "
+                               "overhead. A clear empty gap between the two "
+                               "hands — nothing connects them",
     "Machine adducteurs": "SEATED on an adductor machine: upright back "
                           "against a padded backrest, both knees SPREAD "
                           "APART with the inner side of each thigh pressed "
