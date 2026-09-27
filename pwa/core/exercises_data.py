@@ -1141,6 +1141,89 @@ def _alias_du_catalogue():
 
 _PAR_ALIAS = _alias_du_catalogue()
 
+# Mots de liaison : ils varient d'une écriture à l'autre (« Soulevé de
+# terre » / « Soulevé terre ») sans rien distinguer.
+_MOTS_VIDES = {"a", "de", "du", "des", "la", "le", "les", "ou", "en",
+               "au", "aux", "l", "d", "the", "of"}
+
+
+def _jetons(nom: str) -> frozenset:
+    """Les mots utiles d'un nom, au singulier.
+
+    « Élévations latérales » et « ELÉVATION LATÉRALE » donnent le même
+    jeu : {elevation, laterale}. Comparer des JEUX de mots plutôt que des
+    chaînes rend la reconnaissance insensible au pluriel ET à l'ordre —
+    « Triceps extension » retrouve « Extensions triceps ».
+    """
+    mots = set()
+    for mot in _cle(nom).split():
+        if mot in _MOTS_VIDES:
+            continue
+        # On ne désingularise qu'à partir de 4 lettres : sinon « dos » et
+        # « bras » se feraient amputer.
+        mots.add(mot[:-1] if len(mot) > 3 and mot.endswith(("s", "x")) else mot)
+    return frozenset(mots)
+
+
+# Noms anglais courants en salle. Le catalogue est en français, mais
+# personne ne dit « écartés à la poulie vis-à-vis » devant sa machine.
+# Ce que les jeux de mots ne peuvent pas rattraper — aucun mot commun —
+# se déclare ici.
+_ANGLAIS = {
+    "pec fly": "Écartés poulie",
+    "pec deck": "Écartés poulie",
+    "chest fly": "Écartés poulie",
+    "butterfly": "Écartés poulie",
+    "cable fly": "Écartés poulie",
+    "bench press": "Développé couché",
+    "incline bench press": "Développé incliné",
+    "shoulder press": "Développé militaire",
+    "military press": "Développé militaire",
+    "overhead press": "Développé militaire",
+    "overhead triceps extension": "Extension triceps haltère",
+    "french press": "Extension triceps haltère",
+    "triceps pushdown": "Extensions triceps poulie",
+    "pushdown": "Extensions triceps poulie",
+    "lateral raise": "Élévations latérales",
+    "side raise": "Élévations latérales",
+    "front raise": "Élévations latérales",
+    "rear delt fly": "Oiseau",
+    "reverse fly": "Oiseau",
+    "lat pulldown": "Tirage vertical",
+    "pulldown": "Tirage vertical",
+    "seated row": "Tirage horizontal poulie",
+    "cable row": "Tirage horizontal poulie",
+    "barbell row": "Rowing barre",
+    "dumbbell row": "Rowing haltère",
+    "deadlift": "Soulevé de terre",
+    "romanian deadlift": "Soulevé de terre roumain",
+    "hammer curl": "Curl marteau",
+    "barbell curl": "Curl barre",
+    "pull up": "Tractions",
+    "chin up": "Tractions",
+    "push up": "Pompes",
+    "calf raise": "Mollets debout",
+    "leg curl machine": "Leg curl",
+    "goblet squat": "Squat gobelet",
+    "bulgarian split squat": "Squat bulgare",
+    "walking lunges": "Fentes marchées",
+    "side plank": "Gainage latéral",
+    "leg raise": "Relevé de jambes",
+}
+
+def _index_par_jetons():
+    """Chaque exercice par son jeu de mots. Premier arrivé, premier servi :
+    « Shrug » / « Shrugs » et « Squat » / « Squats » se réduisent au même
+    jeu, mais tous quatre gardent leur fiche par la correspondance exacte,
+    qui passe avant."""
+    index = {}
+    for nom in EXERCISES_INFO:
+        index.setdefault(_jetons(nom), nom)
+    return index
+
+
+_PAR_JETONS = _index_par_jetons()
+
 # Suffixes de matériel à retirer quand le nom complet ne donne rien.
 _SUFFIXES = ("halteres", "haltere", "barre", "poulie", "machine",
              "elastique", "elastiques", "sol", "smith", "ez")
@@ -1186,14 +1269,28 @@ def get_exercise_info(name):
         if candidat in _PAR_ALIAS:
             return _fiche(_PAR_ALIAS[candidat])
 
-    # 6. Le plus long nom de catalogue dont le nom reçu est une extension :
-    #    « Rowing barre buste penché » → « Rowing barre ». Le plus long
-    #    l'emporte, sinon « Squat » capterait tous les squats.
-    meilleur, longueur = None, 0
-    for cle_cat, nom_cat in _PAR_CLE.items():
-        if len(cle_cat) > longueur and (cle.startswith(cle_cat + " ")
-                                        or cle == cle_cat):
-            meilleur, longueur = nom_cat, len(cle_cat)
+    # 6. Nom anglais courant en salle : « pec fly » n'a aucun mot en
+    #    commun avec « Écartés poulie », rien d'automatique ne les relie.
+    for candidat in (cle, cle_nu):
+        if candidat in _ANGLAIS:
+            return _fiche(_ANGLAIS[candidat])
+
+    # 7. Mêmes mots, écrits autrement : « ELÉVATION LATÉRALE » pour
+    #    « Élévations latérales », « Triceps extension » pour
+    #    « Extensions triceps ».
+    jetons = _jetons(name)
+    if jetons in _PAR_JETONS:
+        return _fiche(_PAR_JETONS[jetons])
+
+    # 8. Le nom reçu contient tous les mots d'un exercice, plus d'autres :
+    #    « ÉCARTÉ POULIE VIS À VIS HAUTE » contient « Écartés poulie ».
+    #    Le plus couvrant l'emporte, sinon « Squat » capterait tous les
+    #    squats ; à égalité, l'ordre du catalogue tranche, pour que deux
+    #    affichages de la même séance ne donnent pas deux fiches.
+    meilleur, couverture = None, 0
+    for jetons_cat, nom_cat in _PAR_JETONS.items():
+        if len(jetons_cat) > couverture and jetons_cat <= jetons:
+            meilleur, couverture = nom_cat, len(jetons_cat)
     if meilleur:
         return _fiche(meilleur)
     return None

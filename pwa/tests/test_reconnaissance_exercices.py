@@ -97,3 +97,77 @@ def test_chaque_exercice_du_catalogue_garde_sa_propre_fiche():
         if info is not EXERCISES_INFO[nom] and info["name"] != EXERCISES_INFO[nom]["name"]:
             melanges.append(nom)
     assert not melanges, melanges
+
+
+# ── Noms relevés dans un vrai programme ──────────────────────────
+# Cinq exercices d'une séance réelle n'avaient ni illustration ni conseils
+# d'exécution. Trois causes distinctes, aucune n'était un nom inventé :
+# le singulier contre le pluriel du catalogue, l'ordre des mots inversé,
+# et le vocabulaire anglais de salle.
+
+
+@pytest.mark.parametrize("saisi,attendu", [
+    ("ÉCARTÉ POULIE VIS À VIS HAUTE", "Écartés poulie"),   # singulier + précisions
+    ("ELÉVATION LATÉRALE", "Élévations latérales"),        # singulier des deux mots
+    ("TRICEPS EXTENSION", "Extensions triceps"),           # ordre inversé
+    ("PEC FLY", "Écartés poulie"),                         # anglais, aucun mot commun
+    ("OVERHEAD TRICEPS EXTENSION", "Extension triceps haltère"),
+])
+def test_les_noms_releves_dans_un_vrai_programme(saisi, attendu):
+    info = get_exercise_info(saisi)
+    assert info is not None, f"« {saisi} » reste sans fiche"
+    assert info["name"].startswith(attendu)
+
+
+@pytest.mark.parametrize("saisi,attendu", [
+    ("Élévation latérale", "Élévations latérales"),
+    ("Pompe", "Pompes"),
+    ("Fente", "Fentes"),
+    ("Traction", "Tractions"),
+])
+def test_le_singulier_retrouve_le_pluriel_du_catalogue(saisi, attendu):
+    info = get_exercise_info(saisi)
+    assert info is not None, saisi
+    assert info["name"].startswith(attendu)
+
+
+@pytest.mark.parametrize("anglais,attendu", [
+    ("bench press", "Développé couché"),
+    ("deadlift", "Soulevé de terre"),
+    ("lat pulldown", "Tirage vertical"),
+    ("hammer curl", "Curl marteau"),
+    ("push up", "Pompes"),
+])
+def test_le_vocabulaire_anglais_de_salle_est_reconnu(anglais, attendu):
+    """Le catalogue est en français, mais personne ne dit « écartés à la
+    poulie vis-à-vis » devant sa machine."""
+    info = get_exercise_info(anglais)
+    assert info is not None, anglais
+    assert info["name"].startswith(attendu)
+
+
+def test_la_table_anglaise_ne_pointe_que_sur_des_exercices_existants():
+    """Une entrée qui vise une fiche disparue ferait planter la résolution
+    au lieu de retomber sur « pas de fiche »."""
+    from core.exercises_data import _ANGLAIS
+    fantomes = [k for k, v in _ANGLAIS.items() if v not in EXERCISES_INFO]
+    assert not fantomes, fantomes
+
+
+def test_la_table_anglaise_ne_recouvre_aucun_nom_francais():
+    """Sinon elle détournerait un exercice qui se résolvait très bien tout
+    seul, et l'erreur serait invisible."""
+    from core.exercises_data import _ANGLAIS, _cle
+    vrais = {_cle(n) for n in EXERCISES_INFO}
+    recouvrants = [k for k in _ANGLAIS if _cle(k) in vrais]
+    assert not recouvrants, recouvrants
+
+
+def test_les_variantes_voisines_ne_se_confondent_pas():
+    """Le rattrapage par jeu de mots est large : il ne doit pas faire
+    converger deux exercices que l'utilisateur distingue."""
+    assert get_exercise_info("Dips machine")["name"] != get_exercise_info("Dips")["name"]
+    assert (get_exercise_info("Gainage latéral")["name"]
+            != get_exercise_info("Gainage")["name"])
+    assert (get_exercise_info("Élévations latérales haltères")["name"]
+            != get_exercise_info("Élévations latérales")["name"])
