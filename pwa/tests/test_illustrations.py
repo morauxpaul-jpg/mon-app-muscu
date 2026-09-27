@@ -411,3 +411,31 @@ def test_chaque_exercice_du_catalogue_a_son_illustration():
     manquantes = sorted(nom for nom in EXERCISES_INFO
                         if illustration_slug(nom) not in livres)
     assert not manquantes, f"exercices sans illustration : {manquantes}"
+
+
+def test_chaque_illustration_livree_est_une_image_valide():
+    """Exister ne suffit pas. Un fichier de 0 octet passe tous les tests qui
+    se contentent de regarder son NOM — et c'est arrivé : une écriture
+    interrompue a laissé `push-press.webp` vide, et il a été commité.
+
+    Sur la carte de séance, une image vide ne casse rien : elle ne
+    s'affiche simplement pas, sans erreur nulle part.
+    """
+    import glob
+    import os
+    from PIL import Image
+    cassees = []
+    for chemin in sorted(glob.glob("static/img/exercises/*.webp")):
+        nom = os.path.basename(chemin)
+        taille = os.path.getsize(chemin)
+        if taille < 1024:
+            cassees.append(f"{nom} : {taille} octets")
+            continue
+        try:
+            with Image.open(chemin) as im:
+                im.load()
+                if im.size != (400, 400):
+                    cassees.append(f"{nom} : {im.size} au lieu de (400, 400)")
+        except Exception as e:
+            cassees.append(f"{nom} : illisible ({type(e).__name__})")
+    assert not cassees, cassees
