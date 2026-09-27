@@ -542,9 +542,12 @@ def test_le_curl_marteau_precise_sa_prise():
     """Sa particularité EST la prise : paumes face à face, pouces vers le
     haut. En supination, c'est un curl classique, pas un curl marteau."""
     p = _prompts()["Curl marteau"]["prompt"].lower()
-    assert "neutral grip" in p
-    assert "thumbs point up" in p
-    assert "do not face upwards" in p
+    assert "hammer grip" in p
+    # Ce qui fait la prise marteau, c'est l'ORIENTATION de l'haltère, pas
+    # seulement celle de la paume : la première tentative ne parlait que
+    # des paumes, et l'haltère est ressorti en travers du corps.
+    assert "front-to-back" in p
+    assert "thumbs on top" in p
 
 
 @pytest.mark.parametrize("cle,attendu", [

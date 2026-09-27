@@ -191,18 +191,26 @@ GESTES = {
     # interdisait de la recopier. La geometrie est ce qui marche — deux
     # objets courts, un espace vide entre les mains — la ou « ce n'est pas
     # une barre » n'avait jamais rien donne.
-    "Curl marteau": "standing, holding TWO SEPARATE SHORT DUMBBELLS, one in "
-                    "each hand, with a clear empty gap between the two hands "
-                    "— nothing connects them. NEUTRAL grip: the palms face "
-                    "EACH OTHER and the thumbs point UP, as if holding two "
-                    "hammers. The palms do NOT face upwards. Elbows pinned "
-                    "to the sides, forearms curled up to chest height",
+    "Curl marteau": "standing, a small dumbbell in each hand — a short "
+                    "handle with one small disc at each end, held entirely "
+                    "inside the closed hand, the two far apart with the "
+                    "torso between them. HAMMER GRIP: each dumbbell is "
+                    "turned so its handle runs FRONT-TO-BACK, in line with "
+                    "the forearm, the way you would hold a hammer. The discs "
+                    "are seen edge-on from the front, one in front of the "
+                    "other, NOT side by side across the body. Palms face "
+                    "each other, thumbs on top. Elbows pinned to the sides, "
+                    "forearms curled up to chest height",
     "Curl incliné haltères": "sitting leaning back on a bench inclined at "
-                             "about 45 degrees, holding TWO SEPARATE SHORT "
-                             "DUMBBELLS, one in each hand, with a clear empty "
-                             "gap between the hands — nothing connects them. "
-                             "Arms hang straight down behind the torso, then "
-                             "curl up, palms facing up",
+                             "about 45 degrees. In EACH hand, a small "
+                             "dumbbell: a short handle no longer than the "
+                             "width of a fist, with one small disc at each "
+                             "end, held entirely INSIDE the closed hand. The "
+                             "two dumbbells are far apart, one hanging beside "
+                             "each hip, with the whole torso between them. "
+                             "There is NO long bar crossing the body and the "
+                             "hands do NOT hold the same object. Arms hang "
+                             "down, then curl up, palms facing up",
     "Shrug": "standing upright, holding TWO SEPARATE SHORT DUMBBELLS, one in "
              "each hand hanging at arm's length beside the hips, with a clear "
              "empty gap between the hands — nothing connects them. Shoulders "
@@ -212,12 +220,25 @@ GESTES = {
                             "in each hand, pressed straight up above the "
                             "chest. Nothing connects the two hands, and the "
                             "elbows rest on the floor at the bottom",
-    "Extension triceps haltère": "standing, holding ONE single SHORT DUMBBELL "
-                                 "with BOTH hands together, raised behind the "
-                                 "head; elbows point up and stay close to the "
-                                 "ears while the forearms lower the dumbbell "
-                                 "behind the neck. There is no barbell and no "
-                                 "second dumbbell",
+    # Quatre essais sur celui-ci, et le modèle oscille : soit une barre
+    # avec le rouge parfaitement posé sur les triceps, soit deux haltères
+    # avec le rouge qui déborde sur l'arrière d'épaule. Jamais l'haltère
+    # unique tenu à deux mains. La consigne ci-dessous reste la bonne —
+    # c'est l'exercice tel qu'il se fait — mais l'image livrée est
+    # l'approximation à deux haltères : matériel de la bonne famille, vue
+    # de dos, rouge sur les triceps. Assez juste à 60 px, et on s'arrête là.
+    "Extension triceps haltère": "standing with the BACK TURNED to the "
+                                 "camera — we see the mannequin's back and "
+                                 "shoulder blades, never its chest. "
+                                 "The two hands are CUPPED TOGETHER around "
+                                 "the single upper disc of ONE small "
+                                 "dumbbell held VERTICALLY behind the head, "
+                                 "the way you hold a mug with both hands. "
+                                 "The whole weight is no wider than the head "
+                                 "and NOTHING extends sideways beyond the "
+                                 "hands — no bar, no disc near either "
+                                 "shoulder. Elbows point up, close to the "
+                                 "ears.",
     # Ceux-la sont sortis JUSTES, mais sur la seule description francaise :
     # rien ne garantissait le materiel. On l'ecrit pour que ca ne depende
     # plus de la chance a la prochaine generation.
