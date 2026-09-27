@@ -302,3 +302,22 @@ def test_le_nom_du_muscle_ne_se_repete_pas_dans_sa_description():
         if description.lower().startswith(ancre.lower()):
             doublons.append(libelle)
     assert not doublons, f"le nom du muscle ouvre sa propre description : {doublons}"
+
+
+def test_le_prompt_exige_que_la_camera_voie_le_muscle():
+    """Sur une planche les abdos regardent le sol, sur un hip thrust les
+    fessiers sont dessous, sur un soulevé de terre les érecteurs sont
+    derrière. Trois fois, le modèle a peint la face qu'il avait sous les
+    yeux : lombaires, avant de la cuisse, flanc. Ce n'était pas un problème
+    de formulation mais d'angle de prise de vue."""
+    manquants = [n for n, e in _prompts().items()
+                 if "red-orange" in e["prompt"] and "faces the viewer" not in e["prompt"]]
+    assert not manquants, manquants
+
+
+def test_le_bas_des_pectoraux_reste_sur_la_poitrine():
+    """« the BOTTOM edge of the chest » s'est lu « sous la poitrine » : les
+    cinq dips avaient le rouge sur le ventre ou la taille."""
+    p = _prompts()["Dips"]["prompt"].lower()
+    assert "still on the chest" in p
+    assert "do not paint the stomach" in p

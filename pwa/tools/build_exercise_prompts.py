@@ -109,6 +109,45 @@ GESTES = {
     "Développé militaire haltères": "standing, pressing ONE DUMBBELL IN EACH "
                                     "HAND from shoulder height up to full "
                                     "extension overhead. There is NO barbell",
+    # ── Poses fausses relevées à la relecture des 78 ─────────────
+    "Soulevé de terre roumain": "standing, knees almost straight, HINGED "
+                                "FORWARD at the hips so the torso is close "
+                                "to horizontal, back flat, the barbell "
+                                "sliding down the front of the legs to "
+                                "mid-shin. The torso is NOT upright",
+    "Soulevé de terre roumain haltères": "standing, knees almost straight, "
+                                          "HINGED FORWARD at the hips so the "
+                                          "torso is close to horizontal, back "
+                                          "flat, a dumbbell in each hand "
+                                          "lowered down the front of the "
+                                          "legs. The torso is NOT upright",
+    "Développé haltères": "lying FACE UP on a flat bench, one dumbbell in "
+                            "each hand pressed straight up above the chest, "
+                            "arms extended. The mannequin is NOT face down",
+    "Oiseau": "standing but BENT FORWARD at the hips to about 45 degrees, "
+              "back flat, arms hanging then opened out sideways like wings, "
+              "a light dumbbell in each hand. The torso is NOT upright",
+    "Squat bulgare": "in a split stance with the REAR foot resting on top of "
+                     "a bench behind, front knee bent deep, torso upright. "
+                     "The mannequin is NOT sitting on the bench",
+    "Dips sur chaise": "back to a chair, both hands gripping the front edge "
+                       "of the seat behind them, hips OFF the seat and "
+                       "lowered towards the floor, legs out in front, elbows "
+                       "bent. The mannequin is NOT sitting on the chair",
+    "Leg curl": "lying FACE DOWN on a leg curl machine, knees BENT so the "
+                "heels are pulled up towards the buttocks against the roller "
+                "pad. The legs are NOT straight",
+    "Curl haltères": "standing, ONE DUMBBELL IN EACH HAND, palms facing up, "
+                     "elbows pinned to the sides, both forearms curled up to "
+                     "chest height. There is NO barbell",
+    "Curl haltères (ou élastique)": "standing, ONE DUMBBELL IN EACH HAND, "
+                                    "palms facing up, elbows pinned to the "
+                                    "sides, both forearms curled up to chest "
+                                    "height. There is NO barbell",
+    "Pompes diamant": "in a push-up position, the two hands placed close "
+                      "together directly under the chest so the thumbs and "
+                      "index fingers form a diamond, elbows tucked in "
+                      "close to the ribs",
 }
 
 # Le rouge ne peut pas être « le muscle de la fiche » tel quel : « Dos (grand
@@ -146,9 +185,10 @@ ZONES = {
                            "the BACK of both lower legs, just above "
                            "the ankle", ""),
     "Pectoraux": ("pectorals", "across the chest", ""),
-    "Pectoraux (bas)": ("lower pectorals",
-                        "the BOTTOM edge of the chest",
-                        ""),
+    "Pectoraux (bas)": ("lower chest",
+                        "the lower half of the pectoral muscles, still ON "
+                        "the chest, above the ribs",
+                        " Do not paint the stomach, the waist or the hips."),
     "Pectoraux (haut)": ("upper pectorals",
                          "the TOP of the chest, just below the collarbones",
                          ""),
@@ -222,6 +262,15 @@ COLORIAGE = (
     "next to it. Everything else stays plain matte grey: exactly one red area "
     "in the whole image, on the {ancre}."
 )
+# La camera doit VOIR le muscle. Sans cette consigne, le modèle peignait la
+# face qu'il avait sous les yeux : sur une planche (abdos vers le sol) le
+# rouge partait sur les lombaires, sur un hip thrust (fessiers dessous) sur
+# l'avant de la cuisse, sur un soulevé de terre (érecteurs derrière) sur le
+# flanc. Trois fois la même erreur, jamais la même formulation en cause.
+CAMERA = (" Choose the viewing angle so that the {ancre} faces the viewer and "
+          "is fully visible — if the pose would hide it, turn the camera or "
+          "the body until it shows.")
+
 SANS_COLORIAGE = (
     " The entire body stays plain matte grey — no coloured muscle anywhere."
 )
@@ -261,7 +310,8 @@ def _coloriage(fiche):
     if not zone:
         return SANS_COLORIAGE
     ancre, description, exclusion = zone
-    return COLORIAGE.format(zone=description, exclusion=exclusion, ancre=ancre)
+    return (COLORIAGE.format(zone=description, exclusion=exclusion, ancre=ancre)
+            + CAMERA.format(ancre=ancre))
 
 
 def construire():
