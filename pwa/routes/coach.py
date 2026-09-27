@@ -454,7 +454,12 @@ def ask():
     # _env() strip les guillemets et `=` parasites souvent injectés par Railway
     api_key = _env("ANTHROPIC_API_KEY")
     if not api_key:
-        return jsonify({"error": "Coach IA non configuré (ANTHROPIC_API_KEY manquante)."}), 503
+        # Le détail va dans les logs, où il sert à celui qui peut agir.
+        # À l'utilisateur, nommer la variable et son fournisseur ne dit que
+        # comment l'app est hébergée — il ne peut pas la poser lui-même.
+        logger.error("clé IA absente de l'environnement : coach indisponible")
+        return jsonify({"error": "Le coach est momentanément indisponible. "
+                                 "Réessaie plus tard."}), 503
 
     try:
         import anthropic  # type: ignore

@@ -355,7 +355,12 @@ def generate():
 
     api_key = _env("ANTHROPIC_API_KEY")
     if not api_key:
-        return jsonify({"error": "Générateur non configuré (ANTHROPIC_API_KEY manquante)."}), 503
+        # Voir routes/coach.py : le détail aux logs, la marche à suivre à
+        # l'utilisateur.
+        logger.error("clé IA absente de l'environnement : générateur indisponible")
+        return jsonify({"error": "La génération de programme est "
+                                 "momentanément indisponible. Réessaie "
+                                 "plus tard."}), 503
     try:
         import anthropic  # type: ignore
     except ImportError:
