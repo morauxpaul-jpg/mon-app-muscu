@@ -40,6 +40,16 @@
   {% if request.args.get('exo') == 'deleted' %}
     <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice supprimé.</div>
   {% endif %}
+  {% if request.args.get('align') == 'ok' %}
+  <div class="card" style="border-color: rgba(48,209,88,0.5);">
+    <p style="margin:0; font-size:0.88rem;">{{ request.args.get('n') }} série(s) renommée(s) : ces exercices ont retrouvé leur fiche et leur historique.</p>
+  </div>
+  {% endif %}
+  {% if request.args.get('align') == 'error' %}
+  <div class="card" style="border-color: rgba(255,69,58,0.5);">
+    <p style="margin:0; font-size:0.88rem;">Le renommage a échoué. Rien n'a été modifié — réessaie.</p>
+  </div>
+  {% endif %}
   {% if request.args.get('rename') == 'ok' %}
     <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice renommé dans l'historique ({{ request.args.get('n', '?') }} série(s) mise(s) à jour).</div>
   {% endif %}
@@ -129,6 +139,49 @@
           </div>
         </form>
       {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if alignements %}
+  <div class="card" id="aligner" x-data="{ open: true, confirm: false }" style="border-color: rgba(10,132,255,0.5);">
+    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Aligner sur les noms de l'app ({{ alignements|length }})</span>
+      <span x-text="open ? '−' : '+'"></span>
+    </h3>
+    <div x-show="open" x-transition.duration.200ms>
+      <p style="font-size:0.85rem; color:var(--text-dim);">
+        Ces exercices sont enregistrés sous un nom que l'app ne reconnaît pas :
+        ils n'ont ni fiche, ni illustration, et leur historique est séparé de
+        celui du même exercice écrit autrement. Les renommer les rebranche.
+        <b>C'est définitif</b> — décoche ce dont tu n'es pas sûr.
+      </p>
+      <form method="post" action="/gestion/exercice/aligner">
+        {% for p in alignements %}
+        <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %} cursor:pointer;">
+          <input type="checkbox" name="aligner" value="{{ p.depuis }}"
+                 {% if p.sur %}checked{% endif %} style="flex-shrink:0; margin-top:3px;">
+          <span style="flex:1; min-width:0;">
+            <span style="font-size:0.9rem; color:var(--text-1);">{{ p.depuis }}</span>
+            <span style="color:var(--text-dim);"> → </span>
+            <span style="font-size:0.9rem; color:var(--accent);">{{ p.vers }}</span>
+            <span style="display:block; font-size:0.75rem; color:var(--text-dim); margin-top:2px;">
+              {{ p.count }} série{{ 's' if p.count > 1 else '' }}
+              {%- if not p.sur %} · <b style="color:#FF9F0A;">à vérifier</b>, rapprochement approximatif{% endif %}
+              {%- if p.fusion %} · <b style="color:#FF9F0A;">fusionne</b> avec un historique existant{% endif %}
+            </span>
+          </span>
+        </label>
+        {% endfor %}
+        <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+                x-show="!confirm" @click="confirm = true">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Renommer les exercices cochés
+        </button>
+        <div x-show="confirm" x-cloak class="flex-show" style="gap:8px; margin-top:10px;">
+          <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
+          <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
+        </div>
+      </form>
     </div>
   </div>
   {% endif %}

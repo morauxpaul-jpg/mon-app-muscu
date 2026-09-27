@@ -21,6 +21,7 @@ from core.data import (
 
 logger = logging.getLogger(__name__)
 from core.muscu import auto_muscles, get_base_name
+from core.exercises_data import canoniser, NIVEAUX_SURS
 from core.limiter import limiter
 from core.analytics import paywall
 
@@ -131,6 +132,40 @@ def _duplicate_groups(exo_counts):
     return out
 
 
+def _alignements(exo_counts):
+    """Ce que la migration PROPOSE de renommer, avec de quoi juger.
+
+    Rien n'est modifié ici. Chaque ligne porte le nombre de séries en jeu,
+    le niveau de certitude du rapprochement, et surtout si le renommage
+    FUSIONNERAIT deux historiques — c'est là que ça devient irrattrapable,
+    donc c'est écrit noir sur blanc.
+    """
+    propositions = []
+    deja = {_cle_exo(n) for n in exo_counts}
+    for nom, count in exo_counts.items():
+        vers, niveau = canoniser(nom)
+        if not vers:
+            continue
+        propositions.append({
+            "depuis": nom,
+            "vers": vers,
+            "count": count,
+            "niveau": niveau,
+            "sur": niveau in NIVEAUX_SURS,
+            # Le nom d'arrivée existe déjà : les deux historiques n'en
+            # feront plus qu'un. Souvent voulu (deux orthographes du même
+            # exercice), mais jamais anodin.
+            "fusion": _cle_exo(vers) in deja,
+        })
+    # Les plus sûrs d'abord, puis le plus de séries en jeu.
+    propositions.sort(key=lambda p: (not p["sur"], -p["count"], p["depuis"].lower()))
+    return propositions
+
+
+def _cle_exo(nom):
+    return (nom or "").strip().casefold()
+
+
 @bp.route("/gestion")
 def gestion():
     prog = get_prog()
@@ -175,6 +210,7 @@ def gestion():
         custom_exercises=custom_exercises,
         hist_exercises=hist_exercises,
         dup_groups=_duplicate_groups(exo_counts),
+        alignements=_alignements(exo_counts),
         muscle_list=MUSCLE_LIST,
         profil_options=PROFIL_OPTIONS,
         newsletter_opt_in=newsletter_opt_in,
@@ -253,6 +289,43 @@ def rename_exercise_history():
     if count:
         return redirect(url_for("gestion.gestion") + f"?rename=ok&n={count}")
     return redirect(url_for("gestion.gestion") + "?rename=none")
+
+
+@bp.route("/gestion/exercice/aligner", methods=["POST"])
+@limiter.limit("10 per minute")
+def aligner_exercices():
+    """Applique les renommages COCHÉS, et eux seuls.
+
+    On recalcule la proposition côté serveur au lieu de faire confiance au
+    formulaire : sinon un champ trafiqué pourrait renommer un exercice vers
+    n'importe quoi, et l'historique ne se rattrape pas.
+    """
+    choisis = {n.strip() for n in request.form.getlist("aligner") if n.strip()}
+    if not choisis:
+        return redirect(url_for("gestion.gestion") + "?align=noop#aligner")
+
+    hist = get_hist()
+    exo_counts = {}
+    for r in hist:
+        ex = (r.get("Exercice") or "").strip()
+        if not ex or ex == "SESSION" or ex.startswith("CARDIO:"):
+            continue
+        exo_counts[ex] = exo_counts.get(ex, 0) + 1
+
+    total = 0
+    try:
+        for p in _alignements(exo_counts):
+            if p["depuis"] not in choisis:
+                continue
+            total += rename_exercise_rows([p["depuis"]], p["vers"],
+                                          auto_muscles(get_base_name(p["vers"])))
+    except Exception as e:
+        logger.error("aligner_exercices FAILED user=%s: %s",
+                     getattr(g, "user_id", "?"), e)
+        return redirect(url_for("gestion.gestion") + "?align=error#aligner")
+    if not total:
+        return redirect(url_for("gestion.gestion") + "?align=none#aligner")
+    return redirect(url_for("gestion.gestion") + f"?align=ok&n={total}#aligner")
 
 
 @bp.route("/gestion/exercice/fusionner", methods=["POST"])
