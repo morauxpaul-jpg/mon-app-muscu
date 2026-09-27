@@ -459,3 +459,24 @@ def test_chaque_illustration_livree_est_une_image_valide():
         except Exception as e:
             cassees.append(f"{nom} : illisible ({type(e).__name__})")
     assert not cassees, cassees
+
+
+def test_chaque_exercice_du_catalogue_a_son_prompt():
+    """`exercise_prompts.json` est un fichier GÉNÉRÉ, commité à côté de sa
+    source. Quand on ajoute un exercice sans le reconstruire, les deux
+    divergent — et `--un "<nom>"` ne trouve plus rien.
+
+    C'est arrivé : la commande a répondu « 0 générée, 0 en échec », donc
+    rien ne signalait que l'exercice n'avait pas de prompt.
+    """
+    import io
+    import json
+    from core.exercises_data import EXERCISES_INFO
+    fichier = {e["nom"] for e in json.load(
+        io.open("tools/exercise_prompts.json", encoding="utf-8"))}
+    manquants = sorted(set(EXERCISES_INFO) - fichier)
+    orphelins = sorted(fichier - set(EXERCISES_INFO))
+    assert not manquants, (
+        f"sans prompt : {manquants} — relancer "
+        "python tools/build_exercise_prompts.py")
+    assert not orphelins, f"prompts sans exercice : {orphelins}"

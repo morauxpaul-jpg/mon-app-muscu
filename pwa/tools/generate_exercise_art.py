@@ -175,6 +175,19 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
     if seulement:
         entrees = [e for e in entrees if e["fichier"] in seulement
                    or e["nom"] in seulement][:len(seulement)]
+        # Un nom qui ne correspond à rien donnait « 0 générée, 0 en échec » :
+        # le script se taisait, et on croyait avoir lancé la génération.
+        # Arrive après l'ajout d'un exercice si les prompts n'ont pas été
+        # reconstruits — exactement ce qui vient de se passer.
+        trouves = {e["nom"] for e in entrees} | {e["fichier"] for e in entrees}
+        inconnus = [n for n in seulement if n not in trouves]
+        if inconnus:
+            raise SystemExit(
+                "Aucun prompt pour : " + ", ".join(inconnus) + "."
+                " Soit le nom est mal orthographié, soit l'exercice a"
+                " été ajouté depuis la dernière construction des"
+                " prompts — dans ce cas :"
+                " python tools/build_exercise_prompts.py")
 
     ref = _reference(reference)
     faits = ignores = echecs = 0
