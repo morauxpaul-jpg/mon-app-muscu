@@ -161,16 +161,24 @@ GESTES = {
                           "against a vertical padded lever, squeezing the "
                           "thighs back together. The weight stack is visible "
                           "behind the seat",
-    "Machine abducteurs": "SEATED on an abductor machine: upright back "
-                          "against a padded backrest, both knees pressing "
-                          "OUTWARDS against padded levers placed on the "
-                          "OUTER side of each thigh, thighs spread wide "
-                          "apart. The weight stack is visible behind the seat",
-    "Écarté machine": "SEATED on a pec deck machine: upright back against a "
-                     "padded backrest, both forearms vertical against two "
-                     "padded arms at chest height, bringing them together in "
-                     "front of the chest. The weight stack is visible behind "
-                     "the seat",
+    # Premier essai : debout À CÔTÉ de la machine. « Seated » ne suffit pas,
+    # il faut dire où sont les fesses et ce que fait le dos.
+    "Machine abducteurs": "SITTING DOWN on an abductor machine, buttocks on "
+                          "the seat pad and back leaning against the "
+                          "backrest, both feet off the floor on the machine's "
+                          "footrests, knees bent, thighs SPREAD WIDE APART "
+                          "pushing outwards against a padded lever on the "
+                          "outer side of each thigh. The mannequin is NOT "
+                          "standing and NOT beside the machine",
+    # Premier essai : deux haltères sur une barre droite, donc un développé.
+    # Il faut décrire ce que les mains TIENNENT, et que ça sort du bâti.
+    "Écarté machine": "SITTING DOWN on a pec deck machine, back against the "
+                     "backrest, each hand gripping the end of a long PADDED "
+                     "ARM that is bolted to the machine frame behind the "
+                     "shoulders; the two arms swing horizontally and are "
+                     "closing together in front of the chest, elbows slightly "
+                     "bent. There is NO dumbbell and NO barbell — nothing is "
+                     "held loose, everything is attached to the machine",
     "Pompes diamant": "in a push-up position, the two hands placed close "
                       "together directly under the chest so the thumbs and "
                       "index fingers form a diamond, elbows tucked in "
