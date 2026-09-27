@@ -1319,6 +1319,21 @@ _ANGLAIS = {
     "abductor machine": "Machine abducteurs",
     "hip abduction": "Machine abducteurs",
     "hip adduction": "Machine adducteurs",
+    # Noms cités par les programmes tout faits, sans fiche à eux : ce sont
+    # des façons de nommer un exercice du catalogue, pas des exercices de
+    # plus. Sans ces lignes, un compte neuf voit des cartes sans fiche.
+    "curl barre ez": "Curl biceps",
+    "curl poulie basse": "Curl biceps",
+    "curl concentration": "Curl biceps",
+    "curl pupitre": "Curl biceps",
+    "curl scott": "Curl biceps",
+    "curl australien": "Curl biceps",
+    "kickback poulie": "Kickback triceps",
+    "abductions hanches": "Machine abducteurs",
+    "mollets une jambe": "Mollets unilatéral",
+    "pont fessiers une jambe": "Hip thrust (sol)",
+    "rowing australien pieds sureleves": "Tractions australiennes",
+    "rowing australien": "Tractions australiennes",
 }
 
 def _index_par_jetons():

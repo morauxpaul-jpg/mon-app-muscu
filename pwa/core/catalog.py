@@ -64,17 +64,17 @@ CATALOG = {
                 _ex("Squat", 3, "Quadriceps,Fessiers", "12"),
                 _ex("Développé couché", 3, "Pecs,Triceps", "12"),
                 _ex("Rowing barre", 3, "Dos,Biceps", "12"),
-                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "12"),
+                _ex("Développé militaire", 3, "Épaules,Triceps", "12"),
                 _ex("Curl biceps", 3, "Biceps", "12"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
             ],
             "Full Body B": [
                 _ex("Presse à cuisses", 3, "Quadriceps,Fessiers", "12"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "12"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "12"),
                 _ex("Tirage vertical", 3, "Dos,Biceps", "12"),
                 _ex("Élévations latérales", 3, "Épaules", "12"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
-                _ex("Dips machine", 3, "Triceps,Pecs", "12"),
+                _ex("Dips", 3, "Triceps,Pecs", "12"),
             ],
         },
     },
@@ -97,14 +97,14 @@ CATALOG = {
                 _ex("Pompes", 3, "Pecs,Triceps", "12-15"),
                 _ex("Rowing haltère", 3, "Dos,Biceps", "12-15"),
                 _ex("Développé haltères assis", 3, "Épaules,Triceps", "12-15"),
-                _ex("Curl haltères", 3, "Biceps", "12-15"),
+                _ex("Curl biceps", 3, "Biceps", "12-15"),
                 _ex("Extension triceps haltère", 3, "Triceps", "12-15"),
             ],
             "Maison B": [
-                _ex("Fentes haltères", 3, "Quadriceps,Fessiers", "12-15"),
+                _ex("Fentes", 3, "Quadriceps,Fessiers", "12-15"),
                 _ex("Floor press haltères", 3, "Pecs,Triceps", "12-15"),
                 _ex("Tirage élastique", 3, "Dos,Biceps", "12-15"),
-                _ex("Élévations latérales haltères", 3, "Épaules", "12-15"),
+                _ex("Élévations latérales", 3, "Épaules", "12-15"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12-15"),
                 _ex("Kickback triceps", 3, "Triceps", "12-15"),
             ],
@@ -166,7 +166,7 @@ CATALOG = {
                 _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
                 _ex("Tirage vertical", 3, "Dos,Biceps", "10"),
                 _ex("Curl biceps", 3, "Biceps", "12"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
             ],
             "Lower A": [
                 _ex("Squat", 4, "Quadriceps,Fessiers", "6"),
@@ -176,7 +176,7 @@ CATALOG = {
                 _ex("Mollets debout", 4, "Mollets", "15"),
             ],
             "Upper B": [
-                _ex("Développé incliné haltères", 4, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 4, "Pecs,Épaules", "10"),
                 _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
                 _ex("Élévations latérales", 3, "Épaules", "15"),
                 _ex("Face pull", 3, "Épaules,Dos", "15"),
@@ -210,19 +210,19 @@ CATALOG = {
                 _ex("Floor press haltères", 4, "Pecs,Triceps", "10"),
                 _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
                 _ex("Développé haltères", 3, "Épaules,Triceps", "10"),
-                _ex("Curl haltères", 3, "Biceps", "12"),
+                _ex("Curl biceps", 3, "Biceps", "12"),
                 _ex("Extension triceps haltère", 3, "Triceps", "12"),
             ],
             "Lower A": [
                 _ex("Squat gobelet", 4, "Quadriceps,Fessiers", "12"),
-                _ex("Soulevé de terre roumain haltères", 3, "Ischio-jambiers,Fessiers", "10"),
-                _ex("Fentes haltères", 3, "Quadriceps,Fessiers", "10"),
+                _ex("Soulevé de terre roumain", 3, "Ischio-jambiers,Fessiers", "10"),
+                _ex("Fentes", 3, "Quadriceps,Fessiers", "10"),
                 _ex("Mollets debout", 4, "Mollets", "15"),
             ],
             "Upper B": [
-                _ex("Pompes lestées", 4, "Pecs,Triceps", "max"),
+                _ex("Pompes", 4, "Pecs,Triceps", "max"),
                 _ex("Rowing unilatéral haltère", 4, "Dos,Biceps", "10"),
-                _ex("Élévations latérales haltères", 3, "Épaules", "15"),
+                _ex("Élévations latérales", 3, "Épaules", "15"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
                 _ex("Kickback triceps", 3, "Triceps", "12"),
             ],
@@ -250,17 +250,17 @@ CATALOG = {
         "seances": {
             "Push": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "8"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "10"),
                 _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
                 _ex("Élévations latérales", 3, "Épaules", "15"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
             ],
             "Pull": [
                 _ex("Tractions", 4, "Dos,Biceps", "8"),
                 _ex("Rowing barre", 4, "Dos,Biceps", "8"),
                 _ex("Tirage vertical", 3, "Dos,Biceps", "10"),
                 _ex("Face pull", 3, "Épaules,Dos", "15"),
-                _ex("Curl barre", 3, "Biceps", "10"),
+                _ex("Curl biceps", 3, "Biceps", "10"),
             ],
             "Legs": [
                 _ex("Squat", 4, "Quadriceps,Fessiers", "6"),
@@ -272,7 +272,7 @@ CATALOG = {
             "Upper": [
                 _ex("Développé couché haltères", 4, "Pecs,Triceps", "10"),
                 _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
-                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "10"),
+                _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
                 _ex("Tirage horizontal", 3, "Dos,Biceps", "12"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
                 _ex("Extensions triceps", 3, "Triceps", "12"),
@@ -295,10 +295,10 @@ CATALOG = {
         "seances": {
             "Push": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "8"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "10"),
                 _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
                 _ex("Élévations latérales", 3, "Épaules", "15"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
                 _ex("Dips", 3, "Triceps,Pecs", "10"),
             ],
             "Pull": [
@@ -306,7 +306,7 @@ CATALOG = {
                 _ex("Rowing barre", 4, "Dos,Biceps", "8"),
                 _ex("Tirage vertical prise serrée", 3, "Dos,Biceps", "10"),
                 _ex("Face pull", 3, "Épaules,Dos", "15"),
-                _ex("Curl barre", 3, "Biceps", "10"),
+                _ex("Curl biceps", 3, "Biceps", "10"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
             ],
             "Legs": [
@@ -335,10 +335,10 @@ CATALOG = {
         "seances": {
             "Push": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "8"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "10"),
                 _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
                 _ex("Élévations latérales", 3, "Épaules", "15"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
                 _ex("Dips", 3, "Triceps,Pecs", "10"),
             ],
             "Pull": [
@@ -346,7 +346,7 @@ CATALOG = {
                 _ex("Rowing barre", 4, "Dos,Biceps", "8"),
                 _ex("Tirage vertical prise serrée", 3, "Dos,Biceps", "10"),
                 _ex("Face pull", 3, "Épaules,Dos", "15"),
-                _ex("Curl barre", 3, "Biceps", "10"),
+                _ex("Curl biceps", 3, "Biceps", "10"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
             ],
             "Legs": [
@@ -380,21 +380,21 @@ CATALOG = {
             "Push A (Force)": [
                 _ex("Développé couché", 5, "Pecs,Triceps", "5"),
                 _ex("Développé militaire", 4, "Épaules,Triceps", "6"),
-                _ex("Dips lestés", 3, "Triceps,Pecs", "8"),
+                _ex("Dips", 3, "Triceps,Pecs", "8"),
                 _ex("Élévations latérales", 4, "Épaules", "12"),
                 _ex("Barre au front", 3, "Triceps", "10"),
             ],
             "Push B (Hypertrophie)": [
-                _ex("Développé incliné haltères", 4, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 4, "Pecs,Épaules", "10"),
                 _ex("Arnold press", 3, "Épaules,Triceps", "12"),
                 _ex("Écartés poulie", 3, "Pecs", "15"),
                 _ex("Élévations latérales", 4, "Épaules", "15"),
                 _ex("Extensions triceps poulie corde", 3, "Triceps", "15"),
             ],
             "Pull A (Force)": [
-                _ex("Tractions lestées", 5, "Dos,Biceps", "5"),
+                _ex("Tractions", 5, "Dos,Biceps", "5"),
                 _ex("Rowing barre", 4, "Dos,Biceps", "6"),
-                _ex("Curl barre", 4, "Biceps", "8"),
+                _ex("Curl biceps", 4, "Biceps", "8"),
                 _ex("Face pull", 3, "Épaules,Dos", "15"),
             ],
             "Pull B (Hypertrophie)": [
@@ -438,7 +438,7 @@ CATALOG = {
                 _ex("Développé couché", 5, "Pecs,Triceps", "3"),
                 _ex("Rowing barre", 5, "Dos,Biceps", "3"),
                 _ex("Développé militaire", 4, "Épaules,Triceps", "5"),
-                _ex("Tractions lestées", 4, "Dos,Biceps", "5"),
+                _ex("Tractions", 4, "Dos,Biceps", "5"),
             ],
             "Lower Force": [
                 _ex("Squat", 5, "Quadriceps,Fessiers", "3"),
@@ -446,11 +446,11 @@ CATALOG = {
                 _ex("Front squat", 3, "Quadriceps,Fessiers", "5"),
             ],
             "Upper Hypertrophie": [
-                _ex("Développé incliné haltères", 4, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 4, "Pecs,Épaules", "10"),
                 _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
                 _ex("Élévations latérales", 4, "Épaules", "15"),
                 _ex("Curl biceps", 3, "Biceps", "12"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
             ],
             "Lower Hypertrophie": [
                 _ex("Squat", 4, "Quadriceps,Fessiers", "8"),
@@ -491,7 +491,7 @@ CATALOG = {
                 _ex("Pompes", 4, "Pecs,Triceps", "45s"),
                 _ex("Rowing machine", 4, "Dos,Biceps", "45s"),
                 _ex("Fentes", 4, "Quadriceps,Fessiers", "45s"),
-                _ex("Dips machine", 4, "Triceps,Pecs", "45s"),
+                _ex("Dips", 4, "Triceps,Pecs", "45s"),
                 _ex("Presse à cuisses", 4, "Quadriceps,Fessiers", "45s"),
                 _ex("Gainage", 4, "Abdos", "30s"),
             ],
@@ -548,7 +548,7 @@ CATALOG = {
                 _ex("Rowing barre", 3, "Dos,Biceps", "10"),
                 _ex("Développé militaire", 3, "Épaules,Triceps", "12"),
                 _ex("Curl biceps", 3, "Biceps", "12"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
             ],
             "Lower + HIIT": [
                 _ex("Squat", 3, "Quadriceps,Fessiers", "10"),
@@ -609,8 +609,8 @@ CATALOG = {
             ],
             "Jour Bench": [
                 _ex("Développé couché", 5, "Pecs,Triceps", "3"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "6"),
-                _ex("Dips lestés", 3, "Triceps,Pecs", "8"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "6"),
+                _ex("Dips", 3, "Triceps,Pecs", "8"),
             ],
             "Jour Deadlift": [
                 _ex("Soulevé de terre", 5, "Dos,Ischio-jambiers,Fessiers", "3"),
@@ -644,10 +644,10 @@ CATALOG = {
         "seances": {
             "Push (Pecs / Épaules / Triceps)": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "8-10"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10-12"),
-                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "10-12"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "10-12"),
+                _ex("Développé militaire", 3, "Épaules,Triceps", "10-12"),
                 _ex("Élévations latérales", 3, "Épaules", "12-15"),
-                _ex("Extensions triceps poulie", 3, "Triceps", "12"),
+                _ex("Extensions triceps", 3, "Triceps", "12"),
             ],
             "Pull (Dos / Biceps)": [
                 _ex("Tractions assistées", 4, "Dos,Biceps", "8-10"),
@@ -695,15 +695,15 @@ CATALOG = {
             ],
             "Upper push": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "8-10"),
-                _ex("Développé militaire haltères", 3, "Épaules,Triceps", "10"),
+                _ex("Développé militaire", 3, "Épaules,Triceps", "10"),
                 _ex("Élévations latérales", 4, "Épaules", "12-15"),
-                _ex("Dips machine", 3, "Triceps,Pecs", "10-12"),
+                _ex("Dips", 3, "Triceps,Pecs", "10-12"),
             ],
             "Upper pull": [
                 _ex("Tirage vertical", 4, "Dos,Biceps", "10-12"),
                 _ex("Rowing haltère", 4, "Dos,Biceps", "10"),
                 _ex("Face pull", 3, "Épaules,Dos", "15"),
-                _ex("Curl haltères", 3, "Biceps", "10-12"),
+                _ex("Curl biceps", 3, "Biceps", "10-12"),
             ],
         },
     },
@@ -723,7 +723,7 @@ CATALOG = {
         "seances": {
             "Upper A (Push)": [
                 _ex("Développé couché", 4, "Pecs,Triceps", "8"),
-                _ex("Développé incliné haltères", 3, "Pecs,Épaules", "10"),
+                _ex("Développé incliné", 3, "Pecs,Épaules", "10"),
                 _ex("Développé militaire", 3, "Épaules,Triceps", "8"),
                 _ex("Élévations latérales", 3, "Épaules", "12-15"),
             ],
@@ -735,9 +735,9 @@ CATALOG = {
             ],
             "Bras volume A": [
                 _ex("Curl barre EZ", 4, "Biceps", "8-10"),
-                _ex("Extensions triceps poulie", 4, "Triceps", "10-12"),
+                _ex("Extensions triceps", 4, "Triceps", "10-12"),
                 _ex("Curl incliné haltères", 3, "Biceps", "10-12"),
-                _ex("Dips lestés", 3, "Triceps,Pecs", "8-10"),
+                _ex("Dips", 3, "Triceps,Pecs", "8-10"),
                 _ex("Curl marteau", 3, "Biceps,Avant-bras", "12"),
                 _ex("Extensions triceps haltère", 3, "Triceps", "12"),
             ],
@@ -773,7 +773,7 @@ CATALOG = {
                 _ex("Extensions triceps mur", 3, "Triceps", "10"),
             ],
             "Pull avancé": [
-                _ex("Tractions lestées", 4, "Dos,Biceps", "6-8"),
+                _ex("Tractions", 4, "Dos,Biceps", "6-8"),
                 _ex("Tractions commando", 3, "Dos,Biceps", "8-10"),
                 _ex("Rowing australien pieds surélevés", 4, "Dos", "10-12"),
                 _ex("Tractions tempo 3-1-3", 3, "Dos,Biceps", "5-6"),
@@ -810,10 +810,10 @@ CATALOG = {
         "icon": "🔥",
         "seances": {
             "Pecs / Triceps": [
-                _ex("Développé incliné haltères", 4, "Pecs,Épaules", "10-12"),
+                _ex("Développé incliné", 4, "Pecs,Épaules", "10-12"),
                 _ex("Développé couché", 4, "Pecs,Triceps", "8-10"),
                 _ex("Écarté poulie", 3, "Pecs", "12-15"),
-                _ex("Extensions triceps poulie", 4, "Triceps", "12"),
+                _ex("Extensions triceps", 4, "Triceps", "12"),
                 _ex("Barre au front", 3, "Triceps", "12"),
             ],
             "Dos / Biceps": [
