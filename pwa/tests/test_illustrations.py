@@ -548,8 +548,8 @@ def test_le_curl_marteau_precise_sa_prise():
 
 
 @pytest.mark.parametrize("cle,attendu", [
-    ("AQ.Ab8RN6quelquechose", "jeton de session"),
-    ("nimportequoi", "ne ressemble pas"),
+    ("AQ.Ab8RN6quelquechose", "EXPIRE"),
+    ("nimportequoi", "ne ressemble ni"),
     ("", None),
 ])
 def test_une_cle_mal_formee_est_reconnue_avant_tout_appel(cle, attendu):
@@ -561,11 +561,12 @@ def test_une_cle_mal_formee_est_reconnue_avant_tout_appel(cle, attendu):
     import sys
     sys.path.insert(0, "tools")
     from generate_exercise_art import _forme_de_cle
-    probleme = _forme_de_cle(cle)
+    probleme, avertissement = _forme_de_cle(cle)
+    message = probleme or avertissement
     if attendu is None:
         assert probleme is not None, "une clé vide doit être signalée"
     else:
-        assert probleme and attendu in probleme
+        assert message and attendu in message
 
 
 def test_une_vraie_cle_passe_le_controle_de_forme():
@@ -573,4 +574,4 @@ def test_une_vraie_cle_passe_le_controle_de_forme():
     import sys
     sys.path.insert(0, "tools")
     from generate_exercise_art import _forme_de_cle
-    assert _forme_de_cle("AIzaSyExempleDeCleQuiRessembleAUneVraie") is None
+    assert _forme_de_cle("AIzaSyExempleDeCleQuiRessembleAUneVraie") == (None, None)

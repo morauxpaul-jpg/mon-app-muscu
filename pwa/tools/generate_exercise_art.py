@@ -91,15 +91,26 @@ def _forme_de_cle(cle):
     """
     cle = (cle or "").strip()
     if cle.startswith("AIza"):
-        return None
+        return None, None
     if cle.startswith("AQ."):
-        return ("cette valeur est un jeton de session AI Studio, pas une clé "
-                "API : elle commence par « AQ. ».")
-    return ("cette valeur ne ressemble pas à une clé API Gemini, qui "
-            "commence par « AIza ».")
+        # Ces jetons FONCTIONNENT, mais quelques heures seulement. On
+        # avertit sans bloquer : refuser ce que Google peut accepter serait
+        # pire que l'avertissement.
+        return None, ("Attention : cette valeur est un jeton de session AI "
+                      "Studio (« AQ. »), pas une clé API. Il marche, mais il "
+                      "EXPIRE au bout de quelques heures — c'est la cause "
+                      "des erreurs 401 qui arrivent sans rien avoir changé. "
+                      "Une vraie clé commence par « AIza » et ne périme pas.")
+    return ("cette valeur ne ressemble ni à une clé API Gemini (« AIza ») "
+            "ni à un jeton AI Studio (« AQ. »)."), None
 
 
 def _resume_cle(corps):
+    if "OAuth 2 access token" in corps or "UNAUTHENTICATED" in corps:
+        return ("clé refusée. Si c'est un jeton AI Studio (« AQ. »), il a "
+                "sans doute expiré : ils ne durent que quelques heures. "
+                "Prenez une vraie clé sur https://aistudio.google.com/apikey "
+                "— elle commence par « AIza » et ne périme pas.")
     if "TA_CLE" in corps or "VOTRE_CLE" in corps:
         return "la commande a été lancée avec le modèle de clé, pas la vôtre."
     return ("clé refusée par Google. Vérifiez --cle, ou laissez tomber "
@@ -303,12 +314,15 @@ if __name__ == "__main__":
 
     # Un modèle de commande collé tel quel se reconnaît sans rien demander
     # à Google : autant le dire tout de suite.
-    probleme = _forme_de_cle(a.cle)
+    probleme, avertissement = _forme_de_cle(a.cle)
     if probleme:
         print(probleme)
         print("Une clé s'obtient sur https://aistudio.google.com/apikey,")
         print("bouton « Create API key ». Elle commence par AIza.")
         raise SystemExit(1)
+    if avertissement:
+        print(avertissement)
+        print()
 
     if a.cle in ("TA_CLE", "VOTRE_CLE", "CLE", "cle"):
         print(f"« {a.cle} » est le modèle de la commande, pas votre clé.")
