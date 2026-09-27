@@ -106,6 +106,18 @@
 }
 .exo-variante-nom { flex: 1; min-width: 0; }
 .exo-variante-retour { color: var(--text-2); }
+.exo-variantes-plus {
+  width: 100%;
+  padding: 8px;
+  margin: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 44px;
+}
 .exo-variantes-note {
   font-size: 0.7rem;
   color: var(--text-mute);
@@ -356,7 +368,7 @@
          doit marcher même si un script tombe.
          Le nom posté est celui du PROGRAMME (`remplace` s'il y en a un
          déjà), sinon un deuxième échange ne retrouverait plus sa cible. #}
-      {% if exo._variantes and not exo.completed %}
+      {% if (exo._variantes.mouvement or exo._variantes.muscle) and not exo.completed %}
       <div class="exo-variantes" x-show="showVariantes" x-transition.duration.200ms x-cloak>
         <form method="post" action="/seance/substitute">
           <input type="hidden" name="mode" value="{{ mode }}">
@@ -364,15 +376,37 @@
           <input type="hidden" name="date" value="{{ date_iso }}">
           <input type="hidden" name="seance_name" value="{{ seance_name }}">
           <input type="hidden" name="exo_name" value="{{ exo.remplace or exo.base }}">
-          <div class="exo-variantes-titre">Aujourd'hui, à la place :</div>
-          {% for v in exo._variantes %}
+          {% macro carte(v) %}
           <button type="submit" name="vers" value="{{ v.nom }}" class="exo-variante">
             {% if v.illustration %}
             <img src="/static/img/exercises/{{ v.image }}" alt="" loading="lazy" decoding="async">
             {% else %}<span class="exo-variante-vide"></span>{% endif %}
             <span class="exo-variante-nom">{{ v.titre }}</span>
           </button>
-          {% endfor %}
+          {% endmacro %}
+
+          {# Le même geste, au matériel près : c'est ce qu'on cherche neuf
+             fois sur dix, et ça tient en trois lignes. #}
+          {% if exo._variantes.mouvement %}
+          <div class="exo-variantes-titre">Aujourd'hui, à la place :</div>
+          {% for v in exo._variantes.mouvement %}{{ carte(v) }}{% endfor %}
+          {% endif %}
+
+          {# Le reste du groupe musculaire, replié. Au même niveau, il
+             noyait les vraies variantes sous tous les exercices de pecs. #}
+          {% if exo._variantes.muscle %}
+            {% if exo._variantes.mouvement %}
+            <button type="button" class="exo-variantes-plus"
+                    @click.stop="showAutresVariantes = !showAutresVariantes"
+                    x-text="showAutresVariantes ? 'Masquer les autres' : 'Autre exercice pour ce muscle'"></button>
+            <div x-show="showAutresVariantes" x-cloak>
+              {% for v in exo._variantes.muscle %}{{ carte(v) }}{% endfor %}
+            </div>
+            {% else %}
+            <div class="exo-variantes-titre">Aujourd'hui, à la place :</div>
+            {% for v in exo._variantes.muscle %}{{ carte(v) }}{% endfor %}
+            {% endif %}
+          {% endif %}
           {% if exo.remplace %}
           <button type="submit" name="vers" value="" class="exo-variante exo-variante-retour">
             <span class="exo-variante-vide">↩</span>

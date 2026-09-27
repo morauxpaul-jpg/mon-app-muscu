@@ -14,6 +14,7 @@ import re
 import pytest
 
 from conftest import USER_ID, CSRF
+from core.exercises_data import variantes
 
 MONDAY = dt.date(2026, 9, 14)
 JOUR = MONDAY.isoformat()
@@ -172,28 +173,58 @@ def test_le_calque_est_efface_en_fin_de_seance(programme, logged_in):
 # ── Les propositions ─────────────────────────────────────────────
 
 
+def _tous(v):
+    return [x["nom"] for x in v["mouvement"] + v["muscle"]]
+
+
 def test_les_variantes_proposees_travaillent_le_meme_muscle():
     from core.exercises_data import variantes, famille_musculaire, EXERCISES_INFO
     for depart in ("Curl incliné haltères", "Développé couché", "Squat"):
         attendu = famille_musculaire(EXERCISES_INFO[depart]["muscles"][0])
-        for v in variantes(depart):
-            obtenu = famille_musculaire(EXERCISES_INFO[v["nom"]]["muscles"][0])
-            assert obtenu == attendu, f"{depart} propose {v['nom']} ({obtenu})"
+        for nom in _tous(variantes(depart)):
+            obtenu = famille_musculaire(EXERCISES_INFO[nom]["muscles"][0])
+            assert obtenu == attendu, f"{depart} propose {nom} ({obtenu})"
 
 
 def test_un_exercice_ne_se_propose_pas_lui_meme():
     from core.exercises_data import variantes
-    assert "Curl barre" not in [v["nom"] for v in variantes("Curl barre")]
+    assert "Curl barre" not in _tous(variantes("Curl barre"))
 
 
-def test_les_variantes_les_plus_proches_viennent_en_premier():
-    """Un curl propose d'abord les autres curls, pas les tractions."""
-    from core.exercises_data import variantes
-    premiers = [v["nom"] for v in variantes("Curl incliné haltères")[:3]]
-    assert all(n.lower().startswith("curl") for n in premiers), premiers
+def test_le_premier_rang_ne_contient_que_le_meme_geste():
+    """Le défaut relevé à l'usage : on proposait TOUS les exercices du
+    groupe musculaire. Ce qu'on veut, c'est le même mouvement au matériel
+    près — les extensions triceps à la barre, à la poulie, à la corde."""
+    from core.exercises_data import variantes, famille_geste
+    for depart in ("Extensions triceps", "Curl incliné haltères",
+                   "Développé couché"):
+        attendu = famille_geste(depart)
+        for v in variantes(depart)["mouvement"]:
+            assert famille_geste(v["nom"]) == attendu,                 f"{depart} propose {v['nom']} au premier rang"
+
+
+def test_le_premier_rang_reste_court():
+    """Une liste qu'on parcourt du regard, pas un deuxième formulaire."""
+    from core.exercises_data import variantes, EXERCISES_INFO
+    for nom in EXERCISES_INFO:
+        assert len(variantes(nom)["mouvement"]) <= 6, nom
+
+
+def test_le_developpe_couche_ne_propose_pas_un_developpe_depaules():
+    """Les deux s'appellent « développé » et se ressemblent sur le papier.
+    C'est le muscle qui les sépare, pas le nom."""
+    propositions = _tous(variantes("Développé couché"))
+    assert "Développé militaire" not in propositions
+    assert "Développé haltères assis" not in propositions
+
+
+def test_le_tirage_vertical_ne_propose_pas_un_tirage_horizontal():
+    """Tous deux tirent le dos, mais ce n'est pas le même mouvement."""
+    premier = [v["nom"] for v in variantes("Tirage vertical")["mouvement"]]
+    assert "Tirage horizontal poulie" not in premier
 
 
 def test_un_exercice_inconnu_ne_propose_rien(programme, logged_in):
     """Mieux vaut pas de bouton qu'un bouton qui propose n'importe quoi."""
     from core.exercises_data import variantes
-    assert variantes("Zumba intergalactique") == []
+    assert _tous(variantes("Zumba intergalactique")) == []

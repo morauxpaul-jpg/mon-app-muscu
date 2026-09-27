@@ -1312,48 +1312,81 @@ def _famille(nom: str) -> str:
     return famille_musculaire(muscles[0]) if muscles else ""
 
 
-def variantes(nom: str, limite: int = 12) -> list:
-    """Les exercices qu'on peut faire à la place de celui-ci, aujourd'hui.
+# Matériel, position et charge : ce qui distingue une variante sans changer
+# le geste. La DIRECTION n'y est pas — un tirage vertical et un tirage
+# horizontal ne sont pas le même mouvement, même s'ils tirent tous deux le
+# dos. Le mot « marteau » non plus ne change pas le geste du curl.
+_QUALIFIANTS = {
+    "barre", "halteres", "haltere", "poulie", "machine", "elastique",
+    "elastiques", "corde", "ez", "smith", "sol", "banc", "chaise",
+    "leste", "lestes", "lestee", "lestees", "assiste", "assistee",
+    "incline", "inclinee", "decline", "declinee", "assis", "assise",
+    "debout", "couche", "couchee", "unilateral", "unilaterale",
+    "bulgare", "gobelet", "marteau", "prise", "serree", "large",
+    "corps", "poids", "du", "au", "a", "ou", "pieds", "sureleves",
+    "partie", "haute", "basse", "avec", "de", "la", "le", "les",
+}
 
-    Même groupe musculaire, triés du plus proche au plus lointain : ceux qui
-    partagent le premier mot d'abord (« Curl barre », « Curl marteau » pour
-    un curl), le reste du groupe ensuite. Proposer les 87 exercices ferait
-    de l'échange un deuxième formulaire à remplir — exactement ce qu'on
-    cherche à éviter.
 
-    Renvoie une liste de dicts prêts pour l'affichage. Vide si l'exercice
-    n'est pas reconnu : mieux vaut pas de bouton qu'un bouton qui propose
-    n'importe quoi.
+def famille_geste(nom: str) -> str:
+    """Le mouvement, une fois retiré ce qui n'en est qu'une déclinaison.
+
+    « Extensions triceps poulie corde » et « Extension triceps haltère »
+    donnent tous deux « extension tricep » : c'est le même geste, au
+    matériel près. C'est ça, une variante — pas « un autre exercice pour
+    les pectoraux ».
     """
+    sans_parenthese = re.sub(r"\s*\(.*?\)", "", nom or "")
+    mots = [m for m in _cle(sans_parenthese).split() if m not in _QUALIFIANTS]
+    mots = [m[:-1] if len(m) > 3 and m.endswith(("s", "x")) else m for m in mots]
+    return " ".join(mots) or _cle(sans_parenthese)
+
+
+def _cle_catalogue(nom: str):
+    """La clé du catalogue derrière un nom tapé, ou None."""
     fiche = get_exercise_info(nom)
     if not fiche:
-        return []
-    # On repart de la clé du catalogue, pas du nom tapé : « PEC FLY » doit
-    # proposer les variantes des écartés.
-    reference = next((c for c, f in EXERCISES_INFO.items() if f is fiche
-                      or f.get("name") == fiche.get("name")), None)
-    if not reference:
-        return []
-    famille = _famille(reference)
-    if not famille:
-        return []
+        return None
+    return next((c for c, f in EXERCISES_INFO.items()
+                 if f is fiche or f.get("name") == fiche.get("name")), None)
 
-    premier_mot = _cle(reference).split()[0] if _cle(reference) else ""
-    propositions = []
-    for cle_cat, f in EXERCISES_INFO.items():
+
+def _carte(cle_cat: str) -> dict:
+    f = EXERCISES_INFO[cle_cat]
+    avec = _avec_illustration(cle_cat, f)
+    return {"nom": cle_cat, "titre": f.get("name") or cle_cat,
+            "muscles": f.get("muscles") or [],
+            "image": avec.get("image"),
+            "illustration": avec.get("illustration", False)}
+
+
+def variantes(nom: str, limite: int = 8) -> dict:
+    """Ce qu'on peut faire à la place, classé en deux rangs.
+
+    `mouvement` : le MÊME geste, au matériel ou à la position près — les
+    extensions triceps à la barre, à la poulie, à la corde. C'est ce qu'on
+    cherche neuf fois sur dix, et c'est court.
+
+    `muscle` : le reste du groupe musculaire, proposé seulement en second
+    rang. Le mettre au même niveau noyait les vraies variantes sous tous
+    les exercices de pectoraux.
+    """
+    reference = _cle_catalogue(nom)
+    if not reference:
+        return {"mouvement": [], "muscle": []}
+    geste = famille_geste(reference)
+    famille = _famille(reference)
+
+    mouvement, muscle = [], []
+    for cle_cat in EXERCISES_INFO:
         if cle_cat == reference or _famille(cle_cat) != famille:
             continue
-        proche = _cle(cle_cat).startswith(premier_mot + " ") or _cle(cle_cat) == premier_mot
-        propositions.append((0 if proche else 1, cle_cat, f))
+        (mouvement if famille_geste(cle_cat) == geste else muscle).append(cle_cat)
 
-    propositions.sort(key=lambda t: (t[0], t[1]))
-    return [{
-        "nom": cle_cat,
-        "titre": f.get("name") or cle_cat,
-        "muscles": f.get("muscles") or [],
-        "image": _avec_illustration(cle_cat, f).get("image"),
-        "illustration": _avec_illustration(cle_cat, f).get("illustration", False),
-    } for _, cle_cat, f in propositions[:limite]]
+    mouvement.sort()
+    muscle.sort()
+    return {"mouvement": [_carte(c) for c in mouvement[:limite]],
+            "muscle": [_carte(c) for c in muscle[:limite]]}
 
 
 def get_all_exercises_info():

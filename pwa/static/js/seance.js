@@ -158,6 +158,9 @@
       // Panneau « aujourd'hui, à la place : ». Replié par défaut : on
       // change d'exercice de temps en temps, pas à chaque séance.
       showVariantes: false,
+      // Le second rang (tout le groupe musculaire) reste replié :
+      // c'est lui qui noyait les vraies variantes.
+      showAutresVariantes: false,
       exoInfo: data.info || {},
       variant: data.variant,
       _initialVariant: data.variant,
