@@ -1492,6 +1492,26 @@ def resoudre(name):
     proche = _plus_proche(jetons)
     if proche:
         return proche, "faute_de_frappe"
+
+    # 11. La PRISE, en tout dernier. « Tirage horizontal prise neutre » et
+    #     « ... prise large » sont deux exercices : les charges n'ont rien à
+    #     voir, donc chacun mène sa progression sous son propre nom. Mais ils
+    #     partagent la même FICHE — même geste, mêmes conseils, même
+    #     illustration. On retire donc la prise pour trouver la fiche, sans
+    #     jamais toucher au nom sous lequel les séries sont enregistrées.
+    #
+    #     En dernier parce que le catalogue distingue parfois lui-même les
+    #     prises (« Tirage vertical prise serrée ») : celles-là ont déjà
+    #     trouvé leur fiche aux étapes précédentes.
+    # Tout ce qui suit le mot « prise » : c'est un détail de saisie, pas
+    # un autre exercice pour la fiche.
+    mots = cle.split()
+    if "prise" in mots:
+        sans_prise = " ".join(mots[:mots.index("prise")])
+        if sans_prise:
+            cle_trouvee, _ = resoudre(sans_prise)
+            if cle_trouvee:
+                return cle_trouvee, "prise"
     return None, ""
 
 
@@ -1553,6 +1573,17 @@ def canoniser(nom):
 
     cle, niveau = resoudre(base)
     if not cle:
+        return None, ""
+    # La prise partage la fiche mais PAS l'historique : « prise neutre » et
+    # « prise large » ne se chargent pas pareil, donc chacune mène sa
+    # progression. Proposer de les renommer vers le même nom fusionnerait
+    # deux passés en un, sans retour possible, et le seul indice serait une
+    # courbe devenue incohérente. C'est une distinction voulue, pas une faute.
+    #
+    # Le test porte sur le MOT, pas sur l'étape qui a résolu : « développé
+    # couché prise inversée » trouve sa fiche bien avant d'arriver à l'étape
+    # de la prise.
+    if "prise" in _cle(base).split() and "prise" not in _cle(cle).split():
         return None, ""
     nouveau = f"{cle} ({variante})" if variante else cle
     return (None, "") if nouveau == (nom or "").strip() else (nouveau, niveau)

@@ -100,3 +100,37 @@ def test_aucun_exercice_du_catalogue_nen_absorbe_un_autre():
         if vers and vers != nom:
             fusions.append((nom, vers))
     assert not fusions, fusions
+
+
+# ── La prise : même fiche, historiques séparés ───────────────────
+
+
+@pytest.mark.parametrize("saisi", [
+    "Tirage horizontal prise neutre",
+    "Tirage horizontal prise large",
+])
+def test_une_prise_partage_la_fiche_de_lexercice(saisi):
+    """Le geste, les conseils et l'illustration sont les mêmes quelle que
+    soit la prise : inutile d'écrire deux fiches."""
+    from core.exercises_data import get_exercise_info
+    info = get_exercise_info(saisi)
+    assert info is not None, saisi
+    assert info["name"].startswith("Tirage horizontal")
+
+
+def test_deux_prises_ne_sont_jamais_proposees_a_la_fusion():
+    """Elles ne se chargent pas pareil : prise neutre et prise large mènent
+    chacune sa progression. Les renommer vers le même nom fusionnerait deux
+    passés en un, sans retour possible — et le seul indice serait une
+    courbe qui devient incohérente."""
+    for saisi in ("Tirage horizontal prise neutre",
+                  "Tirage horizontal prise large",
+                  "Développé couché prise inversée"):
+        assert canoniser(saisi) == (None, ""), f"{saisi} -> {canoniser(saisi)}"
+
+
+def test_une_prise_que_le_catalogue_distingue_garde_sa_propre_fiche():
+    """« Tirage vertical prise serrée » est une entrée à part entière : elle
+    ne doit pas retomber sur « Tirage vertical »."""
+    assert resoudre("Tirage vertical prise serrée") == (
+        "Tirage vertical prise serrée", "exact")
