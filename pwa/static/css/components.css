@@ -1063,3 +1063,24 @@ html.has-ad-banner .topbar {
 .debrief-locked strong { font-size: 0.9rem; color: var(--text-1); }
 .debrief-locked p { margin: 3px 0 0; font-size: 0.78rem; color: var(--text-2); line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) { .debrief-dot { animation: none; opacity: 0.6; } }
+
+/* Nom d'exercice modifiable dans le programme. Il se lit comme du texte
+   tant qu'on n'y touche pas : un champ visible partout transformerait la
+   liste en formulaire, alors qu'on la parcourt surtout pour la relire. */
+.prog-exo-rename {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.prog-exo-rename:hover { border-bottom-color: var(--border-default); }
+.prog-exo-rename:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+  background: rgba(255, 255, 255, 0.04);
+}

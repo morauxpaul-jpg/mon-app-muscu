@@ -834,6 +834,24 @@
         }
         this.scheduleSave();
       },
+      renommerExo(sname, exIdx, nouveau) {
+        nouveau = (nouveau || '').trim();
+        var exo = (this.prog[sname] || [])[exIdx];
+        if (!exo || !nouveau || nouveau === exo.name) return;
+        var ancien = exo.name;
+        exo.name = nouveau;
+        this.scheduleSave();
+        // L'historique reste sous l'ancien nom : c'est VOULU. Renommer ici
+        // ne peut pas deviner si tu scindes un exercice en deux (prise
+        // neutre / prise large, où les séries passées appartiennent à l'un
+        // des deux) ou si tu corriges une faute (où elles doivent suivre).
+        // On le dit, et l'outil de Gestion fait le déplacement sur demande.
+        this.seanceMsg = "« " + ancien + " » est renommé en « " + nouveau
+          + " » dans le programme. Tes séries déjà enregistrées restent sous "
+          + "l'ancien nom — si tu voulais les emmener, va dans Plus › Gestion "
+          + "› Renommer un exercice.";
+      },
+
       programmeDe(name) {
         var pid = this.seanceProg[name];
         var trouve = this.programmes.filter(function (p) { return p.id === pid; })[0];

@@ -7,7 +7,8 @@
       "title": "Renommer une séance sans perdre son historique",
       "changes": [
         "Tu peux renommer une séance : ses séries, son volume et ses records la suivent. Avant, le passé restait sous l'ancien nom et la séance repartait de zéro sans rien dire",
-        "Quand un nom de séance est déjà pris, l'app te le dit et te précise dans quel programme il se trouve — utile quand on en construit un deuxième à côté du premier. Les noms servent à retrouver ton historique, ils restent donc uniques"
+        "Quand un nom de séance est déjà pris, l'app te le dit et te précise dans quel programme il se trouve — utile quand on en construit un deuxième à côté du premier. Les noms servent à retrouver ton historique, ils restent donc uniques",
+        "Le nom d'un exercice se modifie directement dans ton programme : précise « Tirage horizontal prise neutre » et « ... prise large » par exemple. Ils comptent comme deux exercices, chacun avec sa progression, mais partagent la même fiche"
       ]
     },
     {
