@@ -157,13 +157,19 @@ GESTES = {
     # dessine un banc quelconque et des poids qui flottent.
     "Leg curl assis": "SITTING DOWN on a seated leg curl machine, back "
                       "against the backrest, a thick pad clamped across the "
-                      "TOPS of both thighs, ankles hooked UNDER a roller pad, "
-                      "knees bending so the heels are pulled back underneath "
-                      "the seat. The mannequin is NOT lying down",
-    "Élévations frontales": "standing, both arms straight and raised "
-                            "FORWARD in front of the body up to shoulder "
-                            "height, a dumbbell in each hand. The arms are "
-                            "raised to the FRONT, not out to the sides",
+                      "TOPS of both thighs, ankles hooked under a roller pad. "
+                      "Show the END of the movement: the knees are FULLY "
+                      "BENT, both lower legs folded back and tucked under "
+                      "the seat, so the BACK of each thigh faces the camera. "
+                      "Strict side view. The mannequin is NOT lying down and "
+                      "the legs are NOT straight out in front",
+    "Élévations frontales": "standing, holding TWO SEPARATE SHORT "
+                            "DUMBBELLS, one in each hand, with a clear empty "
+                            "gap between the two hands — nothing connects "
+                            "them. Both arms are COMPLETELY STRAIGHT at the "
+                            "elbow, raised FORWARD in front of the chest up "
+                            "to shoulder height, palms facing down. The "
+                            "elbows are not bent at all",
     "Machine adducteurs": "SEATED on an adductor machine: upright back "
                           "against a padded backrest, both knees SPREAD "
                           "APART with the inner side of each thigh pressed "
