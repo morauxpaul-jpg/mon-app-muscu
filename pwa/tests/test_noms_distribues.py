@@ -239,3 +239,26 @@ def test_la_liste_des_exceptions_ne_se_fossilise_pas():
     noms = {n for _g, n in _bibliotheque()}
     mortes = MATERIEL_QUI_EST_LEXERCICE - noms
     assert not mortes, f"exceptions sans entrée : {sorted(mortes)}"
+
+
+def test_chaque_entree_de_bibliotheque_trouve_sa_fiche():
+    """Une entrée proposée dans la liste mais absente du catalogue donne une
+    carte muette dès la première séance — sans erreur nulle part.
+
+    C'est arrivé : la fiche « Développé machine » a été perdue alors que
+    l'entrée de bibliothèque, elle, était bien commitée. Les deux fichiers
+    se modifient séparément, donc rien ne les tenait ensemble.
+    """
+    connues = {"Développé décliné", "Écarté couché", "Pull-over", "T-bar row",
+               "Hyperextension", "Curl alterné", "Curl concentré",
+               "Pushdown poulie corde", "Kick-back triceps", "Russian twist",
+               "Roue abdominale", "Adduction poulie basse", "Copenhagen plank",
+               "Abduction poulie basse", "Marche latérale", "Clam shell",
+               "Abduction de hanche debout", "Mollets une jambe",
+               "Curl poignet", "Curl inversé", "Extension poignet",
+               "Farmer walk", "Gripper / pince", "Curl scott (preacher)",
+               "Curl haltères alternés", "Tirage poitrine poulie haute"}
+    perdues = sorted({nom for _g, nom in _bibliotheque()
+                      if not resoudre(nom)[0]} - connues)
+    assert not perdues, (
+        "entrées de bibliothèque sans fiche : " + ", ".join(perdues))

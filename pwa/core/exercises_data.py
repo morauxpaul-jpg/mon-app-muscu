@@ -1103,6 +1103,22 @@ EXERCISES_INFO = {
         ],
         "image": "legs.svg",
     },
+    "Développé machine": {
+        "name": "Développé machine (chest press)",
+        "muscles": ["Pectoraux"],
+        "description": "Assis à la machine, dos plaqué au dossier et poignées "
+                       "à hauteur de poitrine, pousser vers l'avant jusqu'à "
+                       "extension des bras, puis revenir en contrôlant. Le "
+                       "mouvement est guidé : pas de stabilisation à gérer, "
+                       "donc on peut aller près de l'échec sans partenaire.",
+        "tips": [
+            "Règle le siège pour que les poignées soient à hauteur de poitrine, "
+            "pas d'épaules",
+            "Ne verrouille pas les coudes en fin de poussée",
+            "Retour contrôlé jusqu'à sentir l'étirement, sans cogner la pile",
+        ],
+        "image": "chest.svg",
+    },
 }
 
 
@@ -1341,6 +1357,11 @@ _ANGLAIS = {
     "leg curl allonge": "Leg curl",
     "lying leg curl": "Leg curl",
     "seated leg curl": "Leg curl assis",
+    "chest press": "Développé machine",
+    "machine chest press": "Développé machine",
+    "seated chest press": "Développé machine",
+    "presse pectoraux": "Développé machine",
+    "developpe pectoraux machine": "Développé machine",
     "goblet squat": "Squat gobelet",
     "bulgarian split squat": "Squat bulgare",
     "walking lunges": "Fentes marchées",
