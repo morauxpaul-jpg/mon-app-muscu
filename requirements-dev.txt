@@ -1,0 +1,14 @@
+# Dépendances des OUTILS et des TESTS. L'application ne les charge jamais.
+#
+# Pillow sert à fabriquer les illustrations (détourage, carré, WebP) et à
+# les vérifier dans les tests. L'app, elle, ne fait que servir des `.webp`
+# déjà traités : l'embarquer en production alourdirait l'image Railway
+# d'une bibliothèque qu'aucune requête n'utilise.
+#
+# C'est aussi pour ça que ce fichier n'inclut PAS requirements.txt : la CI
+# installe d'abord les seules dépendances de production et vérifie que
+# l'app démarre avec, avant d'ajouter celles-ci. Sans cette séparation,
+# un `from PIL import Image` glissé dans une route passerait les tests et
+# planterait au démarrage du serveur.
+pytest==8.3.4
+Pillow==12.1.0

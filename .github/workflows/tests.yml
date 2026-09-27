@@ -44,12 +44,24 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       # requirements.txt EXACTEMENT comme en production : si une dépendance y
       # manque, le job échoue ici plutôt qu'au démarrage du serveur.
-      - name: Dépendances
-        run: pip install -r requirements.txt pytest
+      - name: Dépendances de production
+        run: pip install -r requirements.txt
+
+      # Le seul moment où l'app est seule avec ses dépendances réelles. Les
+      # outils (Pillow) arrivent APRÈS : un `from PIL import Image` glissant
+      # dans une route passerait les tests et planterait le serveur.
+      - name: L'app démarre avec elles seules
+        working-directory: pwa
+        run: python -c "import app"
+
+      - name: Dépendances des tests et des outils
+        run: pip install -r requirements-dev.txt
 
       - uses: actions/setup-node@v7
         with:
