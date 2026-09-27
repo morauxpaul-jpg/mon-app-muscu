@@ -248,6 +248,9 @@ ZONES = {
     "Épaules (deltoïdes latéraux)": ("side deltoids",
                                      "the OUTER edge of both "
                                      "shoulders", ""),
+    "Épaules (deltoïdes antérieurs)": ("front deltoids",
+                                      "the FRONT of both shoulders, just "
+                                      "below the collarbone", ""),
     "Épaules (deltoïdes postérieurs)": ("rear deltoids",
                                         "the BACK of both "
                                         "shoulders", ""),

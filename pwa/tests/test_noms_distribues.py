@@ -114,3 +114,83 @@ def test_les_noms_absorbes_ne_sont_plus_au_catalogue():
     ne doivent plus être servis : sinon le sélecteur les reproposerait."""
     presents = [n for n in _ABSORBES if n in EXERCISES_INFO]
     assert not presents, presents
+
+
+# ── Les surnoms de la bibliothèque sont DÉRIVÉS du catalogue ─────
+
+
+def test_les_surnoms_de_la_bibliotheque_suivent_le_catalogue():
+    """« Overhead triceps extension » était introuvable alors que
+    l'exercice existait sous « Extension nuque haltère ». Le catalogue
+    connaissait pourtant le surnom : c'est la bibliothèque qui l'ignorait.
+
+    Les deux listes ne s'écrivent plus séparément — celle des surnoms est
+    générée depuis l'autre. Ce test échoue dès qu'elles divergent, et la
+    commande à lancer est dans son message.
+    """
+    import sys
+    sys.path.insert(0, str(RACINE / "tools"))
+    from sync_library_aliases import ecarts
+    a_resync = ecarts()
+    assert not a_resync, (
+        "surnoms désynchronisés pour " + ", ".join(a_resync)
+        + " — relancer : python tools/sync_library_aliases.py")
+
+
+@pytest.mark.parametrize("recherche,attendu", [
+    ("overhead triceps extension", "Extension nuque haltère"),
+    ("skull crusher", "Skull crusher barre EZ"),
+    ("front raise", "Élévation frontale"),
+    ("pec fly", "Écarté machine"),
+])
+def test_un_nom_anglais_courant_trouve_son_exercice(recherche, attendu):
+    """Ce qu'on tape vraiment au moment de construire une séance."""
+    sortie = subprocess.run(
+        ["node", "-e",
+         "const l=require('./static/js/exercise-library.js');"
+         "const q=process.argv[1];const t=[];"
+         "Object.values(l.EXERCISE_LIBRARY).flat()"
+         ".forEach(e=>{if(l.exerciseMatches(e,q))t.push(e.name)});"
+         "console.log(JSON.stringify(t))", recherche],
+        capture_output=True, text=True, encoding="utf-8", cwd=RACINE)
+    if sortie.returncode != 0:
+        pytest.skip("node indisponible")
+    assert attendu in json.loads(sortie.stdout), sortie.stdout
+
+
+def test_une_elevation_frontale_nest_pas_une_elevation_laterale():
+    """« front raise » pointait vers les élévations LATÉRALES : deux
+    faisceaux différents de l'épaule, et donc des conseils qui ne
+    correspondent pas au geste qu'on est en train de faire."""
+    assert resoudre("Élévation frontale")[0] == "Élévations frontales"
+    assert resoudre("front raise")[0] == "Élévations frontales"
+
+
+@pytest.mark.parametrize("saisi,attendu", [
+    ("Skull crusher barre EZ", "Barre au front"),
+    ("Pushdown poulie corde", "Extensions triceps"),
+])
+def test_plusieurs_mots_de_materiel_a_la_suite_sont_tous_retires(saisi, attendu):
+    """Le retrait se faisait en une seule passe, dans l'ordre d'une liste :
+    « Skull crusher barre EZ » perdait « EZ », mais « barre » était déjà
+    derrière nous. L'exercice restait introuvable pour un mot de trop."""
+    assert resoudre(saisi)[0] == attendu, resoudre(saisi)
+
+
+def test_un_nom_absorbe_garde_sa_fiche():
+    """La fusion du matériel a failli coûter leur fiche à « Curl barre » et
+    « Curl haltères » : leur base est « Curl biceps », et retirer le
+    matériel ne laisse que « curl », qui n'est la clé de rien. Quiconque
+    avait ces noms dans son programme ou son historique aurait perdu fiche,
+    conseils et illustration — sans aucune erreur nulle part.
+
+    Une fusion doit déplacer l'information, jamais la faire disparaître.
+    """
+    perdus = [n for n in _ABSORBES if not resoudre(n)[0]]
+    assert not perdus, perdus
+
+
+def test_un_nom_absorbe_mene_bien_a_SA_base():
+    """Résoudre ne suffit pas : encore faut-il tomber sur le bon exercice."""
+    for absorbe, (base, _materiel) in _ABSORBES.items():
+        assert resoudre(absorbe)[0] == base, f"{absorbe} -> {resoudre(absorbe)[0]}"

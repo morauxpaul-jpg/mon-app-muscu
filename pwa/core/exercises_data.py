@@ -1072,6 +1072,21 @@ EXERCISES_INFO = {
         ],
         "image": "chest.svg",
     },
+    "Élévations frontales": {
+        "name": "Élévations frontales",
+        "muscles": ["Épaules (deltoïdes antérieurs)"],
+        "description": "Debout, bras le long du corps, monter les bras "
+                       "tendus DEVANT soi jusqu'à hauteur d'épaules, puis "
+                       "redescendre en contrôlant. Cible le faisceau avant "
+                       "de l'épaule, souvent déjà sollicité par les "
+                       "développés — inutile d'en abuser.",
+        "tips": [
+            "Ne monte pas plus haut que les épaules",
+            "Pas d'élan avec le bas du dos : si tu balances, c'est trop lourd",
+            "Un bras après l'autre pour mieux contrôler",
+        ],
+        "image": "shoulder.svg",
+    },
 }
 
 
@@ -1205,6 +1220,7 @@ def _cle(nom: str) -> str:
 # Index normalisé, construit une fois : la reconnaissance tourne à chaque
 # exercice de chaque séance affichée.
 _PAR_CLE = {_cle(nom): nom for nom in EXERCISES_INFO}
+_PAR_CLE_ABSORBES = {_cle(n): v for n, v in _ABSORBES.items()}
 
 def _alias_du_catalogue():
     """Les noms alternatifs sont déjà dans les fiches, entre parenthèses.
@@ -1288,7 +1304,6 @@ _ANGLAIS = {
     "pushdown": "Extensions triceps",
     "lateral raise": "Élévations latérales",
     "side raise": "Élévations latérales",
-    "front raise": "Élévations latérales",
     "rear delt fly": "Oiseau",
     "reverse fly": "Oiseau",
     "lat pulldown": "Tirage vertical",
@@ -1334,6 +1349,16 @@ _ANGLAIS = {
     "pont fessiers une jambe": "Hip thrust (sol)",
     "rowing australien pieds sureleves": "Tractions australiennes",
     "rowing australien": "Tractions australiennes",
+    # La bibliothèque et le catalogue ne nomment pas toujours pareil. Ces
+    # lignes les réconcilient sans dupliquer les fiches.
+    "front raise": "Élévations frontales",
+    "elevation frontale": "Élévations frontales",
+    "extension nuque": "Extension triceps haltère",
+    "extension nuque haltere": "Extension triceps haltère",
+    "kick back triceps": "Kickback triceps",
+    "kick back": "Kickback triceps",
+    "tirage poitrine": "Tirage vertical",
+    "tirage poitrine poulie haute": "Tirage vertical",
 }
 
 def _index_par_jetons():
@@ -1351,7 +1376,7 @@ _PAR_JETONS = _index_par_jetons()
 
 # Suffixes de matériel à retirer quand le nom complet ne donne rien.
 _SUFFIXES = ("halteres", "haltere", "barre", "poulie", "machine",
-             "elastique", "elastiques", "sol", "smith", "ez")
+             "elastique", "elastiques", "sol", "smith", "ez", "corde")
 
 
 # Du plus sûr au plus large. Le niveau compte : afficher une fiche est
@@ -1384,22 +1409,38 @@ def resoudre(name):
     if cle in _PAR_CLE:
         return _PAR_CLE[cle], "orthographe"
 
+    # 2 bis. Nom absorbé par la fusion du matériel : « Curl haltères »
+    #    désigne « Curl biceps ». Sans cette étape, deux d'entre eux ne
+    #    résolvaient plus DU TOUT — leur base est « Curl biceps », et retirer
+    #    le matériel ne laisse que « curl », qui n'est la clé de rien.
+    #    Quiconque avait ces noms perdait fiche, conseils et illustration.
+    absorbe = _PAR_CLE_ABSORBES.get(cle)
+    if absorbe:
+        return absorbe[0], "orthographe"
+
     # 3. Sans la parenthèse : « Tractions (ou tirage vertical) » → « Tractions ».
     cle_nu = _cle(re.sub(r"\s*\(.*?\)", "", name))
     if cle_nu in _PAR_CLE:
         return _PAR_CLE[cle_nu], "parenthese"
 
     # 4. Sans le matériel en suffixe : « Curl biceps haltères » → « Curl biceps ».
+    # On retire le matériel jusqu'à ce qu'il n'en reste plus. Une seule
+    # passe dans l'ordre du tuple laissait passer « Skull crusher barre EZ » :
+    # « EZ » partait, mais « barre » était déjà derrière nous.
     sans_materiel = cle_nu
-    for suffixe in _SUFFIXES:
-        if sans_materiel.endswith(" " + suffixe):
-            sans_materiel = sans_materiel[: -(len(suffixe) + 1)].strip()
-            if sans_materiel in _PAR_CLE:
-                return _PAR_CLE[sans_materiel], "materiel"
+    encore = True
+    while encore:
+        encore = False
+        for suffixe in _SUFFIXES:
+            if sans_materiel.endswith(" " + suffixe):
+                sans_materiel = sans_materiel[: -(len(suffixe) + 1)].strip()
+                encore = True
+                if sans_materiel in _PAR_CLE:
+                    return _PAR_CLE[sans_materiel], "materiel"
 
     # 5. Nom alternatif annoncé par la fiche : « Leg press » désigne
     #    « Presse à cuisses (Leg press) ».
-    for candidat in (cle, cle_nu):
+    for candidat in (cle, cle_nu, sans_materiel):
         if candidat in _PAR_ALIAS:
             return _PAR_ALIAS[candidat], "surnom"
 
@@ -1478,9 +1519,6 @@ def _plus_proche(jetons):
         else:
             return nom_cat
     return None
-
-
-_PAR_CLE_ABSORBES = {_cle(n): v for n, v in _ABSORBES.items()}
 
 
 def _absorbe_connu(nom):
