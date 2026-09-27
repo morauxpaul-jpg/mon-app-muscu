@@ -1,6 +1,16 @@
 {
-  "current": "v55",
+  "current": "v56",
   "entries": [
+    {
+      "version": "v56",
+      "date": "2026-09-27",
+      "title": "Nouveauté : chaque exercice montre son geste",
+      "changes": [
+        "Chaque exercice a maintenant son illustration sur la carte de séance : un coup d'œil suffit à reconnaître le mouvement, sans avoir à ouvrir la fiche",
+        "Le muscle travaillé apparaît en rouge dessus : tu vois d'un regard où l'effort doit se faire, et tu repères tout de suite si tu compenses avec autre chose",
+        "Touche l'illustration pour l'ouvrir en grand, avec la description du mouvement et les conseils d'exécution"
+      ]
+    },
     {
       "version": "v55",
       "date": "2026-09-26",
