@@ -1,6 +1,16 @@
 {
-  "current": "v59",
+  "current": "v60",
   "entries": [
+    {
+      "version": "v60",
+      "date": "2026-09-28",
+      "title": "Les machines de la salle rejoignent le catalogue",
+      "changes": [
+        "Chest press, reverse fly, leg curl assis, machines adducteurs et abducteurs, écarté machine : les guidées ont maintenant leur fiche, leurs conseils et leur illustration — elles ne renvoyaient plus à la version haltères, qui ne se règle pas pareil",
+        "Le leg curl se choisit assis ou allongé, et le tirage se choisit par la prise : chacun garde sa propre progression, puisque les charges n'ont rien à voir d'une version à l'autre",
+        "Les 82 exercices du catalogue ont désormais tous leur illustration"
+      ]
+    },
     {
       "version": "v59",
       "date": "2026-09-27",
