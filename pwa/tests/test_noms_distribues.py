@@ -138,8 +138,8 @@ def test_les_surnoms_de_la_bibliotheque_suivent_le_catalogue():
 
 
 @pytest.mark.parametrize("recherche,attendu", [
-    ("overhead triceps extension", "Extension nuque haltère"),
-    ("skull crusher", "Skull crusher barre EZ"),
+    ("overhead triceps extension", "Extension nuque"),
+    ("skull crusher", "Skull crusher"),
     ("front raise", "Élévation frontale"),
     ("pec fly", "Écarté machine"),
 ])
@@ -167,7 +167,7 @@ def test_une_elevation_frontale_nest_pas_une_elevation_laterale():
 
 
 @pytest.mark.parametrize("saisi,attendu", [
-    ("Skull crusher barre EZ", "Barre au front"),
+    ("Skull crusher barre EZ", "Barre au front"),   # nom encore tapable
     ("Pushdown poulie corde", "Extensions triceps"),
 ])
 def test_plusieurs_mots_de_materiel_a_la_suite_sont_tous_retires(saisi, attendu):
@@ -194,3 +194,48 @@ def test_un_nom_absorbe_mene_bien_a_SA_base():
     """Résoudre ne suffit pas : encore faut-il tomber sur le bon exercice."""
     for absorbe, (base, _materiel) in _ABSORBES.items():
         assert resoudre(absorbe)[0] == base, f"{absorbe} -> {resoudre(absorbe)[0]}"
+
+
+# ── Le matériel ne s'écrit plus dans le nom ──────────────────────
+
+# Ceux où le mot d'équipement EST l'exercice : « poulie basse » et
+# « poulie haute » désignent une station, « barre EZ » une barre
+# particulière, « vis-à-vis » un montage, « machine adducteurs » une machine
+# dédiée. Et « Rowing barre » n'est pas « Rowing haltère » : debout penché
+# contre un genou sur le banc, ce n'est pas le même mouvement.
+MATERIEL_QUI_EST_LEXERCICE = {
+    "Écarté poulie vis-à-vis", "Écarté machine", "Machine adducteurs",
+    "Machine abducteurs", "Curl barre EZ", "Curl poulie basse",
+    "Adduction poulie basse", "Abduction poulie basse",
+    "Tirage poitrine poulie haute", "Tirage horizontal poulie basse",
+    "Rowing barre", "Rowing haltère", "Pushdown poulie barre",
+    "Pushdown poulie corde",
+}
+
+MOTS_DE_MATERIEL = {"barre", "haltere", "halteres", "poulie", "machine",
+                    "elastique", "corde", "ez", "leste", "lestee", "lestees"}
+
+
+def test_le_materiel_interchangeable_ne_sappelle_plus_un_exercice():
+    """« Extension nuque haltère » empêchait de choisir la poulie : il
+    fallait prendre l'entrée « haltère » pour faire autre chose. Le geste
+    se choisit dans la liste, le matériel dans le sélecteur de variante."""
+    from core.exercises_data import _cle
+    fautifs = []
+    for _groupe, nom in _bibliotheque():
+        if nom in MATERIEL_QUI_EST_LEXERCICE:
+            continue
+        if any(m in MOTS_DE_MATERIEL for m in _cle(nom).split()):
+            fautifs.append(nom)
+    assert not fautifs, (
+        "matériel dans le nom : " + ", ".join(fautifs)
+        + " — soit le retirer, soit l'inscrire dans MATERIEL_QUI_EST_LEXERCICE"
+        " en disant pourquoi")
+
+
+def test_la_liste_des_exceptions_ne_se_fossilise_pas():
+    """Une exception qui ne correspond plus à aucune entrée cache une liste
+    qu'on n'ose plus toucher."""
+    noms = {n for _g, n in _bibliotheque()}
+    mortes = MATERIEL_QUI_EST_LEXERCICE - noms
+    assert not mortes, f"exceptions sans entrée : {sorted(mortes)}"
