@@ -70,7 +70,19 @@ def _display_week(target_date, prog, hist):
     else:
         start = None
     if start is None:
-        # Fallback: date de la première séance non-archivée avec Date valide
+        # Repli : la date de la première séance. On ne l'enregistre PAS.
+        #
+        # Cette fonction est appelée par /accueil et /seance, deux GET que
+        # `prefetch.js` déclenche au simple effleurement du lien. Le
+        # `save_prog` qui vivait ici était la troisième écriture pendant un
+        # GET, après les badges et le record de streak (cf.
+        # tests/test_ecritures_pendant_get.py) — elle avait survécu au
+        # correctif parce qu'elle se cachait dans un helper d'affichage,
+        # derrière un import paresseux.
+        #
+        # Rien n'est perdu : `routes/progres.py:_compute_start_monday` fait
+        # le même calcul sans rien graver, et les programmes créés depuis
+        # l'onboarding portent déjà `_started_at` (routes/onboarding.py).
         dates = []
         for r in hist:
             d = r.get("Date")
@@ -80,12 +92,6 @@ def _display_week(target_date, prog, hist):
                 except (ValueError, TypeError):
                     pass
         start = min(dates) if dates else target_date
-        # Persist for next time
-        from core.data import get_prog as _gp, save_prog as _sp
-        p = _gp()
-        if "_started_at" not in p:
-            p["_started_at"] = start.strftime("%Y-%m-%d")
-            _sp(p)
     start_monday = start - timedelta(days=start.weekday())
     target_monday = target_date - timedelta(days=target_date.weekday())
     return max(1, (target_monday - start_monday).days // 7 + 1)
