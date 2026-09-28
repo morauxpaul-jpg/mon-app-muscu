@@ -70,7 +70,10 @@ def test_save_prog_without_version_column_falls_back_to_upsert(fake_db):
 
 
 def test_cache_is_bounded(fake_db, monkeypatch):
-    monkeypatch.setattr(db, "_CACHE_MAX", 3)
+    # Le plafond est lu par `_cache_set`, qui vit dans core.db_base : c'est
+    # donc ce module qu'il faut borner, pas la façade qui le réexporte.
+    import core.db_base as db_base
+    monkeypatch.setattr(db_base, "_CACHE_MAX", 3)
     for i in range(10):
         db._cache_set(f"k{i}", i)
     assert list(db._data_cache) == ["k7", "k8", "k9"]

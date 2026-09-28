@@ -34,7 +34,17 @@ pwa/
 ├── supabase_schema_v36_coach_memory.sql # profiles.coach_memory (note du coach entre conversations)
 ├── tests/                         # pytest — conftest = fake Supabase en mémoire (cd pwa && python -m pytest tests -q)
 ├── core/
-│   ├── db.py                      # Accès Supabase (service_role), cache LRU TTL 60s, verrou optimiste programs
+│   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
+│   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
+│   ├── db_historique.py           # Table history : lecture, écriture, opérations ciblées, renommages
+│   ├── db_programme.py            # Blob programs.data : verrou optimiste, fusion 3 voies, corps vs données perso
+│   ├── db_profil.py               # profiles : profil, onboarding, poids de corps
+│   ├── db_nutrition.py            # nutrition : repas du jour et sommes de macros
+│   ├── db_bilans.py               # session_notes (v34) : bilans de séance
+│   ├── db_abonnement.py           # Tier PRO, Stripe, parrainage et VIP à durée limitée
+│   ├── db_push.py                 # push_subscriptions, newsletter, relance des inactifs
+│   ├── db_coach.py                # coach_messages / coach_conversations
+│   ├── db_admin.py                # Stats globales, funnel, fiche user, suppression de compte
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
 │   ├── dates.py                   # Helpers dates (timezone Paris), DAYS_FR, MONTHS_FR
 │   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name, overload_suggestion)
@@ -216,7 +226,7 @@ pwa/
 ### Parrainage (croissance, 2026-06-14)
 - **Boucle** : chaque user a un `profiles.referral_code` (stable, dérivé de l'user_id) → lien `/?ref=CODE`. Page **/parrainage** (hub Plus) : lien + copier + partager (Web Share) + compteur de filleuls/jours gagnés.
 - **Capture** : la landing pose un cookie `pending_ref` (survit au round-trip OAuth). À l'onboarding du filleul, `parrainage.apply_referral` crédite **une seule fois** : filleul **+1 j essai**, parrain **+3 j essai** (via `db.grant_vip_days` → `vip_until` cumulatif). L'essai = accès **restreint** (Nutrition + stats, cf. `is_vip_full`). Garde-fous : code valide, pas d'auto-parrainage, `referred_by` posé une seule fois. Le filleul passe en essai immédiatement (`session.pop('is_vip'/'is_vip_full')`) ; le parrain via la revalidation FREE (15 s). Récompenses ajustables : `REFERRER_VIP_DAYS` / `REFEREE_VIP_DAYS` dans `routes/parrainage.py`.
-- **Migration** : `supabase_schema_v29_referral.sql` (`profiles` += `referral_code` [unique], `referred_by`, `vip_until`). Helpers `db.py` : `get_or_create_referral_code`, `get_user_by_referral_code`, `set_referred_by`, `grant_vip_days`, `count_referrals`, `get_referred_by`, `vip_until_active`. Events : `referral_shared`, `referral_signup`.
+- **Migration** : `supabase_schema_v29_referral.sql` (`profiles` += `referral_code` [unique], `referred_by`, `vip_until`). Helpers `db_abonnement.py` : `get_or_create_referral_code`, `get_user_by_referral_code`, `set_referred_by`, `grant_vip_days`, `count_referrals`, `get_referred_by`, `vip_until_active`. Events : `referral_shared`, `referral_signup`.
 
 ### Nudge de relance (rétention, 2026-06-14)
 - **Banner de retour** sur l'accueil : un user avec un historique mais inactif depuis ≥ `REACTIVATION_DAYS`=3 j (jours depuis la dernière perf réelle muscu/cardio) est accueilli par « Content de te revoir ! Ça fait N jours — on reprend en douceur ? » + bouton **Reprendre** (→ /seance). Dismissible (sessionStorage `reac_hidden`). Jamais pour un compte sans historique.
@@ -368,19 +378,25 @@ pwa/
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
-### Lecture paginée (core/db.py)
+### Découpage de la couche données (core/db*.py)
+- `core/db.py` faisait 1 705 lignes et mélangeait dix sujets. Il est devenu une **façade sans code** : docstring, commentaires, imports. Les routes écrivent toujours `from core import db as core_db` et ne voient pas le découpage.
+- Les dépendances entre modules forment un **arbre** : tous s'appuient sur `db_base` ; `db_abonnement`, `db_admin` et `db_push` lisent le profil ; `db_push` et `db_bilans` normalisent une date avec l'historique. Aucun cycle.
+- Le client Supabase n'existe que dans `db_base`. Les tests et `run_local_fake.py` le remplacent par `use_client(faux)` et le relisent par `current_client()` — une affectation directe sur `core.db._client` ne serait plus lue, et `_client` n'est volontairement **pas** réexporté pour que la tentative échoue bruyamment.
+- `tests/test_couche_donnees.py` tient ces propriétés : façade complète, façade sans code, plafond de 400 lignes par module, absence de cycle, client unique, carte à jour.
+
+### Lecture paginée (core/db_base.py)
 - PostgREST plafonne silencieusement les réponses à `max-rows` (1000). Un historique dépassant ce seuil était **tronqué sans erreur**, et une réécriture ultérieure figeait la troncature dans la base. Toutes les lectures de listes passent par `_fetch_all(build)`, qui enchaîne les pages via `.range()` jusqu'à épuisement.
 
 ### Prédicats d'historique (core/hist.py)
 - `is_perf(row)` : au moins une répétition **ou** une charge. Le poids seul ne peut pas servir de critère — pompes, tractions et gainage sont à 0 kg, et toutes les vues qui exigeaient `Poids > 0` ignoraient purement et simplement les séances au poids du corps (streak, compteur de séances, défis).
 - Une seule définition partagée par l'accueil, les progrès, les défis et le debrief : avant, chaque vue avait la sienne.
 
-### Cache mémoire (core/db.py)
+### Cache mémoire (core/db_base.py)
 - TTL : 60 secondes, LRU borné à 200 entrées (`_CACHE_MAX`)
 - Invalidé immédiatement après chaque `save_prog()` et `save_hist()`
 - Clés : `hist:{user_id}`, `prog:{user_id}`, `profile:{user_id}`
 
-### Verrou optimiste sur `programs.data` (core/db.py, migration v32)
+### Verrou optimiste sur `programs.data` (core/db_programme.py, migration v32)
 - 2 workers gunicorn × cache 60 s → deux requêtes peuvent partir du même blob et s'écraser. `save_prog()` fait donc `update … eq(user_id).eq(version)` ; si 0 ligne touchée, relecture + `_merge_prog()` (fusion 3 voies par clé : seules NOS clés modifiées sont réappliquées sur la version DB), 3 tentatives, puis upsert brut loggué en `error`.
 - Base de comparaison = dernier `get_prog()` du process (`_prog_base`). Sans lecture préalable ou sans colonne `version` (migration pas appliquée) → upsert comme avant.
 - `_session_notes` (bilans de séance) : fenêtre glissante de 84 jours purgée à chaque `/seance/finish` (`routes/seance.py`), comme `_extras`/`_libre_draft`.

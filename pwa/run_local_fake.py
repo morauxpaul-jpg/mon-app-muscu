@@ -19,7 +19,7 @@ sys.modules.setdefault("supabase", stub)
 from conftest import FakeSupabase, USER_ID  # noqa: E402
 
 import core.db as core_db  # noqa: E402
-core_db._client = FakeSupabase()
+core_db.use_client(FakeSupabase())
 
 import app as appmod  # noqa: E402
 from flask import session, redirect, request  # noqa: E402
@@ -47,7 +47,7 @@ def test_seed():
     """Remplit la fausse base de données réalistes (pour captures marketing)."""
     import datetime as dt
     from flask import jsonify
-    c = core_db._client
+    c = core_db.current_client()
     c.tables.clear()
     c._id = 0
     core_db._data_cache.clear()  # purge le cache (hist/prog d'une visite vide précédente)

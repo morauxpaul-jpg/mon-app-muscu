@@ -2,7 +2,7 @@
 
 Permet de tester les routes Flask (logique semaine, sauvegarde, suppression
 de compte…) sans base réelle : on stubbe le module `supabase` AVANT l'import
-de l'app, puis on injecte un faux client requêtable dans core.db._client.
+de l'app, puis on injecte un faux client requêtable via core.db.use_client().
 
 Lancer : cd pwa && python -m pytest tests -q
 """
@@ -247,11 +247,11 @@ CSRF = "test-csrf-token"
 def fake_db():
     import core.db as core_db
     fake = FakeSupabase()
-    core_db._client = fake
+    core_db.use_client(fake)
     core_db._data_cache.clear()
     core_db._prog_base.clear()
     yield fake
-    core_db._client = None
+    core_db.use_client(None)
     core_db._data_cache.clear()
     core_db._prog_base.clear()
 
