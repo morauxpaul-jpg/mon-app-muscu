@@ -34,8 +34,8 @@ from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows
                                     _recup_status, _suggestion_for)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
-                                 _purge_old_session_notes, _update_extras,
-                                 _update_libre_draft)
+                                 _purge_old_seance_order, _purge_old_session_notes,
+                                 _update_extras, _update_libre_draft)
 from core.seance_saisie import (_form_date, _known_exo_names, _parse_session_note,
                                 _pr_check, _rows_from_sets, _session_duration_min,
                                 _session_totals)
@@ -747,6 +747,17 @@ def finish():
     # séance, à vie — et il est relu et réécrit à chaque interaction.
     if "_substituts" in prog and key in prog["_substituts"]:
         prog["_substituts"].pop(key, None)
+        changed = True
+    # Même règle, et c'est le calque qui y échappait : l'ordre des cartes
+    # était écrit et jamais effacé. Les cartes d'une séance terminée sont de
+    # toute façon reconstruites depuis l'historique, dans l'ordre où les
+    # séries ont été saisies : l'ordre gardé ne servait plus à rien.
+    if "_seance_order" in prog and key in prog["_seance_order"]:
+        prog["_seance_order"].pop(key, None)
+        changed = True
+    # Rattrapage de ce qui s'est accumulé avant ce correctif : la ligne
+    # ci-dessus ne concerne que les séances à venir.
+    if _purge_old_seance_order(prog):
         changed = True
 
     duration = _session_duration_min(f)

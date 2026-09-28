@@ -384,6 +384,15 @@ pwa/
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
+### Calques du jour dans le blob (`_extras`, `_libre_draft`, `_substituts`, `_seance_order`)
+- Ces quatre clés rangent **une entrée par séance ET par date**. `/seance/finish` en nettoyait trois ; `_seance_order` était écrit et **jamais effacé** — une entrée par séance réordonnée, à vie, dans un blob réécrit à chaque série validée. Corrigé : même suppression que ses trois voisins, plus une purge à 84 jours qui rattrape ce qui s'est déjà accumulé.
+- `_purger_calque(prog, cle, today, jours)` dans `core/seance_calques.py` sert aux deux purges (bilans et ordre) : une seule règle à retenir. `tests/test_calques_bornes.py` la tient pour les quatre calques.
+
+### Mesurer le blob avant d'en sortir quoi que ce soit
+- `python tools/analyse_blob.py` (depuis `pwa/`) lit `programs.data` et donne le poids de chaque clé `_x`, le nombre d'entrées de chaque calque et leur plus vieille date. **Lecture seule**, et il n'imprime **aucun contenu** : que des noms de clés, des tailles et des comptages — un rapport se colle donc sans y réfléchir. Deux tests vérifient ces deux promesses, dont un qui vérifie que la détection d'écriture fonctionne vraiment.
+- Il lit `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` dans l'environnement ; en variables **utilisateur** Windows, les passer par `$env:X = [Environment]::GetEnvironmentVariable('X','User')`.
+- Les 29 clés `_x` (27 au second audit) se répartissent en trois familles : **structurelles** (le programme lui-même : `_profiles`, `_programmes`, `_seance_prog`, `_custom_exercises`, `_cardio`), **bornées** (`_planning`, `_settings`, `_started_at`…) et **croissantes** (les calques, `_archive`, `_legacy_volume`, `_meal_plan`, les défis et badges). Seules les dernières justifient d'être sorties, et l'outil dit lesquelles pèsent vraiment.
+
 ### Poids de /programme (313 → 241 ko)
 - Le détail des vingt programmes du catalogue (chaque séance, chaque exercice) était rendu **côté serveur** derrière un `x-show` : **88 ko, 28 % de la page**, en double du JSON `#catalog-data` qui portait déjà les mêmes données et que la page chargeait de toute façon. Il est rendu à l'ouverture par `detailSeances(id)`.
 - Effet mesuré : **313 → 241 ko** et **1 280 → 406** attributs `style=`. Les styles répétés sont devenus des classes (`.catalog-detail*` dans `components.css`), rendu identique vérifié propriété par propriété dans le navigateur.

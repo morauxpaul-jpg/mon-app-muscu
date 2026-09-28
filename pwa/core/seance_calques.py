@@ -91,25 +91,48 @@ def _apply_seance_order(prog_dict, key, exos_ctx):
     return sorted(exos_ctx, key=_rank)
 
 
-SESSION_NOTES_KEEP_DAYS = 84  # fenêtre glissante : 12 semaines de bilans
+SESSION_NOTES_KEEP_DAYS = 84  # fenêtre glissante : 12 semaines
 
 
-def _purge_old_session_notes(prog_dict, today=None):
-    """Retire de `_session_notes` les bilans plus vieux que la fenêtre.
-    Sans ça le blob programme (relu et réécrit à chaque interaction) grossit
-    d'une entrée par séance, à vie — contrairement à `_extras` et
-    `_libre_draft` qui sont nettoyés en fin de séance. Retourne True si
-    quelque chose a été retiré."""
-    notes = prog_dict.get("_session_notes")
-    if not isinstance(notes, dict) or not notes:
+def _purger_calque(prog_dict, cle, today=None, jours=SESSION_NOTES_KEEP_DAYS):
+    """Retire d'un calque `{"séance|date": …}` les entrées trop vieilles.
+
+    Le blob programme est relu ET réécrit à chaque interaction : un calque
+    qui garde une entrée par séance, à vie, le fait grossir sans fin. Retourne
+    True si quelque chose a été retiré.
+
+    Une clé dont la partie date ne se lit pas est retirée aussi : elle ne
+    correspondra jamais à une séance affichée, donc elle ne fait que peser.
+    """
+    store = prog_dict.get(cle)
+    if not isinstance(store, dict) or not store:
         return False
     today = today or logical_today_paris()
-    cutoff = (today - timedelta(days=SESSION_NOTES_KEEP_DAYS)).strftime("%Y-%m-%d")
+    cutoff = (today - timedelta(days=jours)).strftime("%Y-%m-%d")
     stale = []
-    for k in notes:
+    for k in store:
         date_part = str(k).rsplit("|", 1)[-1]
         if _parse_date(date_part) is None or date_part < cutoff:
             stale.append(k)
     for k in stale:
-        notes.pop(k, None)
+        store.pop(k, None)
     return bool(stale)
+
+
+def _purge_old_session_notes(prog_dict, today=None):
+    """Les bilans plus vieux que la fenêtre. Cf. `_purger_calque`."""
+    return _purger_calque(prog_dict, "_session_notes", today)
+
+
+def _purge_old_seance_order(prog_dict, today=None):
+    """L'ordre des cartes, pour les séances passées.
+
+    `_seance_order` était le seul des quatre calques que RIEN n'effaçait :
+    `/seance/finish` nettoyait `_extras`, `_libre_draft` et `_substituts`, et
+    l'ordre restait. Une entrée par séance réordonnée, à vie, dans un blob
+    réécrit à chaque série validée.
+
+    La purge sert aussi à rattraper ce qui s'est déjà accumulé : la
+    suppression en fin de séance ne concerne que les séances à venir.
+    """
+    return _purger_calque(prog_dict, "_seance_order", today)
