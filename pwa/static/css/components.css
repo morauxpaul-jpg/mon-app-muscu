@@ -749,6 +749,38 @@ button.btn-danger:hover {
   border-color: var(--accent) !important;
 }
 
+/* Détail d'un programme du catalogue : rendu côté client à l'ouverture.
+   Ces règles remplaçaient 328 attributs `style=` identiques — le détail des
+   vingt programmes était écrit dans la page alors qu'on n'en ouvre qu'un.
+   `--border-subtle` n'est défini nulle part : la bordure ci-dessous ne se
+   dessine donc pas, exactement comme avant. Le token est reproduit tel quel
+   pour que les 18 endroits qui l'utilisent reviennent ensemble le jour où
+   il sera défini (cf. tests/test_variables_css.py). */
+.catalog-detail {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 0.5px solid var(--border-subtle);
+  border-radius: 8px;
+}
+.catalog-detail-seance { margin-bottom: 10px; }
+.catalog-detail-seance:last-child { margin-bottom: 0; }
+.catalog-detail-titre {
+  font-size: 0.8rem;
+  color: var(--text-1);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.catalog-detail-exos {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.catalog-detail-exos .nom { color: var(--text-1); }
+.catalog-detail-exos .series { color: var(--text-3); }
+
 /* ── Settings ── */
 .settings-group { margin-bottom: var(--sp-2xl); }
 .settings-group-title {

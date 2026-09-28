@@ -393,19 +393,23 @@
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard-list"/></svg>
             <span x-text="showDetails ? 'Masquer le détail' : 'Détail des séances'"></span>
           </button>
-          <div x-show="showDetails" x-cloak x-transition style="margin-top:10px; padding:10px 12px; background:var(--bg-elevated); border:0.5px solid var(--border-subtle); border-radius:8px;">
-            {% for sp in p.seances_preview %}
-              <div style="margin-bottom: {% if not loop.last %}10px{% else %}0{% endif %};">
-                <div class="label-icon" style="font-size:0.8rem; color:var(--text-1); font-weight:600; margin-bottom:4px;">
-                  <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>{{ sp.name }}
+          {# Le détail est rendu à l'ouverture, depuis `catalogPrograms` (le JSON
+             #catalog-data, déjà dans la page et déjà utilisé plus haut). Écrit
+             côté serveur, il pesait 88 ko — 28 % de la page — pour vingt
+             programmes dont on n'en ouvre qu'un. #}
+          <div x-show="showDetails" x-cloak x-transition class="catalog-detail">
+            <template x-for="sp in detailSeances('{{ p.id }}')" :key="sp.name">
+              <div class="catalog-detail-seance">
+                <div class="label-icon catalog-detail-titre">
+                  <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg><span x-text="sp.name"></span>
                 </div>
-                <ul style="margin:0; padding-left:18px; font-size:0.78rem; color:var(--text-2); line-height:1.5;">
-                  {% for ex in sp.exercises %}
-                    <li><span style="color:var(--text-1);">{{ ex.name }}</span> <span style="color:var(--text-3);">· {{ ex.sets }} séries</span></li>
-                  {% endfor %}
+                <ul class="catalog-detail-exos">
+                  <template x-for="ex in sp.exercises" :key="ex.name">
+                    <li><span class="nom" x-text="ex.name"></span> <span class="series" x-text="'· ' + ex.sets + ' séries'"></span></li>
+                  </template>
                 </ul>
               </div>
-            {% endfor %}
+            </template>
           </div>
 
           {% if p.locked %}
@@ -928,6 +932,13 @@
         this.seanceOrder[i] = this.seanceOrder[j];
         this.seanceOrder[j] = tmp;
         this.scheduleSave();
+      },
+      detailSeances(progId) {
+        // Le détail d'un programme du catalogue, lu dans #catalog-data plutôt
+        // qu'écrit dans la page : vingt programmes dépliés côté serveur
+        // pesaient 88 ko qu'on ne regardait presque jamais.
+        var p = this.catalogPrograms.find(function (x) { return x.id === progId; });
+        return (p && p.seances_preview) || [];
       },
       addSeanceFromCatalog(progId, seanceName, destProg) {
         var p = this.catalogPrograms.find(function (x) { return x.id === progId; });

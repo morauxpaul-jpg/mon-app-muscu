@@ -384,6 +384,16 @@ pwa/
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
+### Poids de /programme (313 → 241 ko)
+- Le détail des vingt programmes du catalogue (chaque séance, chaque exercice) était rendu **côté serveur** derrière un `x-show` : **88 ko, 28 % de la page**, en double du JSON `#catalog-data` qui portait déjà les mêmes données et que la page chargeait de toute façon. Il est rendu à l'ouverture par `detailSeances(id)`.
+- Effet mesuré : **313 → 241 ko** et **1 280 → 406** attributs `style=`. Les styles répétés sont devenus des classes (`.catalog-detail*` dans `components.css`), rendu identique vérifié propriété par propriété dans le navigateur.
+- `tests/test_poids_programme.py` tient un plafond de 260 ko et interdit le retour de la boucle Jinja.
+
+### Variables CSS mortes
+- `var(--x)` vers un token non défini **et sans repli** ne dessine rien : la déclaration entière devient invalide, sans erreur. `--border-subtle` est dans ce cas : **18 fois dans six gabarits, défini nulle part** — 244 bordures demandées et jamais dessinées sur la seule page /programme.
+- Quatre autres tokens absents (`--bg-input`, `--sp-2`, `--sp-3`, `--border-strong`) portent tous un repli à chaque usage : eux s'affichent.
+- `tests/test_variables_css.py` fige la liste : aucun nouveau token mort, et un token enfin défini doit en sortir.
+
 ### Découpage de la couche données (core/db*.py)
 - `core/db.py` faisait 1 705 lignes et mélangeait dix sujets. Il est devenu une **façade sans code** : docstring, commentaires, imports. Les routes écrivent toujours `from core import db as core_db` et ne voient pas le découpage.
 - Les dépendances entre modules forment un **arbre** : tous s'appuient sur `db_base` ; `db_abonnement`, `db_admin` et `db_push` lisent le profil ; `db_push` et `db_bilans` normalisent une date avec l'historique. Aucun cycle.
