@@ -124,15 +124,28 @@ def _purge_old_session_notes(prog_dict, today=None):
     return _purger_calque(prog_dict, "_session_notes", today)
 
 
-def _purge_old_seance_order(prog_dict, today=None):
-    """L'ordre des cartes, pour les séances passées.
+# Les quatre calques indexés par « séance|date ». `/seance/finish` efface
+# l'entrée du jour — mais seulement si la séance est TERMINÉE. Une séance
+# ouverte puis abandonnée laisse la sienne pour toujours : mesuré en
+# production, un `_extras` du 27 avril et un `_libre_draft` du 11 juin
+# traînaient encore fin septembre. D'où la purge, qui ne dépend pas d'une
+# fin de séance qui n'arrivera jamais.
+CALQUES_DU_JOUR = ("_extras", "_libre_draft", "_substituts", "_seance_order")
 
-    `_seance_order` était le seul des quatre calques que RIEN n'effaçait :
-    `/seance/finish` nettoyait `_extras`, `_libre_draft` et `_substituts`, et
-    l'ordre restait. Une entrée par séance réordonnée, à vie, dans un blob
-    réécrit à chaque série validée.
 
-    La purge sert aussi à rattraper ce qui s'est déjà accumulé : la
-    suppression en fin de séance ne concerne que les séances à venir.
+def purger_les_calques(prog_dict, today=None) -> bool:
+    """Retire de TOUS les calques du jour ce qui a passé la fenêtre.
+
+    Retourne True si quelque chose a été retiré — l'appelant sait alors
+    qu'il doit sauvegarder.
     """
+    retire = False
+    for cle in CALQUES_DU_JOUR:
+        if _purger_calque(prog_dict, cle, today):
+            retire = True
+    return retire
+
+
+def _purge_old_seance_order(prog_dict, today=None):
+    """L'ordre des cartes seul. Gardé pour les tests qui le visent."""
     return _purger_calque(prog_dict, "_seance_order", today)

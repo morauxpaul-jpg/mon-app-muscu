@@ -34,8 +34,8 @@ from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows
                                     _recup_status, _suggestion_for)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
-                                 _purge_old_seance_order, _purge_old_session_notes,
-                                 _update_extras, _update_libre_draft)
+                                 _purge_old_session_notes, _update_extras,
+                                 _update_libre_draft, purger_les_calques)
 from core.seance_saisie import (_form_date, _known_exo_names, _parse_session_note,
                                 _pr_check, _rows_from_sets, _session_duration_min,
                                 _session_totals)
@@ -755,9 +755,11 @@ def finish():
     if "_seance_order" in prog and key in prog["_seance_order"]:
         prog["_seance_order"].pop(key, None)
         changed = True
-    # Rattrapage de ce qui s'est accumulé avant ce correctif : la ligne
-    # ci-dessus ne concerne que les séances à venir.
-    if _purge_old_seance_order(prog):
+    # Rattrapage : les quatre lignes ci-dessus ne nettoient que la séance
+    # qu'on vient de TERMINER. Une séance ouverte puis abandonnée ne passe
+    # jamais par ici et garde son calque à vie — mesuré en production, des
+    # entrées d'avril et de juin traînaient encore fin septembre.
+    if purger_les_calques(prog):
         changed = True
 
     duration = _session_duration_min(f)

@@ -10,6 +10,12 @@ exercices ajoutés à la volée), `_libre_draft` (le brouillon de séance libre)
 `/seance/finish` en nettoyait **trois**. Le quatrième, `_seance_order`, était
 écrit et jamais effacé : une entrée par séance réordonnée, à vie.
 
+Et effacer en fin de séance ne suffit pas : une séance **ouverte puis
+abandonnée** ne passe jamais par `finish` et garde son calque à vie. Mesuré
+sur les vraies données fin septembre : un `_extras` du 27 avril et un
+`_libre_draft` du 11 juin traînaient encore. D'où une purge à 84 jours sur
+les quatre, qui ne dépend pas d'une fin de séance qui n'arrivera jamais.
+
 Ces tests tiennent la règle pour les quatre, et vérifient le rattrapage de ce
 qui s'est déjà accumulé.
 """
@@ -150,3 +156,52 @@ def test_les_deux_purges_partagent_la_meme_fenetre():
     assert _purge_old_session_notes(prog, today=LUNDI) is True
     assert _purge_old_seance_order(prog, today=LUNDI) is True
     assert prog["_session_notes"] == {} and prog["_seance_order"] == {}
+
+
+# ── Les séances abandonnées ──────────────────────────────────────────────
+
+@pytest.mark.parametrize("calque", CALQUES)
+def test_une_seance_abandonnee_ne_garde_pas_son_calque_a_vie(calque, compte, logged_in):
+    """Le cas mesuré en production : ouverte, jamais terminée, jamais nettoyée.
+
+    `finish` n'efface que la séance qu'on vient de terminer. Celle qu'on a
+    ouverte en avril et laissée en plan n'y passe jamais.
+    """
+    jour = LUNDI.isoformat()
+    abandon = (LUNDI - dt.timedelta(days=150)).isoformat()
+    _ecrire(compte, {calque: {f"Push|{abandon}": ["X"], f"Push|{jour}": ["Y"]}})
+
+    _finir(logged_in, jour)
+
+    reste = _prog(compte).get(calque) or {}
+    assert f"Push|{abandon}" not in reste, (
+        f"{calque} garde une séance abandonnée depuis 150 jours")
+
+
+def test_les_quatre_calques_partagent_la_meme_fenetre(compte, logged_in):
+    """Une seule règle à retenir, pas quatre."""
+    from core.seance_calques import CALQUES_DU_JOUR, purger_les_calques
+    assert set(CALQUES_DU_JOUR) == set(CALQUES)
+    vieux = (LUNDI - dt.timedelta(days=200)).isoformat()
+    prog = {c: {f"Push|{vieux}": ["X"]} for c in CALQUES_DU_JOUR}
+    assert purger_les_calques(prog, today=LUNDI) is True
+    assert all(prog[c] == {} for c in CALQUES_DU_JOUR)
+
+
+def test_la_purge_groupee_ne_touche_pas_au_recent(compte, logged_in):
+    from core.seance_calques import CALQUES_DU_JOUR, purger_les_calques
+    hier = (LUNDI - dt.timedelta(days=1)).isoformat()
+    prog = {c: {f"Push|{hier}": ["X"]} for c in CALQUES_DU_JOUR}
+    assert purger_les_calques(prog, today=LUNDI) is False
+    assert all(prog[c] for c in CALQUES_DU_JOUR)
+
+
+def test_la_purge_groupee_signale_des_quun_seul_calque_bouge(compte, logged_in):
+    """L'appelant sauvegarde sur ce booléen : le rater perdrait la purge."""
+    from core.seance_calques import purger_les_calques
+    vieux = (LUNDI - dt.timedelta(days=200)).isoformat()
+    hier = (LUNDI - dt.timedelta(days=1)).isoformat()
+    prog = {"_extras": {f"Push|{hier}": ["frais"]},
+            "_libre_draft": {f"Push|{vieux}": ["perime"]}}
+    assert purger_les_calques(prog, today=LUNDI) is True
+    assert prog["_extras"] and prog["_libre_draft"] == {}

@@ -385,8 +385,16 @@ pwa/
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
 ### Calques du jour dans le blob (`_extras`, `_libre_draft`, `_substituts`, `_seance_order`)
-- Ces quatre clés rangent **une entrée par séance ET par date**. `/seance/finish` en nettoyait trois ; `_seance_order` était écrit et **jamais effacé** — une entrée par séance réordonnée, à vie, dans un blob réécrit à chaque série validée. Corrigé : même suppression que ses trois voisins, plus une purge à 84 jours qui rattrape ce qui s'est déjà accumulé.
-- `_purger_calque(prog, cle, today, jours)` dans `core/seance_calques.py` sert aux deux purges (bilans et ordre) : une seule règle à retenir. `tests/test_calques_bornes.py` la tient pour les quatre calques.
+- Ces quatre clés rangent **une entrée par séance ET par date**. `/seance/finish` en nettoyait trois ; `_seance_order` était écrit et **jamais effacé**. Corrigé : même suppression que ses trois voisins.
+- Mais effacer en fin de séance ne suffit pas : une séance **ouverte puis abandonnée** ne passe jamais par `finish`. Mesuré en production fin septembre, un `_extras` du 27 avril et un `_libre_draft` du 11 juin traînaient encore. `purger_les_calques(prog)` applique donc une fenêtre de 84 jours aux **quatre**, à chaque fin de séance.
+- Limite assumée : la purge ne tourne qu'à `finish`. Quelqu'un qui n'en termine aucune ne la déclenche jamais — mais il n'y a pas d'autre point d'écriture naturel, et un nettoyage pendant un GET serait pire (cf. N4).
+- `_purger_calque(prog, cle, today, jours)` sert aussi aux bilans : une seule règle à retenir. `tests/test_calques_bornes.py` la tient pour les quatre.
+
+### Ce que le blob pèse vraiment (mesuré le 2026-09-28)
+- **25,9 ko pour 15 programmes, soit 1,7 ko en moyenne.** Dont **15,9 ko de séances** — le programme lui-même, pas de la dette. Les ~10 ko de clés `_x` se répartissent sur 15 comptes.
+- La plus grosse clé `_x` est `_planning` (1,8 ko cumulés, 197 o au pire). Aucune n'approche le kilo-octet par utilisateur.
+- **Conclusion : le blob n'est pas un problème de taille.** Le sortir pour des raisons de performance ne se justifie pas par les chiffres. Les défauts qu'il a causés (écrasements silencieux) sont traités par le verrou optimiste et `replace_program_body`. Ce qui reste est un problème de *forme* — rien ne s'y interroge — pas de poids.
+- Ce que la mesure a réellement trouvé : des calques de séances abandonnées vieux de cinq mois (voir ci-dessus). Petit en octets, réel en nature.
 
 ### Mesurer le blob avant d'en sortir quoi que ce soit
 - **`/admin/blob`** (protégée par `ADMIN_EMAILS`, 404 sinon) donne le poids de chaque clé `_x`, le nombre d'entrées de chaque calque et leur plus vieille date. C'est le chemin à privilégier : la mesure se fait **là où vit la clé `service_role`**, chez l'hébergeur, au lieu de la rapatrier.
