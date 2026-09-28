@@ -227,18 +227,29 @@ GESTES = {
     # c'est l'exercice tel qu'il se fait — mais l'image livrée est
     # l'approximation à deux haltères : matériel de la bonne famille, vue
     # de dos, rouge sur les triceps. Assez juste à 60 px, et on s'arrête là.
-    "Extension triceps haltère": "standing with the BACK TURNED to the "
-                                 "camera — we see the mannequin's back and "
-                                 "shoulder blades, never its chest. "
-                                 "The two hands are CUPPED TOGETHER around "
-                                 "the single upper disc of ONE small "
-                                 "dumbbell held VERTICALLY behind the head, "
-                                 "the way you hold a mug with both hands. "
-                                 "The whole weight is no wider than the head "
-                                 "and NOTHING extends sideways beyond the "
-                                 "hands — no bar, no disc near either "
-                                 "shoulder. Elbows point up, close to the "
-                                 "ears.",
+    "Extensions triceps": "STANDING upright and facing a cable machine, "
+                          "feet on the floor. Both hands grip a short bar "
+                          "hanging from a cable that comes down from a "
+                          "PULLEY AT THE TOP of the machine. Upper arms "
+                          "vertical and pinned against the ribs, elbows "
+                          "fixed, forearms pushing the bar DOWN to the "
+                          "thighs. The mannequin is NOT lying down and there "
+                          "is no bench in the image",
+    # Six essais. Vue de dos : le poids sortait a hauteur d'epaules
+    # (developpe militaire), puis une barre traversait le torse. De PROFIL,
+    # le geste est sans ambiguite — coude en haut, avant-bras qui pend en
+    # arriere — et le triceps est visible sur la tranche du bras.
+    "Extension triceps haltère": "strict SIDE view. Standing, ONE arm raised: "
+                                 "the elbow points STRAIGHT UP beside the "
+                                 "head, and the forearm hangs DOWN BEHIND "
+                                 "the head so the hand is level with the "
+                                 "back of the neck. That hand holds ONE "
+                                 "small DUMBBELL, and the mannequin's other "
+                                 "hand steadies that elbow. The image "
+                                 "contains NOTHING ELSE: no bar, no second "
+                                 "weight, no disc anywhere near the waist or "
+                                 "the hips.",
+
     # Ceux-la sont sortis JUSTES, mais sur la seule description francaise :
     # rien ne garantissait le materiel. On l'ecrit pour que ca ne depende
     # plus de la chance a la prochaine generation.
