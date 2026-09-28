@@ -23,8 +23,31 @@ def _admin_emails() -> set[str]:
 
 
 def _require_admin():
+    """404 si l'appelant n'est pas admin — et une trace pour savoir pourquoi.
+
+    Un refus ressemblait à une page inexistante, y compris pour l'administrateur
+    lui-même : variable `ADMIN_EMAILS` absente et adresse non autorisée
+    donnaient exactement le même 404 muet. Le journal distingue maintenant les
+    deux cas, sans jamais recopier d'adresse ni le contenu de la variable.
+
+    Le 404 reste un 404 : il ne faut pas révéler à un inconnu que la page
+    existe. Le diagnostic va dans les logs de l'hébergeur, que seul le
+    propriétaire lit.
+    """
     email = (session.get("email") or "").strip().lower()
-    if not email or email not in _admin_emails():
+    autorises = _admin_emails()
+    if not autorises:
+        logger.warning("admin refuse : ADMIN_EMAILS absente ou vide "
+                       "dans l'environnement (path=%s)", request.path)
+        abort(404)
+    if not email:
+        logger.warning("admin refuse : aucune adresse en session (path=%s)",
+                       request.path)
+        abort(404)
+    if email not in autorises:
+        logger.warning("admin refuse : l'adresse de la session n'est pas dans "
+                       "ADMIN_EMAILS, qui en compte %d (path=%s)",
+                       len(autorises), request.path)
         abort(404)
 
 
