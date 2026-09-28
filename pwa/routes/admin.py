@@ -28,6 +28,29 @@ def _require_admin():
         abort(404)
 
 
+@bp.route("/admin/blob")
+def blob():
+    """Ce que pèse chaque clé du blob programme — lecture seule.
+
+    Cette page existe pour que la mesure se fasse **là où vit la clé
+    `service_role`**, chez l'hébergeur. La faire en local obligerait à
+    rapatrier la clé, ce qui est exactement ce qu'on veut éviter.
+
+    Elle ne rend aucun contenu : que des noms de clés `_x`, des tailles et des
+    comptages (cf. `core/blob_stats.py`). Le texte se colle donc n'importe où.
+    """
+    _require_admin()
+    from core.blob_stats import analyser, rapport
+    try:
+        blobs = core_db.list_all_program_blobs()
+    except Exception as e:
+        logger.error("/admin/blob lecture failed: %s", type(e).__name__)
+        return Response("Lecture impossible.\n", mimetype="text/plain"), 503
+    if not blobs:
+        return Response("Aucun programme en base.\n", mimetype="text/plain")
+    return Response(rapport(analyser(blobs)) + "\n", mimetype="text/plain")
+
+
 @bp.route("/admin")
 def index():
     _require_admin()

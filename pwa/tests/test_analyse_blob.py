@@ -16,9 +16,18 @@ from pathlib import Path
 
 import pytest
 
-from tools.analyse_blob import _dates_du_calque, _octets, analyser, rapport
+from conftest import USER_ID
+from core.blob_stats import _dates_du_calque, _octets, analyser, rapport
 
-SOURCE = Path(__file__).resolve().parent.parent / "tools" / "analyse_blob.py"
+RACINE = Path(__file__).resolve().parent.parent
+
+# Le chemin de mesure, de bout en bout. Deux entrées (la ligne de commande et
+# la page admin), une seule lecture, et le calcul qui ne touche pas à la base.
+SANS_BASE = (RACINE / "tools" / "analyse_blob.py",
+             RACINE / "core" / "blob_stats.py")
+# (fichier, fonction) : les deux seuls endroits où la mesure parle à Supabase.
+QUI_LIT = ((RACINE / "core" / "db_programme.py", "list_all_program_blobs"),
+           (RACINE / "routes" / "admin.py", "blob"))
 
 
 # ── Les deux promesses ───────────────────────────────────────────────────
@@ -48,16 +57,44 @@ def _verbes_postgrest(source: str) -> set:
     return verbes
 
 
-def test_loutil_nappelle_aucune_ecriture():
-    """Seuls `select` et `execute` sont permis sur une table.
+PERMIS = {"select", "execute", "eq", "order", "limit", "range"}
+
+
+def _source_de(chemin: Path, nom: str) -> str:
+    """Le texte d'UNE fonction. `core/db_programme.py` contient des écritures
+    légitimes ailleurs : scanner le fichier entier ne prouverait rien."""
+    texte = chemin.read_text(encoding="utf-8")
+    lignes = texte.split(chr(10))
+    for n in ast.walk(ast.parse(texte)):
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == nom:
+            return chr(10).join(lignes[n.lineno - 1:n.end_lineno])
+    raise AssertionError(f"{nom} introuvable dans {chemin.name}")
+
+
+def test_la_mesure_nappelle_aucune_ecriture():
+    """Seule la lecture est permise sur le chemin de mesure.
 
     C'est ce qui rend l'outil sûr à lancer sur des données réelles sans
-    sauvegarde préalable. La liste est blanche, pas noire : un verbe
+    sauvegarde préalable. La liste est BLANCHE, pas noire : un verbe
     d'écriture qu'on n'aurait pas pensé à interdire tombe quand même.
     """
-    verbes = _verbes_postgrest(SOURCE.read_text(encoding="utf-8"))
-    assert verbes <= {"select", "execute", "eq", "order", "limit", "range"}, (
-        f"verbe PostgREST inattendu : {sorted(verbes - {chr(115)})}")
+    for chemin, nom in QUI_LIT:
+        verbes = _verbes_postgrest(_source_de(chemin, nom))
+        assert verbes <= PERMIS, (
+            f"{chemin.name}:{nom} : verbe PostgREST inattendu "
+            f"{sorted(verbes - PERMIS)}")
+
+
+def test_le_calcul_ne_touche_pas_a_la_base():
+    """La mesure et la CLI ne parlent à aucune table.
+
+    Toute la lecture passe par `list_all_program_blobs`, donc par la couche
+    données. Sans ça, il y aurait deux façons de lire les programmes, et le
+    test ci-dessus n'en surveillerait qu'une.
+    """
+    for chemin in SANS_BASE:
+        verbes = _verbes_postgrest(chemin.read_text(encoding="utf-8"))
+        assert verbes == set(), f"{chemin.name} parle à une table : {sorted(verbes)}"
 
 
 def test_la_detection_decriture_fonctionne():
@@ -157,3 +194,39 @@ def test_le_rapport_tient_sans_aucun_calque():
     texte = rapport(analyser([{"_settings": {"a": 1}}]))
     assert "_settings" in texte
     assert "1 programme(s)" in texte
+
+
+# ── La page /admin/blob ──────────────────────────────────────────────────
+
+def test_la_page_est_invisible_sans_droits_admin(fake_db, logged_in):
+    """404, pas 403 : la page ne doit pas révéler qu'elle existe."""
+    assert logged_in.get("/admin/blob").status_code == 404
+
+
+def test_la_page_rend_le_rapport_a_ladmin(fake_db, logged_in, monkeypatch):
+    """Elle existe pour que la mesure se fasse là où vit la clé `service_role`.
+
+    Rapatrier la clé pour lancer la CLI en local serait exactement ce qu'on
+    cherche à éviter.
+    """
+    monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
+    fake_db.table("programs").insert({"user_id": USER_ID, "data": {
+        "Ma séance secrète": [{"name": "Développé couché", "sets": 3}],
+        "_seance_order": {"Ma séance secrète|2026-09-14": ["Développé couché"]},
+    }}).execute()
+
+    r = logged_in.get("/admin/blob")
+    assert r.status_code == 200
+    assert r.mimetype == "text/plain"
+    corps = r.data.decode("utf-8")
+    assert "_seance_order" in corps and "1 entrees" in corps
+    # La promesse tient aussi par HTTP, pas seulement en appelant `rapport()`.
+    for secret in ("Ma séance secrète", "Développé couché", USER_ID):
+        assert secret not in corps, f"la page laisse fuir : {secret}"
+
+
+def test_la_page_le_dit_quand_il_ny_a_rien(fake_db, logged_in, monkeypatch):
+    monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
+    r = logged_in.get("/admin/blob")
+    assert r.status_code == 200
+    assert "Aucun programme" in r.data.decode("utf-8")

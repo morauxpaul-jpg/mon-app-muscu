@@ -14,7 +14,7 @@ import logging
 from collections import OrderedDict
 
 from core import db_base
-from core.db_base import _cache_get, _cache_invalidate, _cache_set, get_client
+from core.db_base import _cache_get, _cache_invalidate, _cache_set, _fetch_all, get_client
 
 logger = logging.getLogger(__name__)
 
@@ -200,3 +200,14 @@ def save_prog(user_id: str, prog_dict: dict):
     _upsert_prog(user_id, prog_dict)
     _cache_invalidate(f"prog:{user_id}")
     _prog_base.pop(user_id, None)
+
+
+def list_all_program_blobs() -> list[dict]:
+    """La colonne `data` de tous les programmes — lecture seule.
+
+    Sert à mesurer ce que pèse le blob (`core/blob_stats.py`). Ne renvoie que
+    `data`, jamais `user_id` ni `version` : l'appelant n'a besoin que de la
+    forme, pas de savoir à qui appartient quoi.
+    """
+    return [ligne.get("data") for ligne in
+            (_fetch_all(lambda: get_client().table("programs").select("data")) or [])]

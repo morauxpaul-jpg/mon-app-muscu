@@ -50,7 +50,8 @@ from core.db_historique import (
 
 # ── le programme et son planning ────────────────────────────────
 from core.db_programme import (
-    PROG_BODY_KEYS, get_prog, replace_program_body, save_prog, _SAVE_PROG_RETRIES,
+    PROG_BODY_KEYS, get_prog, list_all_program_blobs, replace_program_body, save_prog,
+    _SAVE_PROG_RETRIES,
     _copy, _merge_prog, _prog_base, _read_prog_row, _remember_base, _upsert_prog
 )
 
