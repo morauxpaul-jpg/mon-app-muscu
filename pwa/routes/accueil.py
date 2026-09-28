@@ -53,7 +53,8 @@ BADGE_DEFS = [
 ]
 
 
-def _compute_badges(hist, prog, profile, planning_map, streak):
+def _compute_badges(hist, prog, profile, planning_map, streak,
+                    peut_ecrire=True):
     """Retourne (badges_unlocked:set, new_unlocked:list) et persiste _badges.
 
     Recalcule les badges à chaque visite de l'accueil. Un badge déjà obtenu
@@ -123,7 +124,10 @@ def _compute_badges(hist, prog, profile, planning_map, streak):
     final = already | unlocked
     new_unlocked = [b for b in unlocked if b not in already]
 
-    if final != already:
+    # Les badges obtenus s'affichent toujours ; on ne les GRAVE que sur une
+    # vraie visite. Un prefetch qui écrit, c'est une écriture en base pour
+    # un geste que l'utilisateur n'a pas fait.
+    if final != already and peut_ecrire:
         prog["_badges"] = sorted(final)
         try:
             from core.data import save_prog as _save_prog
@@ -211,6 +215,16 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
 
 @bp.route("/accueil")
 def index():
+    # Un prefetch n'est pas une visite. `prefetch.js` charge la page au
+    # `touchstart` : effleurer le lien Accueil suffisait à déclencher les
+    # écritures ci-dessous. Le garde-fou existait déjà pour l'upsell et le
+    # défi, mais il était calculé APRÈS elles.
+    #
+    # `prefetch.js` appelle fetch(mode: "same-origin"), donc l'en-tête vaut
+    # « same-origin » ; une vraie navigation envoie « navigate ». L'absence
+    # d'en-tête (vieux navigateur) compte comme une navigation : mieux vaut
+    # écrire une fois de trop que perdre un badge.
+    is_navigation = request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
     try:
         hist = get_hist()
         prog = get_prog()
@@ -288,9 +302,12 @@ def index():
     streak_record = int(prog.get("_streak_record", 0) or 0)
     if streak > streak_record:
         streak_record = streak
-        prog["_streak_record"] = streak_record
-        from core.data import save_prog as _save_prog
-        _save_prog(prog)
+        # Le record s'AFFICHE quoi qu'il arrive ; il ne s'ÉCRIT que si
+        # quelqu'un regarde vraiment la page.
+        if is_navigation:
+            prog["_streak_record"] = streak_record
+            from core.data import save_prog as _save_prog
+            _save_prog(prog)
 
     # Streak en danger ? (aujourd'hui est un jour de séance et pas fait)
     today_day_name = DAYS_FR[today.weekday()]
@@ -428,7 +445,9 @@ def index():
 
     # Badges — recalculés à chaque visite, persistés dans prog._badges
     try:
-        badges_unlocked, badges_new = _compute_badges(hist, prog, profile, planning_map, streak)
+        badges_unlocked, badges_new = _compute_badges(
+            hist, prog, profile, planning_map, streak,
+            peut_ecrire=is_navigation)
     except Exception as e:
         badges_unlocked, badges_new = set(), []
     badges = [
@@ -451,7 +470,6 @@ def index():
     # de /accueil (prefetch.js, au survol du lien nav) ferait sinon "brûler"
     # l'affichage unique en arrière-plan, sans que l'user le voie. Les fetch de
     # prefetch envoient Sec-Fetch-Mode: same-origin/cors, pas 'navigate'.
-    is_navigation = request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
     if is_navigation and not getattr(g, "is_vip", False) and not prog.get("_upsell_seen"):
         done_sessions = {(r.get("Date"), r.get("Séance")) for r in hist
                          if r.get("Date") and _is_perf(r)}
