@@ -12,7 +12,7 @@ import logging
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from core.data import replace_exo_rows, get_profile
+from core.data import append_exo_rows, get_profile
 from core.dates import today_paris, today_paris_str, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 
@@ -202,7 +202,10 @@ def save():
     }]
 
     try:
-        replace_exo_rows(date_str, seance_name, exo_final, rows)
+        # AJOUT et non remplacement : deux footings le même jour sont deux
+        # séances. `replace_exo_rows` effaçait la première, et elle
+        # disparaissait des stats et du calendrier sans un mot.
+        append_exo_rows(date_str, seance_name, exo_final, rows)
     except Exception as e:
         logger.error("cardio save FAILED: %s", e)
         return render_template(

@@ -497,6 +497,38 @@ def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, ne
     _cache_invalidate(f"hist:{user_id}")
 
 
+def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
+                    new_rows: list[dict]) -> int:
+    """Ajoute des séries à un exercice SANS effacer les précédentes.
+
+    `replace_exo_rows` convient quand on réécrit une saisie qu'on est en
+    train de modifier. Pour une séance qu'on vient de faire, non : deux
+    footings le même jour sont deux séances, et remplacer efface la
+    première. Le numéro de série continue la suite existante, pour que les
+    deux se distinguent à la lecture.
+
+    Retourne le numéro de la première série ajoutée.
+    """
+    date_str = _norm_date(date_str)
+    client = get_client()
+    existantes = (
+        client.table("history").select("serie")
+        .eq("user_id", user_id)
+        .eq("date", date_str)
+        .eq("seance", seance)
+        .eq("exercice", exercice)
+        .execute()
+    ).data or []
+    depart = max((int(r.get("serie") or 0) for r in existantes), default=0) + 1
+    if new_rows:
+        payload = [_row_to_supabase(user_id, {**r, "Date": date_str,
+                                              "Série": depart + i})
+                   for i, r in enumerate(new_rows)]
+        _insert_history(client, payload)
+    _cache_invalidate(f"hist:{user_id}")
+    return depart
+
+
 def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str):
     date_str = _norm_date(date_str)
     client = get_client()
