@@ -52,7 +52,7 @@ var EXERCISE_LIBRARY = {
     { name: "Pushdown poulie corde", alias: "Extensions triceps Extensions triceps poulie triceps pushdown", muscles: [], defaultSets: 3, defaultReps: "12-15" },
     { name: "Pushdown poulie barre", alias: "Extensions triceps Extensions triceps poulie triceps pushdown", muscles: [], defaultSets: 3, defaultReps: "10-12" },
     { name: "Skull crusher", alias: "Barre au front Barre au front (skull crusher)", muscles: [], defaultSets: 3, defaultReps: "8-12" },
-    { name: "Extension nuque", alias: "Extension triceps haltère Extension triceps haltère (au-dessus de la tête) au dessus de la tete au-dessus de la tête extension nuque haltere french press overhead triceps extension", muscles: [], defaultSets: 3, defaultReps: "10-12" },
+    { name: "Overhead extension triceps", alias: "Extension triceps haltère Extension triceps haltère (au-dessus de la tête) au dessus de la tete au-dessus de la tête extension nuque extension nuque haltere french press overhead triceps extension", muscles: [], defaultSets: 3, defaultReps: "10-12" },
     { name: "Kick-back triceps", alias: "Kickback triceps kick back kick back triceps kickback poulie", muscles: [], defaultSets: 3, defaultReps: "12-15" },
   ],
   "Jambes": [

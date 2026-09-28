@@ -138,7 +138,7 @@ def test_les_surnoms_de_la_bibliotheque_suivent_le_catalogue():
 
 
 @pytest.mark.parametrize("recherche,attendu", [
-    ("overhead triceps extension", "Extension nuque"),
+    ("overhead triceps extension", "Overhead extension triceps"),
     ("skull crusher", "Skull crusher"),
     ("front raise", "Élévation frontale"),
     ("pec fly", "Écarté machine"),
@@ -262,3 +262,28 @@ def test_chaque_entree_de_bibliotheque_trouve_sa_fiche():
                       if not resoudre(nom)[0]} - connues)
     assert not perdues, (
         "entrées de bibliothèque sans fiche : " + ", ".join(perdues))
+
+
+def test_aucun_nom_de_la_bibliotheque_ne_designe_le_mauvais_endroit():
+    """« Extension nuque » laissait croire à un exercice pour le cou : le
+    nom d'usage en salle nomme l'endroit où on sent l'étirement, pas le
+    muscle travaillé. Pour une liste qu'on parcourt sans lire les fiches,
+    c'est trompeur.
+
+    Ces mots-là désignent une partie du corps dans le nom d'un exercice
+    qui n'y touche pas.
+    """
+    pieges = {"nuque": "cou", "cervical": "cou"}
+    noms = [n for _g, n in _bibliotheque()]
+    fautifs = [f"{n} (\u00e9voque : {quoi})"
+               for n in noms for mot, quoi in pieges.items()
+               if mot in n.lower()]
+    assert not fautifs, fautifs
+
+
+def test_un_nom_retire_de_la_bibliotheque_reste_reconnu():
+    """Quelqu'un qui avait déjà « Extension nuque » dans son programme doit
+    garder sa fiche : renommer une entrée de la liste ne renomme pas ce qui
+    est déjà enregistré."""
+    assert resoudre("Extension nuque")[0] == "Extension triceps haltère"
+    assert resoudre("Overhead extension triceps")[0] == "Extension triceps haltère"

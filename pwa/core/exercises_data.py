@@ -1413,6 +1413,8 @@ _ANGLAIS = {
     "front raise": "Élévations frontales",
     "elevation frontale": "Élévations frontales",
     "extension nuque": "Extension triceps haltère",
+    "overhead extension triceps": "Extension triceps haltère",
+    "overhead extension": "Extension triceps haltère",
     "extension nuque haltere": "Extension triceps haltère",
     "kick back triceps": "Kickback triceps",
     "kick back": "Kickback triceps",
