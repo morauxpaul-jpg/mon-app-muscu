@@ -10,7 +10,7 @@ import json
 
 from conftest import USER_ID, CSRF
 from core.dates import continuous_week
-from routes.seance import _pr_check
+from core.seance_saisie import _pr_check
 
 MONDAY = dt.date(2026, 9, 14)
 FRIDAY = MONDAY + dt.timedelta(days=4)
@@ -260,13 +260,13 @@ def test_le_commentaire_de_la_serie_survit_au_marquage(fake_db, logged_in):
 def test_derniere_fois_ignore_les_series_a_zero_repetition(fake_db, logged_in):
     """Vaut aussi pour les lignes déjà en base avant ce correctif : le filtre
     est à la lecture, donc pas de migration à passer."""
-    from routes.seance import _last_session_sets
+    from core.seance_historique import _last_session_sets
     import core.db as core_db
     _seed(fake_db)
     _hist(fake_db, MONDAY, reps=10, poids=75.0, serie=1)
     _hist(fake_db, MONDAY, reps=0, poids=82.5, serie=2)   # ancienne ligne fantôme
     core_db._data_cache.clear()
-    hist, _ = __import__("routes.seance", fromlist=["_normalize_hist"])._normalize_hist(
+    hist, _ = __import__("core.seance_semaine", fromlist=["_normalize_hist"])._normalize_hist(
         core_db.get_hist(USER_ID), core_db.get_prog(USER_ID))
     series = _last_session_sets(hist, "Développé couché", "Push", FRIDAY.isoformat())
     assert [(s["reps"], s["poids"]) for s in series] == [(10, 75.0)]
@@ -275,7 +275,8 @@ def test_derniere_fois_ignore_les_series_a_zero_repetition(fake_db, logged_in):
 def test_une_seance_au_poids_du_corps_a_enfin_une_derniere_fois(fake_db, logged_in):
     """Effet de bord du correctif : le filtre était `Poids > 0`, donc les
     exercices au poids du corps n'avaient jamais de « Dernière fois »."""
-    from routes.seance import _last_session_sets, _normalize_hist
+    from core.seance_historique import _last_session_sets
+    from core.seance_semaine import _normalize_hist
     import core.db as core_db
     _seed(fake_db)
     _hist(fake_db, MONDAY, exercice="Pompes", reps=20, poids=0.0)

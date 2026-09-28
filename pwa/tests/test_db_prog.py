@@ -83,7 +83,7 @@ def test_cache_is_bounded(fake_db, monkeypatch):
 
 def test_purge_old_session_notes():
     from datetime import date
-    from routes.seance import _purge_old_session_notes
+    from core.seance_calques import _purge_old_session_notes
     prog = {"_session_notes": {
         "Push|2026-09-20": {"rating": 5},   # hier
         "Pull|2026-06-01": {"rating": 3},   # > 12 semaines

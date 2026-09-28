@@ -257,7 +257,7 @@ def index():
     # Semaine en cours — index continu (interne, sert au filtrage des stats).
     s_act = max((r["Semaine"] for r in hist), default=1)
     # Numéro affiché à l'utilisateur : relatif au début du programme.
-    from routes.seance import _display_week
+    from core.seance_semaine import _display_week
     try:
         s_display = _display_week(today, prog, hist)
     except Exception:

@@ -48,6 +48,12 @@ pwa/
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
 │   ├── dates.py                   # Helpers dates (timezone Paris), DAYS_FR, MONTHS_FR
 │   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name, overload_suggestion)
+│   ├── seance_semaine.py          # Semaine de programme, libellé du jour, séance réellement faite
+│   ├── seance_historique.py       # Ce que l'historique dit d'un exercice : variante, record, suggestion
+│   ├── seance_contexte.py         # Le dictionnaire que reçoit chaque carte d'exercice
+│   ├── seance_calques.py          # Substituts, extras, brouillon libre, ordre des cartes (par séance+date)
+│   ├── seance_saisie.py           # Le formulaire devient des lignes d'historique + détection de record
+│   ├── seance_cardio.py           # Lecture/écriture du format « CARDIO:Type » dans la remarque
 │   ├── hist.py                    # Prédicats UNIQUES sur l'historique (is_perf, is_muscu_perf, is_session_marker, tonnage) — une seule définition de « séance faite »
 │   ├── strength.py                # Standards de force relatifs au poids de corps (ratios par muscle × sexe, niveaux)
 │   ├── exercise_stats.py          # Fiche par exercice : variantes, séances, records, séries, sparkline SVG
@@ -383,6 +389,12 @@ pwa/
 - Les dépendances entre modules forment un **arbre** : tous s'appuient sur `db_base` ; `db_abonnement`, `db_admin` et `db_push` lisent le profil ; `db_push` et `db_bilans` normalisent une date avec l'historique. Aucun cycle.
 - Le client Supabase n'existe que dans `db_base`. Les tests et `run_local_fake.py` le remplacent par `use_client(faux)` et le relisent par `current_client()` — une affectation directe sur `core.db._client` ne serait plus lue, et `_client` n'est volontairement **pas** réexporté pour que la tentative échoue bruyamment.
 - `tests/test_couche_donnees.py` tient ces propriétés : façade complète, façade sans code, plafond de 400 lignes par module, absence de cycle, client unique, carte à jour.
+
+### Découpage de la séance (routes/seance.py → core/seance_*.py)
+- `routes/seance.py` faisait **1 685 lignes**. Les deux tiers ne touchaient ni à Flask ni à la base : c'était du calcul rangé dans la couche HTTP, inexerçable sans monter une requête. **36 fonctions** (690 lignes) sont parties dans six modules `core/seance_*.py` ; il reste **930 lignes** de routes.
+- Les six modules sont **purs** : on leur passe l'historique et le programme, ils rendent des dictionnaires. Aucun n'importe `flask`, `core.data`, `core.db` ni `core.limiter` — un test le vérifie module par module.
+- `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
+- Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
 
 ### Lecture paginée (core/db_base.py)
 - PostgREST plafonne silencieusement les réponses à `max-rows` (1000). Un historique dépassant ce seuil était **tronqué sans erreur**, et une réécriture ultérieure figeait la troncature dans la base. Toutes les lectures de listes passent par `_fetch_all(build)`, qui enchaîne les pages via `.range()` jusqu'à épuisement.

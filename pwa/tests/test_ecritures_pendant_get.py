@@ -155,7 +155,7 @@ def test_les_deux_pages_comptent_la_meme_semaine(compte_sans_date_de_depart, log
     s'accorder, sinon l'utilisateur lit deux numéros différents."""
     import routes.progres as progres
     from core.data import get_hist, get_prog
-    from routes.seance import _display_week
+    from core.seance_semaine import _display_week
     with logged_in.application.test_request_context():
         from flask import g
         g.user_id = USER_ID

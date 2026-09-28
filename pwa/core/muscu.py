@@ -41,6 +41,11 @@ VARIANTS = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lest
 MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
                "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
 
+# Les exercices dont la charge EST le corps : leur record se compte en
+# répétitions, pas en kilos, et une série à 0 kg y est une vraie performance.
+# La variante « Lesté » les fait sortir de cette liste, puisqu'on y ajoute du poids.
+BW_EXOS = {"Dips", "Tractions"}
+
 
 def get_base_name(full_name):
     """'Développé couché (Barre)' -> 'Développé couché'."""
