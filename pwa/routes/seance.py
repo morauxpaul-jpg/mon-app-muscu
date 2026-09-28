@@ -15,7 +15,8 @@ from core.data import (
 )
 from core.dates import today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, now_paris, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
-from core.muscu import calc_1rm, get_base_name, fix_muscle, auto_muscles, parse_rpe, overload_suggestion
+from core.muscu import (MUSCLE_LIST, VARIANTS, calc_1rm, get_base_name, fix_muscle,
+                        auto_muscles, parse_rpe, overload_suggestion)
 from core.exercises_data import (get_exercise_info, filter_exos_by_equipment,
                                  detect_isometric, variantes)
 from core.body_map import get_body_polygons
@@ -25,10 +26,6 @@ from flask import session
 
 bp = Blueprint("seance", __name__)
 
-MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
-               "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
-# Importé de core.muscu, où vit aussi ce qui parse ce format.
-from core.muscu import VARIANTS  # noqa: E402,F401
 BW_EXOS = {"Dips", "Tractions"}
 
 

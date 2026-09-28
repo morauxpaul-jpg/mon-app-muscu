@@ -20,13 +20,11 @@ from core.data import (
 )
 
 logger = logging.getLogger(__name__)
-from core.muscu import auto_muscles, get_base_name
+from core.muscu import MUSCLE_LIST, auto_muscles, get_base_name
 from core.exercises_data import canoniser, NIVEAUX_SURS
 from core.limiter import limiter
 from core.analytics import paywall
 
-MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
-               "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
 PROFIL_OPTIONS = ["Maison", "Salle", "Les deux"]
 bp = Blueprint("gestion", __name__)
 

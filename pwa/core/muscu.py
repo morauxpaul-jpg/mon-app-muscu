@@ -34,6 +34,13 @@ def get_rep_table(one_rm):
 # parenthèse fait partie du nom de l'exercice (« Hip thrust (sol) »).
 VARIANTS = ["Standard", "Barre", "Haltères", "Banc", "Poulie", "Machine", "Lesté"]
 
+# Les groupes musculaires que l'app sait nommer : étiquettes des sélecteurs,
+# clés de la carte du corps, vocabulaire imposé au générateur IA. Cette liste
+# vivait recopiée à l'identique dans seance.py, programme.py, gestion.py et
+# generator.py — quatre exemplaires qu'il fallait penser à modifier ensemble.
+MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
+               "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
+
 
 def get_base_name(full_name):
     """'Développé couché (Barre)' -> 'Développé couché'."""

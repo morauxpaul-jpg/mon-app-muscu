@@ -24,6 +24,7 @@ from core import db as core_db
 from core.limiter import limiter
 from core.analytics import track, paywall
 from core.exercises_data import EXERCISES_INFO
+from core.muscu import MUSCLE_LIST
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +34,7 @@ MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 2600
 WEEKLY_GEN_QUOTA = 3  # générations / semaine glissante (7 j) / VIP — protège le coût API
 
-# Muscles canoniques (alignés sur seance.MUSCLE_LIST / body map).
-MUSCLES = [
-    "Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras",
-    "Abdos", "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs",
-    "Abducteurs", "Mollets", "Autre",
-]
-_MUSCLES_SET = {m.lower() for m in MUSCLES}
+_MUSCLES_SET = {m.lower() for m in MUSCLE_LIST}
 
 OBJECTIFS = ["Prise de masse", "Force", "Sèche / perte de gras", "Endurance", "Remise en forme"]
 NIVEAUX = ["Débutant", "Intermédiaire", "Avancé"]
@@ -68,7 +63,7 @@ def _clean_muscle(raw: str) -> str:
     parts = [p.strip() for p in str(raw or "").replace("/", ",").split(",") if p.strip()]
     kept = []
     for p in parts:
-        match = next((m for m in MUSCLES if m.lower() == p.lower()), None)
+        match = next((m for m in MUSCLE_LIST if m.lower() == p.lower()), None)
         if match and match not in kept:
             kept.append(match)
     return ",".join(kept) if kept else "Autre"
@@ -259,7 +254,7 @@ def _build_prompt(params: dict) -> str:
         "fourchette de répétitions adaptée à l'objectif, et un temps de repos "
         "en secondes (60 à 180 selon l'exercice et l'objectif).\n"
         "- Le champ \"muscle\" DOIT être l'un de ces libellés (ou une combinaison "
-        "séparée par des virgules) : " + ", ".join(MUSCLES) + ".\n"
+        "séparée par des virgules) : " + ", ".join(MUSCLE_LIST) + ".\n"
         "- Privilégie autant que possible des exercices de cette liste connue (pour "
         "les illustrations) : " + _known_exercises() + ".\n"
         "- Adapte le matériel au lieu indiqué (pas de machine de salle si « maison »).\n"

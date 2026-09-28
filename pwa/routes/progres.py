@@ -28,6 +28,10 @@ bp = Blueprint("progres", __name__)
 
 # Zones SVG de la carte du corps. Le 1RM de référence (« std ») n'est plus une
 # constante : il dépend du poids de corps et du sexe (cf. core/strength.py).
+# Ce sont les muscles de `core.muscu.MUSCLE_LIST` MOINS « Autre », qui n'a pas
+# de zone sur le dessin. Un muscle ajouté là-bas et oublié ici disparaîtrait
+# sans un mot de la carte et des filtres : un test tient les deux listes
+# ensemble (tests/test_vocabulaire_muscles.py).
 MUSCLES = {
     "Pecs":            {"zid_f": "z-pecs",    "zid_b": None},
     "Dos":             {"zid_f": None,        "zid_b": "z-dos"},

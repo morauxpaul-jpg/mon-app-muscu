@@ -18,7 +18,7 @@ from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
                        rename_seance_rows)
 from core.dates import DAYS_FR
 from core.limiter import limiter
-from core.muscu import auto_muscles
+from core.muscu import MUSCLE_LIST, auto_muscles
 from core import catalog
 from core.analytics import paywall
 
@@ -26,8 +26,6 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("programme", __name__)
 
-MUSCLE_LIST = ["Pecs", "Dos", "Trapèzes", "Épaules", "Biceps", "Triceps", "Avant-bras", "Abdos",
-               "Quadriceps", "Ischio-jambiers", "Fessiers", "Adducteurs", "Abducteurs", "Mollets", "Autre"]
 
 EXPORT_FORMAT = "muscutracker_program_v1"
 
