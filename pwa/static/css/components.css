@@ -446,6 +446,149 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Saisie série par série ──────────────────────────────────────────
+   Le tableau de six colonnes (.sets-table, plus bas) donnait sur 375 px :
+   Reps 67 px, Poids 70, RPE 25, Remarque 87. Une série remplie se replie
+   donc en une ligne, et seule la courante reste ouverte — deux champs de
+   140 px et un bouton de 290. C'est de la mise en page : ce qui part en
+   base n'a pas changé. */
+.series { margin: var(--sp-md) 0 4px; }
+
+.serie-faite {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: var(--sp-sm);
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--success-bg);
+  border: 1px solid rgba(52,199,89,0.18);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  min-height: 40px;
+}
+.serie-faite .serie-num { color: var(--success); font-weight: 600; }
+.serie-faite .serie-resume { color: var(--text-2); }
+.serie-faite .icon-ok { color: var(--success); }
+
+.serie-avenir {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: var(--sp-sm);
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-default);
+  color: var(--text-3);
+  font-size: 0.82rem;
+  min-height: 36px;
+}
+
+.serie-encours {
+  border: 1px solid rgba(120,200,255,0.30);
+  background: var(--accent-bg);
+  border-radius: var(--radius-md);
+  padding: var(--sp-md);
+  margin-bottom: 6px;
+}
+.serie-encours-tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-sm);
+  margin-bottom: 10px;
+}
+.serie-encours-tete b { font-size: 0.92rem; }
+.serie-encours-tete span { color: var(--text-3); font-size: 0.75rem; }
+
+.serie-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.serie-duo.seul { grid-template-columns: 1fr; }
+.serie-champ {
+  display: block;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 7px 6px 8px;
+  text-align: center;
+}
+.serie-champ:focus-within {
+  border-color: rgba(120,200,255,0.4);
+  box-shadow: 0 0 0 2px rgba(120,200,255,0.08);
+}
+.serie-etiq {
+  display: block;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+.serie-champ input {
+  width: 100%;
+  background: none;
+  border: 0;
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 1.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  min-height: 34px;
+}
+.serie-champ input:focus { outline: none; }
+/* Les flèches du champ nombre volent de la place au chiffre. */
+.serie-champ input::-webkit-outer-spin-button,
+.serie-champ input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.serie-champ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+.serie-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.serie-puce {
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 0.78rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-default);
+  color: var(--text-2);
+  cursor: pointer;
+  min-height: 34px;
+}
+.serie-puce.on {
+  background: var(--accent-bg);
+  border-color: rgba(120,200,255,0.35);
+  color: var(--accent);
+}
+.serie-puce.danger { color: var(--danger); border-color: rgba(255,69,58,0.22); }
+
+.serie-detail {
+  margin-top: 9px;
+  padding: 10px;
+  background: rgba(0,0,0,0.18);
+  border-radius: var(--radius-sm);
+}
+.serie-rpe { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.serie-remarque {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 0.84rem;
+  min-height: 40px;
+}
+
+.serie-valider { width: 100%; justify-content: center; margin-top: 10px; min-height: 46px; }
+
 .sets-table {
   width: 100%;
   border-collapse: collapse;

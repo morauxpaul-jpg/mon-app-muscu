@@ -424,6 +424,14 @@ pwa/
 - `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
 
+### Saisie d'une série (templates/seance_edit.html + static/js/seance.js)
+- Le tableau `.sets-table` de six colonnes donnait, **mesuré à 375 px** : Reps 67, Poids 70, RPE **25** (un `<select>`), Remarque 87. Les deux champs qu'on remplit à chaque série se partageaient la largeur avec trois autres choses.
+- Une série remplie se replie désormais en une ligne (`.serie-faite`, touchable pour corriger) et seule la courante reste ouverte (`.serie-encours`), avec deux champs de **133 px** et un bouton de **277 px**. RPE et remarque se déplient à la demande.
+- **C'est de la mise en page.** `serializedSets()` envoie toujours toutes les séries avec les mêmes quatre champs, et « Enregistrer » reste ce qui écrit. `faits` et `optionsDe` sont de l'état d'affichage. Un test JS vérifie que marquer une série faite ne change pas d'un octet ce qui part en base.
+- Un seul comportement bouge : le chrono de repos démarrait sur le `change` d'un champ, il démarre sur « Série faite ». `onSetFilled` reste appelé par les deux chemins et ne se déclenche qu'une fois par série.
+- `tests/js/test_saisie_serie.js` (16 tests) tient l'ensemble, dont le recalcul des index après `removeSet` — sans lui, retirer une série en rouvrait une autre.
+- Le mode isométrique (`isIso`, gainage) garde son propre chrono, intouché.
+
 ### Coût d'un affichage de /accueil
 - Mesuré avec un an d'entraînement (1 872 séries) : **8 requêtes Supabase**, dont le **programme trois fois**. La page pouvait le sauvegarder **jusqu'à quatre fois** en un seul affichage (badges, record de streak, bandeau PRO, défi gagné), chacune relisant et réécrivant tout le blob sous verrou optimiste. Les quatre posent désormais un drapeau et **une seule écriture** les porte : 8 → 7 requêtes.
 - `_compute_badges` ne persiste plus rien : elle calcule, la vue décide d'écrire. Une fonction de calcul qui sauvegarde était la raison pour laquelle l'une des quatre écritures passait inaperçue.

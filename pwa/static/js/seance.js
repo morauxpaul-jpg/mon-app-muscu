@@ -258,6 +258,8 @@
           this._fetchVariantHistory(this.variant);
         }
         if (this.isIso) this.isoRemaining = this.targetSeconds;
+        // Après le brouillon : une série déjà remplie s'ouvre repliée.
+        this._majFaits();
       },
 
       _fetchVariantHistory: function (newVariant) {
@@ -304,9 +306,79 @@
 
       addSet: function () {
         this.sets.push({ reps: "", poids: "", remarque: "", rpe: "" });
+        this._majFaits();
       },
       removeSet: function (i) {
         if (this.sets.length > 1) this.sets.splice(i, 1);
+        // Les index glissent après un retrait : on les recalcule plutôt que
+        // de les décaler à la main, sinon une série faite se rouvre toute seule.
+        this._majFaits();
+      },
+
+      // ── Saisie série par série ───────────────────────────────────
+      // Une série remplie se replie en une ligne ; seule la courante reste
+      // ouverte, avec deux champs larges. Sur 375 px, les six colonnes du
+      // tableau donnaient 67 px à Reps, 70 à Poids et 25 au sélecteur de RPE.
+      //
+      // C'est de l'AFFICHAGE : `serializedSets()` envoie toujours toutes les
+      // séries, et « Enregistrer » reste ce qui écrit en base.
+      faits: [],
+      optionsDe: -1,
+
+      _estRemplie: function (s) {
+        return !!s && s.reps !== "" && s.reps != null && Number(s.reps) > 0;
+      },
+      _majFaits: function () {
+        var self = this;
+        this.faits = [];
+        this.sets.forEach(function (s, i) {
+          if (self._estRemplie(s)) self.faits.push(i);
+        });
+      },
+      estFait: function (i) { return this.faits.indexOf(i) >= 0; },
+      // La première série non repliée. -1 = tout est fait.
+      indexCourant: function () {
+        for (var i = 0; i < this.sets.length; i++) {
+          if (this.faits.indexOf(i) < 0) return i;
+        }
+        return -1;
+      },
+      serieFaite: function (i) {
+        if (this.faits.indexOf(i) < 0) this.faits.push(i);
+        this.optionsDe = -1;
+        // Le repos démarrait sur la frappe d'un champ ; il démarre maintenant
+        // sur un geste voulu. `onSetFilled` ne se déclenche qu'une fois par
+        // série, donc les deux chemins ne se marchent pas dessus.
+        this.onSetFilled(i);
+      },
+      rouvrir: function (i) {
+        this.faits = this.faits.filter(function (x) { return x !== i; });
+        this.optionsDe = -1;
+      },
+      // Le poids s'écrit avec une virgule partout où c'est du TEXTE. Dans un
+      // champ nombre, le navigateur s'en charge ; dans une phrase, non.
+      _kg: function (v) { return String(v).replace(".", ","); },
+
+      objectifTexte: function () {
+        if (!this.suggestion || !this.suggestion.reps) return "";
+        var t = "objectif " + this.suggestion.reps;
+        if (this.showWeight && this.suggestion.poids) {
+          t += " × " + this._kg(this.suggestion.poids) + " kg";
+        }
+        return t;
+      },
+
+      resumeSerie: function (s) {
+        var bouts = [];
+        if (s.reps !== "" && s.reps != null) bouts.push(s.reps + " reps");
+        if (this.showWeight && s.poids !== "" && s.poids != null) {
+          // Virgule décimale : le résumé est du texte, pas un champ nombre,
+          // donc le navigateur ne la met pas à notre place.
+          bouts.push(this._kg(s.poids) + " kg");
+        }
+        if (s.rpe) bouts.push("RPE " + s.rpe);
+        if (s.remarque) bouts.push(s.remarque);
+        return bouts.length ? bouts.join(" · ") : "—";
       },
       clearWeights: function () {
         this.sets.forEach(function (s) { s.poids = ""; });

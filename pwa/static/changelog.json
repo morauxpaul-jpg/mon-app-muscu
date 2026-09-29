@@ -1,6 +1,17 @@
 {
-  "current": "v60",
+  "current": "v61",
   "entries": [
+    {
+      "version": "v61",
+      "date": "2026-09-29",
+      "title": "La saisie d'une série tient enfin sur un téléphone",
+      "changes": [
+        "Les séries ne sont plus un tableau de six colonnes écrasées : une seule est ouverte à la fois, avec des champs Reps et Poids deux fois plus larges. Les séries faites se replient en une ligne verte — touche-la pour corriger",
+        "Le RPE était un menu déroulant de la largeur d'un ongle. C'est maintenant une rangée de pastilles, avec la remarque en dessous, dépliées seulement quand tu en as besoin",
+        "Le chrono de repos démarre quand tu appuies sur « Série faite », au lieu de partir tout seul dès que tu tapes un chiffre",
+        "En un coup d'œil, tu vois ce qui est fait et ce qui reste — sans plus rien resaisir qu'avant"
+      ]
+    },
     {
       "version": "v60",
       "date": "2026-09-28",
