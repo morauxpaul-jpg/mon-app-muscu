@@ -27,12 +27,7 @@ def get_hist(user_id: str) -> list[dict]:
         return [dict(r) for r in cached]
 
     client = get_client()
-    rows = _fetch_all(lambda: (
-        client.table("history")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("id")
-    ))
+    rows = _lire_history(client, user_id)
     cleaned = []
     for r in rows:
         date_str = str(r.get("date") or "")
@@ -114,6 +109,40 @@ def _delete_history_ids(client, ids: list) -> None:
 # réessaie, puis on s'en souvient pour ce process.
 _HIST_EXT_COLS = ("session_id", "rpe")
 _hist_ext_supported = True  # migration v34 appliquée le 2026-09-23
+
+# Les seules colonnes que `get_hist` regarde. `select("*")` ramenait aussi
+# `user_id`, `session_id` et `created_at` — une centaine d'octets par ligne
+# que personne ne lit, soit presque autant que le contenu utile. Sur un an
+# d'entraînement (~1 900 lignes) c'est la moitié du transfert pour rien.
+# `id` n'y est pas : PostgREST sait trier sur une colonne non demandée.
+_HIST_COLS_LUES = "date,semaine,seance,exercice,serie,reps,poids,remarque,muscle"
+
+
+def _lire_history(client, user_id: str) -> list[dict]:
+    """Les lignes d'historique d'un user, colonnes utiles seulement.
+
+    `rpe` n'existe qu'après la migration v34. Une base en retard ferait
+    échouer la requête au lieu d'ignorer la colonne comme le faisait
+    `select("*")` : on retombe alors sur la liste courte, une fois pour
+    toutes, exactement comme `_insert_history` le fait à l'écriture.
+    """
+    global _hist_ext_supported
+
+    def lire(colonnes):
+        return _fetch_all(lambda: (
+            client.table("history").select(colonnes)
+            .eq("user_id", user_id).order("id")))
+
+    if not _hist_ext_supported:
+        return lire(_HIST_COLS_LUES)
+    try:
+        return lire(_HIST_COLS_LUES + ",rpe")
+    except Exception as e:
+        if "rpe" not in str(e).lower():
+            raise
+        logger.warning("history: colonne rpe absente (%s) — lecture sans elle", e)
+        _hist_ext_supported = False
+        return lire(_HIST_COLS_LUES)
 
 
 def _insert_history(client, payload: list[dict]):

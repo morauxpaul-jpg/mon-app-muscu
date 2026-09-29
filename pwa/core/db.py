@@ -44,8 +44,9 @@ from core.db_base import (
 from core.db_historique import (
     append_exo_rows, delete_exo_rows, delete_session_rows, get_hist,
     mark_session_missed, rename_exercise_rows, rename_seance_rows, replace_exo_rows,
-    save_hist, _HIST_EXT_COLS, _delete_history_ids, _hist_ext_supported,
-    _insert_history, _norm_date, _row_to_supabase
+    save_hist, _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
+    _hist_ext_supported, _insert_history, _lire_history, _norm_date,
+    _row_to_supabase
 )
 
 # ── le programme et son planning ────────────────────────────────

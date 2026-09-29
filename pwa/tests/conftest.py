@@ -54,10 +54,27 @@ class FakeQuery:
         self._maybe_single = False
         self._on_conflict = None
         self._range = None
+        self._colonnes = None
 
     # builders
-    def select(self, *_args, **_kwargs):
+    def select(self, *args, **_kwargs):
+        """PostgREST ne renvoie QUE les colonnes demandées.
+
+        Une fausse base qui ignore la liste laisse passer un code qui lit une
+        colonne qu'il n'a pas demandée — et ça ne se voit qu'en production.
+        On projette donc, comme le vrai.
+
+        Ce que ça n'attrape PAS : un nom de colonne qui n'existe pas en base.
+        Ici les lignes sont des dicts, donc une clé absente d'une ligne est
+        indiscernable d'une colonne absente de la table ; elle ressort à
+        `None`, comme le ferait PostgREST pour une colonne non renseignée.
+        """
         self._op = "select"
+        spec = str(args[0]) if args and args[0] else "*"
+        # Les formes imbriquées (`table(col)`) ou renommées (`alias:col`)
+        # dépassent ce que cette fausse base sait faire : on ne projette pas.
+        if spec != "*" and not any(c in spec for c in "(:*"):
+            self._colonnes = [c.strip() for c in spec.split(",") if c.strip()]
         return self
 
     def delete(self):
@@ -197,6 +214,8 @@ class FakeQuery:
             matched = matched[start:end + 1][:self.MAX_ROWS]
         else:
             matched = matched[:self.MAX_ROWS]
+        if self._colonnes is not None:
+            matched = [{c: r.get(c) for c in self._colonnes} for r in matched]
         if self._maybe_single:
             return FakeResponse(matched[0] if matched else None)
         return FakeResponse(matched)
