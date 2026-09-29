@@ -2,6 +2,7 @@
 
 Logique portée depuis app.py (lignes 1499-1865).
 """
+import logging
 from datetime import timedelta
 from flask import Blueprint, render_template, g, request, session
 
@@ -21,6 +22,8 @@ UPSELL_AFTER_SESSIONS = 3
 # Nudge de relance : un user qui a déjà un historique mais n'a rien fait depuis
 # REACTIVATION_DAYS jours est accueilli avec un message doux + reprise en 1 tap.
 REACTIVATION_DAYS = 3
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("accueil", __name__)
 
@@ -53,9 +56,13 @@ BADGE_DEFS = [
 ]
 
 
-def _compute_badges(hist, prog, profile, planning_map, streak,
-                    peut_ecrire=True):
-    """Retourne (badges_unlocked:set, new_unlocked:list) et persiste _badges.
+def _compute_badges(hist, prog, profile, planning_map, streak):
+    """Retourne (badges_unlocked:set, new_unlocked:list). N'écrit rien.
+
+    Cette fonction sauvegardait le programme elle-même. Elle était l'une des
+    QUATRE écritures que `/accueil` pouvait déclencher en un seul affichage,
+    chacune relisant et réécrivant tout le blob. Elle calcule désormais, et
+    c'est la vue qui décide d'écrire — une fois.
 
     Recalcule les badges à chaque visite de l'accueil. Un badge déjà obtenu
     reste obtenu (on ne peut pas le perdre — `_badges` dans prog en garde la
@@ -123,17 +130,6 @@ def _compute_badges(hist, prog, profile, planning_map, streak,
     # Union : un badge obtenu reste obtenu
     final = already | unlocked
     new_unlocked = [b for b in unlocked if b not in already]
-
-    # Les badges obtenus s'affichent toujours ; on ne les GRAVE que sur une
-    # vraie visite. Un prefetch qui écrit, c'est une écriture en base pour
-    # un geste que l'utilisateur n'a pas fait.
-    if final != already and peut_ecrire:
-        prog["_badges"] = sorted(final)
-        try:
-            from core.data import save_prog as _save_prog
-            _save_prog(prog)
-        except Exception:
-            pass
 
     return final, new_unlocked
 
@@ -225,6 +221,11 @@ def index():
     # d'en-tête (vieux navigateur) compte comme une navigation : mieux vaut
     # écrire une fois de trop que perdre un badge.
     is_navigation = request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
+    # Afficher l'accueil pouvait déclencher jusqu'à QUATRE sauvegardes du
+    # programme — badges, record de streak, bandeau PRO, défi gagné — chacune
+    # relisant et réécrivant tout le blob sous verrou optimiste. Elles posent
+    # maintenant ce drapeau, et une seule écriture les porte toutes.
+    prog_a_sauver = False
     try:
         hist = get_hist()
         prog = get_prog()
@@ -306,8 +307,7 @@ def index():
         # quelqu'un regarde vraiment la page.
         if is_navigation:
             prog["_streak_record"] = streak_record
-            from core.data import save_prog as _save_prog
-            _save_prog(prog)
+            prog_a_sauver = True
 
     # Streak en danger ? (aujourd'hui est un jour de séance et pas fait)
     today_day_name = DAYS_FR[today.weekday()]
@@ -443,13 +443,19 @@ def index():
     cal_today = int((nutr or {}).get("calories") or 0)
     cal_pct = int(min(100, round((cal_today / cal_cible) * 100))) if cal_cible > 0 else 0
 
-    # Badges — recalculés à chaque visite, persistés dans prog._badges
+    # Badges — recalculés à chaque visite, persistés dans prog._badges.
+    # Les badges obtenus s'affichent toujours ; on ne les GRAVE que sur une
+    # vraie visite. Un prefetch qui écrit, c'est une écriture en base pour un
+    # geste que l'utilisateur n'a pas fait.
+    badges_avant = set(prog.get("_badges", []) or [])
     try:
         badges_unlocked, badges_new = _compute_badges(
-            hist, prog, profile, planning_map, streak,
-            peut_ecrire=is_navigation)
+            hist, prog, profile, planning_map, streak)
     except Exception as e:
         badges_unlocked, badges_new = set(), []
+    if is_navigation and badges_unlocked and badges_unlocked != badges_avant:
+        prog["_badges"] = sorted(badges_unlocked)
+        prog_a_sauver = True
     badges = [
         {
             "code": code,
@@ -477,11 +483,7 @@ def index():
         if upsell_sessions >= UPSELL_AFTER_SESSIONS:
             show_upsell = True
             prog["_upsell_seen"] = True
-            try:
-                from core.data import save_prog as _save_prog
-                _save_prog(prog)
-            except Exception:
-                pass
+            prog_a_sauver = True
             try:
                 track("upsell_shown", {"trigger": "post_workout", "sessions": upsell_sessions})
             except Exception:
@@ -522,11 +524,7 @@ def index():
             challenges_won += 1
             prog["_challenges_won"] = challenges_won
             challenge_just_won = True
-            try:
-                from core.data import save_prog as _save_prog
-                _save_prog(prog)
-            except Exception:
-                pass
+            prog_a_sauver = True
             try:
                 track("challenge_completed", {"id": challenge["id"], "week": challenge["week"]})
             except Exception:
@@ -544,6 +542,16 @@ def index():
         session.pop("last_workout", None)
     elif not is_navigation:
         last_workout = None
+
+    # L'unique écriture de la page. Tolérante comme l'étaient les quatre :
+    # un badge non gravé vaut mieux qu'un accueil en erreur.
+    if prog_a_sauver:
+        try:
+            from core.data import save_prog as _save_prog
+            _save_prog(prog)
+        except Exception as e:
+            logger.warning("accueil : sauvegarde du programme échouée (%s)",
+                           type(e).__name__)
 
     return render_template(
         "accueil.html",

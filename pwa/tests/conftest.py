@@ -243,6 +243,28 @@ USER_ID = "u-test-0001"
 CSRF = "test-csrf-token"
 
 
+@pytest.fixture(autouse=True)
+def quota_neuf():
+    """Chaque test repart avec son quota de requêtes complet.
+
+    Le limiteur est **process-wide** et compte par route : les 60 requêtes par
+    minute de `/accueil` étaient partagées par TOUS les tests d'une exécution.
+    Ajouter huit tests sur cette page suffisait à dépasser le seuil — et ce
+    sont des tests voisins, écrits des mois plus tôt, qui recevaient un 429 et
+    tombaient. Un échec qui désigne le mauvais coupable est pire qu'un échec.
+
+    On remet le compteur à zéro plutôt que de désactiver le limiteur : un test
+    qui voudrait vérifier qu'une route se bride peut toujours le faire, en
+    envoyant lui-même sa rafale.
+    """
+    from core.limiter import limiter
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+    yield
+
+
 @pytest.fixture()
 def fake_db():
     import core.db as core_db

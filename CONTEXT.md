@@ -424,6 +424,16 @@ pwa/
 - `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
 
+### Coût d'un affichage de /accueil
+- Mesuré avec un an d'entraînement (1 872 séries) : **8 requêtes Supabase**, dont le **programme trois fois**. La page pouvait le sauvegarder **jusqu'à quatre fois** en un seul affichage (badges, record de streak, bandeau PRO, défi gagné), chacune relisant et réécrivant tout le blob sous verrou optimiste. Les quatre posent désormais un drapeau et **une seule écriture** les porte : 8 → 7 requêtes.
+- `_compute_badges` ne persiste plus rien : elle calcule, la vue décide d'écrire. Une fonction de calcul qui sauvegarde était la raison pour laquelle l'une des quatre écritures passait inaperçue.
+- Reste à traiter : `get_hist()` lit **tout** l'historique (1 872 lignes, 2 pages PostgREST) pour afficher une semaine. Le streak et les badges ont besoin de dates et d'agrégats, pas de lignes complètes.
+- `tests/test_cout_accueil.py` tient le compte : une sauvegarde au plus, et ce qu'elle porte (badges, streak) n'est pas perdu.
+
+### Quota de requêtes dans les tests
+- Le limiteur est **process-wide** et compte par route : les 60 requêtes/minute de `/accueil` étaient partagées par TOUS les tests d'une exécution. Ajouter huit tests sur cette page a suffi à faire tomber **trois tests voisins** en 429 — un échec qui désigne le mauvais coupable.
+- `conftest.quota_neuf` (autouse) remet le compteur à zéro avant chaque test. Le limiteur reste **activé** : un test qui veut vérifier qu'une route se bride envoie sa propre rafale. `tests/test_quota_des_tests.py` prouve l'isolation.
+
 ### Lecture paginée (core/db_base.py)
 - PostgREST plafonne silencieusement les réponses à `max-rows` (1000). Un historique dépassant ce seuil était **tronqué sans erreur**, et une réécriture ultérieure figeait la troncature dans la base. Toutes les lectures de listes passent par `_fetch_all(build)`, qui enchaîne les pages via `.range()` jusqu'à épuisement.
 
