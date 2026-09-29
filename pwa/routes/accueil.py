@@ -11,6 +11,9 @@ from datetime import date as _date, datetime as _datetime
 from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
 from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
+# La normalisation du muscle vivait ici EN DOUBLE, et les deux copies
+# avaient divergé. Une seule désormais, dans core/.
+from core.seance_semaine import _normalize_hist
 from core.hist import is_cardio as _is_cardio_row, is_perf as _is_perf, is_logged as _is_real_perf, tonnage
 from core.analytics import track
 
@@ -26,20 +29,6 @@ REACTIVATION_DAYS = 3
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("accueil", __name__)
-
-
-def _normalize_hist(rows, prog):
-    """Applique le mapping muscle via le programme + fix_muscle, comme app.py ligne 1466-1468."""
-    prog_seances = {k: v for k, v in prog.items() if not k.startswith("_")}
-    muscle_mapping = {ex["name"]: ex.get("muscle", "Autre")
-                      for s in prog_seances for ex in prog_seances[s]}
-    for r in rows:
-        base = get_base_name(r["Exercice"])
-        mapped = muscle_mapping.get(base)
-        if mapped:
-            r["Muscle"] = mapped
-        r["Muscle"] = fix_muscle(r["Exercice"], r["Muscle"])
-    return rows, prog_seances
 
 
 

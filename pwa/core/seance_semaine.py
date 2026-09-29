@@ -18,14 +18,39 @@ from core.muscu import fix_muscle, get_base_name
 logger = logging.getLogger(__name__)
 
 def _normalize_hist(hist, prog):
+    """Corrige le muscle de chaque ligne d'historique, sur place.
+
+    Le muscle vient du programme quand il y est renseigné, sinon de ce que
+    la ligne portait déjà, sinon de la déduction par le nom. Retourne
+    `(hist, séances du programme)`.
+
+    `routes/accueil.py` en avait sa propre copie, qui avait divergé sur un
+    détail : un exercice du programme dont le muscle était vide effaçait
+    celui de l'historique d'un côté, pas de l'autre. C'est la version
+    prudente qui est gardée.
+    """
     prog_seances = {k: v for k, v in prog.items() if not k.startswith("_")}
     muscle_mapping = {ex["name"]: ex.get("muscle", "Autre")
                       for s in prog_seances for ex in prog_seances[s]}
+    # Un an d'entraînement, c'est ~2 000 lignes pour une vingtaine d'exercices
+    # distincts. `fix_muscle` peut passer une soixantaine de règles de mots-clés
+    # sur le nom : le refaire à chaque ligne, c'est des dizaines de milliers de
+    # comparaisons pour vingt réponses différentes. On les retient.
+    #
+    # La clé porte le muscle DÉJÀ noté autant que le nom : `fix_muscle` ne
+    # recalcule que si la valeur existante est vide ou héritée, donc deux
+    # lignes du même exercice peuvent légitimement donner deux résultats.
+    connus = {}
     for r in hist:
-        base = get_base_name(r["Exercice"])
-        if base in muscle_mapping:
-            r["Muscle"] = muscle_mapping[base]
-        r["Muscle"] = fix_muscle(r["Exercice"], r["Muscle"])
+        cle = (r["Exercice"], r["Muscle"])
+        muscle = connus.get(cle)
+        if muscle is None:
+            mappe = muscle_mapping.get(get_base_name(r["Exercice"]))
+            # Un exercice du programme sans muscle renseigné n'efface pas
+            # celui de l'historique : `fix_muscle` saura le déduire si besoin.
+            muscle = fix_muscle(r["Exercice"], mappe if mappe else r["Muscle"])
+            connus[cle] = muscle
+        r["Muscle"] = muscle
     return hist, prog_seances
 
 

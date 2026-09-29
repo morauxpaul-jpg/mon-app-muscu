@@ -427,6 +427,7 @@ pwa/
 ### Coût d'un affichage de /accueil
 - Mesuré avec un an d'entraînement (1 872 séries) : **8 requêtes Supabase**, dont le **programme trois fois**. La page pouvait le sauvegarder **jusqu'à quatre fois** en un seul affichage (badges, record de streak, bandeau PRO, défi gagné), chacune relisant et réécrivant tout le blob sous verrou optimiste. Les quatre posent désormais un drapeau et **une seule écriture** les porte : 8 → 7 requêtes.
 - `_compute_badges` ne persiste plus rien : elle calcule, la vue décide d'écrire. Une fonction de calcul qui sauvegarde était la raison pour laquelle l'une des quatre écritures passait inaperçue.
+- `_normalize_hist` était la fonction la plus coûteuse de la page — et elle existait **en double**, la copie de `routes/accueil.py` ayant divergé sur le traitement d'un muscle vide. Une seule désormais, dans `core/seance_semaine.py`, et **mémoïsée par (exercice, muscle noté)** : `fix_muscle` peut passer 60 règles de mots-clés par ligne, pour une vingtaine de réponses distinctes. Mesuré : **68 ms → 1,2 ms** à 1 872 lignes, **196 ms → 2,3 ms** à 5 000, résultats identiques. Le gain grandit avec l'historique, ce qui est exactement la propriété qui manquait.
 - Reste à traiter : `get_hist()` lit **tout** l'historique (1 872 lignes, 2 pages PostgREST) pour afficher une semaine. Le streak et les badges ont besoin de dates et d'agrégats, pas de lignes complètes.
 - `tests/test_cout_accueil.py` tient le compte : une sauvegarde au plus, et ce qu'elle porte (badges, streak) n'est pas perdu.
 
