@@ -105,7 +105,43 @@ def analyser(blobs: list[dict]) -> dict:
     }
 
 
-def rapport(mesures: dict) -> str:
+PAGE_POSTGREST = 1000  # `max-rows` côté Supabase : au-delà, une requête de plus
+
+
+def analyser_historique(lignes: list[dict]) -> dict:
+    """Ce que coûte la lecture de l'historique, par utilisateur.
+
+    `get_hist()` lit **toutes** les lignes d'un utilisateur à chaque affichage
+    non mis en cache, par pages de 1 000. Savoir combien de lignes porte le
+    plus gros compte dit si ça vaut une table d'agrégats — ou pas encore.
+
+    On ne reçoit que `user_id` et `date` : aucun exercice, aucune charge.
+    """
+    par_user = defaultdict(int)
+    premiere = {}
+    for r in lignes:
+        if not isinstance(r, dict):
+            continue
+        uid = r.get("user_id")
+        par_user[uid] += 1
+        d = str(r.get("date") or "")[:10]
+        if len(d) == 10 and (uid not in premiere or d < premiere[uid]):
+            premiere[uid] = d
+    if not par_user:
+        return {"lignes": 0, "comptes": 0, "pire": 0, "pages_pire": 0, "depuis": ""}
+    pire_uid = max(par_user, key=lambda u: par_user[u])
+    pire = par_user[pire_uid]
+    return {
+        "lignes": sum(par_user.values()),
+        "comptes": len(par_user),
+        "pire": pire,
+        "pages_pire": (pire + PAGE_POSTGREST - 1) // PAGE_POSTGREST,
+        "depuis": premiere.get(pire_uid, ""),
+        "median": sorted(par_user.values())[len(par_user) // 2],
+    }
+
+
+def rapport(mesures: dict, hist: dict | None = None) -> str:
     lignes = []
     n = mesures["programmes"]
     lignes.append(f"{n} programme(s) lu(s).")
@@ -128,6 +164,17 @@ def rapport(mesures: dict) -> str:
             note = f"  ({CROISSANTES[cle]})"
         lignes.append(f"  {cle:22}{_ko(m['total'])}  {_ko(m['max'])}   "
                       f"{m['comptes']:4}{note}")
+    # Un historique vide n'a rien à dire : la section ne s'affiche pas.
+    if hist and hist.get("lignes"):
+        lignes.append("")
+        lignes.append("  HISTORIQUE (ce que /accueil relit a chaque affichage)")
+        lignes.append("  " + "-" * 62)
+        lignes.append(f"  lignes en base          {hist['lignes']:6}"
+                      f"   sur {hist['comptes']} compte(s)")
+        lignes.append(f"  le plus gros compte     {hist['pire']:6}"
+                      f"   soit {hist['pages_pire']} requete(s) PostgREST"
+                      + (f", depuis {hist['depuis']}" if hist.get("depuis") else ""))
+        lignes.append(f"  compte median           {hist.get('median', 0):6}")
     lignes.append("")
     lignes.append("  Rien n'a ete ecrit. Aucun contenu n'est imprime ci-dessus :")
     lignes.append("  que des noms de cles, des tailles et des comptages.")

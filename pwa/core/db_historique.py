@@ -345,3 +345,12 @@ def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: 
     }
     _insert_history(client, [_row_to_supabase(user_id, row)])
     _cache_invalidate(f"hist:{user_id}")
+
+def list_history_shape() -> list[dict]:
+    """(user_id, date) de TOUTES les lignes d'historique — lecture seule.
+
+    Sert à mesurer ce que coûte `get_hist` (`core/blob_stats.py`). Deux
+    colonnes seulement : ni exercice, ni charge, ni remarque. De quoi compter
+    et dater, rien de plus.
+    """
+    return _fetch_all(lambda: get_client().table("history").select("user_id,date")) or []

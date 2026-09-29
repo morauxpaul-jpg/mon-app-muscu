@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 
 from conftest import USER_ID
-from core.blob_stats import _dates_du_calque, _octets, analyser, rapport
+from core.blob_stats import (_dates_du_calque, _octets, analyser,
+                             analyser_historique, rapport)
 
 RACINE = Path(__file__).resolve().parent.parent
 
@@ -27,6 +28,7 @@ SANS_BASE = (RACINE / "tools" / "analyse_blob.py",
              RACINE / "core" / "blob_stats.py")
 # (fichier, fonction) : les deux seuls endroits où la mesure parle à Supabase.
 QUI_LIT = ((RACINE / "core" / "db_programme.py", "list_all_program_blobs"),
+           (RACINE / "core" / "db_historique.py", "list_history_shape"),
            (RACINE / "routes" / "admin.py", "blob"))
 
 
@@ -230,3 +232,57 @@ def test_la_page_le_dit_quand_il_ny_a_rien(fake_db, logged_in, monkeypatch):
     r = logged_in.get("/admin/blob")
     assert r.status_code == 200
     assert "Aucun programme" in r.data.decode("utf-8")
+
+
+# ── La mesure de l'historique ────────────────────────────────────────────
+
+def test_lhistorique_est_compte_par_utilisateur():
+    # Le plus GROS compte est le plus RÉCENT : sans ça, prendre la plus vieille
+    # date toutes lignes confondues donnerait la même réponse par hasard.
+    lignes = [{"user_id": "a", "date": "2026-05-01"},
+              {"user_id": "a", "date": "2026-07-02"},
+              {"user_id": "b", "date": "2026-01-01"}]
+    m = analyser_historique(lignes)
+    assert m["lignes"] == 3 and m["comptes"] == 2
+    assert m["pire"] == 2
+    assert m["depuis"] == "2026-05-01", "la date doit être celle du PLUS GROS compte"
+
+
+def test_le_nombre_de_pages_est_celui_de_postgrest():
+    """C'est le chiffre qui décide : chaque page est un aller-retour réseau."""
+    from core.blob_stats import PAGE_POSTGREST
+    for n, pages in ((1, 1), (PAGE_POSTGREST, 1), (PAGE_POSTGREST + 1, 2),
+                     (3 * PAGE_POSTGREST, 3)):
+        m = analyser_historique([{"user_id": "a", "date": "2026-01-01"}] * n)
+        assert m["pages_pire"] == pages, f"{n} lignes devraient faire {pages} page(s)"
+
+
+def test_un_historique_vide_ne_fait_pas_tomber_la_page():
+    m = analyser_historique([])
+    assert m["lignes"] == 0 and m["pages_pire"] == 0
+    assert "HISTORIQUE" not in rapport(analyser([{"_settings": {}}]), m)
+
+
+def test_le_rapport_montre_lhistorique_quand_il_y_en_a():
+    m = analyser_historique([{"user_id": "a", "date": "2026-01-05"}] * 1500)
+    texte = rapport(analyser([{"_settings": {}}]), m)
+    assert "HISTORIQUE" in texte and "1500" in texte
+    assert "2 requete(s)" in texte
+
+
+def test_la_mesure_de_lhistorique_ne_lit_que_deux_colonnes():
+    """Ni exercice, ni charge, ni remarque : on compte et on date."""
+    import ast
+    src = (RACINE / "core" / "db_historique.py").read_text(encoding="utf-8")
+    fn = _source_de(RACINE / "core" / "db_historique.py", "list_history_shape")
+    demandes = [n.args[0].value for n in ast.walk(ast.parse(fn))
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "select" and n.args
+                and isinstance(n.args[0], ast.Constant)]
+    assert demandes == ["user_id,date"], demandes
+
+
+def test_le_rapport_dhistorique_ne_laisse_rien_fuir():
+    """Un identifiant d'utilisateur n'a rien à faire dans un rapport collable."""
+    m = analyser_historique([{"user_id": "u-secret-0001", "date": "2026-01-05"}])
+    assert "u-secret-0001" not in rapport(analyser([{"_settings": {}}]), m)

@@ -42,7 +42,7 @@ from core.db_base import (
 
 # ── les séries enregistrées ─────────────────────────────────────
 from core.db_historique import (
-    append_exo_rows, delete_exo_rows, delete_session_rows, get_hist,
+    append_exo_rows, delete_exo_rows, delete_session_rows, get_hist, list_history_shape,
     mark_session_missed, rename_exercise_rows, rename_seance_rows, replace_exo_rows,
     save_hist, _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _norm_date,

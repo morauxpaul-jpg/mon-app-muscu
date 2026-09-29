@@ -63,7 +63,7 @@ def blob():
     comptages (cf. `core/blob_stats.py`). Le texte se colle donc n'importe où.
     """
     _require_admin()
-    from core.blob_stats import analyser, rapport
+    from core.blob_stats import analyser, analyser_historique, rapport
     try:
         blobs = core_db.list_all_program_blobs()
     except Exception as e:
@@ -71,7 +71,15 @@ def blob():
         return Response("Lecture impossible.\n", mimetype="text/plain"), 503
     if not blobs:
         return Response("Aucun programme en base.\n", mimetype="text/plain")
-    return Response(rapport(analyser(blobs)) + "\n", mimetype="text/plain")
+    # L'historique est mesuré à part et sans bloquer : c'est un complément,
+    # pas la raison d'être de la page. Une lecture qui échoue ne doit pas
+    # priver du reste.
+    hist = None
+    try:
+        hist = analyser_historique(core_db.list_history_shape())
+    except Exception as e:
+        logger.warning("/admin/blob historique indisponible: %s", type(e).__name__)
+    return Response(rapport(analyser(blobs), hist) + "\n", mimetype="text/plain")
 
 
 @bp.route("/admin")
