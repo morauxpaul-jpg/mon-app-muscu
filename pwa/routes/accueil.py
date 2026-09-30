@@ -59,6 +59,22 @@ def streak_semaines(semaines_actives, semaine_courante):
     return streak
 
 
+def seances_manquees(planning_map, derniere, today):
+    """Jours d'entraînement du planning passés sans séance, entre la
+    dernière séance (exclue) et aujourd'hui (exclu : la journée n'est pas
+    finie). None sans planning exploitable."""
+    jours = {j for j, s in (planning_map or {}).items() if s}
+    if not jours:
+        return None
+    n = 0
+    d = derniere + timedelta(days=1)
+    while d < today:
+        if DAYS_FR[d.weekday()] in jours:
+            n += 1
+        d += timedelta(days=1)
+    return n
+
+
 def _compute_badges(hist, prog, profile, planning_map, streak):
     """Retourne (badges_unlocked:set, new_unlocked:list). N'écrit rien.
 
@@ -493,12 +509,22 @@ def index():
     days_inactive = 0
     perf_dates = [r["Date"] for r in hist if r.get("Date") and _is_perf(r)]
     if perf_dates:
+        last_perf = None
         try:
             last_perf = _date.fromisoformat(max(perf_dates))
             days_inactive = (today - last_perf).days
         except (ValueError, TypeError):
             days_inactive = 0
-        if days_inactive >= REACTIVATION_DAYS:
+        # Avec un planning, « Content de te revoir » attend au moins une
+        # séance prévue et ratée : un pratiquant Lun/Mer/Ven régulier le
+        # lisait chaque lundi (« ça fait 3 jours ») alors qu'il n'avait rien
+        # manqué (audit du 30/09, R7). Sans planning, une semaine d'arrêt.
+        manquees = seances_manquees(planning_map, last_perf, today) if last_perf else None
+        if manquees is None:
+            en_retrait = days_inactive >= 7
+        else:
+            en_retrait = days_inactive >= REACTIVATION_DAYS and manquees >= 1
+        if en_retrait:
             show_reactivation = True
             # Event seulement sur une vraie navigation (pas un prefetch).
             if request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate":
@@ -579,8 +605,6 @@ def index():
         streak_tier_label=streak_tier_label,
         today_seance=today_seance,
         today_done=today_done,
-        notif_enabled=bool(prog.get("_settings", {}).get("notifications", False)),
-        reminder_hour=int((prog.get("_settings") or {}).get("reminder_hour", 18) or 0),
         exos_count=exos_count,
         sets_count=sets_count,
         reps_count=reps_count,

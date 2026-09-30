@@ -133,7 +133,6 @@ pwa/
 │   │   ├── alpine.min.js / alpine-sort.min.js  # Alpine.js + plugin sort bundlés localement
 │   │   ├── sw-register.js         # Enregistrement SW + auto-update
 │   │   ├── offline.js             # Détection hors-ligne, queue localStorage, sync
-│   │   ├── notifications.js       # Rappels quotidiens (API Notification)
 │   │   ├── push.js                # Abonnement push web (VAPID)
 │   │   ├── install.js             # Expérience d'installation PWA (détection plateforme)
 │   │   ├── ads.js                 # AdMob (app native + Free uniquement)
@@ -277,7 +276,7 @@ pwa/
 
 ### Notifications
 - **Universelles (free + PRO)** depuis 2026-06-15 : la case « Notifications de rappel & relances » dans Gestion n'est plus réservée au VIP (rétention = on veut surtout faire revenir les gratuits). Un seul contrôle : cocher la case demande la permission ET abonne au push (`handleNotifToggle` → `window.enablePush`).
-- Rappels **locaux** (notifications.js) : matin (jour d'entraînement, <14 h), soir (séance non faite, ≥18 h), streak en danger (≥19 h, streak > 2). Ne se déclenchent que si l'app est ouverte.
+- Rappels **locaux** : retirés le 30/09 (ils ne se déclenchaient jamais — script exécuté avant le chargement de notifications.js, audit R4 — et n'auraient prévenu que quelqu'un qui regarde déjà l'app). Seuls les rappels serveur (core/reminders.py) existent.
 - **Rappel de séance à l'heure choisie** (`core/reminders.py`) : réglage `_settings.reminder_hour` (6→22 h, 0 = aucun) dans Gestion. `POST /tasks/reminders` (même secret `CRON_SECRET`) est appelé **toutes les heures** par un cron externe et ne notifie que les comptes dont l'heure correspond ET qui ont une séance prévue non faite. Script équivalent : `pwa/cron_reminders.py`.
 - Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Un envoi par utilisateur au maximum tous les 27 jours (`push_subscriptions.last_reactivation_at`, migration v34) — avant, un inactif recevait la même relance 27 jours d'affilée.
 - Désactivable dans Gestion > Paramètres.

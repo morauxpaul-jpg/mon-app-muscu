@@ -35,6 +35,24 @@ def _volume(rows):
     return tonnage(rows)
 
 
+def _reps(rows):
+    return sum(int(r.get("Reps") or 0) for r in rows if _is_real_muscu(r))
+
+
+def _au_poids_du_corps(hist, w):
+    """True si l'utilisateur s'entraîne (presque) sans charge : ≥ 70 % de ses
+    séries des 4 dernières semaines (ou de celle-ci, faute de mieux) à 0 kg.
+
+    Deux défis sur cinq se comptaient en kilos : à 0 kg, un programme au poids
+    du corps — gratuit, proposé dès l'onboarding — ne pouvait jamais les
+    réussir (audit du 30/09, I14). On lui propose les mêmes en répétitions."""
+    series = [r for r in hist if _is_real_muscu(r) and (w - 4) <= (r.get("Semaine") or 0) <= w]
+    if not series:
+        return False
+    a_vide = sum(1 for r in series if float(r.get("Poids") or 0) <= 0)
+    return a_vide >= 0.7 * len(series)
+
+
 def _cardio_sessions(rows):
     return {(r.get("Date"), r.get("Séance")) for r in rows
             if _is_cardio(r) and int(r.get("Reps") or 0) > 0 and r.get("Date")}
@@ -48,6 +66,10 @@ def _ch_sessions(hist, w):
 
 
 def _ch_tonnage(hist, w):
+    if _au_poids_du_corps(hist, w):
+        return ("300 répétitions", "🏋️",
+                "Cumule 300 répétitions cette semaine, toutes séries confondues.",
+                _reps(_week_rows(hist, w)), 300, "reps")
     cur = _volume(_week_rows(hist, w))
     return ("Soulève 10 000 kg", "🏋️",
             "Cumule 10 000 kg de volume (poids × reps) cette semaine.",
@@ -71,6 +93,16 @@ def _ch_new_exo(hist, w):
 
 
 def _ch_beat_volume(hist, w):
+    if _au_poids_du_corps(hist, w):
+        last = _reps(_week_rows(hist, w - 1))
+        cur = _reps(_week_rows(hist, w))
+        if last <= 0:
+            return ("250 répétitions", "📈",
+                    "Lance-toi un gros volume cette semaine : 250 répétitions.",
+                    cur, 250, "reps")
+        return ("Bats ton volume", "📈",
+                f"Dépasse tes {last} répétitions de la semaine dernière.",
+                cur, last + 1, "reps")
     last = _volume(_week_rows(hist, w - 1))
     cur = _volume(_week_rows(hist, w))
     if last <= 0:

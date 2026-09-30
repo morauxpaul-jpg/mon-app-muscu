@@ -126,19 +126,26 @@ def _last_activity_by_user() -> dict:
     return out
 
 
-def get_inactive_user_ids(min_days: int = 3, max_days: int = 30) -> set:
-    """user_id dont la dernière séance (perf réelle) remonte à entre `min_days`
-    et `max_days` jours — cibles de relance (ni actifs, ni partis depuis trop
-    longtemps). Exclut les comptes sans historique."""
+def get_inactive_users(min_days: int = 3, max_days: int = 30) -> dict:
+    """{user_id: date de dernière séance} des comptes dont la dernière perf
+    remonte à entre `min_days` et `max_days` jours — cibles de relance (ni
+    actifs, ni partis depuis trop longtemps). Exclut les comptes sans
+    historique. La date sert à savoir si une relance appartient à l'arrêt
+    EN COURS ou à un arrêt précédent."""
     try:
         last_by_user = _last_activity_by_user()
     except Exception as e:
-        logger.error("get_inactive_user_ids FAILED: %s", e)
-        return set()
+        logger.error("get_inactive_users FAILED: %s", e)
+        return {}
     today = _dt.date.today()
     lo = (today - _dt.timedelta(days=max_days)).isoformat()
     hi = (today - _dt.timedelta(days=min_days)).isoformat()
-    return {uid for uid, last in last_by_user.items() if lo <= last <= hi}
+    return {uid: last for uid, last in last_by_user.items() if lo <= last <= hi}
+
+
+def get_inactive_user_ids(min_days: int = 3, max_days: int = 30) -> set:
+    """Les user_id de `get_inactive_users`."""
+    return set(get_inactive_users(min_days, max_days))
 
 
 def list_push_subscriptions_for_users(user_ids: set) -> list[dict]:

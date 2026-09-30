@@ -1,10 +1,10 @@
 """Rappels de séance planifiés — poussés par le serveur, à l'heure choisie.
 
-Les rappels existants (static/js/notifications.js) ne se déclenchent que si
-l'application est OUVERTE au bon moment : un rappel qui vous prévient pendant
-que vous regardez déjà l'app ne sert à rien. C'est la raison pour laquelle la
-seule notification réellement envoyée était la relance des inactifs — donc
-toujours après le décrochage, jamais avant.
+Les anciens rappels locaux (static/js/notifications.js) ne se déclenchaient
+que si l'application était OUVERTE au bon moment — et, l'audit du 30/09 l'a
+montré (R4), jamais du tout : le script de l'accueil tournait avant que le
+fichier soit chargé. Ils ont été retirés : un rappel qui prévient pendant
+qu'on regarde déjà l'app ne sert à rien. Ceux-ci arrivent app fermée.
 
 Ici, un cron horaire envoie un push aux personnes qui :
   - ont une séance planifiée aujourd'hui,

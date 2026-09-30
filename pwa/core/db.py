@@ -78,7 +78,7 @@ from core.db_abonnement import (
 
 # ── notifications, newsletter, relances ─────────────────────────
 from core.db_push import (
-    delete_push_subscription, get_inactive_user_ids, list_all_programs,
+    delete_push_subscription, get_inactive_user_ids, get_inactive_users, list_all_programs,
     list_newsletter_emails, list_push_subscriptions, list_push_subscriptions_for_users,
     mark_reactivation_sent, save_push_subscription, set_newsletter_optin,
     users_trained_on, _last_activity_by_user, _row_to_subscription

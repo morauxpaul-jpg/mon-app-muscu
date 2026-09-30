@@ -94,14 +94,28 @@ REACTIVATION_MESSAGES = [
 REACTIVATION_PAYLOAD = REACTIVATION_MESSAGES[0]
 
 
-def _should_relaunch(sub: dict, now=None) -> bool:
+def relances_de_cet_arret(sub: dict, derniere_seance: str | None) -> int:
+    """Relances déjà envoyées pour l'arrêt EN COURS.
+
+    Le plafond de 3 n'était jamais remis à zéro : quelqu'un qui avait décroché
+    une fois, puis repris, ne recevait plus jamais de relance au décrochage
+    suivant (audit du 30/09, I14). Une relance envoyée AVANT la dernière
+    séance appartient à un arrêt terminé : elle ne compte plus."""
+    count = int(sub.get("reactivation_count") or 0)
+    last = str(sub.get("last_reactivation_at") or "")[:10]
+    if count and last and derniere_seance and last < str(derniere_seance)[:10]:
+        return 0
+    return count
+
+
+def _should_relaunch(sub: dict, now=None, derniere_seance: str | None = None) -> bool:
     """True si cet abonnement peut recevoir une relance maintenant."""
     import datetime as _dt
-    count = int(sub.get("reactivation_count") or 0)
+    count = relances_de_cet_arret(sub, derniere_seance)
     if count >= MAX_REACTIVATIONS:
         return False
     last = sub.get("last_reactivation_at")
-    if not last:
+    if not last or count == 0:
         return True
     try:
         dt_last = _dt.datetime.fromisoformat(str(last).replace("Z", "+00:00"))
@@ -135,18 +149,19 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
         return {"ok": False, "error": "unconfigured"}
 
     try:
-        targets = core_db.get_inactive_user_ids(min_days=min_days, max_days=max_days)
-        subs = core_db.list_push_subscriptions_for_users(targets)
+        targets = core_db.get_inactive_users(min_days=min_days, max_days=max_days)
+        subs = core_db.list_push_subscriptions_for_users(set(targets))
     except Exception as e:
         logger.error("run_reactivation_push gather FAILED: %s", e)
         return {"ok": False, "error": "gather_failed"}
 
     sent, expired, errors, skipped = 0, 0, 0, 0
     for sub in subs:
-        if not force and not _should_relaunch(sub):
+        derniere = targets.get(sub.get("user_id"))
+        if not force and not _should_relaunch(sub, derniere_seance=derniere):
             skipped += 1
             continue
-        count = int(sub.get("reactivation_count") or 0)
+        count = relances_de_cet_arret(sub, derniere)
         # Message différent à chaque relance (le même texte répété est ignoré).
         body = payload or REACTIVATION_MESSAGES[min(count, len(REACTIVATION_MESSAGES) - 1)]
         status = send_push(sub["sub"], body)
