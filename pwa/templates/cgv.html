@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Conditions générales de vente · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="{% if is_authenticated %}/premium{% else %}/{% endif %}" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Conditions générales de vente</h1>
+  <p class="legal-maj">Dernière mise à jour : 30 septembre 2026</p>
+
+  <div class="card legal-card">
+    <h3>1. Objet</h3>
+    <p>Ces conditions encadrent la souscription à l'offre <strong>Premium (PRO)</strong> de Muscu Tracker, éditée par {{ editeur.nom }} (voir les <a href="/mentions-legales">mentions légales</a>). L'utilisation gratuite de l'app ne nécessite aucun paiement.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>2. Offres et prix</h3>
+    <ul>
+      <li><strong>Mensuel</strong> : 4,99 € par mois, renouvelé chaque mois.</li>
+      <li><strong>Annuel</strong> : 39,99 € par an, renouvelé chaque année.</li>
+      <li><strong>À vie</strong> : 79,99 € en un paiement unique, sans renouvellement.</li>
+    </ul>
+    <p>Prix en euros, toutes taxes comprises. Le contenu de l'offre Premium est décrit sur la <a href="/premium">page PRO</a>.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>3. Paiement</h3>
+    <p>Le paiement est traité par <strong>Stripe</strong> (carte bancaire, Apple Pay, Google Pay). Muscu Tracker ne voit ni ne conserve ton numéro de carte. L'accès Premium est activé dès la confirmation du paiement.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>4. Renouvellement et résiliation</h3>
+    <p>Les abonnements mensuel et annuel se renouvellent automatiquement à la fin de chaque période. Tu peux les résilier à tout moment depuis <strong>« Gérer mon abonnement »</strong> sur la page PRO : la résiliation prend effet à la fin de la période déjà payée, pendant laquelle l'accès Premium reste actif. Supprimer ton compte résilie aussi ton abonnement.</p>
+    <p>L'offre <strong>À vie</strong> donne accès aux fonctions Premium tant que le service Muscu Tracker est exploité.</p>
+  </div>
+
+  <div class="card legal-card" id="retractation">
+    <h3>5. Droit de rétractation</h3>
+    <p>Tu disposes d'un délai de <strong>14 jours</strong> à compter de ta souscription pour te rétracter, sans avoir à te justifier (articles L221-18 et suivants du Code de la consommation). Il te suffit d'envoyer ta demande à <a href="mailto:{{ editeur.email }}">{{ editeur.email }}</a>, par exemple avec le modèle ci-dessous. Tu es remboursé sous 14 jours, par le même moyen de paiement.</p>
+    <p class="legal-modele"><em>Modèle de formulaire de rétractation :</em><br>
+      À l'attention de {{ editeur.nom }}, {{ editeur.email }} :<br>
+      Je vous notifie par la présente ma rétractation du contrat portant sur l'abonnement Muscu Tracker Premium ci-dessous :<br>
+      — Formule et date de souscription :<br>
+      — Nom et e-mail du compte :<br>
+      — Date :</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>6. Essai offert</h3>
+    <p>Un essai Premium peut être offert (parrainage, promotion). Il est gratuit, sans engagement ni moyen de paiement, et prend fin automatiquement à la date indiquée dans l'app.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>7. Disponibilité du service</h3>
+    <p>Muscu Tracker est fourni avec le plus grand soin, mais peut être interrompu ponctuellement (maintenance, panne d'un prestataire). Les conseils du coach IA et des suggestions de charge sont indicatifs et ne remplacent pas l'avis d'un professionnel de santé.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>8. Données personnelles</h3>
+    <p>Voir la <a href="/confidentialite">politique de confidentialité</a>.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>9. Réclamations et droit applicable</h3>
+    <p>Pour toute question ou réclamation : <a href="mailto:{{ editeur.email }}">{{ editeur.email }}</a>. Ces conditions sont soumises au droit français.</p>
+  </div>
+
+  <style>
+    .legal-maj { font-size:0.78rem; color:var(--text-3); margin:4px 0 16px; }
+    .legal-card h3 { margin:0 0 8px; font-size:0.95rem; color:var(--text-1); font-weight:600; }
+    .legal-card p, .legal-card li { font-size:0.84rem; color:var(--text-2); line-height:1.6; }
+    .legal-card ul { padding-left:18px; margin:0 0 8px; }
+    .legal-card a { color:var(--accent); }
+    .legal-modele { background:var(--bg-surface); border-radius:10px; padding:10px 12px; }
+  </style>
+{% endblock %}

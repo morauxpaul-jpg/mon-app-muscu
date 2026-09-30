@@ -147,7 +147,7 @@ app.register_blueprint(push_bp)
 # une URL de politique de confidentialité consultable sans compte.
 # /billing/webhook : appelé par Stripe (pas de session) → public, sécurisé par
 # la signature Stripe et exempté de CSRF (cf. _CSRF_EXEMPT_PATHS).
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders"}
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/mentions-legales", "/cgv", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders"}
 
 
 @app.before_request
@@ -221,7 +221,8 @@ def _require_login():
     # /confidentialite aussi : la carte « Plus de programmes PRO » de
     # l'onboarding pointe vers les offres, et ces pages de présentation
     # ne nécessitent aucune donnée utilisateur.
-    if path.startswith("/onboarding") or path in ("/logout", "/premium", "/faq", "/confidentialite"):
+    if path.startswith("/onboarding") or path in ("/logout", "/premium", "/faq", "/confidentialite",
+                                                  "/mentions-legales", "/cgv"):
         return None
     # Cache le flag en session pour éviter un hit DB à chaque requête
     if not session.get("onboarded"):
@@ -497,6 +498,20 @@ def faq():
 def confidentialite():
     # Politique de confidentialité — publique (exigence stores).
     return render_template("confidentialite.html", active="plus")
+
+
+# Mentions légales et CGV — publiques : on doit pouvoir les lire avant de
+# créer un compte ou de payer (audit du 30/09, I12).
+@app.route("/mentions-legales")
+def mentions_legales():
+    from core.legal import infos_editeur
+    return render_template("mentions_legales.html", active="plus", editeur=infos_editeur())
+
+
+@app.route("/cgv")
+def cgv():
+    from core.legal import infos_editeur
+    return render_template("cgv.html", active="plus", editeur=infos_editeur())
 
 
 # ────────────────────────────────────────────────────────────────

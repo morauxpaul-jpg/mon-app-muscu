@@ -86,3 +86,39 @@ def test_la_politique_dit_ce_que_lapp_fait():
     assert "membres Premium) ou sur demande" not in txt
     faq = (PWA / "templates" / "faq.html").read_text(encoding="utf-8")
     assert "ne peut pas toucher à ta <strong>caméra, ton micro ni ta position" not in faq
+
+
+# ── Pages légales ────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("page", ["/mentions-legales", "/cgv"])
+def test_les_pages_legales_sont_publiques(page, fake_db, client):
+    """On doit pouvoir les lire avant de créer un compte ou de payer."""
+    r = client.get(page)
+    assert r.status_code == 200
+    assert "Paul Moraux" in r.get_data(as_text=True)
+
+
+def test_mentions_legales_sans_adresse_ne_montrent_pas_de_faux(fake_db, client, monkeypatch):
+    monkeypatch.delenv("EDITEUR_ADRESSE", raising=False)
+    html = client.get("/mentions-legales").get_data(as_text=True)
+    assert "communiquée sur simple demande" in html
+    assert "Supabase Pte. Ltd." in html and "Railway" in html
+
+
+def test_mentions_legales_avec_adresse(fake_db, client, monkeypatch):
+    monkeypatch.setenv("EDITEUR_ADRESSE", "12 rue de l'Exemple, 75000 Paris")
+    html = client.get("/mentions-legales").get_data(as_text=True)
+    assert "12 rue de l&#39;Exemple, 75000 Paris" in html
+
+
+def test_les_cgv_disent_les_prix_et_la_retractation(fake_db, client):
+    html = client.get("/cgv").get_data(as_text=True)
+    for prix in ("4,99", "39,99", "79,99"):
+        assert prix in html
+    assert 'id="retractation"' in html and "14 jours" in html
+
+
+def test_la_page_pro_renvoie_aux_cgv(gratuit):
+    html = gratuit.get("/premium").get_data(as_text=True)
+    assert 'href="/cgv"' in html and 'href="/cgv#retractation"' in html

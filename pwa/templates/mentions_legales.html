@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Mentions légales · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="{% if is_authenticated %}/plus{% else %}/{% endif %}" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Mentions légales</h1>
+  <p class="legal-maj">Dernière mise à jour : 30 septembre 2026</p>
+
+  <div class="card legal-card">
+    <h3>Éditeur</h3>
+    <p><strong>Muscu Tracker</strong> est édité par <strong>{{ editeur.nom }}</strong>, {{ editeur.statut }}.</p>
+    <ul>
+      <li>Contact : <a href="mailto:{{ editeur.email }}">{{ editeur.email }}</a></li>
+      {% if editeur.adresse %}
+      <li>Adresse : {{ editeur.adresse }}</li>
+      {% else %}
+      <li>Adresse : communiquée sur simple demande à l'adresse e-mail ci-dessus.</li>
+      {% endif %}
+      {% if editeur.siret %}<li>SIRET : {{ editeur.siret }}</li>{% endif %}
+      <li>Directeur de la publication : {{ editeur.nom }}</li>
+    </ul>
+  </div>
+
+  <div class="card legal-card">
+    <h3>Hébergement</h3>
+    <ul>
+      <li><strong>Serveur de l'application</strong> : Railway — <a href="https://railway.com" rel="noopener">railway.com</a></li>
+      <li><strong>Base de données</strong> : Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapour 049513 — <a href="https://supabase.com" rel="noopener">supabase.com</a></li>
+    </ul>
+  </div>
+
+  <div class="card legal-card">
+    <h3>Propriété intellectuelle</h3>
+    <p>Le code, les textes, les illustrations et le design de Muscu Tracker appartiennent à leur éditeur. Toute reproduction sans autorisation est interdite. Les données que tu saisis restent les tiennes : tu peux les exporter ou les supprimer à tout moment depuis <a href="/gestion">Gestion</a>.</p>
+  </div>
+
+  <div class="card legal-card">
+    <h3>Voir aussi</h3>
+    <p><a href="/cgv">Conditions générales de vente</a> · <a href="/confidentialite">Politique de confidentialité</a> · <a href="/faq">FAQ</a></p>
+  </div>
+
+  <style>
+    .legal-maj { font-size:0.78rem; color:var(--text-3); margin:4px 0 16px; }
+    .legal-card h3 { margin:0 0 8px; font-size:0.95rem; color:var(--text-1); font-weight:600; }
+    .legal-card p, .legal-card li { font-size:0.84rem; color:var(--text-2); line-height:1.6; }
+    .legal-card ul { padding-left:18px; margin:0 0 8px; }
+    .legal-card a { color:var(--accent); }
+  </style>
+{% endblock %}
