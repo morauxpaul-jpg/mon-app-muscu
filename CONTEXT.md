@@ -424,6 +424,13 @@ pwa/
 - `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
 
+### Suivi GPS (static/js/gps-track.js)
+- `GpsTrack.creerSuivi()` accumule la distance à partir des positions du navigateur. Module autonome, sans DOM : `tests/js/test_gps_track.js` (18) l'exerce sous Node en lui poussant des positions à la main.
+- **Limite assumée et écrite à l'écran** : le navigateur ne donne des positions que tant que la page est visible. Écran éteint ou app en arrière-plan, Android suspend la page. Le suivi prend donc un `wakeLock` écran (comme le chrono de repos) et **compte** les interruptions.
+- Trois filtres, chacun contre une façon d'inventer des mètres : précision > 25 m (position floue), déplacement < 6 m (tremblement à l'arrêt — le point de référence n'est PAS mis à jour, sinon le bruit s'accumulerait), vitesse > 12 m/s (recalage).
+- L'avertissement se déclenche sur **UN** silence ≥ 60 s, jamais sur leur somme : un téléphone en économie d'énergie relève toutes les 35 s, la somme grimpe à plusieurs minutes sans qu'un mètre soit perdu, et l'avertissement resterait allumé en permanence. La somme ne distingue pas « lent mais régulier » de « quelques vrais trous » ; la durée du pire trou, si.
+- La distance GPS alimente le champ distance, donc la vitesse se déduit toute seule (cf. `completer_mesures`).
+
 ### Cardio : durée, distance, vitesse (core/seance_cardio.py)
 - **Deux valeurs sur trois suffisent.** `completer_mesures(activite, duree, distance, vitesse)` déduit celle qui manque, dans les deux sens. Une valeur saisie prime toujours : si l'utilisateur donne les deux, on ne corrige rien. La durée n'est jamais déduite — c'est elle qui identifie la séance.
 - Trois défauts trouvés en mesurant : la vitesse calculée dans le formulaire de séance était **affichée en suggestion et jamais enregistrée** ; la page `/cardio` **n'avait aucun champ vitesse** alors que l'écran de séance en a un ; et la règle de conversion se devinait à partir du **libellé** de l'unité (`indexOf("km/h")`), si bien que « Allure (min/500m) » ne tombait dans aucun cas et que l'allure du rameur ne se calculait jamais, en silence.

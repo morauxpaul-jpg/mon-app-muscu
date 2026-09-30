@@ -39,6 +39,26 @@
         <button type="button" class="btn" @click="resume()" x-show="!running && elapsed > 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span style="margin-left:6px;">Reprendre</span></button>
         <button type="button" class="btn" @click="stop()" x-show="elapsed > 0" style="background: rgba(255,69,58,0.1); border-color: rgba(255,69,58,0.35); color: var(--danger);"><svg class="icon icon-sm"><use href="/static/img/icons.svg#square"/></svg><span style="margin-left:6px;">Stop</span></button>
       </div>
+      {# Suivi GPS. Le navigateur ne donne des positions que tant que la page
+         est visible : on garde donc l'écran allumé, et on DIT ce qu'on a
+         perdu plutôt que d'afficher un total qu'on sait bas. #}
+      <div x-show="gpsDispo && unites().regle" x-cloak style="margin-top:10px;">
+        <button type="button" class="btn label-icon" style="width:100%; justify-content:center;"
+                x-show="!gpsActif" @click="gpsDemarrer()">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#target"/></svg>Suivre la distance au GPS
+        </button>
+        <div x-show="gpsActif" x-cloak class="gps-actif">
+          <div class="gps-ligne">
+            <span class="gps-point" aria-hidden="true"></span>
+            <span x-text="gpsKm.toFixed(2) + ' km'"></span>
+            <button type="button" class="btn mini" @click="gpsArreter()">Arrêter</button>
+          </div>
+          <p class="gps-note" x-show="gpsMessage" x-text="gpsMessage"></p>
+          <p class="gps-note" x-show="!gpsMessage">Garde l'écran allumé : le suivi s'arrête si l'app passe en arrière-plan.</p>
+        </div>
+      </div>
+      <p x-show="gpsErreur" x-cloak class="gps-note" style="color:var(--danger);" x-text="gpsErreur"></p>
+
       <div style="font-size: 0.78rem; color: var(--text-dim); text-align: center; margin-top: 8px;">ou saisie manuelle :</div>
       <label class="field-label">Durée (minutes)</label>
       <input type="number" inputmode="numeric" min="0" name="duree_min" class="field" x-model.number="dureeMin" placeholder="ex. 30">
@@ -230,6 +250,30 @@
       letter-spacing: 1px;
       text-transform: uppercase;
     }
+    .gps-actif {
+      border: 1px solid rgba(120,200,255,0.30);
+      background: var(--accent-bg);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .gps-ligne {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.15rem; font-variant-numeric: tabular-nums;
+    }
+    .gps-ligne span:nth-child(2) { flex: 1; }
+    .gps-point {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--success); flex: 0 0 auto;
+      animation: gps-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes gps-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+    @media (prefers-reduced-motion: reduce) {
+      .gps-point { animation: none; }
+    }
+    .gps-note {
+      font-size: 0.72rem; color: var(--text-3);
+      margin: 6px 0 0; line-height: 1.45;
+    }
     .summary-value {
       font-size: 1.15rem;
       color: var(--success);
@@ -239,6 +283,9 @@
     }
   </style>
 
+  {# `gps-track.js` accumule la distance et compte ce qu'il a perdu. Sans
+     `defer` : le composant Alpine ci-dessous s'en sert dès son démarrage. #}
+  <script src="/static/js/gps-track.js"></script>
   <script>
     // MET par activité (synchro avec routes/cardio.py)
     const MET = {
@@ -264,6 +311,15 @@
         note: "",
         incline: 0,
         running: false,
+        // ── Suivi GPS ───────────────────────────────────────────
+        gpsDispo: typeof navigator !== "undefined" && !!navigator.geolocation,
+        gpsActif: false,
+        gpsKm: 0,
+        gpsMessage: "",
+        gpsErreur: "",
+        _gpsSuivi: null,
+        _gpsWatch: null,
+        _gpsLock: null,
         elapsed: 0,  // secondes
         startedAt: 0,
         baseAccum: 0,
@@ -331,6 +387,7 @@
           this._persist();
         },
         stop() {
+          if (this.gpsActif) this.gpsArreter();
           if (this.running) {
             this.baseAccum += Math.floor((Date.now() - this.startedAt) / 1000);
             this.running = false;
@@ -354,6 +411,62 @@
           return base + (this.incline * bonus);
         },
         unites() { return UNITES[this.activite] || UNITES["Autre"]; },
+
+        // ── Suivi GPS ─────────────────────────────────────────────
+        // Le navigateur ne donne des positions que tant que la page est
+        // visible. On garde donc l'écran allumé, et `gps-track.js` compte
+        // ce qu'il a perdu pour qu'on puisse le dire au lieu d'afficher un
+        // total qu'on sait bas.
+        gpsDemarrer() {
+          if (!this.gpsDispo || !window.GpsTrack) {
+            this.gpsErreur = "Ce navigateur ne donne pas la position.";
+            return;
+          }
+          this.gpsErreur = "";
+          this._gpsSuivi = window.GpsTrack.creerSuivi();
+          this.gpsKm = 0;
+          this.gpsActif = true;
+          if (!this.running && this.elapsed === 0) this.start();
+          this._gpsEcranAllume(true);
+          this._gpsWatch = navigator.geolocation.watchPosition(
+            (pos) => {
+              this._gpsSuivi.ajouter({
+                lat: pos.coords.latitude, lon: pos.coords.longitude,
+                precision: pos.coords.accuracy, t: pos.timestamp,
+              });
+              this.gpsKm = this._gpsSuivi.km();
+              this.gpsMessage = this._gpsSuivi.avertissement();
+              // La distance suit le GPS : la vitesse s'en déduit toute seule.
+              this.distanceKm = this.gpsKm ? this.gpsKm.toFixed(2) : "";
+            },
+            (err) => {
+              this.gpsErreur = err && err.code === 1
+                ? "Autorise la position pour suivre la distance."
+                : "Position indisponible pour l'instant.";
+              this.gpsArreter();
+            },
+            { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+          );
+        },
+        gpsArreter() {
+          if (this._gpsWatch != null && navigator.geolocation) {
+            navigator.geolocation.clearWatch(this._gpsWatch);
+          }
+          this._gpsWatch = null;
+          this.gpsActif = false;
+          this._gpsEcranAllume(false);
+        },
+        _gpsEcranAllume(veut) {
+          try {
+            if (veut && navigator.wakeLock && !this._gpsLock) {
+              navigator.wakeLock.request("screen").then((l) => { this._gpsLock = l; })
+                .catch(() => {});
+            } else if (!veut && this._gpsLock) {
+              this._gpsLock.release().catch(() => {});
+              this._gpsLock = null;
+            }
+          } catch (e) {}
+        },
         // Combien d'unités de distance pour une unité de vitesse.
         _facteur() {
           const t = parseFloat(this.dureeMin) || 0;

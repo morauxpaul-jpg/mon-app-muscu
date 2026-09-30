@@ -1,6 +1,17 @@
 {
-  "current": "v62",
+  "current": "v63",
   "entries": [
+    {
+      "version": "v63",
+      "date": "2026-09-30",
+      "title": "Le GPS compte tes kilomètres",
+      "changes": [
+        "Sur l'écran Cardio, « Suivre la distance au GPS » lance le chrono et compte les kilomètres pendant que tu cours. La vitesse se calcule toute seule à l'arrivée",
+        "Le compteur ignore ce qui fausse le total : une position trop imprécise, le tremblement du GPS quand tu es à l'arrêt, et les recalages brutaux",
+        "Et surtout, il le DIT quand il a perdu le signal un moment : plutôt qu'afficher un chiffre trop bas sans rien signaler, il prévient que la distance est peut-être sous-estimée",
+        "L'écran reste allumé pendant le suivi : le téléphone cesse de donner sa position dès que l'app passe en arrière-plan"
+      ]
+    },
     {
       "version": "v62",
       "date": "2026-09-30",
