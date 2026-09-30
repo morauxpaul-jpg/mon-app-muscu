@@ -78,8 +78,6 @@ def delete_session_rows(date_str, seance):
     return db.delete_session_rows(_uid(), date_str, seance)
 
 
-def mark_session_missed(semaine, seance_name, date_str):
-    return db.mark_session_missed(_uid(), semaine, seance_name, date_str)
 
 
 # ── Profil (Phase 4) ────────────────────────────────────────────────────

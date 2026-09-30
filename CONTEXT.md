@@ -74,10 +74,9 @@ pwa/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
 │   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance"
 │   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline, suggestion de surcharge)
-│   ├── programme.py               # CRUD programme + profils + planning + import/export
+│   ├── programme.py               # CRUD programme + planning + import/export
 │   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement, poids corporel (/progres/poids)
 │   ├── gestion.py                 # Paramètres, settings, export/import, fusion doublons, reset soft/total
-│   ├── arcade.py                  # Mini-jeux
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
 │   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas (recherche aliments, plats de la semaine, saisie rapide, composition)
@@ -100,11 +99,11 @@ pwa/
 │   ├── accueil.html               # Dashboard
 │   ├── seance_choix.html          # Choix de séance du jour
 │   ├── seance_edit.html           # Saisie exercices (Alpine, chrono, RPE, inline history)
-│   ├── programme.html             # Gestion programme + profils + planning
+│   ├── programme.html             # Gestion programme + planning
 │   ├── progres.html               # Progression (body map, calendrier, volume, standards de force)
 │   ├── exercice.html              # Fiche d'un exercice : records, courbes, variantes, toutes les séances
 │   ├── gestion.html               # Paramètres, export/import, reset, notifications, newsletter
-│   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Arcade, Gestion, Tutoriel
+│   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Gestion, Tutoriel
 │   ├── premium.html               # Page de présentation des tiers
 │   ├── billing_success.html       # Retour Stripe Checkout
 │   ├── parrainage.html            # Page parrainage
@@ -113,7 +112,6 @@ pwa/
 │   ├── generator.html             # Générateur de programme IA (form + preview + adopter)
 │   ├── cardio.html                # Saisie cardio
 │   ├── nutrition.html             # Profil + journal repas
-│   ├── arcade.html                # Mini-jeux canvas
 │   ├── onboarding.html            # Questionnaire 4 étapes (Alpine)
 │   ├── admin.html / funnel.html   # Console admin + funnel de conversion (7/30/90j)
 │   ├── faq.html / confidentialite.html  # Pages publiques (FAQ, politique de confidentialité)
@@ -161,18 +159,18 @@ pwa/
 1. **🏠 Accueil** (`/accueil`) — Dashboard, planning semaine compact, streak, carte « Prochaine séance » cliquable, stats
 2. **💪 Séance** (`/seance`) — Sélection séance du jour, saisie exercices, ajout cardio inline
 3. **📈 Progrès** (`/progres`) — Calendrier mensuel, volume hebdo, body map, hall of fame, zoom mouvement
-4. **📋 Plus** (`/plus`) → Premium · Coach IA · Programme · Nutrition · Cardio · Arcade · Gestion · Tutoriel
+4. **📋 Plus** (`/plus`) → Premium · Coach IA · Programme · Nutrition · Cardio · Gestion · Tutoriel (l'Arcade a été retirée le 01/10/2026 : hors sujet, audit du 30/09)
 
 ## Système Free / VIP
 
 - **Deux niveaux d'accès** (2026-06-14) :
-  - `g.is_vip_full` = **PAYANT** (`tier == 'vip'`) → accès **complet** (Coach IA, Générateur IA, programmes PRO, multi-programmes/profils, export/import).
+  - `g.is_vip_full` = **PAYANT** (`tier == 'vip'`) → accès **complet** (Coach IA, Générateur IA, programmes PRO, multi-programmes, réimport).
   - `g.is_vip` = full **OU essai à durée limitée** (`vip_until > now()`, via `db.vip_until_active()`) → accès **restreint** : **Nutrition + stats détaillées seulement**. L'AFFICHAGE suit : l'essai voit « Essai PRO — encore X h », un badge ESSAI et les boutons d'achat (`is_trial`, `trial_left`), jamais « Tu es VIP » (audit du 30/09, C2).
   - `vip_until` = essai « découverte » (parrainage/promo, migration v29). Volontairement court + restreint pour ne pas cannibaliser l'achat (un essai complet permettrait de générer un programme et tout extraire en 1 j).
   - **Règle de gate** : features payantes → `getattr(g, "is_vip_full", False)` ; Nutrition + stats avancées (`progres`, profondeur d'historique `gestion`) → `getattr(g, "is_vip", False)`.
   - Les deux sont résolus + cachés en session par `before_request` (`is_vip`, `is_vip_full`), exposés aux templates par le context processor. `billing.success` pose les deux ; le webhook passe le `tier` → recalculé au TTL. **TTL asymétrique** (2026-06-14) : un VIP confirmé est re-vérifié toutes les `VIP_CACHE_TTL`=120 s, un FREE toutes les `FREE_RECHECK_TTL`=15 s — pour qu'un passage VIP (grant admin ou achat Stripe) se propage en quelques secondes à la session du user, même sur un autre appareil. La vérif d'existence du compte auth (API auth, plus coûteuse) reste sur la cadence lente via `session['auth_check_ts']`.
-- **Offre « équilibrée »** (2026-06-11) — Free = séances illimitées + progrès simple + 1 programme + cardio + **export de ses données** (gratuit depuis le 30/09, RGPD). VIP = Coach IA (15 msg/j), **Nutrition**, stats détaillées (body map/1RM/zoom), programmes PRO, multi-programmes/profils, réimport.
-- **Gating Free** : Coach IA, Nutrition, Import (l'export est gratuit), programmes PRO du catalogue, stats avancées, multi-programmes/profils.
+- **Offre « équilibrée »** (2026-06-11) — Free = séances illimitées + progrès simple + 1 programme + cardio + **export de ses données** (gratuit depuis le 30/09, RGPD). VIP = Coach IA (15 msg/j), **Nutrition**, stats détaillées (body map/1RM/zoom), programmes PRO, multi-programmes, réimport.
+- **Gating Free** : Coach IA, Nutrition, Import (l'export est gratuit), programmes PRO du catalogue, stats avancées, multi-programmes.
 - **Onglet Plus** : sections épurées (Entraînement / Premium / Détente / Réglages) ; features VIP visibles avec cadenas + `vip_wall`. Incitation VIP douce sur l'accueil pour les gratuits (remplace le widget calories).
 - **Mur VIP** : `templates/partials/vip_lock.html` (inline) ou `vip_wall.html` (plein écran).
 - **Badge PRO** affiché dans la topbar pour les VIP.
@@ -536,3 +534,9 @@ pwa/
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm
 - **Inline-confirm** doit rester dans la carte qui le déclenche (programme/séance)
 - Page de plomberie (`/admin`, `/auth/debug`) : pas de nav bottom, retour explicite
+
+
+### Retiré le 01/10/2026 (audit du 30/09, partie 4-C)
+- **Arcade** (mini-jeux, `/arcade`) : hors sujet ; sa place sur la landing revient au Coach IA.
+- **Profils d'entraînement** (`_profiles`, `_active_profile`, `profile_id` des dossiers) : une hiérarchie profil → programme → séance pour un besoin que « un programme par lieu » couvre. Les routes `/programme/profile/*` n'existent plus ; les clés restent dans les blobs existants, ignorées.
+- **Bouton « Séance manquée »** (`/seance/mark-missed`, lignes `SESSION`) : le calendrier déduit déjà une séance manquée. On n'en écrit plus ; les lignes `SESSION` déjà en base restent filtrées par `core.hist.is_session_marker`.

@@ -224,3 +224,30 @@ def test_les_decimales_du_record_sont_a_la_francaise():
     t = _tpl("seance_edit.html")
     assert "record.one_rm + 'kg'" not in t
     assert "_kg(record.one_rm)" in t
+
+
+# ── Retirés le 01/10 (audit, partie 4-C) ─────────────────────────
+
+
+@pytest.mark.parametrize("chemin,methode", [
+    ("/arcade", "get"),
+    ("/programme/profile/switch", "post"),
+    ("/programme/profile/add", "post"),
+    ("/seance/mark-missed", "post"),
+])
+def test_les_fonctions_retirees_nexistent_plus(fake_db, logged_in, chemin, methode):
+    r = getattr(logged_in, methode)(chemin, data={"_csrf": CSRF})
+    assert r.status_code == 404
+
+
+def test_plus_de_lien_vers_les_fonctions_retirees():
+    for nom in ("plus.html", "landing.html", "seance_edit.html", "seance_choix.html", "programme.html"):
+        t = _tpl(nom)
+        assert "/arcade" not in t and "mark-missed" not in t
+        assert "profile/switch" not in t and "PROFIL D'ENTRAÎNEMENT" not in t
+
+
+def test_la_landing_parle_du_coach(fake_db, client):
+    html = client.get("/").get_data(as_text=True)
+    assert "coach ia" in html.lower()
+    assert "Arcade" not in html

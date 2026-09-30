@@ -56,47 +56,6 @@
     </div>
   </template>
 
-  <h2 class="label-icon" style="font-size:0.85rem; color:var(--accent); margin:18px 0 6px; letter-spacing:2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL D'ENTRAÎNEMENT</h2>
-
-  {# ── Profils d'entraînement (Maison / Salle / …) ─────────── #}
-  <div class="card" style="padding:12px 14px;">
-    <div class="label-icon" style="color: var(--accent); font-size:0.7rem; letter-spacing:3px; margin-bottom:8px;">
-      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL D'ENTRAÎNEMENT
-    </div>
-    <div style="display:flex; gap:6px; flex-wrap:wrap;">
-      <template x-for="pf in profiles" :key="pf.id">
-        <button type="button" class="btn mini"
-                :class="pf.id === activeProfile ? 'primary' : ''"
-                :style="pf.id === activeProfile ? '' : 'opacity:0.75;'"
-                @click="switchProfile(pf.id)" x-text="pf.name"></button>
-      </template>
-      <template x-if="canAddProfile()">
-        <button type="button" class="btn mini label-icon" @click="openAddProfileModal()">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Nouveau
-        </button>
-      </template>
-      <template x-if="!canAddProfile()">
-        <a href="/premium" class="btn mini label-icon" style="text-decoration:none;">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Nouveau profil <span class="badge-pro" style="margin-left:4px; font-size:0.7rem; padding:1px 5px;">PRO</span>
-        </a>
-      </template>
-      <template x-if="profiles.length > 1">
-        <div style="display:inline-flex; gap:6px; margin-left:auto; flex-wrap:wrap;">
-          <button type="button" class="btn mini label-icon" @click="openRenameProfileModal()" aria-label="Renommer le profil">
-            <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>
-          </button>
-          <button type="button" class="btn mini label-icon" x-show="!confirmDeleteProfile" @click="confirmDeleteProfile=true" aria-label="Supprimer le profil">
-            <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>
-          </button>
-          <span class="inline-confirm" x-show="confirmDeleteProfile" x-cloak style="display:inline-flex; width:auto; gap:6px;">
-            <button type="button" class="btn mini" @click="confirmDeleteProfile=false">Annuler</button>
-            <button type="button" class="btn mini btn-danger" @click="deleteActiveProfile()">Supprimer</button>
-          </span>
-        </div>
-      </template>
-    </div>
-  </div>
-
   <h2 class="label-icon" style="font-size:0.85rem; color:var(--violet); margin:18px 0 6px; letter-spacing:2px;"><svg class="icon icon-sm" style="color:var(--violet);"><use href="/static/img/icons.svg#folder"/></svg>MES PROGRAMMES</h2>
   <p style="font-size:0.78rem; color:var(--text-2); margin:0 0 10px;">Un programme regroupe des séances. Ex : « Push Pull Legs », « Full-body maison »…</p>
 
@@ -121,7 +80,7 @@
     {% endif %}
   </div>
 
-  <template x-for="pg in filteredProgrammes()" :key="pg.id">
+  <template x-for="pg in programmes" :key="pg.id">
     <div class="card prog-section" x-data="{ open: true, newSname: '' }">
       <div class="prog-head">
         <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;" @click="open = !open">
@@ -139,14 +98,6 @@
           <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
-          <template x-if="profiles.length > 1">
-            <select class="btn mini" style="padding:4px 8px;"
-                    @change="assignProgrammeProfile(pg.id, $event.target.value)">
-              <template x-for="pf in profiles" :key="'assign-'+pg.id+'-'+pf.id">
-                <option :value="pf.id" :selected="(pg.profile_id || activeProfile) === pf.id" x-text="pf.name"></option>
-              </template>
-            </select>
-          </template>
           <template x-if="true">
             <div x-data="{ c:false }" style="display:inline-flex; gap:6px; min-width:0;">
               <button type="button" class="btn mini label-icon" x-show="!c" @click="c=true">
@@ -480,33 +431,6 @@
     </div>
   </div>
 
-  {# ── Modal profil (ajouter / renommer) ──────────────────── #}
-  <div x-show="profileModal.open" x-transition.opacity
-       x-init="$watch('profileModal.open', v => { if(v) document.body.appendChild($el); })"
-       style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:16px;"
-       @click.self="closeProfileModal()"
-       @keydown.escape.window="closeProfileModal()">
-    <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(255,255,255,0.15); border-radius:22px; padding:18px; max-width:380px; width:calc(100vw - 32px); box-shadow:0 8px 48px rgba(0,0,0,0.6);"
-         @click.stop>
-      <h4 class="label-icon" style="color:var(--text-1); margin:0 0 12px; font-weight:500;">
-        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>
-        <span x-text="profileModal.mode === 'add' ? 'Nouveau profil' : 'Renommer le profil'"></span>
-      </h4>
-      <label class="field-label" style="margin-top:0;" for="profil-nom">Nom (ex: Maison, Salle…)</label>
-      <input x-ref="profileInput" id="profil-nom" type="text" class="field" maxlength="40"
-             x-model="profileModal.name"
-             style="margin:0 0 14px; font-size:1rem;"
-             @keydown.enter.prevent="confirmProfileModal()">
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button type="button" class="btn" @click="closeProfileModal()">Annuler</button>
-        <button type="button" class="btn primary label-icon" @click="confirmProfileModal()"
-                :disabled="!profileModal.name.trim()">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Valider
-        </button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <script src="/static/js/exercise-library.js"></script>
@@ -527,14 +451,10 @@
       catalogPrograms: [],
       programmes: [],
       seanceProg: {},
-      profiles: [],
-      activeProfile: '',
       editingName: false,
       saveState: '',
       _saveTimer: null,
       renameModal: { open: false, id: null, name: '' },
-      profileModal: { open: false, mode: 'add', name: '' },
-      confirmDeleteProfile: false,
       // Pourquoi une séance n'a pas pu être créée ou renommée.
       seanceMsg: '',
 
@@ -566,8 +486,6 @@
         this.catalogPrograms = JSON.parse(document.getElementById('catalog-data').textContent);
         this.programmes = initial.programmes || [];
         this.seanceProg = initial.seance_prog || {};
-        this.profiles = initial.profiles || [];
-        this.activeProfile = initial.active_profile || (this.profiles[0] && this.profiles[0].id) || '';
 
         this.syncPlanningSelects();
         var self = this;
@@ -588,92 +506,6 @@
           if (document.visibilityState === 'hidden') flush();
         });
         window.addEventListener('pagehide', flush);
-      },
-
-      // ── Profils d'entraînement ──
-      filteredProgrammes() {
-        if (!this.profiles || this.profiles.length <= 1) return this.programmes;
-        var active = this.activeProfile;
-        return this.programmes.filter(function (p) {
-          return p.profile_id === active;
-        });
-      },
-      async switchProfile(pid) {
-        if (!pid || pid === this.activeProfile) return;
-        this.activeProfile = pid;
-        try {
-          var fd = new FormData();
-          fd.append('profile_id', pid);
-          await fetch('/programme/profile/switch', { method: 'POST', body: fd });
-        } catch (e) {}
-      },
-      openAddProfileModal() {
-        this.profileModal = { open: true, mode: 'add', name: '' };
-        var self = this;
-        this.$nextTick(function () {
-          if (self.$refs.profileInput) self.$refs.profileInput.focus();
-        });
-      },
-      openRenameProfileModal() {
-        var current = (this.profiles.find((p) => p.id === this.activeProfile) || {}).name || '';
-        this.profileModal = { open: true, mode: 'rename', name: current };
-        var self = this;
-        this.$nextTick(function () {
-          if (self.$refs.profileInput) { self.$refs.profileInput.focus(); self.$refs.profileInput.select(); }
-        });
-      },
-      closeProfileModal() {
-        this.profileModal = { open: false, mode: 'add', name: '' };
-      },
-      async confirmProfileModal() {
-        var name = (this.profileModal.name || '').trim();
-        if (!name) return;
-        var mode = this.profileModal.mode;
-        this.closeProfileModal();
-        if (mode === 'add') {
-          var fd = new FormData();
-          fd.append('name', name);
-          var resp = await fetch('/programme/profile/add', { method: 'POST', body: fd });
-          var data = await resp.json().catch(function () { return {}; });
-          if (data.ok && data.profile) {
-            this.profiles.push(data.profile);
-            this.activeProfile = data.profile.id;
-          }
-        } else if (mode === 'rename') {
-          var fd2 = new FormData();
-          fd2.append('profile_id', this.activeProfile);
-          fd2.append('name', name);
-          var resp2 = await fetch('/programme/profile/rename', { method: 'POST', body: fd2 });
-          if (resp2.ok) {
-            var i = this.profiles.findIndex((p) => p.id === this.activeProfile);
-            if (i >= 0) this.profiles[i] = { id: this.profiles[i].id, name: name };
-          }
-        }
-      },
-      async deleteActiveProfile() {
-        if (this.profiles.length <= 1) return;
-        var fd = new FormData();
-        fd.append('profile_id', this.activeProfile);
-        var resp = await fetch('/programme/profile/delete', { method: 'POST', body: fd });
-        var data = await resp.json().catch(function () { return {}; });
-        if (data.ok) {
-          this.profiles = this.profiles.filter((p) => p.id !== this.activeProfile);
-          this.activeProfile = data.active_profile;
-          var active = this.activeProfile;
-          this.programmes.forEach(function (pg) {
-            if (!pg.profile_id) pg.profile_id = active;
-          });
-        }
-        this.confirmDeleteProfile = false;
-      },
-      async assignProgrammeProfile(progId, profileId) {
-        var pg = this.programmes.find(function (p) { return p.id === progId; });
-        if (!pg) return;
-        pg.profile_id = profileId;
-        var fd = new FormData();
-        fd.append('prog_id', progId);
-        fd.append('profile_id', profileId);
-        await fetch('/programme/profile/assign', { method: 'POST', body: fd });
       },
 
       scheduleSave() {
@@ -732,10 +564,6 @@
         if (this.isVip) return true;
         return (this.programmes || []).length < 1;
       },
-      canAddProfile() {
-        if (this.isVip) return true;
-        return (this.profiles || []).length < 1;
-      },
       addProgramme(name) {
         name = (name || '').trim();
         if (!name) return;
@@ -743,7 +571,6 @@
         var id = this._genProgId();
         while (this.programmes.some(function (p) { return p.id === id; })) id = this._genProgId();
         var entry = { id: id, name: name };
-        if (this.activeProfile) entry.profile_id = this.activeProfile;
         this.programmes.push(entry);
         this.scheduleSave();
       },

@@ -2,7 +2,7 @@
 
 Le blob `programs.data` range TOUTES les séances à plat (clés sans « _ »),
 plus :
-  _programmes  : liste de dossiers {id, name, profile_id}
+  _programmes  : liste de dossiers {id, name}
   _seance_prog : séance → id de dossier
   _planning    : jour de semaine → séance (un seul planning, global)
 
@@ -94,8 +94,6 @@ def remplacer_programme_en_cours(old, seances, planning, nom, started_at, extra=
     body = {s: exos for s, exos in old.items()
             if not s.startswith("_") and mapping.get(s) not in en_cours}
     nouveau = {"id": gen_prog_id(), "name": (nom or "Mon programme")[:80]}
-    if old.get("_active_profile"):
-        nouveau["profile_id"] = old["_active_profile"]
 
     renomme = {}
     for s, exos in (seances or {}).items():

@@ -52,7 +52,7 @@ SYSTEM_PROMPT_TMPL = (
     "- [Séance](/seance) : reprendre la séance du jour\n"
     "- [Progrès](/progres) : calendrier mensuel, volume hebdo, body map, hall of fame, zoom par exercice\n"
     "- [Programme](/programme) : gérer ses séances, planning hebdo, profils d'entraînement\n"
-    "- [Plus](/plus) : hub → Programme, Arcade, Gestion, Tutoriel\n"
+    "- [Plus](/plus) : hub → Programme, Gestion, Tutoriel\n"
     "- [Gestion](/gestion) : paramètres, export/import, notifications, reset\n\n"
     "## LIENS SPÉCIAUX (utilise-les quand pertinent)\n"
     "- Pour proposer un programme du catalogue → lien [nom](/programme?apply=ID) "

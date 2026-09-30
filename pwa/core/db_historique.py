@@ -353,34 +353,6 @@ def rename_exercise_rows(user_id: str, old_names: list[str], new_name: str,
     return count
 
 
-def mark_session_missed(user_id: str, semaine: int, seance_name: str, date_str: str):
-    """Insère une ligne SESSION "manquée" à la date donnée si aucune n'existe
-    déjà. Utilise une requête ciblée au lieu de relire tout l'historique."""
-    client = get_client()
-    resp = (
-        client.table("history").select("id")
-        .eq("user_id", user_id)
-        .eq("date", date_str)
-        .eq("exercice", "SESSION")
-        .limit(1)
-        .execute()
-    )
-    if resp.data:
-        return
-    row = {
-        "Semaine": semaine,
-        "Séance": seance_name,
-        "Exercice": "SESSION",
-        "Série": 1,
-        "Reps": 0,
-        "Poids": 0.0,
-        "Remarque": "SÉANCE MANQUÉE",
-        "Muscle": "Autre",
-        "Date": date_str,
-    }
-    _insert_history(client, [_row_to_supabase(user_id, row)])
-    _cache_invalidate(f"hist:{user_id}")
-
 def list_history_shape() -> list[dict]:
     """(user_id, date) de TOUTES les lignes d'historique — lecture seule.
 

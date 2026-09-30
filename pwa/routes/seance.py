@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from core.data import (
     get_hist, get_prog, clear_user_cache,
-    replace_exo_rows, append_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
+    replace_exo_rows, append_exo_rows, delete_exo_rows, delete_session_rows,
 )
 from core.dates import (today_paris, today_paris_str, logical_today_paris, now_paris,
                         continuous_week, DAYS_FR, MONTHS_FR)
@@ -103,20 +103,10 @@ def seance():
             subtitle_text, subtitle_color = "À FAIRE", "#58CCFF"
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
 
-        # Regroupe les séances par programme pour un affichage clair,
-        # filtré par profil d'entraînement actif (s'il y en a plusieurs).
+        # Regroupe les séances par programme pour un affichage clair.
         programmes = prog.get("_programmes") or []
         seance_prog = prog.get("_seance_prog") or {}
-        profiles = prog.get("_profiles") or []
-        active_profile = prog.get("_active_profile")
         active_programmes = programmes
-        if len(profiles) > 1 and active_profile:
-            valid_pids = {p.get("id") for p in profiles if isinstance(p, dict)}
-            fallback_pid = profiles[0].get("id") if profiles else None
-            for pg in programmes:
-                if isinstance(pg, dict) and pg.get("profile_id") not in valid_pids:
-                    pg["profile_id"] = fallback_pid
-            active_programmes = [p for p in programmes if isinstance(p, dict) and p.get("profile_id") == active_profile]
         prog_by_id = {p["id"]: p["name"] for p in active_programmes if isinstance(p, dict) and p.get("id")}
         _planning = prog.get("_planning") or {}
         _day_idx = {d: i for i, d in enumerate(DAYS_FR)}
@@ -134,13 +124,11 @@ def seance():
             snames = sorted([s for s in seance_order if seance_prog.get(s) == pid], key=_sort_key)
             if snames:
                 groups.append({"name": p.get("name") or "Programme", "seances": snames})
-        # Séances orphelines : n'apparaissent que si le profil actif n'est pas
-        # filtré (ou s'il n'y a qu'un profil).
-        if len(profiles) <= 1:
-            unclassified = [s for s in seance_order if not seance_prog.get(s) or seance_prog.get(s) not in prog_by_id]
-            if unclassified:
-                label_uncl = "Non classé" if groups else "Mes séances"
-                groups.append({"name": label_uncl, "seances": unclassified})
+        # Séances orphelines (rattachées à aucun programme).
+        unclassified = [s for s in seance_order if not seance_prog.get(s) or seance_prog.get(s) not in prog_by_id]
+        if unclassified:
+            label_uncl = "Non classé" if groups else "Mes séances"
+            groups.append({"name": label_uncl, "seances": unclassified})
 
         # ── Séance de rattrapage : uniquement la séance de la VEILLE si
         # elle était planifiée, pas faite, et pas marquée comme manquée.
@@ -521,19 +509,6 @@ def reset_session():
     delete_session_rows(_form_date(f), f["seance_name"])
     clear_user_cache()
     return _back_to_editor(f)
-
-
-@bp.route("/seance/mark-missed", methods=["POST"])
-@limiter.limit("10 per minute")
-def mark_missed():
-    f = request.form
-    date_str = f["date"]
-    target = _parse_date(date_str) or today_paris()
-    semaine = _iso_week(target)
-    seance_name = f.get("seance_name") or "Séance manquée"
-    mark_session_missed(semaine, seance_name, date_str)
-    clear_user_cache()
-    return redirect(url_for("accueil.index"))
 
 
 @bp.route("/seance/add-extra", methods=["POST"])

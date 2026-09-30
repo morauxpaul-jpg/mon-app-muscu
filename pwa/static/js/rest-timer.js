@@ -590,13 +590,12 @@
     }
   } catch (e) {}
 
-  // Fin de séance (ou séance marquée manquée) → plus de repos ni de notif.
+  // Fin de séance → plus de repos ni de notif.
   document.addEventListener("submit", function (e) {
     var f = e.target;
     if (!f || !f.getAttribute) return;
     var action = f.getAttribute("action") || "";
-    if (action.indexOf("/seance/finish") !== -1 ||
-        action.indexOf("/seance/mark-missed") !== -1) {
+    if (action.indexOf("/seance/finish") !== -1) {
       finishSession();
     }
   }, true);

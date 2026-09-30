@@ -237,17 +237,6 @@
   </div>
   {% endif %}
 
-  <form method="post" action="/seance/mark-missed" style="margin-bottom: 8px;" x-data="{ c:false }">
-    <input type="hidden" name="date" value="{{ date_iso }}">
-    <input type="hidden" name="seance_name" value="{{ seance_name }}">
-    <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>Séance manquée</button>
-    <div class="inline-confirm" x-show="c" x-cloak>
-      <span class="confirm-label">Marquer comme manquée ?</span>
-      <button type="button" class="btn" @click="c=false">Annuler</button>
-      <button type="submit" class="btn btn-danger">Confirmer</button>
-    </div>
-  </form>
-
   <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;" x-data="{ c:false }">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="semaine" value="{{ s_act }}">

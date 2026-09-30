@@ -24,7 +24,6 @@ from routes.progres import bp as progres_bp
 from routes.gestion import bp as gestion_bp
 from routes.auth import bp as auth_bp
 from routes.onboarding import bp as onboarding_bp
-from routes.arcade import bp as arcade_bp
 from routes.cardio import bp as cardio_bp
 from routes.nutrition import bp as nutrition_bp
 from routes.coach import bp as coach_bp
@@ -127,7 +126,6 @@ app.register_blueprint(programme_bp)
 app.register_blueprint(progres_bp)
 app.register_blueprint(gestion_bp)
 app.register_blueprint(onboarding_bp)
-app.register_blueprint(arcade_bp)
 app.register_blueprint(cardio_bp)
 app.register_blueprint(nutrition_bp)
 app.register_blueprint(coach_bp)

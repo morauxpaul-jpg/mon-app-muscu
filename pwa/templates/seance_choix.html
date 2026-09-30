@@ -173,14 +173,6 @@
     </a>
   </div>
 
-  <div class="card" style="border-color:var(--danger);">
-    <div class="label-icon" style="color: var(--danger); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 8px;"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#flag"/></svg>PASSER UNE SÉANCE</div>
-    <form method="post" action="/seance/mark-missed">
-      <input type="hidden" name="date" value="{{ date_iso }}">
-      <button type="submit" class="btn label-icon" style="width: 100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#flag"/></svg>Marquer comme manquée</button>
-    </form>
-  </div>
-
   <script>
     document.getElementById('page-loader').style.display = 'none';
     document.addEventListener('submit', function(e) {
