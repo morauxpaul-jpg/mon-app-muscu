@@ -6,7 +6,7 @@ tzdata==2026.4
 supabase==2.8.1
 pyjwt==2.10.1
 cryptography==44.0.3
-anthropic==0.39.0
+anthropic==1.8.0
 sentry-sdk[flask]==2.19.2
 stripe==15.2.0
 pywebpush==2.0.0
