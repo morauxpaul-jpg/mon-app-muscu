@@ -105,7 +105,9 @@
   {% endif %}
 
   {% if next_session %}
-    <a href="/seance?date={{ next_session.date_iso }}" class="card next-session-card">
+    {# Directement la séance, pas la liste des séances : un tap de moins, et
+       pas de risque d'ouvrir la mauvaise (audit du 30/09, M8). #}
+    <a href="/seance?mode=prefaite&name={{ next_session.seance|urlencode }}&date={{ next_session.date_iso }}" class="card next-session-card">
       <div class="card-label">PROCHAINE SÉANCE</div>
       <div class="next-session-row">
         <div class="next-session-info">

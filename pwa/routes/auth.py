@@ -109,12 +109,16 @@ def set_session():
     access_token = data.get("access_token")
     if not access_token:
         return jsonify({"error": "missing access_token"}), 400
+    # Le détail de l'exception reste dans les logs : renvoyé au navigateur,
+    # il s'affichait sous le message de connexion (audit du 30/09, M2).
     try:
         payload = _verify_supabase_jwt(access_token)
     except jwt.InvalidTokenError as e:
-        return jsonify({"error": f"invalid token: {e}"}), 401
+        logger.warning("auth/session jeton refusé : %s", e)
+        return jsonify({"error": "invalid token"}), 401
     except Exception as e:
-        return jsonify({"error": f"jwt verification failed: {e}"}), 500
+        logger.error("auth/session vérification impossible : %s", e)
+        return jsonify({"error": "verification failed"}), 500
 
     user_id = payload.get("sub")
     email = payload.get("email")
@@ -132,7 +136,10 @@ def set_session():
     return jsonify({"ok": True, "user_id": user_id})
 
 
-@bp.route("/logout", methods=["GET", "POST"])
+# POST seulement : en GET, n'importe quelle page (une image, un lien) pouvait
+# déconnecter l'utilisateur à son insu (audit du 30/09, M3). Le bouton de
+# l'en-tête est un formulaire.
+@bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     return redirect("/")

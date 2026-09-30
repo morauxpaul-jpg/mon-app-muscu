@@ -251,7 +251,9 @@ def index():
         profile = get_profile() or {}
         onboarding = get_onboarding() or {}
     except Exception as e:
-        return render_template("accueil.html", active="accueil", error=str(e))
+        logger.error("accueil lecture FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
+        return render_template("accueil.html", active="accueil",
+                               error="Tes données n'ont pas pu être chargées. Réessaie dans un instant.")
     prenom = (profile.get("prenom") or "").strip()
 
     # Date d'inscription : utilisée pour ne pas marquer "manquées" les
