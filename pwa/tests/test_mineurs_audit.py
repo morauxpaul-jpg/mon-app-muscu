@@ -305,3 +305,13 @@ def test_aucun_gabarit_ni_feuille_ne_depasse_900_lignes():
         if n > 900:
             trop.append(f"{p.name}: {n}")
     assert not trop, trop
+
+
+def test_aucune_couche_http_ne_depasse_850_lignes():
+    """routes/seance.py (969 l.) a été découpé : fin de séance et cardio ont
+    leur blueprint, bilans et retour à l'éditeur vivent dans core/. Les gros
+    fichiers de core/ restants sont des DONNÉES (bibliothèque d'exercices,
+    catalogue de programmes), pas du code."""
+    trop = [f"{p.name}: {n}" for p in (PWA / "routes").glob("*.py")
+            if (n := len(p.read_text(encoding="utf-8").splitlines())) > 850]
+    assert not trop, trop

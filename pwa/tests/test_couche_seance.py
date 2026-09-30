@@ -117,19 +117,16 @@ def test_la_couche_http_ne_garde_que_des_routes():
 
 # ── Cliquet : les routes qui s'importent entre elles ─────────────────────
 
-# Mesuré, pas choisi. `routes/cardio.py` est cité par quatre autres routes :
-# c'est un module de calcul qui porte un chapeau de blueprint. Tant qu'il n'a
-# pas déménagé dans `core/`, cette liste empêche au moins la dette de grossir.
+# Mesuré, pas choisi. `routes/cardio.py` était cité par quatre autres routes
+# (un module de calcul coiffé d'un blueprint) : ses constantes et formules ont
+# déménagé dans core/cardio_activites.py le 01/10/2026, et ces quatre
+# dépendances ont disparu. Cette liste empêche la dette restante de grossir.
 IMPORTS_ENTRE_ROUTES = {
-    ("accueil", "cardio"),
-    ("generator", "cardio"),
     ("gestion", "programme"),
     ("onboarding", "parrainage"),
     ("premium", "billing"),
     ("programme", "generator"),
-    ("progres", "cardio"),
     ("progres", "nutrition"),
-    ("seance", "cardio"),
 }
 
 

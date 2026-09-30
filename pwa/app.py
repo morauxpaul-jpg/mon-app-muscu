@@ -19,6 +19,8 @@ from core.limiter import limiter
 
 from routes.accueil import bp as accueil_bp
 from routes.seance import bp as seance_bp
+from routes.seance_fin import bp as seance_fin_bp
+from routes.seance_cardio import bp as seance_cardio_bp
 from routes.programme import bp as programme_bp
 from routes.progres import bp as progres_bp
 from routes.gestion import bp as gestion_bp
@@ -122,6 +124,8 @@ app.config.update(
 app.register_blueprint(auth_bp)
 app.register_blueprint(accueil_bp)
 app.register_blueprint(seance_bp)
+app.register_blueprint(seance_fin_bp)
+app.register_blueprint(seance_cardio_bp)
 app.register_blueprint(programme_bp)
 app.register_blueprint(progres_bp)
 app.register_blueprint(gestion_bp)

@@ -5,22 +5,20 @@ Logique portée depuis app.py lignes 1555-1722 (choix_seance) et 2048-2676 (ma s
 import json
 import logging
 from datetime import timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify, g, session
+from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify
 
 logger = logging.getLogger(__name__)
 
 from core.data import (
     get_hist, get_prog, clear_user_cache,
-    replace_exo_rows, append_exo_rows, delete_exo_rows, delete_session_rows,
+    replace_exo_rows, delete_exo_rows, delete_session_rows,
 )
-from core.dates import (today_paris, today_paris_str, logical_today_paris, now_paris,
-                        continuous_week, DAYS_FR, MONTHS_FR)
+from core.dates import (today_paris_str, logical_today_paris, DAYS_FR, MONTHS_FR)
 from core.limiter import limiter
 from core.muscu import BW_EXOS, MUSCLE_LIST, VARIANTS, auto_muscles
 from core.exercises_data import filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
 from core.hist import is_logged as _is_real_perf
-from core.analytics import track
 
 # Le calcul de la séance vit dans core/ : ce fichier n'est plus que la couche
 # HTTP — les routes, le formulaire, le rendu. Les six modules ci-dessous ne
@@ -34,13 +32,12 @@ from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows
                                     _recup_status, _suggestion_for, _cible_du_programme)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
-                                 _purge_old_session_notes, _update_extras,
-                                 _update_libre_draft, purger_les_calques)
-from core.seance_saisie import (_form_date, _known_exo_names, _parse_session_note,
-                                _pr_check, _reps_saisies, _rows_from_sets, _session_duration_min,
-                                _session_totals)
-from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done,
-                                completer_mesures)
+                                 _update_extras, _update_libre_draft)
+from core.seance_saisie import (_form_date, _known_exo_names, _pr_check,
+                                _reps_saisies, _rows_from_sets, _session_totals)
+from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done)
+from core.bilans_seance import _load_session_note
+from core.navigation_seance import _back_to_editor
 
 bp = Blueprint("seance", __name__)
 
@@ -368,12 +365,6 @@ def seance():
 # Actions POST (form-based, PRG pattern)
 # ────────────────────────────────────────────────────────────────
 
-def _back_to_editor(form):
-    return redirect(url_for(
-        "seance.seance",
-        date=form["date"], mode=form["mode"], name=form["name"]
-    ))
-
 
 @bp.route("/seance/save-exo", methods=["POST"])
 @limiter.limit("60 per minute")
@@ -628,286 +619,6 @@ def reorder_exos():
     from core.data import save_prog
     save_prog(prog)
     return {"ok": True}
-
-
-@bp.route("/seance/add-cardio", methods=["POST"])
-@limiter.limit("20 per minute")
-def add_cardio():
-    """Ajoute un bloc cardio à la séance muscu en cours (même Séance + Date)."""
-    from routes.cardio import ACTIVITES_MAP, RPE_LABELS, _estimate_calories, _adjust_met_for_incline
-    from core.data import get_profile
-    f = request.form
-    target = _parse_date(f.get("date")) or today_paris()
-    date_str = target.strftime("%Y-%m-%d")
-    semaine = _iso_week(target)
-    seance_name = f["seance_name"]
-
-    activite = (f.get("activite") or "Autre").strip()
-    if activite not in ACTIVITES_MAP:
-        activite = "Autre"
-    _icon, met = ACTIVITES_MAP[activite]
-
-    try:
-        duree_min = max(0, int(float(f.get("duree_min") or 0)))
-    except ValueError:
-        duree_min = 0
-    try:
-        distance_val = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
-    except ValueError:
-        distance_val = 0.0
-    try:
-        vitesse = max(0.0, float((f.get("vitesse") or "0").replace(",", ".")))
-    except ValueError:
-        vitesse = 0.0
-    # Deux valeurs sur trois suffisent. La vitesse était calculée dans le
-    # formulaire mais seulement AFFICHÉE en suggestion : elle n'arrivait
-    # jamais jusqu'ici. Et le sens inverse manquait — le tapis affiche
-    # 10 km/h pendant 30 min, c'est la distance qu'on ignore.
-    distance_val, vitesse = completer_mesures(activite, duree_min, distance_val, vitesse)
-    try:
-        cal_saisie = int(float(f.get("calories") or 0))
-    except ValueError:
-        cal_saisie = 0
-    rpe = (f.get("rpe") or "").strip()
-    if rpe not in RPE_LABELS:
-        rpe = ""
-    note = (f.get("note") or "").strip()[:80]
-
-    try:
-        incline_pct = max(0, min(30, float(f.get("incline") or 0)))
-    except (ValueError, TypeError):
-        incline_pct = 0
-    met = _adjust_met_for_incline(met, activite, incline_pct)
-
-    if cal_saisie > 0:
-        calories = cal_saisie
-    else:
-        profile = get_profile() or {}
-        poids_kg = float(profile.get("poids_kg") or 0)
-        calories = _estimate_calories(met, duree_min, poids_kg) if duree_min > 0 else 0
-
-    parts = []
-    if calories > 0: parts.append(f"Cal:{calories}")
-    if incline_pct > 0: parts.append(f"Incl:{incline_pct:g}%")
-    if vitesse > 0: parts.append(f"Vit:{vitesse:g}")
-    if rpe: parts.append(f"RPE:{rpe}")
-    if note: parts.append(note)
-    remarque = " | ".join(parts)
-
-    exo_final = f"CARDIO:{activite}"
-    rows = [{
-        "Semaine": semaine,
-        "Séance": seance_name,
-        "Exercice": exo_final,
-        "Série": 1,
-        "Reps": duree_min,
-        "Poids": distance_val,
-        "Remarque": remarque,
-        "Muscle": "Cardio",
-        "Date": date_str,
-    }]
-    # AJOUTER, pas remplacer : 10 min de rameur en échauffement puis 8 min en
-    # finisher sont deux blocs. `replace_exo_rows` ne gardait que le second.
-    try:
-        append_exo_rows(date_str, seance_name, exo_final, rows)
-        clear_user_cache()
-    except Exception as e:
-        logger.error("add-cardio FAILED: %s", e)
-        # L'échec était avalé puis la page revenait comme si de rien n'était.
-        return render_template(
-            "error.html", code=503,
-            message="Le cardio n'a pas pu être enregistré. Réessaie dans un instant.",
-        ), 503
-    return _back_to_editor(f)
-
-
-@bp.route("/seance/delete-cardio", methods=["POST"])
-@limiter.limit("20 per minute")
-def delete_cardio():
-    from core.data import delete_exo_rows
-    f = request.form
-    seance_name = f["seance_name"]
-    activite = (f.get("activite") or "").strip()
-    if not activite:
-        return _back_to_editor(f)
-    try:
-        serie = int(f["serie"]) if (f.get("serie") or "").isdigit() else None
-    except ValueError:
-        serie = None
-    try:
-        delete_exo_rows(_form_date(f), seance_name, f"CARDIO:{activite}", serie)
-        clear_user_cache()
-    except Exception as e:
-        logger.error("delete-cardio FAILED: %s", e)
-    return _back_to_editor(f)
-
-
-@bp.route("/seance/finish", methods=["POST"])
-def finish():
-    """Termine la séance : enregistre le bilan (note /5 + commentaire, tous deux
-    facultatifs — le bouton « Passer » n'envoie rien), nettoie le brouillon libre
-    ou les extras, et retourne à l'accueil."""
-    f = request.form
-    mode = f["mode"]
-    seance_name = f["seance_name"]
-    date_str = _form_date(f)
-    key = f"{seance_name}|{date_str}"
-    prog = get_prog()
-    changed = False
-    if mode == "libre" and "_libre_draft" in prog and key in prog["_libre_draft"]:
-        prog["_libre_draft"].pop(key, None)
-        changed = True
-    if mode == "prefaite" and "_extras" in prog and key in prog["_extras"]:
-        prog["_extras"].pop(key, None)
-        changed = True
-    # Comme les extras : le calque d'échanges ne concerne que la séance du
-    # jour. Le garder ferait grossir le blob programme d'une entrée par
-    # séance, à vie — et il est relu et réécrit à chaque interaction.
-    if "_substituts" in prog and key in prog["_substituts"]:
-        prog["_substituts"].pop(key, None)
-        changed = True
-    # Même règle, et c'est le calque qui y échappait : l'ordre des cartes
-    # était écrit et jamais effacé. Les cartes d'une séance terminée sont de
-    # toute façon reconstruites depuis l'historique, dans l'ordre où les
-    # séries ont été saisies : l'ordre gardé ne servait plus à rien.
-    if "_seance_order" in prog and key in prog["_seance_order"]:
-        prog["_seance_order"].pop(key, None)
-        changed = True
-    # Rattrapage : les quatre lignes ci-dessus ne nettoient que la séance
-    # qu'on vient de TERMINER. Une séance ouverte puis abandonnée ne passe
-    # jamais par ici et garde son calque à vie — mesuré en production, des
-    # entrées d'avril et de juin traînaient encore fin septembre.
-    if purger_les_calques(prog):
-        changed = True
-
-    duration = _session_duration_min(f)
-    note = _parse_session_note(f)
-    if duration:
-        note = note or {"ts": now_paris().strftime("%Y-%m-%d %H:%M")}
-        note["duration_min"] = duration
-    if note:
-        _save_session_note(prog, date_str, seance_name, note)
-        if prog.get("_session_notes") is not None:
-            changed = True
-
-    if changed:
-        from core.data import save_prog
-        save_prog(prog)
-        clear_user_cache()
-    # Une séance « terminée » sans une seule série n'est pas une séance faite :
-    # la compter gonflait le funnel (et proposait un debrief de rien).
-    series = [r for r in get_hist()
-              if r.get("Date") == date_str and r.get("Séance") == seance_name
-              and int(r.get("Reps") or 0) > 0]
-    if not series:
-        track("workout_finished_empty", {"mode": mode, "seance": seance_name})
-        return redirect(url_for("accueil.index"))
-    # L'accueil (écran suivant) propose le debrief de CETTE séance.
-    session["last_workout"] = {"seance": seance_name, "date": date_str}
-    track("workout_finished", {
-        "mode": mode, "seance": seance_name,
-        "rating": note.get("rating", 0) if note else 0,
-        "has_comment": bool(note and note.get("comment")),
-        "duration_min": duration,
-    })
-    return redirect(url_for("accueil.index"))
-
-
-def _save_session_note(prog, date_str, seance_name, note):
-    """Écrit le bilan dans la table `session_notes` (migration v34). Repli sur
-    l'ancien stockage dans le programme si la table n'existe pas encore."""
-    from core.data import upsert_session_note
-    try:
-        upsert_session_note(date_str, seance_name, note.get("rating"),
-                            note.get("comment"), note.get("duration_min"))
-        # La table a pris le relais : on purge l'ancien emplacement.
-        if isinstance(prog.get("_session_notes"), dict):
-            prog["_session_notes"].pop(f"{seance_name}|{date_str}", None)
-            if not prog["_session_notes"]:
-                prog.pop("_session_notes", None)
-        return
-    except Exception as e:
-        logger.warning("session_notes indisponible (%s) — repli sur le programme", e)
-    _purge_old_session_notes(prog)
-    prog.setdefault("_session_notes", {})[f"{seance_name}|{date_str}"] = note
-
-
-def _load_session_note(prog, date_str, seance_name):
-    """Bilan d'une séance : table v34 d'abord, ancien stockage ensuite."""
-    from core.data import get_session_note
-    try:
-        note = get_session_note(date_str, seance_name)
-        if note:
-            return note
-    except Exception:
-        pass
-    return (prog.get("_session_notes") or {}).get(f"{seance_name}|{date_str}")
-
-
-# ── Debrief de fin de séance ────────────────────────────────────
-# Le coach est une page qu'il faut penser à ouvrir. Ce debrief va au-devant,
-# au seul moment où l'attention est garantie : l'écran qui suit la séance.
-# PRO complet ; un aperçu gratuit par semaine sert de démonstration honnête
-# (on montre le produit réel, pas une capture).
-FREE_DEBRIEFS_PER_WEEK = 1
-
-
-def _debrief_allowed(prog) -> tuple[bool, str]:
-    """(autorisé, raison). La raison sert à l'UI : « PRO » ou « quota »."""
-    if getattr(g, "is_vip_full", False):
-        return True, "vip"
-    from core.dates import continuous_week
-    week = continuous_week(logical_today_paris())
-    used = (prog.get("_debrief_free") or {}).get(str(week), 0)
-    if used < FREE_DEBRIEFS_PER_WEEK:
-        return True, "free_trial"
-    return False, "quota"
-
-
-@bp.route("/seance/debrief", methods=["POST"])
-@limiter.limit("10 per hour")
-def debrief():
-    """Trois phrases sur la séance qui vient d'être terminée."""
-    from core import debrief as core_debrief
-    from core.db import _env
-
-    data = request.get_json(silent=True) or {}
-    seance = str(data.get("seance") or "").strip()
-    date_str = _form_date({"date": data.get("date")})
-    if not seance:
-        return jsonify({"ok": False, "error": "séance manquante"}), 400
-
-    prog = get_prog()
-    allowed, reason = _debrief_allowed(prog)
-    if not allowed:
-        return jsonify({"ok": False, "locked": True,
-                        "message": "Le debrief après séance fait partie de PRO."}), 200
-
-    hist, _ = _normalize_hist(get_hist(), prog)
-    facts = core_debrief.collect_facts(
-        hist, seance, date_str, _load_session_note(prog, date_str, seance))
-    if not facts:
-        return jsonify({"ok": False, "error": "aucune série enregistrée"}), 200
-
-    text = core_debrief.generate(_env("ANTHROPIC_API_KEY"), facts)
-    if not text:
-        return jsonify({"ok": False, "error": "indisponible"}), 200
-
-    # Consomme l'aperçu gratuit seulement si la génération a abouti.
-    if reason == "free_trial":
-        from core.dates import continuous_week
-        week = str(continuous_week(logical_today_paris()))
-        store = prog.setdefault("_debrief_free", {})
-        store[week] = int(store.get(week, 0)) + 1
-        # Fenêtre glissante : on ne garde que les 4 dernières semaines.
-        for k in sorted(store)[:-4]:
-            store.pop(k, None)
-        from core.data import save_prog
-        save_prog(prog)
-
-    track("debrief_generated", {"seance": seance, "tier": reason})
-    return jsonify({"ok": True, "text": text, "trial": reason == "free_trial",
-                    "volume": facts["volume"], "records": len(facts["records"])})
 
 
 @bp.route("/seance/api/variant-history", methods=["POST"])

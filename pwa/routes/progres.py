@@ -242,7 +242,7 @@ def _build_cardio_stats(cardio_rows, start_monday):
     if not cardio_rows:
         return None
 
-    from routes.cardio import sum_cardio_km, KM_BASED_ACTIVITES
+    from core.cardio_activites import sum_cardio_km, KM_BASED_ACTIVITES
     total_min = sum(int(r.get("Reps") or 0) for r in cardio_rows)
     total_km = sum_cardio_km(cardio_rows)
     sessions = len(cardio_rows)

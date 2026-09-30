@@ -43,7 +43,7 @@ LIEUX = ["Salle de sport", "Maison (haltères)", "Maison (poids du corps)"]
 
 # Activités cardio proposées — alignées sur routes.cardio.ACTIVITES (le formulaire
 # /cardio et l'historique « CARDIO:Type » utilisent exactement ces libellés).
-from routes.cardio import ACTIVITES as _CARDIO_ACTIVITES  # noqa: E402
+from core.cardio_activites import ACTIVITES as _CARDIO_ACTIVITES  # noqa: E402
 CARDIO_TYPES = [name for name, _icon, _met in _CARDIO_ACTIVITES if name != "Autre"]
 _CARDIO_TYPES_SET = {t.lower() for t in CARDIO_TYPES}
 

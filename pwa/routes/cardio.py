@@ -20,44 +20,14 @@ from core.analytics import track
 from core.dates import today_paris, today_paris_str, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 
+from core.cardio_activites import (  # noqa: F401 — réexportés sous les mêmes noms
+    ACTIVITES, ACTIVITES_MAP, INCLINE_MET_BONUS, KM_BASED_ACTIVITES, RPE_LABELS,
+    _activity_of, _adjust_met_for_incline, _estimate_calories, sum_cardio_km,
+)
+
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("cardio", __name__)
-
-ACTIVITES = [
-    ("Course", "footprints", 10.0),      # MET ≈ 10 (course 10 km/h)
-    ("Vélo", "activity", 7.5),
-    ("Rameur", "activity", 7.0),
-    ("Natation", "activity", 8.0),
-    ("Corde", "activity", 11.0),
-    ("HIIT", "flame", 9.0),
-    ("Marche", "footprints", 3.5),
-    ("Elliptique", "activity", 6.5),
-    ("Montée d'escaliers", "activity", 8.0),
-    ("Autre", "heart", 6.0),
-]
-ACTIVITES_MAP = {name: (icon, met) for name, icon, met in ACTIVITES}
-
-# Activités dont la valeur "Poids" (stockée) s'interprète comme des km.
-# Les autres (Corde = sauts, HIIT = rounds, Montée d'escaliers = marches)
-# ne doivent pas être additionnées dans un total kilométrique.
-KM_BASED_ACTIVITES = {"Course", "Vélo", "Rameur", "Natation", "Marche", "Elliptique", "Autre"}
-
-
-def _activity_of(row):
-    exo = str(row.get("Exercice") or "")
-    return exo.split(":", 1)[1] if ":" in exo else "Autre"
-
-
-def sum_cardio_km(cardio_rows):
-    """Somme la distance en km uniquement pour les activités dont l'unité est le km."""
-    return round(sum(
-        float(r.get("Poids") or 0)
-        for r in cardio_rows
-        if _activity_of(r) in KM_BASED_ACTIVITES
-    ), 2)
-
-RPE_LABELS = ["Facile", "Modéré", "Intense"]
 
 
 def _parse_date(s):
@@ -70,27 +40,6 @@ def _parse_date(s):
 def _iso_week(d):
     # Index de semaine continu — cf. core.dates.continuous_week.
     return continuous_week(d)
-
-
-INCLINE_MET_BONUS = {
-    "Marche": 0.35,
-    "Course": 0.5,
-}
-
-
-def _adjust_met_for_incline(met, activite, incline_pct):
-    """Ajuste le MET en fonction de l'inclinaison (%) pour marche/course."""
-    bonus = INCLINE_MET_BONUS.get(activite, 0)
-    if bonus and incline_pct > 0:
-        return met + (incline_pct * bonus)
-    return met
-
-
-def _estimate_calories(met, minutes, poids_kg):
-    """Formule standard : kcal = MET × poids(kg) × temps(h)."""
-    if not poids_kg or poids_kg <= 0:
-        poids_kg = 70.0
-    return int(round(met * poids_kg * (minutes / 60.0)))
 
 
 @bp.route("/cardio")

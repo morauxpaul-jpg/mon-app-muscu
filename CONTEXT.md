@@ -545,3 +545,10 @@ pwa/
 - Les attributs `style="…"` fixes des gabarits sont sortis dans `static/css/styles-extraits.css` par `pwa/outils/extraire_styles.py` : une classe `s-xxxxxx` par valeur distincte (949 → 56 attributs ; 484 classes). Restent en ligne : les valeurs calculées par Jinja et `display:none` (des scripts lisent et changent `el.style.display`).
 - Priorité : chaque règle porte `:not(#_s):not(#_s)` (poids de deux identifiants), pour garder la préséance qu'avait le style en ligne sur les feuilles de l'app ; un style posé par JavaScript reste en ligne et garde le dernier mot. Vérifié par captures avant/après, pixel à pixel, sur 38 pages et 6 états ouverts.
 - Nouveau style dans un gabarit : de préférence une classe nommée dans `components.css` ; sinon relancer l'outil (idempotent). `tests/test_mineurs_audit.py` tient un cliquet (≤ 56) et vérifie que chaque classe générée a sa règle et sert.
+
+### Découpages (01/10/2026, audit M11)
+- `templates/seance_edit.html` (1 043 → 206 l.) : `_seance_carte_exercice.html` (attend `exo` et `exo_index`), `_seance_ajout_exercice.html`, `_seance_cardio.html`, `_seance_modale_info.html` ; son `<style>` est devenu `static/css/seance.css`.
+- `static/css/components.css` (1 268 l.) → `components.css` + `components-seance.css` + `components-pages.css`, chargés dans cet ordre.
+- `routes/seance.py` (969 → 680 l.) : blueprints `seance_fin` (`/seance/finish`, `/seance/debrief`) et `seance_cardio` (`/seance/add-cardio`, `/seance/delete-cardio`) ; `core/bilans_seance.py` (bilans), `core/navigation_seance.py` (retour à l'éditeur).
+- `core/cardio_activites.py` : activités, MET, unités km, calories — sortis de `routes/cardio.py`, que quatre routes importaient (4 dépendances entre blueprints en moins).
+- Garde-fous : aucun gabarit ni feuille > 900 lignes, aucune route > 850 (`tests/test_mineurs_audit.py`).
