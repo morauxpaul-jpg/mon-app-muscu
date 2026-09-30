@@ -14,6 +14,7 @@ Config : deux variables d'env requises
 """
 import datetime as _dt
 import os
+import threading
 import time
 import uuid
 from collections import OrderedDict
@@ -99,8 +100,14 @@ def get_client() -> Client:
 # Borné (LRU) : sans plafond, chaque user actif laisserait son historique
 # complet en RAM du worker jusqu'à expiration — et la clé n'était jamais
 # retirée, seulement ignorée.
+#
+# Il n'est juste que parce qu'il n'y a qu'UN process (railway.json : un
+# worker, 16 threads). Avec deux workers, chacun avait son cache : après une
+# écriture sur l'un, l'autre servait l'ancien historique jusqu'à 60 s (audit
+# du 30/09, I8). Les threads le partagent : chaque accès passe par le verrou.
 _CACHE_MAX = 200
 _data_cache: "OrderedDict[str, dict]" = OrderedDict()
+_cache_lock = threading.RLock()
 _TTL = 60.0
 # Le profil porte le tier VIP : TTL court pour qu'un passage PRO (Stripe,
 # admin) se propage vite à toutes les requêtes (cf. FREE_RECHECK_TTL app.py).
@@ -108,32 +115,36 @@ _PROFILE_TTL = 15.0
 
 
 def _cache_get(key: str, ttl: float | None = None):
-    entry = _data_cache.get(key)
-    if entry is None:
-        return None
-    if (time.time() - entry["ts"]) >= (ttl or _TTL):
-        _data_cache.pop(key, None)
-        return None
-    _data_cache.move_to_end(key)
-    return entry["value"]
+    with _cache_lock:
+        entry = _data_cache.get(key)
+        if entry is None:
+            return None
+        if (time.time() - entry["ts"]) >= (ttl or _TTL):
+            _data_cache.pop(key, None)
+            return None
+        _data_cache.move_to_end(key)
+        return entry["value"]
 
 
 def _cache_set(key: str, value):
-    _data_cache[key] = {"value": value, "ts": time.time()}
-    _data_cache.move_to_end(key)
-    while len(_data_cache) > _CACHE_MAX:
-        _data_cache.popitem(last=False)
+    with _cache_lock:
+        _data_cache[key] = {"value": value, "ts": time.time()}
+        _data_cache.move_to_end(key)
+        while len(_data_cache) > _CACHE_MAX:
+            _data_cache.popitem(last=False)
 
 
 def _cache_invalidate(key: str):
-    _data_cache.pop(key, None)
+    with _cache_lock:
+        _data_cache.pop(key, None)
 
 
 def clear_user_cache(user_id: str):
     """Invalide explicitement toutes les entrées cache d'un utilisateur.
     Appelé après chaque save réussi pour éviter les séances vides au reload."""
-    for prefix in ("hist", "prog", "profile", "onboarding"):
-        _data_cache.pop(f"{prefix}:{user_id}", None)
+    with _cache_lock:
+        for prefix in ("hist", "prog", "profile", "onboarding"):
+            _data_cache.pop(f"{prefix}:{user_id}", None)
 
 
 def use_client(client) -> None:

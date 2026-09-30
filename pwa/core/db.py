@@ -37,7 +37,7 @@ Config : deux variables d'env requises
 from core.db_base import (
     clear_user_cache, current_client, get_client, session_id_for, use_client,
     _CACHE_MAX, _PAGE, _PROFILE_TTL, _SESSION_NS, _TTL, _cache_get, _cache_invalidate,
-    _cache_set, _continuous_week_of, _data_cache, _env, _fetch_all
+    _cache_lock, _cache_set, _continuous_week_of, _data_cache, _env, _fetch_all
 )
 
 # ── les séries enregistrées ─────────────────────────────────────
@@ -54,7 +54,7 @@ from core.db_historique import (
 from core.db_programme import (
     PROG_BODY_KEYS, get_prog, list_all_program_blobs, replace_program_body, save_prog,
     _SAVE_PROG_RETRIES,
-    _copy, _merge_prog, _prog_base, _read_prog_row, _remember_base, _upsert_prog
+    _bases, _copy, _merge_prog, _prog_base, _read_prog_row, _remember_base, _upsert_prog
 )
 
 # ── profil, onboarding, poids de corps ──────────────────────────

@@ -93,3 +93,78 @@ def test_purge_old_session_notes():
     assert list(prog["_session_notes"]) == ["Push|2026-09-20"]
     assert _purge_old_session_notes(prog, today=date(2026, 9, 21)) is False
     assert _purge_old_session_notes({}) is False
+
+
+def test_deux_requetes_du_meme_worker_ne_se_volent_pas_leur_base(fake_db):
+    """Audit du 30/09, I7 (reproduit R11). Deux requêtes du même
+    utilisateur, servies par deux threads du même worker : A lit, B lit, A
+    grave un badge, B enregistre un réglage. La base du verrou était partagée
+    par le process : B écrivait « depuis » la version de A, l'update passait,
+    et le badge disparaissait. Chaque requête a désormais sa propre base."""
+    import app as appmod
+    db.save_prog(USER_ID, {"Push": [], "_settings": {}})
+    db.clear_user_cache(USER_ID)
+
+    req_a = appmod.app.app_context()
+    req_b = appmod.app.app_context()
+
+    req_a.push()
+    prog_a = db.get_prog(USER_ID)                  # A lit v1
+    req_a.pop()
+
+    req_b.push()
+    prog_b = db.get_prog(USER_ID)                  # B lit v1
+    req_b.pop()
+
+    req_a.push()
+    prog_a["_badges"] = ["first_session"]
+    db.save_prog(USER_ID, prog_a)                  # A écrit v2
+    req_a.pop()
+
+    req_b.push()
+    prog_b["_settings"] = {"auto_rest_timer": False}
+    db.save_prog(USER_ID, prog_b)                  # B écrit « depuis v1 » → conflit → fusion
+    req_b.pop()
+
+    data = _db_row(fake_db)["data"]
+    assert data.get("_badges") == ["first_session"], "le badge de A a survécu"
+    assert data["_settings"] == {"auto_rest_timer": False}
+
+
+def test_un_seul_process_donc_un_seul_cache():
+    """Audit du 30/09, I8 : le cache est par process. Avec plusieurs
+    workers, chacun servait sa version de l'historique jusqu'à 60 s après une
+    écriture faite ailleurs. Ce test tient la configuration qui rend le
+    cache juste : si on repasse à plusieurs workers, il faut un cache
+    partagé (Redis) d'abord."""
+    import json
+    from pathlib import Path
+    conf = json.loads((Path(__file__).resolve().parents[2] / "railway.json").read_text(encoding="utf-8"))
+    cmd = conf["deploy"]["startCommand"]
+    assert "--workers 1 " in cmd, cmd
+    assert "WEB_CONCURRENCY" not in cmd, "une variable d'environnement ne doit pas pouvoir le changer"
+
+
+def test_le_cache_supporte_des_threads_concurrents():
+    import threading
+    import core.db_base as b
+    erreurs = []
+
+    def travail(n):
+        try:
+            for i in range(300):
+                k = f"hist:u{(n * 7 + i) % 250}"
+                b._cache_set(k, [i])
+                b._cache_get(k)
+                if i % 5 == 0:
+                    b._cache_invalidate(k)
+        except Exception as e:  # pragma: no cover - c'est ce qu'on guette
+            erreurs.append(e)
+
+    fils = [threading.Thread(target=travail, args=(n,)) for n in range(16)]
+    for f in fils:
+        f.start()
+    for f in fils:
+        f.join()
+    assert not erreurs, erreurs
+    assert len(b._data_cache) <= b._CACHE_MAX

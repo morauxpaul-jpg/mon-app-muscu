@@ -2,7 +2,7 @@
 
 Le programme, le planning, les réglages, les badges et une vingtaine de calques
 `_x` vivent dans une seule colonne JSON. `save_prog` fusionne donc trois
-versions (la base lue par ce process, la nôtre, celle en base) pour qu'un
+versions (la base lue par cette requête, la nôtre, celle en base) pour qu'un
 onglet n'écrase pas ce qu'un autre vient d'écrire, et `replace_program_body`
 distingue le corps métier des données personnelles.
 
@@ -13,6 +13,8 @@ import json
 import logging
 from collections import OrderedDict
 
+from flask import g, has_app_context
+
 from core import db_base
 from core.db_base import _cache_get, _cache_invalidate, _cache_set, _fetch_all, get_client
 
@@ -22,11 +24,28 @@ logger = logging.getLogger(__name__)
 # Programme (stocké en JSON dans programs.data)
 # ────────────────────────────────────────────────────────────
 
-# Dernier instantané (data + version) lu par CE process pour chaque user :
+# Dernier instantané (data + version) lu PAR LA REQUÊTE pour chaque user :
 # c'est la base à partir de laquelle save_prog calcule ce que la requête a
-# réellement modifié. Borné comme le cache.
+# réellement modifié.
+#
+# Elle vivait au niveau du process, partagée par les 8 threads d'un worker :
+# deux requêtes du même utilisateur se volaient leur base. A lit (v1), B lit
+# (v1), A écrit (v2) et devient la base ; B écrit alors « depuis v2 » —
+# l'update conditionnel passe, et le badge que A venait de graver disparaît
+# sous le réglage de B (audit du 30/09, I7, reproduit R11). Rangée dans
+# `flask.g`, chaque requête garde la sienne, et B tombe en conflit, donc en
+# fusion. Hors requête (scripts, cron : un seul fil), repli sur ce dict.
 _prog_base: "OrderedDict[str, dict]" = OrderedDict()
 _SAVE_PROG_RETRIES = 3
+
+
+def _bases() -> dict:
+    if has_app_context():
+        bases = g.get("_prog_bases")
+        if bases is None:
+            bases = g._prog_bases = {}
+        return bases
+    return _prog_base
 
 
 def _copy(obj):
@@ -34,10 +53,12 @@ def _copy(obj):
 
 
 def _remember_base(user_id: str, data: dict, version):
-    _prog_base[user_id] = {"data": _copy(data), "version": version}
-    _prog_base.move_to_end(user_id)
-    while len(_prog_base) > db_base._CACHE_MAX:
-        _prog_base.popitem(last=False)
+    bases = _bases()
+    bases[user_id] = {"data": _copy(data), "version": version}
+    if bases is _prog_base:
+        _prog_base.move_to_end(user_id)
+        while len(_prog_base) > db_base._CACHE_MAX:
+            _prog_base.popitem(last=False)
 
 
 def _read_prog_row(user_id: str):
@@ -163,7 +184,7 @@ def save_prog(user_id: str, prog_dict: dict):
     (défi validé, badge, note…) est écrasée sans erreur. Ici l'update est
     conditionné à la version lue ; en cas de conflit on relit et on ne
     réapplique que nos propres modifications (cf. _merge_prog)."""
-    base = _prog_base.get(user_id)
+    base = _bases().get(user_id)
     if base is None or base["version"] is None:
         # Pas de lecture préalable dans ce process (ou colonne version absente)
         # → écriture inconditionnelle, comme avant.
@@ -199,7 +220,7 @@ def save_prog(user_id: str, prog_dict: dict):
     logger.error("save_prog user=%s : verrou optimiste abandonné, upsert brut", user_id)
     _upsert_prog(user_id, prog_dict)
     _cache_invalidate(f"prog:{user_id}")
-    _prog_base.pop(user_id, None)
+    _bases().pop(user_id, None)
 
 
 def list_all_program_blobs() -> list[dict]:
