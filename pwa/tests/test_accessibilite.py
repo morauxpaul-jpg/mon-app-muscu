@@ -170,7 +170,7 @@ def test_la_feuille_accessibilite_est_chargee_en_dernier(fake_db, logged_in):
     """a11y.css corrige des tailles posées ailleurs : chargée avant, elle
     serait écrasée sans que rien ne le signale."""
     html = logged_in.get("/accueil").get_data(as_text=True)
-    feuilles = re.findall(r'<link rel="stylesheet" href="(/static/css/[^"]+)"', html)
+    feuilles = [f.split("?")[0] for f in re.findall(r'<link rel="stylesheet" href="(/static/css/[^"]+)"', html)]
     assert feuilles, "aucune feuille de style"
     assert feuilles[-1] == "/static/css/a11y.css", feuilles
 

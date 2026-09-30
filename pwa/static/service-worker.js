@@ -187,6 +187,9 @@ async function precache(urls) {
 // Assets versionnés (CSS/JS/SVG) : cache d'abord, rafraîchi en arrière-plan
 //   (stale-while-revalidate). Ils changent à chaque déploiement, jamais entre
 //   deux, donc les re-télécharger à chaque navigation est du gaspillage.
+//   Les JS/CSS portent « ?v=<build> » (ajouté par le serveur) : une nouvelle
+//   version ne peut pas être servie avec l'ancien script. Hors ligne, faute
+//   de la version exacte, on se rabat sur n'importe quelle version gardée.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -247,7 +250,7 @@ self.addEventListener("fetch", (event) => {
             }
             return resp;
           })
-          .catch(() => cached);
+          .catch(() => cached || cache.match(req, { ignoreSearch: true }));
         return cached || network;
       })
     );

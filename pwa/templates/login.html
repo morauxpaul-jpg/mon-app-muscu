@@ -47,8 +47,14 @@
     <div id="err" class="err"></div>
   </div>
 
+  {# supabase-js servi par l'app, version exacte (static/vendor, vérifiée
+     contre l'empreinte du registre npm). Chargé depuis jsDelivr en « @2 »
+     flottant, sans contrôle d'intégrité, une version compromise se serait
+     exécutée sur la page de connexion (audit du 30/09, M1). Mise à jour :
+     remplacer le fichier et le nom ici. #}
+  <script src="/static/vendor/supabase-js-2.117.2.umd.js"></script>
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+    const { createClient } = window.supabase;
     const SUPABASE_URL = {{ supabase_url|tojson }};
     const SUPABASE_ANON = {{ supabase_anon|tojson }};
     const GOOGLE_WEB_CLIENT_ID = {{ google_web_client_id|tojson }};

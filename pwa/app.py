@@ -338,11 +338,11 @@ def _csp_report_policy() -> str:
     connect_extra = f" {supa}" if supa else ""
     return (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self' data: blob:; "
         "font-src 'self' data: https://fonts.gstatic.com; "
-        f"connect-src 'self' https://cdn.jsdelivr.net{connect_extra}; "
+        f"connect-src 'self'{connect_extra}; "
         "frame-ancestors 'self'; "
         "base-uri 'self'; "
         f"form-action 'self' https://accounts.google.com {_STRIPE_FORM_ACTION}; "
@@ -531,6 +531,27 @@ def _sw_build_suffix() -> str:
     avoir à bumper la constante à la main (source classique d'oubli)."""
     sha = (os.getenv("RAILWAY_GIT_COMMIT_SHA") or os.getenv("SOURCE_COMMIT") or "").strip()
     return sha[:8]
+
+
+# Chaque déploiement change l'URL de ses JS et CSS (« ?v=<build> »). Le
+# service worker les sert cache d'abord : sans ce suffixe, la première page
+# après un déploiement recevait le NOUVEAU HTML avec l'ANCIEN JavaScript — une
+# séance pouvait s'ouvrir cassée (fonctions appelées par le gabarit absentes
+# du script), le temps que le SW se mette à jour. Localement, sans SHA, le
+# démarrage du process sert d'identifiant.
+_ASSET_BUILD = _sw_build_suffix() or str(int(time.time()))
+_ASSET_RE = re.compile(r'((?:src|href)=")(/static/[^"?#]+\.(?:js|css))(")')
+
+
+@app.after_request
+def _versionner_les_assets(response):
+    if (response.mimetype == "text/html" and not response.direct_passthrough
+            and response.status_code == 200):
+        html = response.get_data(as_text=True)
+        nouveau = _ASSET_RE.sub(lambda m: f"{m.group(1)}{m.group(2)}?v={_ASSET_BUILD}{m.group(3)}", html)
+        if nouveau != html:
+            response.set_data(nouveau)
+    return response
 
 
 @app.route("/service-worker.js")

@@ -89,3 +89,34 @@ def test_commencer_ouvre_la_seance_du_jour(fake_db, logged_in, monkeypatch):
         "_planning": {"Lundi": "Full Body A"}, "_settings": {}}}).execute()
     html = logged_in.get("/accueil").get_data(as_text=True)
     assert 'href="/seance?mode=prefaite&name=Full%20Body%20A&date=2026-09-28"' in html
+
+
+# ── Scripts et styles versionnés par déploiement ─────────────────
+
+
+def test_les_scripts_et_styles_portent_la_version_du_deploiement(fake_db, logged_in):
+    """Le SW sert JS et CSS cache d'abord : sans version dans l'URL, la
+    première page après un déploiement mélangeait nouveau HTML et ancien
+    script (une séance pouvait s'ouvrir cassée)."""
+    import re
+    import app as appmod
+    html = logged_in.get("/accueil").get_data(as_text=True)
+    assets = re.findall(r'(?:src|href)="(/static/[^"]+\.(?:js|css)[^"]*)"', html)
+    assert assets
+    for a in assets:
+        assert a.endswith(f"?v={appmod._ASSET_BUILD}"), a
+    # Les icônes et images ne sont pas concernées (fragments #id conservés).
+    assert 'href="/static/img/icons.svg#' in html
+
+
+def test_hors_ligne_le_sw_se_rabat_sur_une_version_gardee():
+    sw = (PWA / "static" / "service-worker.js").read_text(encoding="utf-8")
+    assert "ignoreSearch: true" in sw
+
+
+def test_la_page_de_connexion_ne_charge_rien_dun_cdn():
+    for nom in ("login.html", "bridge.html"):
+        t = _tpl(nom)
+        assert "cdn.jsdelivr" not in t and "unpkg" not in t
+        assert "/static/vendor/supabase-js-" in t
+    assert list((PWA / "static" / "vendor").glob("supabase-js-*.umd.js"))
