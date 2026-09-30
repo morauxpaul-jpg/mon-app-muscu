@@ -2,27 +2,27 @@
 {% block title %}Nutrition · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom: 12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/plus" class="btn label-icon s-364572"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Nutrition</h1>
 
   {% set _p = request.args.get('plats') %}
   {% if _p == 'ok' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>{{ request.args.get('n', '?') }} plat(s) importé(s) pour la semaine.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>{{ request.args.get('n', '?') }} plat(s) importé(s) pour la semaine.</div>
   {% elif _p == 'format' %}
-    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Fichier non reconnu (format « plats » attendu). Recopie bien tout le JSON.</div>
+    <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Fichier non reconnu (format « plats » attendu). Recopie bien tout le JSON.</div>
   {% elif _p == 'parse' %}
-    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>JSON invalide — vérifie que tu as collé le texte en entier.</div>
+    <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>JSON invalide — vérifie que tu as collé le texte en entier.</div>
   {% elif _p == 'empty' %}
-    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucun plat trouvé dans le fichier.</div>
+    <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucun plat trouvé dans le fichier.</div>
   {% elif _p == 'cleared' %}
     <div class="card label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#check-circle"/></svg>Liste de plats effacée.</div>
   {% endif %}
 
   {% if not nutrition_ready %}
-    <div class="card" style="border-color: rgba(255,59,48,0.4); background: rgba(255,59,48,0.06);">
-      <div style="color: #FF453A; font-weight: 700; margin-bottom: 6px;">Table Supabase manquante</div>
-      <div style="color: var(--text-dim); font-size: 0.82rem; line-height: 1.5;">
+    <div class="card s-1caf58">
+      <div class="s-8bc5f9">Table Supabase manquante</div>
+      <div class="s-9a1093">
         La table <code>nutrition</code> n'existe pas encore dans ta base. Exécute le script
         <code>pwa/supabase_schema_v23.sql</code> dans le SQL Editor de Supabase, puis recharge cette page.
       </div>
@@ -31,42 +31,42 @@
 
   {# ══════════════════════ Section 1 — Profil nutritionnel ══════════════════════ #}
   <div class="card" x-data="{ open: {{ 'false' if targets else 'true' }} }">
-    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; display:flex; justify-content:space-between; align-items:center;">
-      <span style="display:inline-flex; align-items:center; gap:6px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>MON PROFIL NUTRITIONNEL</span>
-      <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.75rem;" @click="open = !open">
+    <div class="label-icon s-0fef38">
+      <span class="s-b8f199"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>MON PROFIL NUTRITIONNEL</span>
+      <button type="button" class="btn s-62b0b4" @click="open = !open">
         <span x-text="open ? 'Replier' : 'Modifier'"></span>
       </button>
     </div>
 
     {% if targets %}
-      <div style="margin-top: 10px;" x-show="!open">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+      <div class="s-e5a6d3" x-show="!open">
+        <div class="s-803c5f">
           <div class="detail-metric">
             <div class="detail-label">BMR</div>
-            <div class="detail-value" style="font-size:1.3rem;">{{ targets.bmr }}</div>
+            <div class="detail-value s-27e469">{{ targets.bmr }}</div>
           </div>
           <div class="detail-metric">
             <div class="detail-label">TDEE</div>
-            <div class="detail-value" style="font-size:1.3rem;">{{ targets.tdee }}</div>
+            <div class="detail-value s-27e469">{{ targets.tdee }}</div>
           </div>
         </div>
-        <div class="detail-metric" style="background:var(--success-bg); border-color:var(--success);">
-          <div class="detail-label" style="color: var(--success);">Objectif quotidien{% if targets.is_custom %} · manuel{% endif %}</div>
-          <div class="detail-value" style="font-size: 1.8rem; color: var(--success);">{{ targets.calories_cible }} <span style="font-size:0.9rem;">kcal</span></div>
-          {% if targets.is_custom %}<div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Auto : {{ targets.calories_auto }} kcal</div>{% endif %}
+        <div class="detail-metric s-38f98a">
+          <div class="detail-label s-26deb8">Objectif quotidien{% if targets.is_custom %} · manuel{% endif %}</div>
+          <div class="detail-value s-6a9c64">{{ targets.calories_cible }} <span class="s-c821f2">kcal</span></div>
+          {% if targets.is_custom %}<div class="s-1b2dea">Auto : {{ targets.calories_auto }} kcal</div>{% endif %}
         </div>
-        <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 8px; text-align:center;">
+        <div class="s-8a0196">
           Prot {{ targets.macros_g.protein }}g · Gluc {{ targets.macros_g.carbs }}g · Lip {{ targets.macros_g.fat }}g
         </div>
       </div>
     {% endif %}
 
-    <form method="post" action="/nutrition/profile" style="margin-top: 12px;" x-show="open" x-cloak>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+    <form class="s-4bb900" method="post" action="/nutrition/profile" x-show="open" x-cloak>
+      <div class="s-240c63">
         <div>
           <label class="field-label" for="nutri-poids">Poids (kg)</label>
           <input type="number" id="nutri-poids" step="0.1" name="poids_kg" class="field" value="{{ profile.poids_kg or '' }}" required>
-          <div style="font-size:0.7rem; color:var(--text-3); margin-top:3px;">Suit ta dernière pesée (<a href="/progres#poids" style="color:var(--accent);">courbe dans Progrès</a>)</div>
+          <div class="s-78b762">Suit ta dernière pesée (<a class="s-a80552" href="/progres#poids">courbe dans Progrès</a>)</div>
         </div>
         <div>
           <label class="field-label" for="nutri-taille">Taille (cm)</label>
@@ -85,31 +85,31 @@
         </div>
       </div>
 
-      <label class="field-label" style="margin-top: 10px;">Niveau d'activité</label>
+      <label class="field-label s-e5a6d3">Niveau d'activité</label>
       <select name="activite" class="field" required>
         {% for val, label, desc in activite_labels %}
           <option value="{{ val }}" {% if profile.activite == val %}selected{% endif %}>{{ label }} — {{ desc }}</option>
         {% endfor %}
       </select>
 
-      <label class="field-label" style="margin-top: 10px;">Objectif</label>
-      <div class="rpe-row" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+      <label class="field-label s-e5a6d3">Objectif</label>
+      <div class="rpe-row s-e48e62">
         {% for val, label, sub in objectifs %}
-          <label class="obj-btn" style="padding: 10px 4px; text-align:center; background:var(--bg-elevated); border:0.5px solid var(--border-default); border-radius: 10px; cursor: pointer; font-size: 0.8rem; color: var(--text-2); display:block;">
+          <label class="obj-btn s-ee88a1">
             <input type="radio" name="objectif_nutrition" value="{{ val }}" {% if (profile.objectif_nutrition or 'maintien') == val %}checked{% endif %} style="display:none;" onchange="this.parentElement.parentElement.querySelectorAll('label').forEach(l=>l.classList.remove('selected'));this.parentElement.classList.add('selected');">
-            <div style="font-weight: 700;">{{ label }}</div>
-            <div style="font-size: 0.7rem; margin-top: 2px;">{{ sub }}</div>
+            <div class="s-5db75d">{{ label }}</div>
+            <div class="s-828914">{{ sub }}</div>
           </label>
         {% endfor %}
       </div>
 
-      <label class="field-label" style="margin-top: 10px;">Cible calorique manuelle (optionnel)</label>
+      <label class="field-label s-e5a6d3">Cible calorique manuelle (optionnel)</label>
       <input type="number" inputmode="numeric" name="calories_custom" class="field" min="0" max="10000"
              value="{{ calories_custom or '' }}"
              placeholder="{% if targets %}Auto : {{ targets.calories_auto }} kcal — laisse vide pour l'automatique{% else %}Ex : 2400{% endif %}">
-      <p style="font-size:0.75rem; color:var(--text-dim); margin:4px 0 0;">Si tu suis un plan (ex. rééquilibrage à 2400 kcal), mets ta cible ici : elle remplace le calcul auto et les macros s'ajustent dessus. Vide = calcul automatique.</p>
+      <p class="s-0c39b5">Si tu suis un plan (ex. rééquilibrage à 2400 kcal), mets ta cible ici : elle remplace le calcul auto et les macros s'ajustent dessus. Vide = calcul automatique.</p>
 
-      <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center; margin-top: 10px;">
+      <button type="submit" class="btn primary label-icon s-2068f6" data-haptic="1">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer
       </button>
     </form>
@@ -118,7 +118,7 @@
   {# ════════════════��═════ Section 1b — Semaine ════════════════════��═ #}
   {% if week_days %}
   <div class="card">
-    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;">
+    <div class="label-icon s-2641b0">
       <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>SEMAINE
     </div>
     <div class="week-row">
@@ -141,7 +141,7 @@
   {# ═══════════════��══════ Section 2 — Objectif du jour ══════════��═══════════ #}
   {% if targets %}
   <div class="card">
-    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 14px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#target"/></svg>OBJECTIF DU JOUR</div>
+    <div class="label-icon s-a901d4"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#target"/></svg>OBJECTIF DU JOUR</div>
 
     <div class="kcal-donut-wrap">
       {% set radius = 70 %}
@@ -149,9 +149,9 @@
       {% set offset = (circ * (100 - cal_pct) / 100) | round(1) %}
       <svg width="180" height="180" viewBox="0 0 180 180">
         <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--border-default)" stroke-width="14"/>
-        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--accent)" stroke-width="14"
+        <circle class="s-3774a1" cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--accent)" stroke-width="14"
                 stroke-linecap="round" stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}"
-                transform="rotate(-90 90 90)" style="transition: stroke-dashoffset 1s ease-out;"/>
+                transform="rotate(-90 90 90)"/>
       </svg>
       <div class="kcal-donut-center">
         <div class="kcal-big">{{ totals.calories }}</div>
@@ -166,7 +166,7 @@
         <div class="macro-bar">
           <div class="macro-label">
             <span style="color:{{ color }}; font-weight:600;">{{ label }}</span>
-            <span style="color: var(--text-3); font-size: 0.78rem;">{{ mp.val }}/{{ mp.goal }} g</span>
+            <span class="s-fbcbcc">{{ mp.val }}/{{ mp.goal }} g</span>
           </div>
           <div class="macro-track">
             <div class="macro-fill" style="width: {{ mp.pct }}%; background: {{ color }};"></div>
@@ -176,48 +176,48 @@
     </div>
   </div>
   {% else %}
-    <div class="card" style="text-align: center; color: var(--text-dim);">
+    <div class="card s-b31618">
       Renseigne ton profil ci-dessus pour débloquer ton objectif calorique quotidien.
     </div>
   {% endif %}
 
   {# ══════════════════════ Section 2b — Mes plats de la semaine ══════════════════════ #}
   <div class="card" x-data="{ open: {{ 'false' if meal_plan.plats else 'true' }}, showImport: {{ 'false' if meal_plan.plats else 'true' }} }">
-    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; display:flex; justify-content:space-between; align-items:center;">
-      <span style="display:inline-flex; align-items:center; gap:6px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>MES PLATS DE LA SEMAINE</span>
-      <button type="button" class="btn" style="padding:4px 10px; font-size:0.75rem;" @click="open = !open"><span x-text="open ? 'Replier' : (({{ meal_plan.plats|length }}) ? '{{ meal_plan.plats|length }} plats' : 'Ajouter')"></span></button>
+    <div class="label-icon s-0fef38">
+      <span class="s-b8f199"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>MES PLATS DE LA SEMAINE</span>
+      <button type="button" class="btn s-dae33e" @click="open = !open"><span x-text="open ? 'Replier' : (({{ meal_plan.plats|length }}) ? '{{ meal_plan.plats|length }} plats' : 'Ajouter')"></span></button>
     </div>
 
-    <div x-show="open" x-transition.duration.200ms style="margin-top:10px;">
-      {% if meal_plan.label %}<div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:6px;">{{ meal_plan.label }}</div>{% endif %}
+    <div class="s-d2c171" x-show="open" x-transition.duration.200ms>
+      {% if meal_plan.label %}<div class="s-07ab64">{{ meal_plan.label }}</div>{% endif %}
 
       {% if meal_plan.plats %}
         {% for p in meal_plan.plats %}
           <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %}">
-            <div style="min-width:0;">
-              <div style="font-size:0.88rem; color:var(--text-1); font-weight:500;">{{ p.name }}{% if p.portion %} <span style="color:var(--text-dim); font-weight:400;">· {{ p.portion }}</span>{% endif %}</div>
-              <div style="font-size:0.72rem; color:var(--text-3);">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</div>
+            <div class="s-3922d3">
+              <div class="s-8c5809">{{ p.name }}{% if p.portion %} <span class="s-071d82">· {{ p.portion }}</span>{% endif %}</div>
+              <div class="s-2f4568">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</div>
             </div>
           </div>
         {% endfor %}
-        <form method="post" action="/nutrition/plats/clear" x-data="{ c:false }" style="margin-top:8px;">
-          <button type="button" class="btn" style="width:100%; justify-content:center; font-size:0.8rem;" x-show="!c" @click="c=true">Vider la liste</button>
-          <div x-show="c" x-cloak class="flex-show" style="gap:8px;">
-            <button type="button" class="btn" style="flex:1; justify-content:center;" @click="c=false">Annuler</button>
-            <button type="submit" class="btn btn-danger" style="flex:1; justify-content:center;">Vider</button>
+        <form class="s-8a77e5" method="post" action="/nutrition/plats/clear" x-data="{ c:false }">
+          <button type="button" class="btn s-4efb8e" x-show="!c" @click="c=true">Vider la liste</button>
+          <div x-show="c" x-cloak class="flex-show s-33fcd4">
+            <button type="button" class="btn s-69eb87" @click="c=false">Annuler</button>
+            <button type="submit" class="btn btn-danger s-69eb87">Vider</button>
           </div>
         </form>
       {% endif %}
 
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px; font-size:0.82rem;" @click="showImport = !showImport">
+      <button type="button" class="btn label-icon s-b6dafd" @click="showImport = !showImport">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg><span x-text="showImport ? 'Fermer' : ({{ meal_plan.plats|length }} ? 'Remplacer la liste' : 'Importer une liste')"></span>
       </button>
 
-      <div x-show="showImport" x-cloak style="margin-top:8px;">
-        <p style="font-size:0.78rem; color:var(--text-dim); margin:0 0 6px;">Colle ici le fichier de plats (JSON) fourni pour ta semaine, puis Importer. Ça remplace la liste actuelle.</p>
+      <div class="s-8a77e5" x-show="showImport" x-cloak>
+        <p class="s-ec50f6">Colle ici le fichier de plats (JSON) fourni pour ta semaine, puis Importer. Ça remplace la liste actuelle.</p>
         <form method="post" action="/nutrition/plats/import">
-          <textarea name="data" class="field" rows="5" placeholder='{"_format":"muscu-plats-v1", "plats":[ ... ]}' style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.78rem; resize:vertical;"></textarea>
-          <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Importer les plats</button>
+          <textarea name="data" class="field s-4fe56e" rows="5" placeholder='{"_format":"muscu-plats-v1", "plats":[ ... ]}'></textarea>
+          <button type="submit" class="btn primary label-icon s-ac0370"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Importer les plats</button>
         </form>
       </div>
     </div>
@@ -225,7 +225,7 @@
 
   {# ══════════════════════ Section 3 — Suivi rapide ══════════════════════ #}
   <div class="card" x-data="mealForm()">
-    <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>AJOUTER UN REPAS</div>
+    <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>AJOUTER UN REPAS</div>
 
     <div class="meal-grid">
       {% for mt_val, mt_label in meal_types %}
@@ -237,7 +237,7 @@
     </div>
 
     <template x-for="mt in ['petit_dej', 'dejeuner', 'diner', 'collation']">
-      <div x-show="open_meal === mt" x-cloak style="margin-top: 12px;">
+      <div class="s-4bb900" x-show="open_meal === mt" x-cloak>
         {# Mode toggle #}
         <div class="mode-toggle">
           <button type="button" class="mode-btn" :class="mode === 'aliments' ? 'active' : ''" @click="stopScan(); mode = 'aliments'; $nextTick(() => $refs['food-q-' + mt] && $refs['food-q-' + mt].focus())">Aliments</button>
@@ -249,9 +249,9 @@
 
         {% if meal_plan.plats %}
         {# Mode « Mes plats » : un tap pour logger un plat de la semaine dans ce créneau #}
-        <div x-show="mode === 'plats'" x-cloak style="margin-top: 10px;">
+        <div class="s-e5a6d3" x-show="mode === 'plats'" x-cloak>
           {% for p in meal_plan.plats %}
-            <form method="post" action="/nutrition/add-meal" style="margin:0;">
+            <form class="s-116966" method="post" action="/nutrition/add-meal">
               <input type="hidden" name="date" value="{{ date_iso }}">
               <input type="hidden" name="meal_type" :value="mt">
               <input type="hidden" name="calories" value="{{ p.calories }}">
@@ -259,12 +259,12 @@
               <input type="hidden" name="carbs" value="{{ p.carbs }}">
               <input type="hidden" name="fat" value="{{ p.fat }}">
               <input type="hidden" name="note" value="{{ p.name }}">
-              <button type="submit" data-haptic="1" style="width:100%; text-align:left; background:var(--bg-input, rgba(255,255,255,0.05)); border:0.5px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-1); padding:9px 12px; margin-bottom:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                <span style="min-width:0;">
-                  <span style="font-size:0.86rem; font-weight:500;">{{ p.name }}</span>{% if p.portion %}<span style="font-size:0.72rem; color:var(--text-dim);"> · {{ p.portion }}</span>{% endif %}
-                  <span style="display:block; font-size:0.7rem; color:var(--text-3);">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</span>
+              <button class="s-dfb0da" type="submit" data-haptic="1">
+                <span class="s-3922d3">
+                  <span class="s-ae9427">{{ p.name }}</span>{% if p.portion %}<span class="s-71cc7d"> · {{ p.portion }}</span>{% endif %}
+                  <span class="s-2e11e6">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</span>
                 </span>
-                <svg class="icon icon-sm icon-accent" style="flex-shrink:0;"><use href="/static/img/icons.svg#plus-circle"/></svg>
+                <svg class="icon icon-sm icon-accent s-6ee066"><use href="/static/img/icons.svg#plus-circle"/></svg>
               </button>
             </form>
           {% endfor %}
@@ -274,7 +274,7 @@
         {# Mode « Scanner » : code-barres du paquet → macros exactes du produit.
            La base maison donne des moyennes ; un skyr ou une barre protéinée
            varient trop d'une marque à l'autre pour s'en contenter. #}
-        <div x-show="mode === 'scan'" x-cloak style="margin-top: 10px;">
+        <div class="s-e5a6d3" x-show="mode === 'scan'" x-cloak>
           <template x-if="scanSupported">
             <div>
               <div class="scan-frame">
@@ -288,10 +288,9 @@
             <p class="scan-hint">Ce navigateur ne lit pas les codes-barres. Tape les chiffres imprimés sous le code.</p>
           </template>
 
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <input type="text" inputmode="numeric" class="field" x-model="scanCode" maxlength="14"
-                   placeholder="Chiffres du code-barres" autocomplete="off"
-                   style="margin:0; flex:1;" aria-label="Code-barres"
+          <div class="s-2ef65b">
+            <input type="text" inputmode="numeric" class="field s-0935c1" x-model="scanCode" maxlength="14"
+                   placeholder="Chiffres du code-barres" autocomplete="off" aria-label="Code-barres"
                    @keydown.enter.prevent="lookupCode(scanCode)">
             <button type="button" class="btn" @click="lookupCode(scanCode)" :disabled="scanBusy"
                     x-text="scanBusy ? 'Recherche…' : 'Chercher'"></button>
@@ -300,15 +299,15 @@
           <template x-if="scanError">
             <p class="scan-error" x-text="scanError"></p>
           </template>
-          <p style="font-size:0.7rem; color:var(--text-3); margin:8px 0 0;">Valeurs lues sur Open Food Facts, base collaborative : vérifie l'étiquette si un chiffre te surprend.</p>
+          <p class="s-ea6f12">Valeurs lues sur Open Food Facts, base collaborative : vérifie l'étiquette si un chiffre te surprend.</p>
         </div>
 
         {# Mode « Aliments » : recherche dans la base d'aliments courants, portions usuelles #}
-        <div x-show="mode === 'aliments'" style="margin-top: 10px;">
-          <input type="search" class="field" :x-ref="'food-q-' + mt" x-model="q" @input.debounce.120ms="search()"
-                 placeholder="Rechercher : banane, riz, poulet, whey…" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin:0;">
+        <div class="s-e5a6d3" x-show="mode === 'aliments'">
+          <input type="search" class="field s-116966" :x-ref="'food-q-' + mt" x-model="q" @input.debounce.120ms="search()"
+                 placeholder="Rechercher : banane, riz, poulet, whey…" autocomplete="off" autocapitalize="off" spellcheck="false">
           <template x-if="q.trim().length >= 2 && results.length === 0">
-            <p style="font-size:0.78rem; color:var(--text-3); margin:8px 0 0;">Aucun aliment trouvé — essaie un autre mot, ou passe en « Saisie rapide ».</p>
+            <p class="s-b801fa">Aucun aliment trouvé — essaie un autre mot, ou passe en « Saisie rapide ».</p>
           </template>
           <template x-if="results.length > 0">
             <div class="food-results">
@@ -322,7 +321,7 @@
           </template>
 
           <template x-if="basket.length > 0">
-            <div style="margin-top: 10px;">
+            <div class="s-e5a6d3">
               <template x-for="(b, idx) in basket" :key="idx">
                 <div class="food-item">
                   <div class="food-item-head">
@@ -331,8 +330,8 @@
                     <button type="button" class="mini-btn" @click="basket.splice(idx, 1)" title="Retirer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
                   </div>
                   <div class="food-item-ctrl">
-                    <input type="number" inputmode="decimal" class="field" x-model.number="b.qty" min="0.25" step="0.25" style="margin:0; width:64px; text-align:center;" aria-label="Quantité">
-                    <select class="field" x-model.number="b.u" style="margin:0; flex:1;" aria-label="Portion">
+                    <input type="number" inputmode="decimal" class="field s-b78406" x-model.number="b.qty" min="0.25" step="0.25" aria-label="Quantité">
+                    <select class="field s-0935c1" x-model.number="b.u" aria-label="Portion">
                       <template x-for="(u, ui) in b.food.u" :key="ui"><option :value="ui" x-text="u[0] + ' (' + u[1] + ' g)'"></option></template>
                     </select>
                     <span class="food-item-macros">P<span x-text="Math.round(macro(b, 'p'))"></span> · G<span x-text="Math.round(macro(b, 'c'))"></span> · L<span x-text="Math.round(macro(b, 'f'))"></span></span>
@@ -345,7 +344,7 @@
                 <span><strong x-text="sumBasket('k')"></strong> kcal · P<span x-text="sumBasket('p')"></span>g · G<span x-text="sumBasket('c')"></span>g · L<span x-text="sumBasket('f')"></span>g</span>
               </div>
 
-              <form method="post" action="/nutrition/add-meal" style="margin-top: 8px;">
+              <form class="s-0d69e4" method="post" action="/nutrition/add-meal">
                 <input type="hidden" name="date" value="{{ date_iso }}">
                 <input type="hidden" name="meal_type" :value="mt">
                 <input type="hidden" name="calories" :value="sumBasket('k')">
@@ -353,21 +352,21 @@
                 <input type="hidden" name="carbs" :value="sumBasket('c')">
                 <input type="hidden" name="fat" :value="sumBasket('f')">
                 <input type="hidden" name="note" :value="basketNote()">
-                <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center;">
+                <button type="submit" class="btn primary label-icon s-9f1047" data-haptic="1">
                   <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Ajouter <span x-text="mealLabel(mt)"></span>
                 </button>
               </form>
             </div>
           </template>
-          <p style="font-size:0.7rem; color:var(--text-3); margin:8px 0 0;">Valeurs moyennes pour des aliments courants — pour un produit précis, reporte l'étiquette en « Saisie rapide ».</p>
+          <p class="s-ea6f12">Valeurs moyennes pour des aliments courants — pour un produit précis, reporte l'étiquette en « Saisie rapide ».</p>
         </div>
 
         {# Quick mode (existing) #}
-        <div x-show="mode === 'quick'" style="margin-top: 10px;">
+        <div class="s-e5a6d3" x-show="mode === 'quick'">
           <form method="post" action="/nutrition/add-meal">
             <input type="hidden" name="date" value="{{ date_iso }}">
             <input type="hidden" name="meal_type" :value="mt">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div class="s-c1a946">
               <div>
                 <label class="field-label">Calories</label>
                 <input type="number" inputmode="numeric" name="calories" class="field" min="0" required
@@ -391,50 +390,50 @@
             </div>
             <label class="field-label">Note (ex. Poulet riz brocoli)</label>
             <input type="text" name="note" class="field" maxlength="200" placeholder="Contenu du repas">
-            <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center; margin-top: 8px;">
+            <button type="submit" class="btn primary label-icon s-d1c22b" data-haptic="1">
               <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter
             </button>
           </form>
         </div>
 
         {# Composition mode #}
-        <div x-show="mode === 'compose'" x-cloak style="margin-top: 10px;">
-          <div style="display:flex; gap:6px; align-items:flex-end; margin-bottom: 6px;">
-            <div style="flex:1;">
+        <div class="s-e5a6d3" x-show="mode === 'compose'" x-cloak>
+          <div class="s-bdb573">
+            <div class="s-97445a">
               <label class="field-label">Ingrédient / plat</label>
-              <input type="text" class="field" x-model="cur.name" placeholder="Ex. Poulet grillé" maxlength="100" style="margin:0;">
+              <input type="text" class="field s-116966" x-model="cur.name" placeholder="Ex. Poulet grillé" maxlength="100">
             </div>
           </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+          <div class="s-ca48e9">
             <div>
-              <label class="field-label" style="font-size:0.7rem;">Kcal</label>
-              <input type="number" inputmode="numeric" class="field" x-model.number="cur.calories" min="0" aria-label="Calories de l'ingrédient" style="margin:0; font-size:0.82rem;">
+              <label class="field-label s-8e87b7">Kcal</label>
+              <input type="number" inputmode="numeric" class="field s-5bc73c" x-model.number="cur.calories" min="0" aria-label="Calories de l'ingrédient">
             </div>
             <div>
-              <label class="field-label" style="font-size:0.7rem;">Prot (g)</label>
-              <input type="number" inputmode="numeric" class="field" x-model.number="cur.protein" min="0" aria-label="Protéines de l'ingrédient, en grammes" style="margin:0; font-size:0.82rem;">
+              <label class="field-label s-8e87b7">Prot (g)</label>
+              <input type="number" inputmode="numeric" class="field s-5bc73c" x-model.number="cur.protein" min="0" aria-label="Protéines de l'ingrédient, en grammes">
             </div>
             <div>
-              <label class="field-label" style="font-size:0.7rem;">Gluc (g)</label>
-              <input type="number" inputmode="numeric" class="field" x-model.number="cur.carbs" min="0" aria-label="Glucides de l'ingrédient, en grammes" style="margin:0; font-size:0.82rem;">
+              <label class="field-label s-8e87b7">Gluc (g)</label>
+              <input type="number" inputmode="numeric" class="field s-5bc73c" x-model.number="cur.carbs" min="0" aria-label="Glucides de l'ingrédient, en grammes">
             </div>
             <div>
-              <label class="field-label" style="font-size:0.7rem;">Lip (g)</label>
-              <input type="number" inputmode="numeric" class="field" x-model.number="cur.fat" min="0" aria-label="Lipides de l'ingrédient, en grammes" style="margin:0; font-size:0.82rem;">
+              <label class="field-label s-8e87b7">Lip (g)</label>
+              <input type="number" inputmode="numeric" class="field s-5bc73c" x-model.number="cur.fat" min="0" aria-label="Lipides de l'ingrédient, en grammes">
             </div>
           </div>
-          <button type="button" class="btn label-icon" style="width:100%; justify-content:center; font-size:0.82rem;" @click="addItem()" :disabled="!cur.name.trim() || cur.calories <= 0">
+          <button type="button" class="btn label-icon s-68e552" @click="addItem()" :disabled="!cur.name.trim() || cur.calories <= 0">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter à la liste
           </button>
 
           {# Items list #}
           <template x-if="items.length > 0">
-            <div style="margin-top: 10px;">
+            <div class="s-e5a6d3">
               <template x-for="(it, idx) in items" :key="idx">
                 <div class="compose-item">
-                  <div style="flex:1; min-width:0;">
-                    <div style="font-size:0.82rem; color:var(--text-1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" x-text="it.name"></div>
-                    <div style="font-size:0.7rem; color:var(--text-3);">
+                  <div class="s-7f784d">
+                    <div class="s-c4a9e0" x-text="it.name"></div>
+                    <div class="s-1342a3">
                       <span x-text="it.calories"></span> kcal · P<span x-text="it.protein"></span> · G<span x-text="it.carbs"></span> · L<span x-text="it.fat"></span>
                     </div>
                   </div>
@@ -451,7 +450,7 @@
               </div>
 
               {# Submit #}
-              <form method="post" action="/nutrition/add-meal" style="margin-top: 8px;">
+              <form class="s-0d69e4" method="post" action="/nutrition/add-meal">
                 <input type="hidden" name="date" value="{{ date_iso }}">
                 <input type="hidden" name="meal_type" :value="mt">
                 <input type="hidden" name="calories" :value="sumItems('calories')">
@@ -459,7 +458,7 @@
                 <input type="hidden" name="carbs" :value="sumItems('carbs')">
                 <input type="hidden" name="fat" :value="sumItems('fat')">
                 <input type="hidden" name="note" :value="items.map(i => i.name).join(', ')">
-                <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center;">
+                <button type="submit" class="btn primary label-icon s-9f1047" data-haptic="1">
                   <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Valider le repas
                 </button>
               </form>
@@ -474,20 +473,20 @@
   {% for mt_val, mt_label in meal_types %}
     {% set items = meals_by_type.get(mt_val, []) %}
     {% if items %}
-      <div class="card" style="padding: 10px 14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; color:var(--text-1); margin-bottom:6px;">
+      <div class="card s-3cf3a7">
+        <div class="s-b16da2">
           <span>{{ mt_label }}</span>
-          <span style="color:var(--accent);">{{ items | sum(attribute='calories') }} kcal</span>
+          <span class="s-a80552">{{ items | sum(attribute='calories') }} kcal</span>
         </div>
         {% for it in items %}
           <div class="meal-item">
-            <div style="flex:1;">
-              <div style="font-size:0.85rem; color:var(--text-1);">{{ it.note or '—' }}</div>
-              <div style="font-size:0.72rem; color:var(--text-3); margin-top:2px;">
+            <div class="s-97445a">
+              <div class="s-1bccb6">{{ it.note or '—' }}</div>
+              <div class="s-beee49">
                 {{ it.calories }} kcal · P {{ it.protein or 0 }}g · G {{ it.carbs or 0 }}g · L {{ it.fat or 0 }}g
               </div>
             </div>
-            <form method="post" action="/nutrition/delete-meal" style="margin:0;">
+            <form class="s-116966" method="post" action="/nutrition/delete-meal">
               <input type="hidden" name="id" value="{{ it.id }}">
               <input type="hidden" name="date" value="{{ date_iso }}">
               <button type="submit" class="mini-btn" title="Supprimer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg></button>

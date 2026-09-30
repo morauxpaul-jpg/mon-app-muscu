@@ -2,12 +2,12 @@
 {% block title %}Premium · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/plus" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <div class="premium-hero">
-    <svg class="icon" style="width:52px; height:52px; color:#FFD700; margin-bottom:8px;"><use href="/static/img/icons.svg#gem"/></svg>
-    <h1 style="margin:0; font-size:1.8rem;">Muscu Tracker Premium</h1>
-    <p style="margin:8px 0 0; color:var(--text-dim); font-size:0.9rem; max-width:320px;">
+    <svg class="icon s-3a385d"><use href="/static/img/icons.svg#gem"/></svg>
+    <h1 class="s-49bb8c">Muscu Tracker Premium</h1>
+    <p class="s-e01b21">
       Débloque le Coach IA, le suivi nutrition, les stats détaillées et les programmes avancés.
     </p>
   </div>
@@ -38,21 +38,21 @@
     {# L'essai (parrainage, promo) n'ouvre que Nutrition et les stats. Il lui
        disait « Tu es VIP, débloqué à vie » sans aucun bouton d'achat — alors
        que ce sont les comptes les plus chauds. #}
-    <div class="card" style="text-align:center;">
-      <svg class="icon icon-lg" style="color:var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
-      <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Essai PRO{% if trial_left %} — {{ trial_left }}{% endif %}</h3>
-      <p style="margin:0; font-size:0.82rem; color:var(--text-2);">Ton essai ouvre la nutrition et les statistiques détaillées. Le Coach IA, le générateur et les programmes avancés viennent avec l'abonnement.</p>
+    <div class="card s-91a870">
+      <svg class="icon icon-lg s-e39eba"><use href="/static/img/icons.svg#gem"/></svg>
+      <h3 class="s-4fa5e0">Essai PRO{% if trial_left %} — {{ trial_left }}{% endif %}</h3>
+      <p class="s-1b6897">Ton essai ouvre la nutrition et les statistiques détaillées. Le Coach IA, le générateur et les programmes avancés viennent avec l'abonnement.</p>
     </div>
   {% endif %}
 
   {% if is_vip_full %}
-    <div class="card" style="text-align:center;">
-      <svg class="icon icon-lg" style="color:var(--gold);"><use href="/static/img/icons.svg#shield-check"/></svg>
-      <h3 style="margin:8px 0 4px; color:var(--text-1); font-weight:500;">Tu es VIP</h3>
-      <p style="margin:0 0 12px; font-size:0.82rem; color:var(--text-2);">Toutes les features premium sont débloquées. Merci de soutenir l'app 🙏</p>
+    <div class="card s-91a870">
+      <svg class="icon icon-lg s-e39eba"><use href="/static/img/icons.svg#shield-check"/></svg>
+      <h3 class="s-4fa5e0">Tu es VIP</h3>
+      <p class="s-53a832">Toutes les features premium sont débloquées. Merci de soutenir l'app 🙏</p>
       {% if not hide_billing %}
-      <form method="post" action="/billing/portal" class="billing-cta billing-only" style="margin:0;">
-        <button type="submit" class="btn label-icon" style="display:inline-flex; justify-content:center;">
+      <form method="post" action="/billing/portal" class="billing-cta billing-only s-116966">
+        <button type="submit" class="btn label-icon s-5a31a7">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Gérer mon abonnement
         </button>
       </form>
@@ -65,7 +65,7 @@
      navigateur : le paiement aboutit quand même, mais l'utilisateur ne revient
      pas tout seul. Autant le dire avant plutôt que de le laisser douter. #}
   {% if is_native and not hide_billing %}
-    <p style="font-size:0.76rem; color:var(--text-2); text-align:center; margin:0 0 12px; line-height:1.5;">
+    <p class="s-206006">
       Le paiement passe par Stripe. S'il s'ouvre dans ton navigateur, termine-le
       là-bas puis reviens ici&nbsp;: ton accès PRO s'active tout seul.
     </p>
@@ -89,7 +89,7 @@
         <li><span class="ok">✓</span>Badges</li>
         <li class="muted"><span class="ko">·</span>Coach IA réservé Premium</li>
       </ul>
-      <button class="btn tier-cta" disabled style="opacity:0.5;">{% if is_vip_full %}Plan gratuit{% elif is_trial %}Après ton essai{% else %}Tu y es déjà{% endif %}</button>
+      <button class="btn tier-cta s-e1549f" disabled>{% if is_vip_full %}Plan gratuit{% elif is_trial %}Après ton essai{% else %}Tu y es déjà{% endif %}</button>
     </div>
 
     <!-- PREMIUM MENSUEL -->
@@ -114,28 +114,28 @@
       {% if is_vip_full %}
         {% if current_plan == 'monthly' %}
           {# Abonné mensuel : son plan actuel + upgrade vers l'annuel. #}
-          <button class="btn tier-cta" disabled style="opacity:0.6;">✓ Ton plan actuel</button>
+          <button class="btn tier-cta s-d95b59" disabled>✓ Ton plan actuel</button>
           {% if not hide_billing %}
-          <div class="billing-cta billing-only" style="margin-top:8px;">
-            <form method="post" action="/billing/checkout" style="margin:0;">
+          <div class="billing-cta billing-only s-8a77e5">
+            <form class="s-116966" method="post" action="/billing/checkout">
               <input type="hidden" name="plan" value="annual">
-              <button type="submit" class="btn primary tier-cta" data-haptic="1">Passer à l'annuel — 39,99€/an <span style="opacity:0.85;">(-33%)</span></button>
+              <button type="submit" class="btn primary tier-cta" data-haptic="1">Passer à l'annuel — 39,99€/an <span class="s-f6411e">(-33%)</span></button>
             </form>
           </div>
           {% endif %}
         {% elif current_plan == 'annual' %}
-          <button class="btn tier-cta" disabled style="opacity:0.6;">✓ Ton plan actuel (annuel)</button>
+          <button class="btn tier-cta s-d95b59" disabled>✓ Ton plan actuel (annuel)</button>
         {% else %}
-          <button class="btn tier-cta" disabled style="opacity:0.5;">Inclus dans ton accès</button>
+          <button class="btn tier-cta s-e1549f" disabled>Inclus dans ton accès</button>
         {% endif %}
       {% else %}
         {% if not hide_billing %}
         <div class="billing-cta billing-only">
-          <form method="post" action="/billing/checkout" style="margin:0;">
+          <form class="s-116966" method="post" action="/billing/checkout">
             <input type="hidden" name="plan" value="monthly">
             <button type="submit" class="btn primary tier-cta" data-haptic="1">S'abonner — 4,99€/mois</button>
           </form>
-          <form method="post" action="/billing/checkout" style="margin:8px 0 0;">
+          <form class="s-c94d43" method="post" action="/billing/checkout">
             <input type="hidden" name="plan" value="annual">
             <button type="submit" class="btn tier-cta" data-haptic="1">Annuel — 39,99€/an</button>
           </form>
@@ -171,21 +171,21 @@
           {# Abonné : peut passer au « à vie » (on annule l'abonnement en cours). #}
           {% if not hide_billing %}
           <div class="billing-cta billing-only">
-            <form method="post" action="/billing/checkout" style="margin:0;">
+            <form class="s-116966" method="post" action="/billing/checkout">
               <input type="hidden" name="plan" value="lifetime">
-              <button type="submit" class="btn tier-cta" data-haptic="1" style="background:var(--warning-bg); color:var(--warning); font-weight:500; border-color:var(--warning);">Passer à vie — 79,99€</button>
+              <button type="submit" class="btn tier-cta s-a40473" data-haptic="1">Passer à vie — 79,99€</button>
             </form>
           </div>
           {% endif %}
         {% else %}
-          <button class="btn tier-cta" disabled style="opacity:0.5;">✓ Débloqué à vie</button>
+          <button class="btn tier-cta s-e1549f" disabled>✓ Débloqué à vie</button>
         {% endif %}
       {% else %}
         {% if not hide_billing %}
         <div class="billing-cta billing-only">
-          <form method="post" action="/billing/checkout" style="margin:0;">
+          <form class="s-116966" method="post" action="/billing/checkout">
             <input type="hidden" name="plan" value="lifetime">
-            <button type="submit" class="btn tier-cta" data-haptic="1" style="background:var(--warning-bg); color:var(--warning); font-weight:500; border-color:var(--warning);">Acheter à vie — 79,99€</button>
+            <button type="submit" class="btn tier-cta s-a40473" data-haptic="1">Acheter à vie — 79,99€</button>
           </form>
         </div>
         {% endif %}
@@ -195,12 +195,12 @@
   </div>
 
   {% if not hide_billing %}
-  <p class="billing-only" style="font-size:0.74rem; color:var(--text-3); text-align:center; margin:12px 0 0; line-height:1.5;">
-    En t'abonnant, tu acceptes les <a href="/cgv" style="color:var(--text-2);">conditions générales de vente</a>.
-    Tu disposes de 14 jours pour te <a href="/cgv#retractation" style="color:var(--text-2);">rétracter</a>.
+  <p class="billing-only s-35ecda">
+    En t'abonnant, tu acceptes les <a class="s-b3842e" href="/cgv">conditions générales de vente</a>.
+    Tu disposes de 14 jours pour te <a class="s-b3842e" href="/cgv#retractation">rétracter</a>.
   </p>
-  <div class="card billing-only" style="margin-top:14px; font-size:0.78rem; color:var(--text-2); line-height:1.5;">
-    <strong style="color:var(--text-1);">FAQ rapide</strong><br><br>
+  <div class="card billing-only s-a25ac1">
+    <strong class="s-38f301">FAQ rapide</strong><br><br>
     <strong>Paiement sécurisé ?</strong> Oui — le paiement est traité par Stripe (leader mondial). Carte, Apple Pay et Google Pay acceptés. L'app ne voit jamais ton numéro de carte.<br><br>
     <strong>Puis-je annuler ?</strong> Oui, à tout moment depuis « Gérer mon abonnement ». L'accès reste actif jusqu'à la fin de la période payée.<br><br>
     <strong>Que se passe-t-il si j'annule ?</strong> Tu repasses en gratuit — tu gardes toutes tes données, seules les features premium sont désactivées.<br><br>

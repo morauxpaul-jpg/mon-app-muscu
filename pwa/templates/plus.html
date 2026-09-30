@@ -6,36 +6,36 @@
 
   {# ── Bandeau Premium ───────────────────────────────────────── #}
   {% if is_trial %}
-    <a href="/premium" class="card plus-link plus-promo" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
-      <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
-      <div style="flex:1;">
-        <div style="font-weight:600; color: var(--text-1); font-size:0.95rem;">Essai PRO{% if trial_left %} · {{ trial_left }}{% endif %}</div>
-        <div style="font-size:0.78rem; color:var(--text-2);">Passe en PRO pour le garder et débloquer le Coach IA.</div>
+    <a href="/premium" class="card plus-link plus-promo s-fac33a">
+      <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
+      <div class="s-97445a">
+        <div class="s-3d3074">Essai PRO{% if trial_left %} · {{ trial_left }}{% endif %}</div>
+        <div class="s-71a611">Passe en PRO pour le garder et débloquer le Coach IA.</div>
       </div>
       <span class="plus-promo-cta">Voir</span>
     </a>
   {% elif is_vip_full %}
-    <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(255,215,0,0.25);">
-      <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
-      <div style="flex:1;">
-        <div style="font-weight:600; color: var(--text-1); font-size:0.9rem;">Membre PRO</div>
-        <div style="font-size:0.75rem; color:var(--text-2);">Merci de ton soutien — gérer mon abonnement.</div>
+    <a href="/premium" class="card plus-link s-da0cdf">
+      <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
+      <div class="s-97445a">
+        <div class="s-80ae8b">Membre PRO</div>
+        <div class="s-15f704">Merci de ton soutien — gérer mon abonnement.</div>
       </div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
   {% else %}
-    <a href="/premium" class="card plus-link plus-promo" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
-      <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
-      <div style="flex:1;">
-        <div style="font-weight:600; color: var(--text-1); font-size:0.95rem;">Passe en PRO</div>
-        <div style="font-size:0.78rem; color:var(--text-2);">Coach IA, nutrition, stats détaillées & programmes avancés.</div>
+    <a href="/premium" class="card plus-link plus-promo s-fac33a">
+      <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
+      <div class="s-97445a">
+        <div class="s-3d3074">Passe en PRO</div>
+        <div class="s-71a611">Coach IA, nutrition, stats détaillées & programmes avancés.</div>
       </div>
       <span class="plus-promo-cta">Voir</span>
     </a>
   {% endif %}
 
-  <a href="/parrainage" class="card plus-link plus-row" style="margin-top:10px; border-color:rgba(255,215,0,0.22);">
-    <svg class="icon icon-lg" style="color:var(--gold,#FFD700);"><use href="/static/img/icons.svg#party"/></svg>
+  <a href="/parrainage" class="card plus-link plus-row s-2b6f80">
+    <svg class="icon icon-lg s-e65ba6"><use href="/static/img/icons.svg#party"/></svg>
     <div class="plus-row-txt"><h3>Inviter des amis</h3><p>Gagnez des jours PRO à deux.</p></div>
     <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
@@ -62,7 +62,7 @@
   </a>
 
   {# ── Premium (fonctions avancées, verrouillées en gratuit) ──── #}
-  <div class="plus-section">Premium{% if not is_vip %} <span style="color:var(--text-3); font-weight:400; text-transform:none; letter-spacing:0;">· inclus avec PRO</span>{% endif %}</div>
+  <div class="plus-section">Premium{% if not is_vip %} <span class="s-3c6a21">· inclus avec PRO</span>{% endif %}</div>
 
   <a href="/coach" class="card plus-link plus-row{% if not is_vip_full %} plus-locked{% endif %}">
     <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
@@ -100,8 +100,8 @@
   {% if is_admin %}
   <div class="plus-section">Admin</div>
     <a href="/admin" class="card plus-link plus-row">
-      <svg class="icon icon-lg" style="color:var(--success);"><use href="/static/img/icons.svg#shield-check"/></svg>
-      <div class="plus-row-txt"><h3 style="color:var(--success);">Admin</h3><p>Utilisateurs &amp; attribution PRO.</p></div>
+      <svg class="icon icon-lg s-5a4529"><use href="/static/img/icons.svg#shield-check"/></svg>
+      <div class="plus-row-txt"><h3 class="s-5a4529">Admin</h3><p>Utilisateurs &amp; attribution PRO.</p></div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
   {% endif %}

@@ -3,26 +3,25 @@
 
 {% block content %}
 <div x-data="programmeApp()" x-init="init()">
-  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-    <h1 class="label-icon" style="margin-bottom:0;"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Programme</h1>
-    <span class="save-pill" x-show="saveState" x-text="saveState" x-transition
-          style="font-size:0.72rem; padding:4px 10px; border-radius:10px; background:var(--accent-bg); color:var(--accent);"></span>
+  <div class="s-a2cd8b">
+    <h1 class="label-icon s-ef0b7a"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Programme</h1>
+    <span class="save-pill s-89a599" x-show="saveState" x-text="saveState" x-transition></span>
   </div>
 
   {% if request.args.get('program_changed') %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Nouveau programme chargé.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Nouveau programme chargé.</div>
   {% endif %}
   {% if request.args.get('import_err') == 'parse' %}
-    <div class="card label-icon" style="border-color: var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Fichier illisible (JSON invalide).</div>
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Fichier illisible (JSON invalide).</div>
   {% elif request.args.get('import_err') == 'format' %}
-    <div class="card label-icon" style="border-color: var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Format non reconnu — ce fichier n'a pas été exporté depuis Muscu Tracker.</div>
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Format non reconnu — ce fichier n'a pas été exporté depuis Muscu Tracker.</div>
   {% endif %}
 
-  <h2 class="label-icon" style="font-size:0.85rem; color:var(--accent); margin:18px 0 6px; letter-spacing:2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>PLANNING</h2>
+  <h2 class="label-icon s-378d90"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>PLANNING</h2>
 
   {# ── Planning hebdomadaire ───────────────────────────── #}
   <div class="card" id="planning">
-    <div class="field-label" style="margin-top:0;">Assigne une séance à chaque jour. Vide = repos.</div>
+    <div class="field-label s-d46224">Assigne une séance à chaque jour. Vide = repos.</div>
     {% for day in days_fr %}
       <label class="field-label">{{ day }}</label>
       <select class="field" data-day="{{ day }}" x-model="planning['{{ day }}']" @change="scheduleSave()">
@@ -36,16 +35,16 @@
 
   {# ── Cardio planifié (généré par l'IA) ───────────────── #}
   <template x-if="cardio && cardio.length">
-    <div class="card" style="border-color:var(--warning);">
-      <div class="label-icon" style="color:var(--warning); font-size:0.7rem; letter-spacing:3px; margin-bottom:8px;">
-        <svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>CARDIO PLANIFIÉ
+    <div class="card s-fd6601">
+      <div class="label-icon s-c1e5ec">
+        <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>CARDIO PLANIFIÉ
       </div>
-      <p style="font-size:0.76rem; color:var(--text-2); margin:0 0 10px;">Retrouve ces séances cardio dans l'onglet Séance, le jour prévu.</p>
+      <p class="s-e50a7f">Retrouve ces séances cardio dans l'onglet Séance, le jour prévu.</p>
       <template x-for="(c, i) in cardio" :key="i">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:0.5px solid var(--border-subtle);">
-          <div style="min-width:0;">
-            <div style="font-size:0.9rem; color:var(--text-1);" x-text="c.activite + ' · ' + c.duree + ' min'"></div>
-            <div style="font-size:0.74rem; color:var(--warning);"
+        <div class="s-71d449">
+          <div class="s-3922d3">
+            <div class="s-198075" x-text="c.activite + ' · ' + c.duree + ' min'"></div>
+            <div class="s-fcf2ab"
                  x-text="(c.jours && c.jours.length) ? c.jours.join(', ') : 'jour flexible'"></div>
           </div>
           <button type="button" class="btn mini label-icon" aria-label="Retirer ce cardio" @click="removeCardio(i)">
@@ -56,13 +55,13 @@
     </div>
   </template>
 
-  <h2 class="label-icon" style="font-size:0.85rem; color:var(--violet); margin:18px 0 6px; letter-spacing:2px;"><svg class="icon icon-sm" style="color:var(--violet);"><use href="/static/img/icons.svg#folder"/></svg>MES PROGRAMMES</h2>
-  <p style="font-size:0.78rem; color:var(--text-2); margin:0 0 10px;">Un programme regroupe des séances. Ex : « Push Pull Legs », « Full-body maison »…</p>
+  <h2 class="label-icon s-f128cb"><svg class="icon icon-sm s-8b872f"><use href="/static/img/icons.svg#folder"/></svg>MES PROGRAMMES</h2>
+  <p class="s-017590">Un programme regroupe des séances. Ex : « Push Pull Legs », « Full-body maison »…</p>
 
   {# ── Nouveau programme (haut de la liste) ────────────────── #}
   <div class="card" x-data="{ newProgName: '' }">
-    <div style="display:flex; gap:6px;">
-      <input type="text" x-model="newProgName" class="field" style="flex:1; margin:0;"
+    <div class="s-ab9fcd">
+      <input type="text" x-model="newProgName" class="field s-5d50d5"
              :disabled="!canAddProgramme()"
              :placeholder="canAddProgramme() ? 'Nouveau programme (ex: Force, Hypertrophie…)' : '1 programme max en gratuit'" maxlength="80"
              @keydown.enter.prevent="if(canAddProgramme() && newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
@@ -74,8 +73,8 @@
       </button>
     </div>
     {% if not is_vip %}
-      <p x-show="!canAddProgramme()" style="font-size:0.78rem; color:var(--text-2); margin-top:8px;">
-        1 programme max en gratuit. <a href="/premium" style="color:var(--accent);">Passe en PRO <span class="badge-pro" style="margin-left:4px;">PRO</span></a> pour en créer plus.
+      <p class="s-7566f6" x-show="!canAddProgramme()">
+        1 programme max en gratuit. <a class="s-a80552" href="/premium">Passe en PRO <span class="badge-pro s-46cec8">PRO</span></a> pour en créer plus.
       </p>
     {% endif %}
   </div>
@@ -83,28 +82,28 @@
   <template x-for="pg in programmes" :key="pg.id">
     <div class="card prog-section" x-data="{ open: true, newSname: '' }">
       <div class="prog-head">
-        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;" @click="open = !open">
+        <div class="s-31b4c8" @click="open = !open">
           <svg class="icon icon-sm icon-violet"><use href="/static/img/icons.svg#folder"/></svg>
           <span class="prog-name" x-text="pg.name"></span>
-          <span style="font-size:11px; color:var(--text-3);" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
+          <span class="s-0098b4" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
           <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
         </div>
       </div>
 
       <div x-show="open" x-transition>
-        <div style="display:flex; gap:6px; margin:8px 0 10px; flex-wrap:wrap;">
+        <div class="s-8e4027">
           <button type="button" class="btn mini label-icon" aria-label="Monter" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
           <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
           <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
           </button>
           <template x-if="true">
-            <div x-data="{ c:false }" style="display:inline-flex; gap:6px; min-width:0;">
+            <div class="s-003db1" x-data="{ c:false }">
               <button type="button" class="btn mini label-icon" x-show="!c" @click="c=true">
                 <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
               </button>
               <template x-if="c">
-                <span class="inline-confirm" style="flex-basis:100%; width:100%;">
+                <span class="inline-confirm s-c6af6d">
                   <span class="confirm-label">Supprimer ce programme ?</span>
                   <button type="button" class="btn mini" @click="c=false">Annuler</button>
                   <button type="button" class="btn mini btn-danger" @click="deleteProgramme(pg.id); c=false">Confirmer</button>
@@ -118,15 +117,14 @@
           {% include "_programme_seance_card.html" %}
         </template>
 
-        <div x-show="seancesIn(pg.id).length === 0" style="font-size:0.82rem; color:var(--text-dim); margin:8px 0; text-align:center;">
+        <div class="s-1b6d02" x-show="seancesIn(pg.id).length === 0">
           Aucune séance — ajoute-en une ci-dessous.
         </div>
 
-        <p x-show="seanceMsg" x-cloak x-text="seanceMsg"
-           style="font-size:0.78rem; color:#FF9F0A; margin:8px 0 0; line-height:1.4;"></p>
+        <p class="s-5588ac" x-show="seanceMsg" x-cloak x-text="seanceMsg"></p>
 
-        <div style="display:flex; gap:6px; margin-top:10px;">
-          <input type="text" x-model="newSname" class="field" style="flex:1; margin:0;"
+        <div class="s-cc0019">
+          <input type="text" x-model="newSname" class="field s-5d50d5"
                  placeholder="Nouvelle séance (ex: Push)" maxlength="60"
                  @keydown.enter.prevent="if(newSname.trim()){ addSeance(newSname.trim(), pg.id); newSname=''; }">
           <button type="button" class="btn primary label-icon"
@@ -142,11 +140,11 @@
   <template x-if="seancesIn(null).length > 0">
     <div class="card prog-section" x-data="{ open: true }">
       <div class="prog-head" @click="open = !open">
-        <div style="display:flex; align-items:center; gap:8px; flex:1;">
+        <div class="s-3faf3d">
           <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>
-          <span class="prog-name" style="color:var(--text-dim);">Non classé</span>
-          <span style="font-size:11px; color:var(--text-3);" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
-          <div class="exo-toggle" style="margin-left:auto;" x-text="open ? '−' : '+'"></div>
+          <span class="prog-name s-73e788">Non classé</span>
+          <span class="s-0098b4" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
+          <div class="exo-toggle s-6d0006" x-text="open ? '−' : '+'"></div>
         </div>
       </div>
       <div x-show="open" x-transition>
@@ -157,18 +155,18 @@
     </div>
   </template>
 
-  <h2 class="label-icon" style="font-size:0.85rem; color:var(--accent); margin:24px 0 6px; letter-spacing:2px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>OUTILS AVANCÉS</h2>
-  <p style="font-size:0.78rem; color:var(--text-2); margin:0 0 10px;">Catalogue de programmes, partage, changement de programme. Replié par défaut.</p>
+  <h2 class="label-icon s-edfd6e"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>OUTILS AVANCÉS</h2>
+  <p class="s-017590">Catalogue de programmes, partage, changement de programme. Replié par défaut.</p>
 
-  <details class="card" style="padding:14px; margin-bottom:10px;">
-    <summary style="cursor:pointer; font-weight:500; color:var(--text-1); display:flex; align-items:center; gap:8px;">
+  <details class="card s-eaaf71">
+    <summary class="s-b52505">
       <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ajouter une séance depuis le catalogue
     </summary>
 
   {# ── Ajouter une séance depuis le catalogue ─────────────── #}
-  <div class="card" style="margin-top:10px; border-color:var(--border-subtle);" x-data="{ catalogPick: '', catalogSeance: '', destProg: '' }">
+  <div class="card s-64b672" x-data="{ catalogPick: '', catalogSeance: '', destProg: '' }">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ajouter depuis le catalogue</h3>
-    <label class="field-label" style="margin-top:0;">Programme du catalogue</label>
+    <label class="field-label s-d46224">Programme du catalogue</label>
     <select x-model="catalogPick" class="field" @change="catalogSeance=''">
       <option value="">— Choisis un programme —</option>
       {% for p in catalog_programs %}
@@ -194,7 +192,7 @@
       </template>
       <option value="__none__">Non classé</option>
     </select>
-    <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+    <button type="button" class="btn primary label-icon s-d5b41c"
             :disabled="!catalogPick || !catalogSeance"
             @click="addSeanceFromCatalog(catalogPick, catalogSeance, destProg); catalogSeance=''">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cette séance
@@ -203,27 +201,27 @@
   </details>
 
   {# ── Exporter / Importer mon programme ──────────── #}
-  <details class="card" style="padding:14px; margin-bottom:10px;">
-    <summary style="cursor:pointer; font-weight:500; color:var(--text-1); display:flex; align-items:center; gap:8px;">
-      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Partager mon programme (export / import){% if not is_vip %} <span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}
+  <details class="card s-eaaf71">
+    <summary class="s-b52505">
+      <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Partager mon programme (export / import){% if not is_vip %} <span class="badge-pro s-391ef1">PRO</span>{% endif %}
     </summary>
-  <div class="card" style="margin-top:10px; border-color:var(--border-subtle);">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme {% if not is_vip %}<span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Télécharge l'intégralité de ton programme (toutes les séances + planning) dans un fichier <code>.json</code>. Tu peux le partager à un ami pour qu'il importe exactement le tien.</p>
+  <div class="card s-64b672">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme {% if not is_vip %}<span class="badge-pro s-391ef1">PRO</span>{% endif %}</h3>
+    <p class="s-7e1751">Télécharge l'intégralité de ton programme (toutes les séances + planning) dans un fichier <code>.json</code>. Tu peux le partager à un ami pour qu'il importe exactement le tien.</p>
     {% if is_vip %}
-      <a href="/programme/export" class="btn primary label-icon" style="width:100%; justify-content:center; display:flex;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</a>
+      <a href="/programme/export" class="btn primary label-icon s-2c073e"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter mon programme</a>
     {% else %}
-      <button type="button" class="btn primary label-icon locked" style="width:100%; justify-content:center; display:flex;" disabled><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Exporter mon programme</button>
-      <p style="font-size:0.78rem; color:var(--text-2); text-align:center; margin-top:8px;">Réservé aux membres <span class="badge-pro">PRO</span></p>
+      <button type="button" class="btn primary label-icon locked s-2c073e" disabled><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Exporter mon programme</button>
+      <p class="s-f5c6e4">Réservé aux membres <span class="badge-pro">PRO</span></p>
     {% endif %}
   </div>
 
-  <div class="card" style="border-color:var(--border-subtle);" x-data="{ detected: '' }">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme {% if not is_vip %}<span class="badge-pro" style="margin-left:6px;">PRO</span>{% endif %}</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. <strong>Attention :</strong> cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
+  <div class="card s-a21a33" x-data="{ detected: '' }">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer un programme {% if not is_vip %}<span class="badge-pro s-391ef1">PRO</span>{% endif %}</h3>
+    <p class="s-7e1751">Charge un fichier <code>.json</code> exporté depuis Muscu Tracker. <strong>Attention :</strong> cela <strong>remplace</strong> ton programme actuel (l'historique et les records sont conservés).</p>
     {% if not is_vip %}
-      <button type="button" class="btn primary label-icon locked" style="width:100%; justify-content:center; display:flex;" disabled><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Importer un programme</button>
-      <p style="font-size:0.78rem; color:var(--text-2); text-align:center; margin-top:8px;">Réservé aux membres <span class="badge-pro">PRO</span></p>
+      <button type="button" class="btn primary label-icon locked s-2c073e" disabled><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Importer un programme</button>
+      <p class="s-f5c6e4">Réservé aux membres <span class="badge-pro">PRO</span></p>
     {% else %}
     <form method="post" action="/programme/import" enctype="multipart/form-data" x-data="{ c:false }">
       <label class="field-label" for="import-programme">Fichier du programme (.json)</label>
@@ -246,10 +244,10 @@
                  reader.readAsText(f);
                }
              ">
-      <div x-show="detected" x-text="detected" style="font-size:0.82rem; margin:6px 0; color:var(--accent);"></div>
+      <div class="s-737546" x-show="detected" x-text="detected"></div>
       <input type="hidden" name="confirm" value="yes">
-      <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
-      <div class="inline-confirm" x-show="c" x-cloak style="margin-top:8px;">
+      <button type="button" class="btn primary label-icon s-ac0370" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
+      <div class="inline-confirm s-8a77e5" x-show="c" x-cloak>
         <span class="confirm-label">Remplacer le programme actuel ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -262,12 +260,12 @@
   {# ── Changer de programme (catalogue) ────────────── #}
   {# x-init évalue une EXPRESSION, pas un bloc : un `try { ... }` ici lève
      SyntaxError et le panneau ne s'ouvrait jamais après un « Appliquer ». #}
-  <details class="card" style="padding:14px; margin-bottom:10px;"
+  <details class="card s-eaaf71"
            x-init="(new URLSearchParams(location.search).get('apply') || '').trim() && $el.setAttribute('open', '')">
-    <summary style="cursor:pointer; font-weight:500; color:var(--text-1); display:flex; align-items:center; gap:8px;">
+    <summary class="s-b52505">
       <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme (catalogue)
     </summary>
-  <div id="change-program" class="card" style="margin-top:10px; border-color:var(--border-subtle);"
+  <div id="change-program" class="card s-64b672"
        x-data="{
          open: false,
          mode: 'replace',
@@ -291,54 +289,54 @@
        }">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme</h3>
     {% if current_program_meta %}
-      <p style="font-size:0.85rem; color:var(--text-2);">Programme actuel : <strong style="color:var(--accent);">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
+      <p class="s-ef3b7e">Programme actuel : <strong class="s-a80552">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
     {% else %}
-      <p style="font-size:0.85rem; color:var(--text-2);">Programme actuel : <strong style="color:var(--accent);">personnalisé</strong>.</p>
+      <p class="s-ef3b7e">Programme actuel : <strong class="s-a80552">personnalisé</strong>.</p>
     {% endif %}
 
-    <button type="button" class="btn primary" style="width:100%;" @click="open = !open"
+    <button type="button" class="btn primary s-046678" @click="open = !open"
             x-text="open ? 'Fermer' : 'Changer de programme'"></button>
 
-    <div x-show="open" x-transition style="margin-top:14px;">
-      <div style="display:flex; gap:6px; margin-bottom:10px;">
-        <label class="btn" :class="{ primary: mode==='replace' }" style="flex:1; justify-content:center; cursor:pointer;">
+    <div class="s-d6f2af" x-show="open" x-transition>
+      <div class="s-ac52d8">
+        <label class="btn s-6d409c" :class="{ primary: mode==='replace' }">
           <input type="radio" value="replace" x-model="mode" style="display:none;">Remplacer
         </label>
-        <label class="btn" :class="{ primary: mode==='merge' }" style="flex:1; justify-content:center; cursor:pointer;">
+        <label class="btn s-6d409c" :class="{ primary: mode==='merge' }">
           <input type="radio" value="merge" x-model="mode" style="display:none;">Fusionner
         </label>
       </div>
-      <p style="font-size:0.78rem; color:var(--text-dim); margin-bottom:10px;">
+      <p class="s-8f7368">
         <span x-show="mode==='replace'">⚠️ Les séances du programme en cours seront remplacées. Tes autres programmes restent.</span>
         <span x-show="mode==='merge'">✓ Les séances actuelles sont gardées ; seules les nouvelles séances sont ajoutées.</span>
       </p>
 
       {% for p in catalog_programs %}
-        <div id="catalog-{{ p.id }}" class="card catalog-card" style="margin:10px 0;"
+        <div id="catalog-{{ p.id }}" class="card catalog-card s-f4e719"
              :class="applyId === '{{ p.id }}' ? 'catalog-suggested' : ''"
              x-data="{ showDetails: false }">
-          <div style="display:flex; justify-content:space-between; align-items:start; gap:8px;">
+          <div class="s-522c48">
             <div>
-              <div style="font-weight:600; color:var(--text-1);">{{ p.title }}</div>
-              <div style="font-size:0.78rem; color:var(--text-2);">{{ p.subtitle }}</div>
+              <div class="s-337883">{{ p.title }}</div>
+              <div class="s-71a611">{{ p.subtitle }}</div>
             </div>
-            <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+            <div class="s-076260">
               {% if p.pro %}
                 <span class="badge-pro">PRO</span>
               {% endif %}
-              <span x-show="applyId === '{{ p.id }}'" x-cloak class="label-icon" style="font-size:10px; padding:2px 8px; border-radius:10px; background:var(--accent-bg); color:var(--accent); border:0.5px solid var(--accent);">
+              <span x-show="applyId === '{{ p.id }}'" x-cloak class="label-icon s-f67b5d">
                 <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Suggéré
               </span>
               {% if current_program_meta and current_program_meta.id == p.id %}
-                <span style="font-size:10px; padding:2px 8px; border-radius:10px; background:var(--success-bg); color:var(--success);">ACTUEL</span>
+                <span class="s-6041de">ACTUEL</span>
               {% endif %}
             </div>
           </div>
-          <p style="font-size:0.82rem; margin:8px 0;">{{ p.description }}</p>
-          <div class="label-icon" style="font-size:0.75rem; color:var(--text-3);"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>{{ p.muscles|join(' · ') }}</div>
-          <div class="label-icon" style="font-size:0.75rem; color:var(--text-3); margin-top:2px;"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>{{ p.nb_seances }} séances</div>
+          <p class="s-327506">{{ p.description }}</p>
+          <div class="label-icon s-538f5b"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>{{ p.muscles|join(' · ') }}</div>
+          <div class="label-icon s-84b281"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>{{ p.nb_seances }} séances</div>
 
-          <button type="button" class="btn mini label-icon" style="margin-top:10px;"
+          <button type="button" class="btn mini label-icon s-d2c171"
                   @click="showDetails = !showDetails"
                   :aria-expanded="showDetails.toString()">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard-list"/></svg>
@@ -364,16 +362,16 @@
           </div>
 
           {% if p.locked %}
-            <a href="/premium" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px; display:flex;">
+            <a href="/premium" class="btn primary label-icon s-dd3709">
               <svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Débloquer avec PRO
             </a>
           {% else %}
-          <form method="post" action="/programme/change-program" style="margin-top:10px;"
+          <form class="s-d2c171" method="post" action="/programme/change-program"
                 x-data="{ c:false }">
             <input type="hidden" name="programme_id" value="{{ p.id }}">
             <input type="hidden" name="mode" :value="mode">
             <input type="hidden" name="confirm" value="yes">
-            <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>
+            <button type="button" class="btn label-icon s-9f1047" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>
               <span x-text="mode==='merge' ? 'Fusionner ce programme' : 'Choisir ce programme'"></span>
             </button>
             <div class="inline-confirm" x-show="c" x-cloak>
@@ -386,14 +384,14 @@
         </div>
       {% endfor %}
 
-      <div class="card" style="margin:10px 0; border-color:var(--warning);">
-        <div class="label-icon" style="font-weight:600; color:var(--warning);"><svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</div>
-        <p style="font-size:0.82rem; margin:8px 0;">Vide les séances actuelles et te laisse construire ton programme à zéro depuis cet onglet.</p>
+      <div class="card s-ecac84">
+        <div class="label-icon s-92694f"><svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#settings"/></svg>Créer mon propre programme</div>
+        <p class="s-327506">Vide les séances actuelles et te laisse construire ton programme à zéro depuis cet onglet.</p>
         <form method="post" action="/programme/change-program" x-data="{ c:false }">
           <input type="hidden" name="programme_id" value="custom">
           <input type="hidden" name="mode" value="replace">
           <input type="hidden" name="confirm" value="yes">
-          <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
+          <button type="button" class="btn label-icon s-9f1047" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#settings"/></svg>Repartir de zéro</button>
           <div class="inline-confirm" x-show="c" x-cloak>
             <span class="confirm-label">Effacer toutes les séances ?</span>
             <button type="button" class="btn" @click="c=false">Annuler</button>
@@ -406,22 +404,20 @@
   </details>
 
   {# ── Modal renommer un programme ─────────────────────────── #}
-  <div x-show="renameModal.open" x-transition.opacity
+  <div class="s-40258d" x-show="renameModal.open" x-transition.opacity
        x-init="$watch('renameModal.open', v => { if(v) document.body.appendChild($el); })"
-       style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:16px;"
        @click.self="closeRenameModal()"
        @keydown.escape.window="closeRenameModal()">
-    <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(255,255,255,0.15); border-radius:22px; padding:18px; max-width:380px; width:calc(100vw - 32px); box-shadow:0 8px 48px rgba(0,0,0,0.6);"
+    <div class="s-73d1cf"
          @click.stop>
-      <h4 class="label-icon" style="color:var(--text-1); margin:0 0 12px; font-weight:500;">
+      <h4 class="label-icon s-efe757">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#edit"/></svg>Renommer le programme
       </h4>
-      <label class="field-label" style="margin-top:0;" for="rename-programme">Nouveau nom</label>
-      <input x-ref="renameInput" id="rename-programme" type="text" class="field" maxlength="80"
+      <label class="field-label s-d46224" for="rename-programme">Nouveau nom</label>
+      <input x-ref="renameInput" id="rename-programme" type="text" class="field s-a68cf1" maxlength="80"
              x-model="renameModal.name"
-             style="margin:0 0 14px; font-size:1rem;"
              @keydown.enter.prevent="confirmRenameModal()">
-      <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <div class="s-68c73e">
         <button type="button" class="btn" @click="closeRenameModal()">Annuler</button>
         <button type="button" class="btn violet label-icon" @click="confirmRenameModal()"
                 :disabled="!renameModal.name.trim() || renameModal.name.trim().length > 80">

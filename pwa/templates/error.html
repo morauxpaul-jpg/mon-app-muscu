@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/static/css/theme.css">
   <link rel="stylesheet" href="/static/css/components.css">
   <link rel="stylesheet" href="/static/css/icons.css">
+  <link rel="stylesheet" href="/static/css/styles-extraits.css">
   <style>
     .err-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 20px; text-align:center; }
     .err-code {
@@ -39,7 +40,7 @@
     <h1 class="err-title">{% if code == 404 %}Page introuvable{% else %}Oups, quelque chose a cassé{% endif %}</h1>
     <p class="err-msg">{{ message }}</p>
     <div class="err-actions">
-      <a href="/accueil" class="btn-primary label-icon" style="justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#home"/></svg>Retour à l'accueil</a>
+      <a href="/accueil" class="btn-primary label-icon s-03c4bb"><svg class="icon icon-sm"><use href="/static/img/icons.svg#home"/></svg>Retour à l'accueil</a>
       <a href="mailto:muscutracker@gmail.com?subject=Muscu%20Tracker%20—%20Erreur%20{{ code }}&body=Bonjour,%0D%0A%0D%0AJ'ai%20rencontré%20une%20erreur%20{{ code }}%20dans%20l'application.%0D%0A%0D%0ADescription%20:%20" class="btn-report">Signaler un problème</a>
     </div>
   </main>

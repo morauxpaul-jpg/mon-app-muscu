@@ -28,7 +28,7 @@ def admin(fake_db, logged_in, monkeypatch):
 def test_la_ligne_ouvre_la_fiche_sans_onclick(admin):
     html = admin.get("/admin").get_data(as_text=True)
     assert "onclick=\"adminShowUser(" not in html
-    ligne = re.search(r'<div class="admin-user-open"[^>]*>', html).group(0)
+    ligne = re.search(r'<div class="admin-user-open[^"]*"[^>]*>', html).group(0)
     assert f'data-uid="{USER_ID}"' in ligne
     assert 'data-label="a&#34;b@example.com"' in ligne or 'data-label="a&quot;b@example.com"' in ligne
 

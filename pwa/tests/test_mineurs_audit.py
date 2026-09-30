@@ -251,3 +251,40 @@ def test_la_landing_parle_du_coach(fake_db, client):
     html = client.get("/").get_data(as_text=True)
     assert "coach ia" in html.lower()
     assert "Arcade" not in html
+
+
+# ── M9 : les styles vivent dans des feuilles, pas dans les gabarits ─
+
+
+def _gabarits():
+    return list((PWA / "templates").glob("*.html"))
+
+
+def test_les_styles_en_ligne_ne_reviennent_pas():
+    """949 attributs style= avant l'extraction (outils/extraire_styles.py).
+    Restent seulement ceux qui ne peuvent pas partir : valeur calculée par
+    Jinja, ou display:none que des scripts lisent et changent. Cliquet :
+    ce nombre ne doit que baisser."""
+    import re
+    n = sum(len(re.findall(r'(?<![:\w-])style=["\']', p.read_text(encoding="utf-8")))
+            for p in _gabarits())
+    assert n <= 56, f"{n} attributs style= : relancer outils/extraire_styles.py"
+
+
+def test_chaque_classe_generee_existe_et_sert():
+    import re
+    css = (PWA / "static" / "css" / "styles-extraits.css").read_text(encoding="utf-8")
+    definies = set(re.findall(r"\.(s-[0-9a-f]{6}):not", css))
+    utilisees = set()
+    for p in _gabarits():
+        utilisees |= set(re.findall(r"\b(s-[0-9a-f]{6})\b", p.read_text(encoding="utf-8")))
+    assert utilisees <= definies, f"classes sans règle : {sorted(utilisees - definies)[:5]}"
+    assert definies <= utilisees, f"règles mortes : {sorted(definies - utilisees)[:5]}"
+
+
+def test_la_feuille_generee_est_chargee_partout_ou_elle_sert(fake_db, logged_in):
+    import app as appmod
+    for page in ("/accueil", "/seance", "/premium"):
+        assert "/static/css/styles-extraits.css" in logged_in.get(page).get_data(as_text=True)
+    visiteur = appmod.app.test_client()
+    assert "/static/css/styles-extraits.css" in visiteur.get("/").get_data(as_text=True)

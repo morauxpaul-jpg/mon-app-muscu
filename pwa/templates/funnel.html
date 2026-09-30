@@ -2,27 +2,27 @@
 {% block title %}Funnel · Admin{% endblock %}
 
 {% block content %}
-  <a href="/admin" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour admin</a>
+  <a href="/admin" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour admin</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Funnel de conversion</h1>
 
   {# ── Sélecteur de fenêtre ── #}
-  <div class="seg" style="margin-bottom:14px;">
+  <div class="seg s-2b583d">
     {% for d in [7, 30, 90] %}
       <a href="/admin/funnel?days={{ d }}" class="seg-item {% if days == d %}seg-on{% endif %}">{{ d }} j</a>
     {% endfor %}
   </div>
 
   {% if not funnel.steps %}
-    <div class="card" style="text-align:center; color:var(--text-dim);">
+    <div class="card s-145695">
       Aucune donnée. La table <code>events</code> se remplit dès que les utilisateurs interagissent
       (vérifie que la migration <code>v28</code> est appliquée dans Supabase).
     </div>
   {% else %}
     <div class="card">
-      <div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:12px;">
-        Utilisateurs distincts par étape sur les <strong style="color:var(--text-2);">{{ funnel.days }} derniers jours</strong>.
-        <span style="color:var(--text-3);">% du haut de funnel · conversion vs étape précédente.</span>
+      <div class="s-b62691">
+        Utilisateurs distincts par étape sur les <strong class="s-b3842e">{{ funnel.days }} derniers jours</strong>.
+        <span class="s-ab23bb">% du haut de funnel · conversion vs étape précédente.</span>
       </div>
 
       {% for s in funnel.steps %}
@@ -47,10 +47,10 @@
     </div>
 
     {# ── Métrique d'engagement annexe ── #}
-    <div class="card" style="margin-top:12px;">
-      <div class="label-icon" style="justify-content:space-between;">
-        <span class="label-icon" style="color:var(--text-2); font-size:0.85rem;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA utilisé</span>
-        <strong style="color:var(--text-1);">{{ funnel.coach_msgs_users }} <span style="font-weight:400; color:var(--text-dim); font-size:0.78rem;">VIP actifs</span></strong>
+    <div class="card s-56f435">
+      <div class="label-icon s-a562f4">
+        <span class="label-icon s-050e59"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA utilisé</span>
+        <strong class="s-38f301">{{ funnel.coach_msgs_users }} <span class="s-80be56">VIP actifs</span></strong>
       </div>
     </div>
   {% endif %}

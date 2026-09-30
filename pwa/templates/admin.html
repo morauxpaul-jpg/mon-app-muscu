@@ -2,23 +2,23 @@
 {% block title %}Admin · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/plus" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Admin</h1>
 
-  <div class="card" style="margin-bottom:12px;">
-    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-      <span><strong style="color:var(--text-1);">{{ total_count }}</strong> utilisateur{% if total_count != 1 %}s{% endif %}</span>
-      <span><strong style="color:var(--success);">{{ vip_count }}</strong> VIP</span>
+  <div class="card s-da12f2">
+    <div class="s-767234">
+      <span><strong class="s-38f301">{{ total_count }}</strong> utilisateur{% if total_count != 1 %}s{% endif %}</span>
+      <span><strong class="s-5a4529">{{ vip_count }}</strong> VIP</span>
     </div>
-    <div style="font-size:0.72rem; color:var(--text-dim); margin-top:6px;">
+    <div class="s-46ed26">
       Connecté en tant que <code>{{ current_email }}</code>
     </div>
   </div>
 
   {# ── Stats globales ── #}
   <div class="card admin-stats">
-    <h3 class="label-icon" style="margin-top:0;"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Statistiques globales</h3>
+    <h3 class="label-icon s-d46224"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Statistiques globales</h3>
     <div class="stat-grid">
       <div class="stat"><div class="stat-v">{{ stats.active_7d }}</div><div class="stat-l">Actifs 7 j</div></div>
       <div class="stat"><div class="stat-v">{{ stats.active_30d }}</div><div class="stat-l">Actifs 30 j</div></div>
@@ -28,46 +28,46 @@
     </div>
   </div>
 
-  <a href="/admin/funnel" class="card label-icon" style="display:flex; align-items:center; justify-content:space-between; text-decoration:none; margin-bottom:12px;">
-    <span class="label-icon" style="color:var(--text-1);"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Funnel de conversion</span>
-    <svg class="icon icon-sm" style="color:var(--text-dim);"><use href="/static/img/icons.svg#chevron-right"/></svg>
+  <a href="/admin/funnel" class="card label-icon s-2625a9">
+    <span class="label-icon s-38f301"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Funnel de conversion</span>
+    <svg class="icon icon-sm s-73e788"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </a>
 
   {# ── Relance des inactifs (push) ── #}
-  <div class="card" style="margin-bottom:12px;">
-    <div class="label-icon" style="color:var(--text-1); font-size:0.9rem; margin-bottom:8px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>Relance des inactifs</div>
-    <p style="font-size:0.76rem; color:var(--text-dim); margin:0 0 10px;">Envoie un push aux abonnés inactifs depuis 3 à 30 jours.</p>
-    <button type="button" id="reac-btn" class="btn" style="width:100%;" onclick="adminSendReactivation(this)">Envoyer la relance</button>
-    <button type="button" class="btn" style="width:100%; margin-top:8px;" onclick="adminSendTestPush(this)">M'envoyer une notif de test</button>
-    <div id="reac-result" style="font-size:0.78rem; color:var(--text-2); margin-top:8px; display:none;"></div>
+  <div class="card s-da12f2">
+    <div class="label-icon s-30701f"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>Relance des inactifs</div>
+    <p class="s-6c8ea5">Envoie un push aux abonnés inactifs depuis 3 à 30 jours.</p>
+    <button type="button" id="reac-btn" class="btn s-046678" onclick="adminSendReactivation(this)">Envoyer la relance</button>
+    <button type="button" class="btn s-a4a5b8" onclick="adminSendTestPush(this)">M'envoyer une notif de test</button>
+    <div class="s-7566f6" id="reac-result" style="display:none;"></div>
   </div>
 
   {# ── Newsletter (export pour Brevo) ── #}
-  <div class="card" style="margin-bottom:12px;">
-    <div class="label-icon" style="color:var(--text-1); font-size:0.9rem; margin-bottom:8px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#mail"/></svg>Newsletter</div>
-    <p style="font-size:0.76rem; color:var(--text-dim); margin:0 0 10px;">E-mails des utilisateurs ayant accepté la newsletter (réglage dans Gestion). Ouvre la liste et copie-la dans Brevo.</p>
-    <a class="btn" style="width:100%; justify-content:center;" href="/admin/newsletter-emails" target="_blank" rel="noopener">Voir / exporter les e-mails</a>
+  <div class="card s-da12f2">
+    <div class="label-icon s-30701f"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#mail"/></svg>Newsletter</div>
+    <p class="s-6c8ea5">E-mails des utilisateurs ayant accepté la newsletter (réglage dans Gestion). Ouvre la liste et copie-la dans Brevo.</p>
+    <a class="btn s-9f1047" href="/admin/newsletter-emails" target="_blank" rel="noopener">Voir / exporter les e-mails</a>
   </div>
 
   {# ── Recherche + liste users ── #}
-  <div class="card" style="padding:10px 12px;">
-    <input id="admin-search" type="search" class="field" placeholder="🔍 Rechercher email ou prénom…" style="width:100%; margin:0;" autocomplete="off">
+  <div class="card s-2285bd">
+    <input id="admin-search" type="search" class="field s-1fc7f0" placeholder="🔍 Rechercher email ou prénom…" autocomplete="off">
   </div>
 
   <div id="admin-user-list">
     {% if not users %}
-      <div class="card" style="text-align:center; color:var(--text-dim);">Aucun utilisateur.</div>
+      <div class="card s-145695">Aucun utilisateur.</div>
     {% endif %}
 
     {% for u in users %}
       <div class="admin-user" data-email="{{ (u.email or '')|lower }}" data-prenom="{{ (u.prenom or '')|lower }}">
-        <div class="admin-user-open" style="flex:1; min-width:0; cursor:pointer;" data-uid="{{ u.id }}" data-label="{{ u.email or '—' }}">
-          <div style="font-size:0.88rem; color:var(--text-1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
-          <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">
+        <div class="admin-user-open s-679290" data-uid="{{ u.id }}" data-label="{{ u.email or '—' }}">
+          <div class="s-c7dced">{{ u.email or '—' }}</div>
+          <div class="s-1b2dea">
             {% if u.prenom %}{{ u.prenom }} · {% endif %}Inscrit le {{ u.created_at or '?' }}
           </div>
         </div>
-        <form method="post" action="/admin/set-tier" style="margin:0; display:flex; align-items:center; gap:6px;">
+        <form class="s-b54762" method="post" action="/admin/set-tier">
           <input type="hidden" name="user_id" value="{{ u.id }}">
           {% if u.tier == 'vip' %}
             <span class="tier-pill tier-vip">VIP</span>
@@ -76,21 +76,21 @@
           {% else %}
             <span class="tier-pill tier-free">FREE</span>
             <input type="hidden" name="tier" value="vip">
-            <button type="submit" class="btn" style="padding:4px 10px; font-size:0.72rem;" data-haptic="1">Passer VIP</button>
+            <button type="submit" class="btn s-5ad9b6" data-haptic="1">Passer VIP</button>
           {% endif %}
         </form>
       </div>
     {% endfor %}
-    <div id="admin-empty-filter" class="card" style="display:none; text-align:center; color:var(--text-dim);">Aucun résultat.</div>
+    <div id="admin-empty-filter" class="card s-145695" style="display:none;">Aucun résultat.</div>
   </div>
 
   {# ── Modal fiche user ── #}
-  <div id="admin-user-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this){this.style.display='none'}">
-    <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(255,255,255,0.15); border-radius:22px; padding:18px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 48px rgba(0,0,0,0.6);">
-      <h3 id="admin-u-title" style="color:var(--text-1); margin:0 0 10px; word-break:break-all; font-size:1rem;"></h3>
-      <div id="admin-u-body" style="font-size:0.85rem; line-height:1.5; color:var(--text-1);">Chargement…</div>
-      <div style="display:flex; gap:8px; margin-top:14px;">
-        <button type="button" class="btn btn-cancel" style="flex:1;" onclick="document.getElementById('admin-user-modal').style.display='none'">Fermer</button>
+  <div class="s-1e20da" id="admin-user-modal" style="display:none;" onclick="if(event.target===this){this.style.display='none'}">
+    <div class="s-c1734a">
+      <h3 class="s-9117e2" id="admin-u-title"></h3>
+      <div class="s-e54640" id="admin-u-body">Chargement…</div>
+      <div class="s-80a892">
+        <button type="button" class="btn btn-cancel s-97445a" onclick="document.getElementById('admin-user-modal').style.display='none'">Fermer</button>
       </div>
     </div>
   </div>

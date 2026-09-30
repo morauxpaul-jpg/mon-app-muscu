@@ -2,7 +2,7 @@
 {% block title %}Cardio · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/seance?date={{ date_iso }}" class="btn label-icon" style="display:inline-flex; margin-bottom: 12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/seance?date={{ date_iso }}" class="btn label-icon s-364572"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <div class="choix-hero">
     <div class="choix-date">{{ date_label|upper }}</div>
@@ -10,8 +10,7 @@
   </div>
 
   {# L'import de l'export Strava : discret, il ne sert qu'une fois ou deux. #}
-  <a href="/cardio/import" class="btn mini label-icon"
-     style="display:inline-flex; margin-bottom:10px;">
+  <a href="/cardio/import" class="btn mini label-icon s-86c142">
     <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#upload"/></svg>Importer mon historique Strava
   </a>
 
@@ -21,7 +20,7 @@
 
     <!-- Type d'activité -->
     <div class="card">
-      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#heart"/></svg>TYPE D'ACTIVITÉ</div>
+      <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#heart"/></svg>TYPE D'ACTIVITÉ</div>
       <div class="cardio-activites">
         {% for name, icon, met in activites %}
           {# Pas d'expression Alpine ici : le libellé « Montée d'escaliers »
@@ -37,19 +36,19 @@
 
     <!-- Chrono -->
     <div class="card">
-      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clock"/></svg>CHRONO</div>
+      <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clock"/></svg>CHRONO</div>
       <div class="cardio-chrono-display" x-text="formatTime(elapsed)">00:00</div>
       <div class="cardio-chrono-btns">
-        <button type="button" class="btn" @click="start()" x-show="!running && elapsed === 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span style="margin-left:6px;">Démarrer</span></button>
-        <button type="button" class="btn primary" @click="pause()" x-show="running"><svg class="icon icon-sm"><use href="/static/img/icons.svg#pause"/></svg><span style="margin-left:6px;">Pause</span></button>
-        <button type="button" class="btn" @click="resume()" x-show="!running && elapsed > 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span style="margin-left:6px;">Reprendre</span></button>
-        <button type="button" class="btn" @click="stop()" x-show="elapsed > 0" style="background: rgba(255,69,58,0.1); border-color: rgba(255,69,58,0.35); color: var(--danger);"><svg class="icon icon-sm"><use href="/static/img/icons.svg#square"/></svg><span style="margin-left:6px;">Stop</span></button>
+        <button type="button" class="btn" @click="start()" x-show="!running && elapsed === 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span class="s-391ef1">Démarrer</span></button>
+        <button type="button" class="btn primary" @click="pause()" x-show="running"><svg class="icon icon-sm"><use href="/static/img/icons.svg#pause"/></svg><span class="s-391ef1">Pause</span></button>
+        <button type="button" class="btn" @click="resume()" x-show="!running && elapsed > 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#play"/></svg><span class="s-391ef1">Reprendre</span></button>
+        <button type="button" class="btn s-b362be" @click="stop()" x-show="elapsed > 0"><svg class="icon icon-sm"><use href="/static/img/icons.svg#square"/></svg><span class="s-391ef1">Stop</span></button>
       </div>
       {# Suivi GPS. Le navigateur ne donne des positions que tant que la page
          est visible : on garde donc l'écran allumé, et on DIT ce qu'on a
          perdu plutôt que d'afficher un total qu'on sait bas. #}
-      <div x-show="gpsDispo && unites().regle" x-cloak style="margin-top:10px;">
-        <button type="button" class="btn label-icon" style="width:100%; justify-content:center;"
+      <div class="s-d2c171" x-show="gpsDispo && unites().regle" x-cloak>
+        <button type="button" class="btn label-icon s-9f1047"
                 x-show="!gpsActif" @click="gpsDemarrer()">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#target"/></svg>Suivre la distance au GPS
         </button>
@@ -63,21 +62,21 @@
           <p class="gps-note" x-show="!gpsMessage">Garde l'écran allumé : le suivi s'arrête si l'app passe en arrière-plan.</p>
         </div>
       </div>
-      <p x-show="gpsErreur" x-cloak class="gps-note" style="color:var(--danger);" x-text="gpsErreur"></p>
+      <p x-show="gpsErreur" x-cloak class="gps-note s-497726" x-text="gpsErreur"></p>
 
-      <div style="font-size: 0.78rem; color: var(--text-dim); text-align: center; margin-top: 8px;">ou saisie manuelle :</div>
+      <div class="s-3fdfbc">ou saisie manuelle :</div>
       <label class="field-label">Durée (minutes)</label>
       <input type="number" inputmode="numeric" min="0" name="duree_min" class="field" x-model.number="dureeMin" placeholder="ex. 30">
     </div>
 
     <!-- Distance + Inclinaison + FC + Intensité -->
     <div class="card">
-      <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#activity"/></svg>PERFORMANCE</div>
+      <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#activity"/></svg>PERFORMANCE</div>
 
       {# Distance et vitesse se déduisent l'une de l'autre avec la durée : on
          demande les deux, chacune suggérant l'autre en filigrane, et le
          serveur complète ce qui manque (core/seance_cardio.py). #}
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <div class="s-24a1ed">
         <div>
           <label class="field-label" for="cardio-dist" x-text="unites().dist"></label>
           <input type="text" inputmode="decimal" id="cardio-dist" name="distance_km" class="field"
@@ -89,21 +88,20 @@
                  x-model="vitesse" :placeholder="autoVitesse() || 'ex. 10'">
         </div>
       </div>
-      <p style="font-size:0.72rem; color:var(--text-3); margin:4px 0 0;"
+      <p class="s-74f672"
          x-show="unites().vit">Remplis l'un ou l'autre : le second se calcule.</p>
 
       <template x-if="activite === 'Course' || activite === 'Marche'">
-        <div style="margin-top: 2px;">
+        <div class="s-46a7c4">
           <label class="field-label" for="cardio-incline">Inclinaison (<span x-text="incline"></span>%)</label>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:0.75rem; color:var(--text-3);">0%</span>
-            <input type="range" id="cardio-incline" name="incline" min="0" max="20" step="0.5"
-                   x-model.number="incline" :aria-valuetext="incline + ' %'"
-                   style="flex:1; accent-color: var(--accent); height: 28px;">
-            <span style="font-size:0.75rem; color:var(--text-3);">20%</span>
+          <div class="s-26c3ae">
+            <span class="s-538f5b">0%</span>
+            <input class="s-823f49" type="range" id="cardio-incline" name="incline" min="0" max="20" step="0.5"
+                   x-model.number="incline" :aria-valuetext="incline + ' %'">
+            <span class="s-538f5b">20%</span>
           </div>
-          <div style="text-align:center; font-size:0.72rem; color:var(--text-dim); margin-top:2px;">
-            MET ajusté : <strong x-text="adjustedMet().toFixed(1)" style="color:var(--accent);"></strong>
+          <div class="s-41b856">
+            MET ajusté : <strong class="s-a80552" x-text="adjustedMet().toFixed(1)"></strong>
           </div>
         </div>
       </template>
@@ -122,7 +120,7 @@
       </div>
 
       <label class="field-label">Calories brûlées
-        <span style="color: var(--text-dim); font-weight: 400;">(vide = estimation auto)</span>
+        <span class="s-b2c986">(vide = estimation auto)</span>
       </label>
       <input type="number" inputmode="numeric" name="calories" class="field" x-model.number="calories" :placeholder="'estimé : ' + estimatedCal() + ' kcal'">
 
@@ -132,7 +130,7 @@
 
     <!-- Résumé -->
     <div class="card" x-show="dureeMin > 0" x-cloak>
-      <div class="label-icon" style="color: var(--success); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>RÉSUMÉ</div>
+      <div class="label-icon s-a988a5"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>RÉSUMÉ</div>
       <div class="cardio-summary">
         <div class="summary-item">
           <div class="summary-label">Durée</div>
@@ -157,7 +155,7 @@
       </div>
     </div>
 
-    <button type="submit" class="btn primary label-icon" data-haptic="1" style="width:100%; justify-content:center; margin-top: 6px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer la séance cardio</button>
+    <button type="submit" class="btn primary label-icon s-87de47" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer la séance cardio</button>
   </form>
 
   <style>

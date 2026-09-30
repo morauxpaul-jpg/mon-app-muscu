@@ -3,12 +3,12 @@
 
 {% block content %}
 <div x-data="gen()">
-  <a href="/programme" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Programme</a>
+  <a href="/programme" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Programme</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Générateur IA</h1>
-  <p style="color:var(--text-2); font-size:0.85rem; margin:-4px 0 14px;">
+  <p class="s-947155">
     Décris ton objectif, l'IA construit un programme sur-mesure que tu peux adopter en un clic.
-    <span style="color:var(--text-dim);">· <span x-text="quotaLeft"></span>/<span>{{ quota_limit }}</span> génération(s) restante(s) cette semaine</span>
+    <span class="s-73e788">· <span x-text="quotaLeft"></span>/<span>{{ quota_limit }}</span> génération(s) restante(s) cette semaine</span>
   </p>
 
   {# ── Formulaire ─────────────────────────────────────────────── #}
@@ -27,7 +27,7 @@
       </select>
     </label>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+    <div class="s-e3b679">
       <label class="gen-field">
         <span>Séances / semaine</span>
         <select class="field" x-model.number="form.frequence">
@@ -52,13 +52,13 @@
     {# ── Cardio ─────────────────────────────────────────────── #}
     <div class="gen-cardio">
       <label class="gen-cardio-toggle">
-        <span class="label-icon"><svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>Ajouter du cardio</span>
+        <span class="label-icon"><svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>Ajouter du cardio</span>
         <input type="checkbox" x-model="form.cardio" class="gen-switch">
       </label>
 
-      <div x-show="form.cardio" x-cloak x-transition style="display:grid; gap:12px; margin-top:12px;">
+      <div class="s-ffa9d6" x-show="form.cardio" x-cloak x-transition>
         <div class="gen-field">
-          <span>Type(s) de cardio <span style="color:var(--text-dim); font-weight:400;">— coche, ou laisse vide = peu importe</span></span>
+          <span>Type(s) de cardio <span class="s-071d82">— coche, ou laisse vide = peu importe</span></span>
           <div class="gen-chips">
             <template x-for="t in cardioTypesAll" :key="t">
               <button type="button" class="gen-chip"
@@ -66,7 +66,7 @@
                 @click="toggleCardioType(t)" x-text="t"></button>
             </template>
           </div>
-          <span x-show="form.cardioTypes.length === 0" style="color:var(--text-dim); font-size:0.72rem;">Peu importe — l'IA choisit selon ton objectif.</span>
+          <span class="s-8165b4" x-show="form.cardioTypes.length === 0">Peu importe — l'IA choisit selon ton objectif.</span>
         </div>
 
         <div class="gen-field">
@@ -90,38 +90,38 @@
     </div>
 
     <label class="gen-field">
-      <span>Contraintes, blessures, préférences <span style="color:var(--text-dim); font-weight:400;">(optionnel)</span></span>
+      <span>Contraintes, blessures, préférences <span class="s-071d82">(optionnel)</span></span>
       <textarea class="field" rows="2" maxlength="400" x-model="form.contraintes"
         placeholder="Ex : épaule droite fragile, pas de soulevé de terre, je préfère les haltères…"></textarea>
     </label>
 
-    <button type="button" class="btn primary label-icon" style="justify-content:center;"
+    <button type="button" class="btn primary label-icon s-03c4bb"
       :disabled="loading || quotaLeft <= 0" @click="generate()">
       <template x-if="!loading"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg></template>
       <span x-text="loading ? 'Génération en cours…' : 'Générer mon programme'"></span>
     </button>
-    <div x-show="error" x-text="error" style="color:var(--danger); font-size:0.82rem; text-align:center;"></div>
-    <div x-show="quotaLeft <= 0" style="color:var(--text-dim); font-size:0.78rem; text-align:center;">
+    <div class="s-f4cfdb" x-show="error" x-text="error"></div>
+    <div class="s-88b41d" x-show="quotaLeft <= 0">
       Limite hebdomadaire atteinte — reviens dans quelques jours.
     </div>
   </div>
 
   {# ── Preview du programme généré ────────────────────────────── #}
   <div x-show="program" x-cloak>
-    <div class="card" style="border-color:var(--accent);">
-      <div class="label-icon" style="justify-content:space-between; margin-bottom:6px;">
-        <h2 style="margin:0; font-size:1.05rem; color:var(--text-1);" x-text="program?.name"></h2>
-        <span class="tier-pill" style="background:var(--accent-bg); color:var(--accent); font-size:0.7rem; font-weight:600; letter-spacing:1px; padding:3px 8px; border-radius:6px;">IA</span>
+    <div class="card s-38fcbe">
+      <div class="label-icon s-2f8b2e">
+        <h2 class="s-c8441f" x-text="program?.name"></h2>
+        <span class="tier-pill s-c67092">IA</span>
       </div>
-      <p x-show="program?.notes" x-text="program?.notes" style="color:var(--text-2); font-size:0.82rem; line-height:1.45; margin:0;"></p>
+      <p class="s-787954" x-show="program?.notes" x-text="program?.notes"></p>
     </div>
 
     <template x-for="(exos, sname) in program?.seances" :key="sname">
-      <div class="card" style="padding:12px 14px;">
-        <h3 class="label-icon" style="margin:0 0 8px; font-size:0.95rem; color:var(--text-1);">
+      <div class="card s-60bde0">
+        <h3 class="label-icon s-29f736">
           <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>
           <span x-text="sname"></span>
-          <span style="color:var(--text-dim); font-weight:400; font-size:0.78rem;" x-text="'· ' + exos.length + ' exos'"></span>
+          <span class="s-b6172f" x-text="'· ' + exos.length + ' exos'"></span>
         </h3>
         <template x-for="(e, i) in exos" :key="i">
           <div class="gen-exo">
@@ -137,18 +137,18 @@
 
     {# Cardio #}
     <template x-if="program?.cardio?.length">
-      <div class="card" style="padding:12px 14px; border-color:var(--warning);">
-        <h3 class="label-icon" style="margin:0 0 8px; font-size:0.95rem; color:var(--text-1);">
-          <svg class="icon icon-sm" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>
+      <div class="card s-27d354">
+        <h3 class="label-icon s-29f736">
+          <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>
           Cardio
-          <span style="color:var(--text-dim); font-weight:400; font-size:0.78rem;" x-text="'· ' + program.cardio.length + ' séance' + (program.cardio.length > 1 ? 's' : '')"></span>
+          <span class="s-b6172f" x-text="'· ' + program.cardio.length + ' séance' + (program.cardio.length > 1 ? 's' : '')"></span>
         </h3>
         <template x-for="(c, i) in program.cardio" :key="i">
           <div class="gen-exo">
             <span class="gen-exo-name" x-text="c.activite"></span>
             <span class="gen-exo-meta">
               <span x-text="c.duree + ' min'"></span>
-              <span class="gen-exo-muscle" style="color:var(--warning); background:var(--warning-bg);"
+              <span class="gen-exo-muscle s-03a49c"
                 x-text="(c.jours && c.jours.length) ? c.jours.map(j => j.slice(0,3)).join(', ') : 'flexible'"></span>
             </span>
           </div>
@@ -157,8 +157,8 @@
     </template>
 
     {# Planning #}
-    <div class="card" style="padding:12px 14px;">
-      <h3 class="label-icon" style="margin:0 0 8px; font-size:0.9rem; color:var(--text-1);"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning</h3>
+    <div class="card s-60bde0">
+      <h3 class="label-icon s-1d79de"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning</h3>
       <div class="gen-planning">
         <template x-for="day in days" :key="day">
           <div class="gen-day" :class="{ 'gen-day-on': program?.planning?.[day], 'gen-day-cardio': cardioFor(day) }">
@@ -171,15 +171,15 @@
     </div>
 
     {# Actions #}
-    <div style="display:flex; gap:10px; margin:14px 0 4px;">
-      <button type="button" class="btn btn-cancel" style="flex:1;" @click="reset()">↺ Régénérer</button>
-      <form method="post" action="/generator/apply" style="flex:2; margin:0;">
+    <div class="s-dc4c3f">
+      <button type="button" class="btn btn-cancel s-97445a" @click="reset()">↺ Régénérer</button>
+      <form class="s-d22c86" method="post" action="/generator/apply">
         <input type="hidden" name="program" :value="JSON.stringify(program)">
-        <button type="submit" class="btn primary" style="width:100%;" data-haptic="1"
+        <button type="submit" class="btn primary s-046678" data-haptic="1"
           x-ref="adopt" @click="confirmAdopt($event)">Adopter ce programme</button>
       </form>
     </div>
-    <p style="color:var(--text-dim); font-size:0.74rem; text-align:center; margin:6px 0 0;">
+    <p class="s-34fc29">
       Adopter remplace ton programme en cours. Tes autres programmes et ton historique sont conservés.
     </p>
   </div>

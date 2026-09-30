@@ -5,63 +5,63 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Gestion</h1>
 
   {% if request.args.get('reset') == 'soft' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Historique réinitialisé. Les records sont archivés.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Historique réinitialisé. Les records sont archivés.</div>
   {% endif %}
   {% if request.args.get('reset') == 'total' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Tout a été remis à zéro.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Tout a été remis à zéro.</div>
   {% endif %}
   {% if request.args.get('import') == 'ok' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Données importées avec succès.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Données importées avec succès.</div>
   {% endif %}
   {% if request.args.get('import') == 'error' %}
-    <div class="card label-icon" style="border-color: var(--danger);"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Erreur : fichier JSON invalide ou manquant.</div>
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Erreur : fichier JSON invalide ou manquant.</div>
   {% endif %}
 
   {# ── Section : Profil ────────────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL</h2>
 
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Relance le questionnaire de bienvenue pour mettre à jour ton profil (taille, poids, niveau, matériel). Pour seulement changer de programme sans refaire le profil, va dans <a href="/programme" style="color:var(--violet);">Programme → Changer de programme</a>.</p>
+    <p class="s-7e1751">Relance le questionnaire de bienvenue pour mettre à jour ton profil (taille, poids, niveau, matériel). Pour seulement changer de programme sans refaire le profil, va dans <a class="s-8b872f" href="/programme">Programme → Changer de programme</a>.</p>
     <form method="post" action="/gestion/redo-onboarding">
-      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</button>
+      <button type="submit" class="btn label-icon s-9f1047"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Refaire l'onboarding</button>
     </form>
   </div>
 
   {# ── Section : Banque d'exercices ─────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>BANQUE D'EXERCICES</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>BANQUE D'EXERCICES</h2>
 
   {% if request.args.get('exo') == 'ok' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice ajouté à ta banque.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice ajouté à ta banque.</div>
   {% endif %}
   {% if request.args.get('exo') == 'duplicate' %}
-    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Cet exercice existe déjà dans ta banque.</div>
+    <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Cet exercice existe déjà dans ta banque.</div>
   {% endif %}
   {% if request.args.get('exo') == 'deleted' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice supprimé.</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice supprimé.</div>
   {% endif %}
   {% if request.args.get('align') == 'ok' %}
-  <div class="card" style="border-color: rgba(48,209,88,0.5);">
-    <p style="margin:0; font-size:0.88rem;">{{ request.args.get('n') }} série(s) renommée(s) : ces exercices ont retrouvé leur fiche et leur historique.</p>
+  <div class="card s-56d7e9">
+    <p class="s-2ee693">{{ request.args.get('n') }} série(s) renommée(s) : ces exercices ont retrouvé leur fiche et leur historique.</p>
   </div>
   {% endif %}
   {% if request.args.get('align') == 'error' %}
-  <div class="card" style="border-color: rgba(255,69,58,0.5);">
-    <p style="margin:0; font-size:0.88rem;">Le renommage a échoué. Rien n'a été modifié — réessaie.</p>
+  <div class="card s-121b3c">
+    <p class="s-2ee693">Le renommage a échoué. Rien n'a été modifié — réessaie.</p>
   </div>
   {% endif %}
   {% if request.args.get('rename') == 'ok' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice renommé dans l'historique ({{ request.args.get('n', '?') }} série(s) mise(s) à jour).</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Exercice renommé dans l'historique ({{ request.args.get('n', '?') }} série(s) mise(s) à jour).</div>
   {% endif %}
   {% if request.args.get('rename') == 'none' %}
-    <div class="card label-icon" style="border-color: rgba(255,159,10,0.5);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucune série trouvée pour cet exercice — rien n'a changé.</div>
+    <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Aucune série trouvée pour cet exercice — rien n'a changé.</div>
   {% endif %}
   {% if request.args.get('merge') == 'ok' %}
-    <div class="card label-icon" style="border-color: var(--success);"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Doublons fusionnés ({{ request.args.get('n', '?') }} série(s) regroupée(s)).</div>
+    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Doublons fusionnés ({{ request.args.get('n', '?') }} série(s) regroupée(s)).</div>
   {% endif %}
 
   <div class="card" x-data="{ open: false }">
-    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+    <h3 class="s-a0dcef" @click="open = !open">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>Ajouter un exercice personnalisé</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
@@ -76,7 +76,7 @@
       <select name="profil" class="field">
         {% for p in profil_options %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
       </select>
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter à la banque</button>
+      <button type="submit" class="btn primary label-icon s-d5b41c"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter à la banque</button>
     </form>
   </div>
 
@@ -86,17 +86,17 @@
     {% for exo in custom_exercises %}
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %}">
         <div>
-          <div style="font-size:0.9rem; font-weight:500; color:var(--text-1);">{{ exo.name }}</div>
-          <div style="font-size:0.75rem; color:var(--text-dim);">{{ exo.muscle }} · {{ exo.profil|default('Les deux') }}</div>
+          <div class="s-d21eb7">{{ exo.name }}</div>
+          <div class="s-7e514b">{{ exo.muscle }} · {{ exo.profil|default('Les deux') }}</div>
         </div>
         <form method="post" action="/gestion/exercice/supprimer" x-data="{ c: false }">
           <input type="hidden" name="index" value="{{ loop.index0 }}">
-          <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" x-show="!c" @click="c=true">
+          <button type="button" class="btn s-00d9f5" x-show="!c" @click="c=true">
             <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>
           </button>
-          <div x-show="c" x-cloak class="flex-show" style="gap:4px;">
-            <button type="button" class="btn" style="padding:4px 8px; font-size:0.7rem;" @click="c=false">Non</button>
-            <button type="submit" class="btn btn-danger" style="padding:4px 8px; font-size:0.7rem;">Oui</button>
+          <div x-show="c" x-cloak class="flex-show s-d76768">
+            <button type="button" class="btn s-344cc3" @click="c=false">Non</button>
+            <button type="submit" class="btn btn-danger s-344cc3">Oui</button>
           </div>
         </form>
       </div>
@@ -105,37 +105,36 @@
   {% endif %}
 
   {% if dup_groups %}
-  <div class="card" id="doublons" x-data="{ open: true }" style="border-color: rgba(255,159,10,0.5);">
-    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
-      <span class="label-icon"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Doublons détectés ({{ dup_groups|length }})</span>
+  <div class="card s-070e82" id="doublons" x-data="{ open: true }">
+    <h3 class="s-a0dcef" @click="open = !open">
+      <span class="label-icon"><svg class="icon icon-md s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Doublons détectés ({{ dup_groups|length }})</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
-      <p style="font-size:0.85rem; color:var(--text-dim);">Ces exercices semblent être les mêmes écrits différemment. Choisis le bon nom dans chaque groupe : toutes les séries des autres seront regroupées dessus. <b>Vérifie bien</b> — ne fusionne pas deux variantes réellement différentes (ex. barre vs haltères).</p>
+      <p class="s-7e1751">Ces exercices semblent être les mêmes écrits différemment. Choisis le bon nom dans chaque groupe : toutes les séries des autres seront regroupées dessus. <b>Vérifie bien</b> — ne fusionne pas deux variantes réellement différentes (ex. barre vs haltères).</p>
       {% for grp in dup_groups %}
-        <form method="post" action="/gestion/exercice/fusionner"
-              x-data='{ keep: {{ grp.suggested|tojson }}, confirm: false }'
-              style="border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 12px; margin-top:10px;">
+        <form class="s-3274ce" method="post" action="/gestion/exercice/fusionner"
+              x-data='{ keep: {{ grp.suggested|tojson }}, confirm: false }'>
           {% for m in grp.members %}
             <input type="hidden" name="member" value="{{ m.name }}">
             <label style="display:flex; align-items:center; gap:8px; padding:6px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %} cursor:pointer;">
-              <input type="radio" name="keep" value="{{ m.name }}" x-model="keep" style="flex-shrink:0;">
-              <span style="flex:1; min-width:0;">
-                <span style="font-size:0.9rem; color:var(--text-1);">{{ m.name }}</span>
-                <span style="font-size:0.75rem; color:var(--text-dim);"> · {{ m.count }} série{{ 's' if m.count > 1 else '' }}</span>
+              <input class="s-6ee066" type="radio" name="keep" value="{{ m.name }}" x-model="keep">
+              <span class="s-7f784d">
+                <span class="s-198075">{{ m.name }}</span>
+                <span class="s-7e514b"> · {{ m.count }} série{{ 's' if m.count > 1 else '' }}</span>
               </span>
             </label>
           {% endfor %}
-          <p style="font-size:0.78rem; color:var(--text-dim); margin:8px 0 0;">
-            Tout sera regroupé sous « <span x-text="keep" style="color:var(--text-1);"></span> ».
+          <p class="s-d3a1c1">
+            Tout sera regroupé sous « <span class="s-38f301" x-text="keep"></span> ».
           </p>
-          <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:8px;"
+          <button type="button" class="btn primary label-icon s-ac0370"
                   x-show="!confirm" @click="confirm = true">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Fusionner ce groupe
           </button>
-          <div x-show="confirm" x-cloak class="flex-show" style="gap:8px; margin-top:8px;">
-            <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
-            <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
+          <div x-show="confirm" x-cloak class="flex-show s-7e81fa">
+            <button type="button" class="btn s-69eb87" @click="confirm = false">Annuler</button>
+            <button type="submit" class="btn primary s-69eb87">Confirmer</button>
           </div>
         </form>
       {% endfor %}
@@ -144,13 +143,13 @@
   {% endif %}
 
   {% if alignements %}
-  <div class="card" id="aligner" x-data="{ open: true, confirm: false }" style="border-color: rgba(10,132,255,0.5);">
-    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+  <div class="card s-0e1618" id="aligner" x-data="{ open: true, confirm: false }">
+    <h3 class="s-a0dcef" @click="open = !open">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Aligner sur les noms de l'app ({{ alignements|length }})</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
-      <p style="font-size:0.85rem; color:var(--text-dim);">
+      <p class="s-7e1751">
         Ces exercices sont enregistrés sous un nom que l'app ne reconnaît pas :
         ils n'ont ni fiche, ni illustration, et leur historique est séparé de
         celui du même exercice écrit autrement. Les renommer les rebranche.
@@ -159,27 +158,27 @@
       <form method="post" action="/gestion/exercice/aligner">
         {% for p in alignements %}
         <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %} cursor:pointer;">
-          <input type="checkbox" name="aligner" value="{{ p.depuis }}"
-                 {% if p.sur %}checked{% endif %} style="flex-shrink:0; margin-top:3px;">
-          <span style="flex:1; min-width:0;">
-            <span style="font-size:0.9rem; color:var(--text-1);">{{ p.depuis }}</span>
-            <span style="color:var(--text-dim);"> → </span>
-            <span style="font-size:0.9rem; color:var(--accent);">{{ p.vers }}</span>
-            <span style="display:block; font-size:0.75rem; color:var(--text-dim); margin-top:2px;">
+          <input class="s-7dda2a" type="checkbox" name="aligner" value="{{ p.depuis }}"
+                 {% if p.sur %}checked{% endif %}>
+          <span class="s-7f784d">
+            <span class="s-198075">{{ p.depuis }}</span>
+            <span class="s-73e788"> → </span>
+            <span class="s-4fe8aa">{{ p.vers }}</span>
+            <span class="s-563c67">
               {{ p.count }} série{{ 's' if p.count > 1 else '' }}
-              {%- if not p.sur %} · <b style="color:#FF9F0A;">à vérifier</b>, rapprochement approximatif{% endif %}
-              {%- if p.fusion %} · <b style="color:#FF9F0A;">fusionne</b> avec un historique existant{% endif %}
+              {%- if not p.sur %} · <b class="s-839aae">à vérifier</b>, rapprochement approximatif{% endif %}
+              {%- if p.fusion %} · <b class="s-839aae">fusionne</b> avec un historique existant{% endif %}
             </span>
           </span>
         </label>
         {% endfor %}
-        <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+        <button type="button" class="btn primary label-icon s-d5b41c"
                 x-show="!confirm" @click="confirm = true">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Renommer les exercices cochés
         </button>
-        <div x-show="confirm" x-cloak class="flex-show" style="gap:8px; margin-top:10px;">
-          <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
-          <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
+        <div x-show="confirm" x-cloak class="flex-show s-f6c3b0">
+          <button type="button" class="btn s-69eb87" @click="confirm = false">Annuler</button>
+          <button type="submit" class="btn primary s-69eb87">Confirmer</button>
         </div>
       </form>
     </div>
@@ -190,12 +189,12 @@
   <script>window.HIST_EXERCISES = {{ hist_exercises|tojson }};</script>
   <div class="card" x-data="{ open: false, oldName: '', newName: '', confirm: false,
         count() { const e = (window.HIST_EXERCISES || []).find(x => x.name === this.oldName); return e ? e.count : 0; } }">
-    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+    <h3 class="s-a0dcef" @click="open = !open">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Renommer un exercice (historique)</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
-      <p style="font-size:0.85rem; color:var(--text-dim);">Corrige rétroactivement un exercice mal nommé dans toutes tes séances passées (ex : tu as loggé « Développé incliné (Barre) » mais tu faisais du décliné). Le renommage est <b>exact</b> : les autres variantes (incliné standard, haltères…) ne sont pas touchées.</p>
+      <p class="s-7e1751">Corrige rétroactivement un exercice mal nommé dans toutes tes séances passées (ex : tu as loggé « Développé incliné (Barre) » mais tu faisais du décliné). Le renommage est <b>exact</b> : les autres variantes (incliné standard, haltères…) ne sont pas touchées.</p>
       <form method="post" action="/gestion/exercice/renommer">
         <label class="field-label">Exercice à corriger</label>
         <select name="old_name" class="field" x-model="oldName" required>
@@ -208,18 +207,18 @@
           {% for exo in hist_exercises %}<option value="{{ exo.name }}">{% endfor %}
         </datalist>
         <template x-if="oldName && newName && oldName !== newName">
-          <p style="font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+          <p class="s-be67db">
             <span x-text="count()"></span> série(s) de « <span x-text="oldName"></span> » deviendront « <span x-text="newName"></span> ».
           </p>
         </template>
-        <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"
+        <button type="button" class="btn primary label-icon s-d5b41c"
                 x-show="!confirm" @click="confirm = true"
                 :disabled="!oldName || !newName || oldName === newName">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Renommer dans tout l'historique
         </button>
-        <div x-show="confirm" x-cloak class="flex-show" style="gap:8px; margin-top:10px;">
-          <button type="button" class="btn" style="flex:1; justify-content:center;" @click="confirm = false">Annuler</button>
-          <button type="submit" class="btn primary" style="flex:1; justify-content:center;">Confirmer</button>
+        <div x-show="confirm" x-cloak class="flex-show s-f6c3b0">
+          <button type="button" class="btn s-69eb87" @click="confirm = false">Annuler</button>
+          <button type="submit" class="btn primary s-69eb87">Confirmer</button>
         </div>
       </form>
     </div>
@@ -227,17 +226,17 @@
   {% endif %}
 
   {# ── Section : Tutoriels ─────────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>TUTORIELS</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>TUTORIELS</h2>
 
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>Tutoriels interactifs</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Relance les tutoriels pour revoir les explications pas à pas.</p>
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center;"
+    <p class="s-7e1751">Relance les tutoriels pour revoir les explications pas à pas.</p>
+    <div class="s-525f63">
+      <button type="button" class="btn label-icon s-9f1047"
               onclick="try{localStorage.removeItem('tutoSeen')}catch(e){} this.textContent='Se lancera à la prochaine page'; this.disabled=true;">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Revoir le tutoriel principal
       </button>
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center;"
+      <button type="button" class="btn label-icon s-9f1047"
               onclick="try{localStorage.removeItem('tutoSeanceSeen')}catch(e){} this.textContent='Se lancera à ta prochaine séance'; this.disabled=true;">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Revoir le tuto séance
       </button>
@@ -245,92 +244,92 @@
   </div>
 
   {# ── Section : Préférences ─────────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>PRÉFÉRENCES</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>PRÉFÉRENCES</h2>
 
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sliders"/></svg>Paramètres d'affichage</h3>
     <form method="post" action="/gestion/settings">
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="auto_collapse" {% if settings.auto_collapse %}checked{% endif %}>
         <span>Replier automatiquement les exercices terminés</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="show_1rm" {% if settings.show_1rm %}checked{% endif %}>
         <span>Afficher l'estimation 1RM</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
         <span>Chrono de repos automatique entre les séries</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="show_rpe" {% if settings.show_rpe %}checked{% endif %}>
         <span>Afficher la colonne RPE (difficulté ressentie)</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="show_overload_hint" {% if settings.show_overload_hint %}checked{% endif %}>
         <span>Suggérer la progression (+2,5 kg / +1 rep) d'après les dernières séances</span>
       </label>
       <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
         <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
-        <span>Animations du thème (cartes, glow, pulse) {% if not is_vip %}<span class="badge-pro" style="margin-left:4px; font-size:0.7rem; padding:1px 5px;">PRO</span>{% endif %}</span>
+        <span>Animations du thème (cartes, glow, pulse) {% if not is_vip %}<span class="badge-pro s-580f44">PRO</span>{% endif %}</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
         <span>Pré-remplir les poids de la dernière séance</span>
       </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this); var r=document.getElementById('reminder-hour-row'); if(r) r.hidden = !this.checked;">
         <span>Notifications de rappel &amp; relances (même app fermée)</span>
       </label>
-      <p style="font-size:0.7rem; color:var(--text-dim); margin:0 0 6px 26px;">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
-      <div id="reminder-hour-row" style="margin:0 0 10px 26px;" {% if not settings.notifications %}hidden{% endif %}>
-        <label class="field-label" for="reminder-hour" style="margin-top:0;">Heure du rappel les jours de séance</label>
-        <select name="reminder_hour" id="reminder-hour" class="field" style="max-width:220px;">
+      <p class="s-da7920">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
+      <div class="s-f3ec68" id="reminder-hour-row" {% if not settings.notifications %}hidden{% endif %}>
+        <label class="field-label s-d46224" for="reminder-hour">Heure du rappel les jours de séance</label>
+        <select name="reminder_hour" id="reminder-hour" class="field s-27af89">
           <option value="0" {% if not settings.reminder_hour %}selected{% endif %}>Aucun rappel</option>
           {% for h in range(6, 23) %}
             <option value="{{ h }}" {% if settings.reminder_hour == h %}selected{% endif %}>{{ '%02d' % h }} h 00</option>
           {% endfor %}
         </select>
-        <p style="font-size:0.7rem; color:var(--text-dim); margin:4px 0 0;">
+        <p class="s-fdee3b">
           Envoyé seulement si la séance du jour n'est pas encore faite.
         </p>
       </div>
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
         <span>Recevoir les nouveautés par e-mail (mises à jour, nouveaux programmes)</span>
       </label>
-      <p style="font-size:0.7rem; color:var(--text-dim); margin:0 0 6px 26px;">Quelques e-mails par an, jamais de spam. Désactivable ici à tout moment.</p>
-      <label class="field-label" for="show-previous-weeks" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">Nombre de semaines précédentes affichées en séance {% if not is_vip %}<span class="badge-pro" style="font-size:0.7rem; padding:1px 5px;">PRO au-delà de 2</span>{% endif %}</label>
+      <p class="s-da7920">Quelques e-mails par an, jamais de spam. Désactivable ici à tout moment.</p>
+      <label class="field-label s-655d3d" for="show-previous-weeks">Nombre de semaines précédentes affichées en séance {% if not is_vip %}<span class="badge-pro s-bdcdd3">PRO au-delà de 2</span>{% endif %}</label>
       <input type="number" id="show-previous-weeks" name="show_previous_weeks" min="0" max="{% if is_vip %}10{% else %}2{% endif %}" value="{{ settings.show_previous_weeks }}" class="field">
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
+      <button type="submit" class="btn primary label-icon s-d5b41c"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
     </form>
   </div>
 
   {# ── Section : Mise à jour ───────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>MISE À JOUR</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>MISE À JOUR</h2>
 
   <div class="card">
-    <div class="detail-row" style="grid-template-columns: 1fr; margin-bottom: 10px;">
+    <div class="detail-row s-476e04">
       <div class="detail-metric">
         <div class="detail-label">VERSION ACTUELLE</div>
-        <div class="detail-value" style="font-size:1.1rem;" id="sw-version">—</div>
+        <div class="detail-value s-f15bdb" id="sw-version">—</div>
       </div>
     </div>
-    <button type="button" class="btn primary label-icon" style="width:100%; justify-content:center;" id="btn-check-update" onclick="checkForUpdate()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
-    <p style="font-size:0.75rem; color:var(--text-dim); margin-top:6px; text-align:center;" id="update-status"></p>
+    <button type="button" class="btn primary label-icon s-9f1047" id="btn-check-update" onclick="checkForUpdate()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
+    <p class="s-33a3e1" id="update-status"></p>
   </div>
 
   {# ── Section : Données ───────────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bar-chart"/></svg>DONNÉES</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bar-chart"/></svg>DONNÉES</h2>
 
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#bar-chart"/></svg>État</h3>
     <div class="detail-row">
-      <div class="detail-metric"><div class="detail-label">SÉANCES</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_seances }}</div></div>
-      <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_exos }}</div></div>
-      <div class="detail-metric"><div class="detail-label">LIGNES HIST.</div><div class="detail-value" style="font-size:1.4rem;">{{ nb_hist }}</div></div>
+      <div class="detail-metric"><div class="detail-label">SÉANCES</div><div class="detail-value s-bea3ad">{{ nb_seances }}</div></div>
+      <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value s-bea3ad">{{ nb_exos }}</div></div>
+      <div class="detail-metric"><div class="detail-label">LIGNES HIST.</div><div class="detail-value s-bea3ad">{{ nb_hist }}</div></div>
     </div>
-    <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:8px;">
+    <div class="s-bf4588">
       Archive : {{ nb_archive }} record(s)
     </div>
   </div>
@@ -339,30 +338,30 @@
      seule la réimportation reste PRO. #}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegarde complète</h3>
-    <p style="font-size:0.8rem; color:var(--text-dim); margin:0 0 8px;">Exporte <strong>toutes</strong> tes données (programme, historique, pesées, bilans, nutrition, conversations du coach) dans un fichier JSON.</p>
-    <a href="/gestion/export" class="btn primary label-icon" style="width:100%; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
+    <p class="s-434391">Exporte <strong>toutes</strong> tes données (programme, historique, pesées, bilans, nutrition, conversations du coach) dans un fichier JSON.</p>
+    <a href="/gestion/export" class="btn primary label-icon s-b8db1d"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
     {% if is_vip_full %}
-    <form method="post" action="/gestion/import" enctype="multipart/form-data" style="margin-top:10px;"
+    <form class="s-d2c171" method="post" action="/gestion/import" enctype="multipart/form-data"
           x-data="{ c:false }">
       <label class="field-label" for="import-json">Importer un fichier JSON</label>
-      <input type="file" id="import-json" name="file" accept=".json" required class="field" style="padding:8px;">
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
-      <div class="inline-confirm" x-show="c" x-cloak style="margin-top:8px;">
+      <input type="file" id="import-json" name="file" accept=".json" required class="field s-e2c960">
+      <button type="button" class="btn label-icon s-ac0370" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
+      <div class="inline-confirm s-8a77e5" x-show="c" x-cloak>
         <span class="confirm-label">Remplacer toutes les données ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>
       </div>
     </form>
     {% else %}
-    <p style="font-size:0.75rem; color:var(--text-2); margin:10px 0 0;">Réimporter un fichier : <a href="/premium" style="color:var(--violet);">avec PRO</a>.</p>
+    <p class="s-08e11e">Réimporter un fichier : <a class="s-8b872f" href="/premium">avec PRO</a>.</p>
     {% endif %}
   </div>
 
-  <div class="card" style="border-color: rgba(255,159,10,0.4);">
-    <h3 class="label-icon" style="color:#FF9F0A;"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
+  <div class="card s-040ce7">
+    <h3 class="label-icon s-839aae"><svg class="icon icon-md s-839aae"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>
+    <p class="s-7e1751">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-soft" x-data="{ c:false }">
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,159,10,0.15); border-color:rgba(255,159,10,0.5); color:#FF9F0A;" x-show="!c" @click="c=true"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</button>
+      <button type="button" class="btn label-icon s-23a086" x-show="!c" @click="c=true"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</button>
       <div class="inline-confirm" x-show="c" x-cloak>
         <span class="confirm-label">Vider l'historique ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
@@ -371,15 +370,15 @@
     </form>
   </div>
 
-  <div class="card" style="border-color: rgba(255,69,58,0.5);">
-    <h3 class="label-icon" style="color: var(--danger);"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>Tout remettre à zéro</h3>
-    <p class="label-icon" style="font-size:0.85rem; color:var(--text-dim);"><svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#alert-triangle"/></svg>Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
+  <div class="card s-121b3c">
+    <h3 class="label-icon s-9cb6f5"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>Tout remettre à zéro</h3>
+    <p class="label-icon s-7e1751"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-total" x-data="{ c:false }">
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="confirm" value="yes" required>
         <span>Je comprends, je veux tout effacer</span>
       </label>
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>TOUT REMETTRE À ZÉRO</button>
+      <button type="button" class="btn label-icon s-c81f97" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>TOUT REMETTRE À ZÉRO</button>
       <div class="inline-confirm" x-show="c" x-cloak>
         <span class="confirm-label">Effacer TOUTES les données ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
@@ -388,15 +387,15 @@
     </form>
   </div>
 
-  <div class="card" style="border-color: rgba(255,69,58,0.5);">
-    <h3 class="label-icon" style="color: var(--danger);"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#user"/></svg>Supprimer mon compte</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Supprime <strong>définitivement</strong> ton compte et toutes tes données (historique, programme, profil, nutrition, conversations coach). Aucune récupération possible. Un abonnement PRO en cours est résilié au même moment. Pense à <a href="/gestion/export" style="color:var(--violet);">exporter tes données</a> avant si tu veux les garder.</p>
+  <div class="card s-121b3c">
+    <h3 class="label-icon s-9cb6f5"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#user"/></svg>Supprimer mon compte</h3>
+    <p class="s-7e1751">Supprime <strong>définitivement</strong> ton compte et toutes tes données (historique, programme, profil, nutrition, conversations coach). Aucune récupération possible. Un abonnement PRO en cours est résilié au même moment. Pense à <a class="s-8b872f" href="/gestion/export">exporter tes données</a> avant si tu veux les garder.</p>
     <form method="post" action="/gestion/delete-account" x-data="{ c:false }">
-      <label class="muscle-check" style="display:flex; margin:6px 0;">
+      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="confirm" value="yes" required>
         <span>Je comprends, mon compte et mes données seront supprimés pour toujours</span>
       </label>
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; background:rgba(255,69,58,0.15); border-color:var(--danger); color:var(--danger);" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>SUPPRIMER MON COMPTE</button>
+      <button type="button" class="btn label-icon s-c81f97" x-show="!c" @click="c=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>SUPPRIMER MON COMPTE</button>
       <div class="inline-confirm" x-show="c" x-cloak>
         <span class="confirm-label">Supprimer définitivement ton compte ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
@@ -406,12 +405,12 @@
   </div>
 
   {# ── Section : À propos ──────────────────── #}
-  <h2 class="label-icon" style="font-size:1rem; color:var(--accent); margin:20px 0 8px; letter-spacing:1px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>À PROPOS</h2>
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#info"/></svg>À PROPOS</h2>
 
-  <div class="card" style="text-align:center;">
-    <p style="font-size:0.9rem; margin:0 0 4px;"><strong>Muscu Tracker</strong></p>
-    <p style="font-size:0.8rem; color:var(--text-dim); margin:0;">PWA de suivi musculation · Données privées</p>
-    <p style="font-size:0.75rem; margin:6px 0 0;"><a href="/confidentialite" style="color:var(--text-3);">Politique de confidentialité</a> · <a href="/faq" style="color:var(--text-3);">FAQ</a> · <a href="/mentions-legales" style="color:var(--text-3);">Mentions légales</a> · <a href="/cgv" style="color:var(--text-3);">CGV</a></p>
+  <div class="card s-91a870">
+    <p class="s-57f860"><strong>Muscu Tracker</strong></p>
+    <p class="s-97322e">PWA de suivi musculation · Données privées</p>
+    <p class="s-eea1b2"><a class="s-ab23bb" href="/confidentialite">Politique de confidentialité</a> · <a class="s-ab23bb" href="/faq">FAQ</a> · <a class="s-ab23bb" href="/mentions-legales">Mentions légales</a> · <a class="s-ab23bb" href="/cgv">CGV</a></p>
   </div>
 
   <script>

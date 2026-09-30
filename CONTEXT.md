@@ -540,3 +540,8 @@ pwa/
 - **Arcade** (mini-jeux, `/arcade`) : hors sujet ; sa place sur la landing revient au Coach IA.
 - **Profils d'entraînement** (`_profiles`, `_active_profile`, `profile_id` des dossiers) : une hiérarchie profil → programme → séance pour un besoin que « un programme par lieu » couvre. Les routes `/programme/profile/*` n'existent plus ; les clés restent dans les blobs existants, ignorées.
 - **Bouton « Séance manquée »** (`/seance/mark-missed`, lignes `SESSION`) : le calendrier déduit déjà une séance manquée. On n'en écrit plus ; les lignes `SESSION` déjà en base restent filtrées par `core.hist.is_session_marker`.
+
+### Styles des gabarits (01/10/2026, audit M9)
+- Les attributs `style="…"` fixes des gabarits sont sortis dans `static/css/styles-extraits.css` par `pwa/outils/extraire_styles.py` : une classe `s-xxxxxx` par valeur distincte (949 → 56 attributs ; 484 classes). Restent en ligne : les valeurs calculées par Jinja et `display:none` (des scripts lisent et changent `el.style.display`).
+- Priorité : chaque règle porte `:not(#_s):not(#_s)` (poids de deux identifiants), pour garder la préséance qu'avait le style en ligne sur les feuilles de l'app ; un style posé par JavaScript reste en ligne et garde le dernier mot. Vérifié par captures avant/après, pixel à pixel, sur 38 pages et 6 états ouverts.
+- Nouveau style dans un gabarit : de préférence une classe nommée dans `components.css` ; sinon relancer l'outil (idempotent). `tests/test_mineurs_audit.py` tient un cliquet (≤ 56) et vérifie que chaque classe générée a sa règle et sert.

@@ -2,19 +2,19 @@
 {% block title %}Parrainage · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Plus</a>
+  <a href="/plus" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Plus</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#party"/></svg>Inviter des amis</h1>
 
   {# ── Comment ça marche ── #}
-  <div class="card" style="border-color:rgba(255,215,0,0.3); background:linear-gradient(135deg, rgba(255,215,0,0.06), rgba(120,200,255,0.05));">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <svg class="icon icon-lg" style="color:var(--gold,#FFD700);"><use href="/static/img/icons.svg#gem"/></svg>
+  <div class="card s-ca705c">
+    <div class="s-3b94bc">
+      <svg class="icon icon-lg s-e65ba6"><use href="/static/img/icons.svg#gem"/></svg>
       <div>
-        <div style="font-weight:600; color:var(--text-1); font-size:0.95rem;">Goûtez au PRO à deux</div>
-        <div style="font-size:0.82rem; color:var(--text-2); line-height:1.5; margin-top:2px;">
-          Ton ami reçoit <strong style="color:var(--text-1);">{{ referee_days }} jour{{ 's' if referee_days > 1 else '' }} d'essai PRO</strong> à l'inscription, et toi
-          <strong style="color:var(--text-1);">{{ referrer_days }} jour{{ 's' if referrer_days > 1 else '' }}</strong> par ami qui rejoint.
+        <div class="s-571945">Goûtez au PRO à deux</div>
+        <div class="s-cc94e0">
+          Ton ami reçoit <strong class="s-38f301">{{ referee_days }} jour{{ 's' if referee_days > 1 else '' }} d'essai PRO</strong> à l'inscription, et toi
+          <strong class="s-38f301">{{ referrer_days }} jour{{ 's' if referrer_days > 1 else '' }}</strong> par ami qui rejoint.
         </div>
       </div>
     </div>
@@ -23,18 +23,17 @@
   {# ── Lien d'invitation ── #}
   <div class="card">
     <div class="card-label">Ton lien d'invitation</div>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <input id="ref-link" type="text" class="field" readonly style="flex:1; margin:0; font-size:0.8rem;" value="">
-      <button type="button" class="btn" id="ref-copy" data-haptic="1" onclick="copyRefLink(this)" style="flex-shrink:0;">Copier</button>
+    <div class="s-f12844">
+      <input id="ref-link" type="text" class="field s-77df1c" readonly value="">
+      <button type="button" class="btn s-6ee066" id="ref-copy" data-haptic="1" onclick="copyRefLink(this)">Copier</button>
     </div>
-    <button type="button" class="btn primary label-icon" data-haptic="1" onclick="shareRefLink(this)"
-            style="width:100%; justify-content:center; margin-top:10px;">
+    <button type="button" class="btn primary label-icon s-d5b41c" data-haptic="1" onclick="shareRefLink(this)">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>Partager mon lien
     </button>
   </div>
 
   {# ── Compteur ── #}
-  <div class="stats-row" style="margin-top:4px;">
+  <div class="stats-row s-96ad60">
     <div class="stat-card stat-gold">
       <div class="stat-label">AMIS PARRAINÉS</div>
       <div class="stat-value">{{ referral_count }}</div>
@@ -45,7 +44,7 @@
     </div>
   </div>
 
-  <p style="font-size:0.74rem; color:var(--text-dim); text-align:center; margin-top:10px;">
+  <p class="s-6ef023">
     Crédité quand ton ami termine son inscription. L'essai donne accès à la nutrition et aux stats détaillées.
   </p>
 

@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="/static/css/glass.css">
   <link rel="stylesheet" href="/static/css/tutorial.css">
   <link rel="stylesheet" href="/static/css/rest-timer.css">
+  {# Styles sortis des gabarits (outils/extraire_styles.py) : ex-attributs style=. #}
+  <link rel="stylesheet" href="/static/css/styles-extraits.css">
   {# a11y.css en dernier : il corrige des tailles posées plus haut, sans !important. #}
   <link rel="stylesheet" href="/static/css/a11y.css">
   <script defer src="/static/js/alpine-sort.min.js"></script>
@@ -117,7 +119,7 @@
   {% if is_authenticated %}
   <div class="topbar">
     <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg><span class="topbar-email">{{ current_user_email }}</span>{% if is_vip_full %}<span class="badge-pro topbar-badge">PRO</span>{% elif is_trial %}<span class="badge-pro topbar-badge">ESSAI</span>{% endif %}</span>
-    <form method="post" action="/logout" style="margin:0;">
+    <form class="s-116966" method="post" action="/logout">
       <button type="submit" class="btn topbar-logout label-icon" title="Déconnexion" aria-label="Déconnexion"><svg class="icon icon-sm"><use href="/static/img/icons.svg#log-out"/></svg><span class="topbar-logout-txt">Déconnexion</span></button>
     </form>
   </div>

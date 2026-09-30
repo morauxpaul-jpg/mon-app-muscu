@@ -203,7 +203,7 @@
 <div class="onboard-wrap" x-data="onboardingFlow()" x-init="init()">
 
   <div class="welcome-hero">
-    <h1 class="label-icon" style="justify-content:center;"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Bienvenue</h1>
+    <h1 class="label-icon s-03c4bb"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Bienvenue</h1>
     <p>Construisons ton plan d'entraînement en 1 minute.</p>
   </div>
 
@@ -228,7 +228,7 @@
     {# Poids et taille : ils servent aux standards de force (comparés au
        gabarit et non à des valeurs absolues), au calcul des calories, et
        ouvrent la courbe de poids. Sans eux ces trois écrans tournent à vide. #}
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+    <div class="s-9348fa">
       <div>
         <label class="field-label" for="onb-poids">Poids (kg)</label>
         <input class="field" id="onb-poids" type="number" inputmode="decimal" step="0.1"
@@ -240,7 +240,7 @@
                x-model.number="form.taille_cm" min="100" max="250" placeholder="178">
       </div>
     </div>
-    <p style="font-size:0.72rem; color:var(--text-2); margin:6px 0 0; line-height:1.45;">
+    <p class="s-a2e3a8">
       Pour comparer tes performances à ton gabarit plutôt qu'à une moyenne, et
       suivre ton poids. Modifiable à tout moment.
     </p>
@@ -262,7 +262,7 @@
     </div>
 
     <div class="onboard-actions">
-      <button class="btn-next label-icon" :disabled="!canNext1()" @click="step = 2" style="justify-content:center;">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
+      <button class="btn-next label-icon s-03c4bb" :disabled="!canNext1()" @click="step = 2">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
     </div>
   </div>
 
@@ -297,7 +297,7 @@
     </div>
 
     <label class="field-label">Fréquence (séances / semaine)</label>
-    <div class="opt-grid" style="grid-template-columns: repeat(5, 1fr);"
+    <div class="opt-grid s-78319a"
          role="radiogroup" aria-label="Séances par semaine">
       <template x-for="n in [2,3,4,5,6]" :key="n">
         <label class="opt" :class="{ sel: form.frequence === n }">
@@ -312,7 +312,7 @@
 
     <div class="onboard-actions">
       <button class="btn-ghost label-icon" @click="step = 1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
-      <button class="btn-next label-icon" :disabled="!canNext2()" @click="step = 3" style="justify-content:center;">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
+      <button class="btn-next label-icon s-03c4bb" :disabled="!canNext2()" @click="step = 3">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
     </div>
   </div>
 
@@ -363,18 +363,18 @@
 
     <!-- Sous-question équipement maison -->
     <template x-if="form.equipement && form.equipement !== 'salle'">
-      <div style="margin-top:16px;">
+      <div class="s-1b0f49">
         <label class="field-label">Quel matériel as-tu ? (sélection multiple)</label>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+        <div class="s-7799bc">
           <template x-for="eq in equipmentOptions" :key="eq.id">
-            <label class="opt" style="display:flex; align-items:center; gap:8px; text-align:left; padding:10px 12px; cursor:pointer;"
+            <label class="opt s-60ca2d"
                    :class="{ sel: form.equipment_details.includes(eq.id) }">
               {# La case pilote la sélection : @change plutôt que @click, sinon
                  le clavier (Espace) coche sans rien changer au formulaire. #}
               <input type="checkbox" class="sr-only" :checked="form.equipment_details.includes(eq.id)"
                      @change="toggleEquipment(eq.id)" :aria-label="eq.label">
-              <span style="font-size:1.2rem;" x-text="eq.icon"></span>
-              <span style="font-size:0.82rem;" x-text="eq.label"></span>
+              <span class="s-101860" x-text="eq.icon"></span>
+              <span class="s-474a30" x-text="eq.label"></span>
             </label>
           </template>
         </div>
@@ -383,19 +383,19 @@
 
     <div class="onboard-actions">
       <button class="btn-ghost label-icon" @click="step = 2"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
-      <button class="btn-next label-icon" :disabled="!canNext3()" @click="goStep4()" style="justify-content:center;">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
+      <button class="btn-next label-icon s-03c4bb" :disabled="!canNext3()" @click="goStep4()">Suivant<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></button>
     </div>
   </div>
 
   <!-- Étape 4 : choix du programme -->
   <div x-show="step === 4" x-cloak>
     <div class="card">
-      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+      <div class="s-d10cb8">
         <div>
           <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ton programme</h2>
-          <p class="onboard-step-sub" style="margin-bottom:0;">Touche un programme pour voir sa description et ses exercices, puis lance-toi.</p>
+          <p class="onboard-step-sub s-ef0b7a">Touche un programme pour voir sa description et ses exercices, puis lance-toi.</p>
         </div>
-        <button type="button" class="btn-ghost label-icon" @click="step = 3" style="flex-shrink:0;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
+        <button type="button" class="btn-ghost label-icon s-6ee066" @click="step = 3"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
       </div>
     </div>
 
@@ -461,18 +461,17 @@
 
     <div class="onb-card custom" @click="useProgram('custom')">
       <h3 class="onb-title">
-        <svg class="icon icon-md onb-title-icon" style="color:#FF9F0A;"><use href="/static/img/icons.svg#settings"/></svg>
+        <svg class="icon icon-md onb-title-icon s-839aae"><use href="/static/img/icons.svg#settings"/></svg>
         <span class="onb-title-text">Créer mon propre programme</span>
       </h3>
       <div class="onb-desc">Tu seras amené directement dans l'éditeur pour construire ton programme à zéro.</div>
       <div class="onb-preview-btn">Partir de zéro →</div>
     </div>
 
-    <a class="onb-card" x-show="lockedCount > 0" href="/premium"
-       style="text-decoration:none; color:inherit; display:block; border-color:rgba(255,215,0,0.35);">
+    <a class="onb-card s-1e84b2" x-show="lockedCount > 0" href="/premium">
       <div class="onb-badges"><span class="onb-badge-pro">PRO</span></div>
       <h3 class="onb-title">
-        <svg class="icon icon-md onb-title-icon" style="color:var(--gold, #FFD700);"><use href="/static/img/icons.svg#gem"/></svg>
+        <svg class="icon icon-md onb-title-icon s-317954"><use href="/static/img/icons.svg#gem"/></svg>
         <span class="onb-title-text">Plus de programmes avec PRO</span>
       </h3>
       <div class="onb-desc"><span x-text="lockedCount"></span> programmes avancés (PPL, Upper/Lower, spécialisations…) sont réservés aux membres Premium. Tu pourras les débloquer à tout moment.</div>
@@ -489,7 +488,7 @@
           <h3 x-text="previewProg.icon + ' ' + previewProg.title"></h3>
           <button class="preview-close" @click="previewProg = null" aria-label="Fermer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
         </div>
-        <div class="prog-meta" style="margin-bottom:14px;">
+        <div class="prog-meta s-2b583d">
           <span class="prog-meta-item" x-text="previewProg.freq + 'x/sem'"></span>
           <span class="prog-meta-item" x-text="previewProg.duration"></span>
           <span class="prog-meta-item prog-stars"
@@ -506,7 +505,7 @@
             </template>
           </div>
         </template>
-        <button class="preview-choose label-icon" style="justify-content:center;" @click="useProgram(previewProg.id)">
+        <button class="preview-choose label-icon s-03c4bb" @click="useProgram(previewProg.id)">
           Utiliser ce programme<svg class="icon icon-sm"><use href="/static/img/icons.svg#zap"/></svg>
         </button>
       </div>

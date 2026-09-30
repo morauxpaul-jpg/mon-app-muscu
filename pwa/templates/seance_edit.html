@@ -184,12 +184,12 @@
 {% endblock %}
 
 {% block content %}
-  <a href="/seance?date={{ date_iso }}" class="btn" style="display:inline-block; margin-bottom: 10px;">← Changer de séance</a>
+  <a href="/seance?date={{ date_iso }}" class="btn s-ad0098">← Changer de séance</a>
 
   {% if is_rattrapage %}
-    <div style="background:rgba(255,149,0,0.12); border:1px solid rgba(255,149,0,0.4); border-radius:10px; padding:8px 12px; margin-bottom:10px;">
-      <span style="font-size:11px; color:#FF9500; letter-spacing:2px;">RATTRAPAGE · </span>
-      <span style="font-size:13px; color:#fff; font-weight:700;">{{ date_label }}</span>
+    <div class="s-2b6e37">
+      <span class="s-790fac">RATTRAPAGE · </span>
+      <span class="s-a38b54">{{ date_label }}</span>
     </div>
   {% endif %}
 
@@ -200,22 +200,22 @@
 
   {# ── Bilan enregistré à la fin de cette séance ──────────────── #}
   {% if session_note %}
-  <div class="card" style="border-color:var(--border-default); padding:10px 12px; margin-bottom:10px;">
-    <div class="label-icon" style="font-size:0.7rem; color:var(--text-3); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:4px;">
+  <div class="card s-8819f3">
+    <div class="label-icon s-eb33bc">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>Ton bilan
     </div>
     {% if session_note.rating %}
-    <div style="display:flex; gap:2px; margin-bottom:4px;">
+    <div class="s-0b06bf">
       {% for i in range(1, 6) %}
         <svg class="icon icon-sm" style="color:{{ '#FFC93C' if i <= session_note.rating else 'var(--text-3)' }}; opacity:{{ '1' if i <= session_note.rating else '0.3' }};"><use href="/static/img/icons.svg#star"/></svg>
       {% endfor %}
     </div>
     {% endif %}
     {% if session_note.comment %}
-      <div style="font-size:0.85rem; color:var(--text-2); line-height:1.45;">{{ session_note.comment }}</div>
+      <div class="s-240016">{{ session_note.comment }}</div>
     {% endif %}
     {% if session_note.duration_min %}
-      <div class="label-icon" style="font-size:0.78rem; color:var(--text-3); margin-top:6px;">
+      <div class="label-icon s-272e2c">
         <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#clock"/></svg>
         {{ session_note.duration_min }} min{% if vol_curr and session_note.duration_min %}
           · {{ (vol_curr / session_note.duration_min)|round|int }} kg/min{% endif %}
@@ -237,7 +237,7 @@
   </div>
   {% endif %}
 
-  <form method="post" action="/seance/reset-session" style="margin-bottom: 1rem;" x-data="{ c:false }">
+  <form class="s-c2c0d0" method="post" action="/seance/reset-session" x-data="{ c:false }">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="semaine" value="{{ s_act }}">
     <input type="hidden" name="seance_name" value="{{ seance_name }}">
@@ -306,7 +306,7 @@
             <img src="/static/img/exercises/{{ exo.info.image }}" alt="" loading="lazy" decoding="async">
           </button>
         {% endif %}
-        <div style="flex:1; min-width:0;">
+        <div class="s-7f784d">
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
               <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)"
                       title="Info exercice" aria-label="Fiche technique de l'exercice {{ exo.base }}">?</button>
@@ -348,7 +348,7 @@
             </div>
           </template>
         </div>
-        <div class="exo-toggle" @click="open = !open" style="cursor:pointer;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;" x-text="open ? '−' : '+'"></div>
+        <div class="exo-toggle s-c01db1" @click="open = !open" x-text="open ? '−' : '+'"></div>
       </div>
 
       {# ── Variantes du jour ─────────────────────────────────────
@@ -418,7 +418,7 @@
             </template>
             <template x-if="!isBw">
               <span>Record : <b x-text="_kg(record.weight) + ' kg'"></b>
-              <svg class="icon icon-sm icon-accent" style="margin-left:4px;"><use href="/static/img/icons.svg#zap"/></svg>
+              <svg class="icon icon-sm icon-accent s-46cec8"><use href="/static/img/icons.svg#zap"/></svg>
               1RM : <b x-text="_kg(record.one_rm) + ' kg'"></b></span>
             </template>
           </div>
@@ -432,11 +432,11 @@
         <template x-for="pw in prevWeeks" :key="pw.week">
           <div>
             <template x-if="pw.missed">
-              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span> — <svg class="icon icon-sm icon-danger" style="margin-left:4px;"><use href="/static/img/icons.svg#flag"/></svg><span style="color:var(--danger);">SÉANCE MANQUÉE</span></div>
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span> — <svg class="icon icon-sm icon-danger s-46cec8"><use href="/static/img/icons.svg#flag"/></svg><span class="s-497726">SÉANCE MANQUÉE</span></div>
             </template>
             <template x-if="!pw.missed">
               <div>
-                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span><template x-if="pw.cross_session"><span style="color:var(--text-mute); font-size:0.78rem; margin-left:4px;">· autre séance</span></template></div>
+                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span><template x-if="pw.cross_session"><span class="s-1065cb">· autre séance</span></template></div>
                 <table class="prev-table">
                   <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
                   <tbody>
@@ -572,10 +572,9 @@
             <p class="exo-etat" :class="'exo-etat-' + etat" x-show="etat" x-cloak
                role="status" aria-live="polite" x-text="etatTexte()"></p>
 
-            <button type="button" class="btn label-icon" style="width:100%; margin-top:8px; justify-content:center;" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
-            <button type="button" @click="clearWeights()"
-                    title="Efface les poids pré-remplis de la dernière séance"
-                    style="background:none; border:none; color:var(--text-mute); font-size:0.78rem; padding:10px 0; margin-top:2px; min-height:32px; cursor:pointer; text-decoration:underline;">
+            <button type="button" class="btn label-icon s-e0d5fc" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
+            <button class="s-b4e066" type="button" @click="clearWeights()"
+                    title="Efface les poids pré-remplis de la dernière séance">
               Réinitialiser les poids
             </button>
           </div>
@@ -593,7 +592,7 @@
             <input type="hidden" name="is_bw" :value="showWeight ? '0' : '1'">
             <input type="hidden" name="variant" :value="variant">
             <input type="hidden" name="sets_json" :value="serializedSets()">
-            <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;"
+            <button type="submit" class="btn primary label-icon s-9f1047"
                     data-haptic="1" :disabled="saving">
               <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#save"/></svg>
               <span x-text="saving ? 'Enregistrement…' : (completed ? 'Mettre à jour' : 'Enregistrer')"></span>
@@ -612,7 +611,7 @@
           </form>
         </div>
 
-        <form method="post" action="/seance/reset-exo" style="margin-top:6px;" x-data="{ c:false }">
+        <form class="s-fe7b49" method="post" action="/seance/reset-exo" x-data="{ c:false }">
           <input type="hidden" name="mode" value="{{ mode }}">
           <input type="hidden" name="name" value="{{ seance_name }}">
           <input type="hidden" name="date" value="{{ date_iso }}">
@@ -620,7 +619,7 @@
           <input type="hidden" name="seance_name" value="{{ seance_name }}">
           <input type="hidden" name="exo_base" value="{{ exo.base }}">
           <input type="hidden" name="variant" :value="variant">
-          <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
+          <button type="button" class="btn label-icon s-9f1047" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
           <div class="inline-confirm" x-show="c" x-cloak>
             <span class="confirm-label">Effacer les séries de {{ exo.base }} ?</span>
             <button type="button" class="btn" @click="c=false">Annuler</button>
@@ -629,14 +628,14 @@
         </form>
 
         {% if exo.is_extra %}
-          <form method="post" action="/seance/remove-extra" style="margin-top:6px;">
+          <form class="s-fe7b49" method="post" action="/seance/remove-extra">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
             <input type="hidden" name="exo_name" value="{{ exo.base }}">
             <input type="hidden" name="index" value="{{ loop.index0 - (exos|length - (exos|selectattr('is_extra')|list|length)) }}">
-            <button type="submit" class="btn label-icon" style="width:100%; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>Retirer cet exercice</button>
+            <button type="submit" class="btn label-icon s-9f1047"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>Retirer cet exercice</button>
           </form>
         {% endif %}
       </div>
@@ -646,12 +645,12 @@
 
   {# ── Ajouter un exercice (fermé par défaut) ─────────────────────────── #}
   <div class="card" x-data="{ open: false, tab: '{% if custom_exercises %}custom{% else %}prog{% endif %}', muscle: 'Tous' }">
-    <h3 @click="open = !open" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+    <h3 class="s-a0dcef" @click="open = !open">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg>Ajouter un exercice</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
-    <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+    <div class="s-a38f82">
       {% if custom_exercises %}
       <button type="button" class="btn" :class="{ primary: tab==='custom' }" @click="tab='custom'">Mes exos</button>
       {% endif %}
@@ -722,37 +721,35 @@
       <input type="hidden" name="date" value="{{ date_iso }}">
       <input type="hidden" name="seance_name" value="{{ seance_name }}">
 
-      <button type="button" class="btn label-icon" style="width:100%; justify-content:center; margin-bottom:8px;"
+      <button type="button" class="btn label-icon s-914733"
               @click="showLib = true">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Choisir un exercice
       </button>
 
       {# Modale bibliothèque inline #}
-      <div x-show="showLib" x-transition
-           x-init="$watch('showLib', v => { if(v) document.body.appendChild($el); })"
-           style="position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.50); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:16px;" @click.self="showLib = false">
-        <div style="background:rgba(16,18,28,0.80); backdrop-filter:blur(48px) saturate(200%); -webkit-backdrop-filter:blur(48px) saturate(200%); border:1px solid rgba(120,200,255,0.20); border-radius:22px; padding:16px; max-width:380px; width:calc(100vw - 32px); max-height:calc(100vh - 80px); overflow-y:auto; overscroll-behavior:contain; box-shadow:0 8px 48px rgba(0,0,0,0.6);" @click.stop>
-          <h4 style="color:var(--accent); margin:0 0 10px;">Bibliothèque d'exercices</h4>
-          <input type="text" x-model="libSearch" class="field" placeholder="Rechercher..." style="margin-bottom:8px;">
-          <select class="field" x-model="libFilter" style="margin-bottom:10px;">
+      <div class="s-40258d" x-show="showLib" x-transition
+           x-init="$watch('showLib', v => { if(v) document.body.appendChild($el); })" @click.self="showLib = false">
+        <div class="s-6eaacc" @click.stop>
+          <h4 class="s-fddfbc">Bibliothèque d'exercices</h4>
+          <input type="text" x-model="libSearch" class="field s-fdf33f" placeholder="Rechercher...">
+          <select class="field s-761d3a" x-model="libFilter">
             <option value="Tous">Tous les groupes</option>
             <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="grp">
               <option :value="grp" x-text="grp"></option>
             </template>
           </select>
-          <div style="max-height:300px; overflow-y:auto;">
+          <div class="s-bcf450">
             <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="'slib-'+grp">
               <template x-if="libFilter === 'Tous' || libFilter === grp">
                 <div>
-                  <div style="font-size:0.72rem; color:var(--accent); letter-spacing:1px; font-weight:700; margin:8px 0 4px;" x-text="grp"></div>
+                  <div class="s-f2e2ad" x-text="grp"></div>
                   <template x-for="ex in (typeof EXERCISE_LIBRARY !== 'undefined' ? (EXERCISE_LIBRARY[grp] || []) : [])" :key="grp+'-'+ex.name">
-                    <div x-show="typeof exerciseMatches === 'undefined' ? (!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0) : exerciseMatches(ex, libSearch)"
-                         style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <div class="s-1eb598" x-show="typeof exerciseMatches === 'undefined' ? (!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0) : exerciseMatches(ex, libSearch)">
                       <div>
-                        <div style="font-size:0.85rem; color:#fff; font-weight:600;" x-text="ex.name"></div>
-                        <div style="font-size:0.7rem; color:var(--text-dim);" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
+                        <div class="s-d799ac" x-text="ex.name"></div>
+                        <div class="s-8b4f4a" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
                       </div>
-                      <button type="button" class="btn mini" style="white-space:nowrap;"
+                      <button type="button" class="btn mini s-86abda"
                               @click="newName = ex.name; newMuscle = (typeof LIBRARY_TO_MUSCLE !== 'undefined' ? LIBRARY_TO_MUSCLE[grp] : 'Autre') || 'Autre'; newSets = ex.defaultSets; showLib = false;">+ Ajouter</button>
                     </div>
                   </template>
@@ -760,7 +757,7 @@
               </template>
             </template>
           </div>
-          <button type="button" class="btn primary" style="width:100%; margin-top:10px;" @click="showLib = false">Fermer</button>
+          <button type="button" class="btn primary s-1847bb" @click="showLib = false">Fermer</button>
         </div>
       </div>
 
@@ -772,7 +769,7 @@
       <datalist id="known-exo-names">
         {% for n in known_exo_names %}<option value="{{ n }}"></option>{% endfor %}
       </datalist>
-      <p style="font-size:0.72rem; color:var(--text-mute); margin:4px 0 0;">Réutilise un nom déjà proposé pour éviter les doublons dans ton historique.</p>
+      <p class="s-26913c">Réutilise un nom déjà proposé pour éviter les doublons dans ton historique.</p>
       {% endif %}
       <label class="field-label">Muscle principal</label>
       <select name="muscle" class="field" x-model="newMuscle">
@@ -780,7 +777,7 @@
       </select>
       <label class="field-label">Nombre de séries</label>
       <input type="number" name="sets_count" min="1" max="10" class="field" x-model.number="newSets">
-      <button type="submit" class="btn primary label-icon" style="width:100%; margin-top:10px; justify-content:center;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cet exercice</button>
+      <button type="submit" class="btn primary label-icon s-aa44fc"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cet exercice</button>
     </form>
     </div>
   </div>
@@ -830,13 +827,13 @@
   {# ── Cardios déjà enregistrés pour cette séance ── #}
   {% if cardio_done %}
     {% for c in cardio_done %}
-      <div class="card" style="margin-top:10px; border-color: rgba(255,159,10,0.4);">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <div class="label-icon" style="font-weight:700; color:#FF9F0A;">
-            <svg class="icon icon-sm" style="color:#FF9F0A;"><use href="/static/img/icons.svg#flame"/></svg>
+      <div class="card s-5e45f3">
+        <div class="s-5f28bc">
+          <div class="label-icon s-e59549">
+            <svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#flame"/></svg>
             Cardio · {{ c.activite }}
           </div>
-          <form method="post" action="/seance/delete-cardio" style="margin:0;" x-data="{ c2:false }">
+          <form class="s-116966" method="post" action="/seance/delete-cardio" x-data="{ c2:false }">
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
@@ -845,39 +842,39 @@
             <input type="hidden" name="activite" value="{{ c.activite }}">
             <input type="hidden" name="serie" value="{{ c.serie }}">
             <button type="button" class="btn mini label-icon" x-show="!c2" @click="c2=true" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
-            <span class="inline-confirm" x-show="c2" x-cloak style="display:inline-flex; width:auto;">
+            <span class="inline-confirm s-834332" x-show="c2" x-cloak>
               <button type="button" class="btn mini" @click="c2=false">Annuler</button>
               <button type="submit" class="btn mini btn-danger">Confirmer</button>
             </span>
           </form>
         </div>
-        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:0.85rem; color: var(--text-2);">
-          {% if c.duree %}<span><strong style="color:var(--text-1);">{{ c.duree }}</strong> min</span>{% endif %}
-          {% if c.distance %}<span><strong style="color:var(--text-1);">{{ c.distance|round(2) }}</strong></span>{% endif %}
-          {% if c.vitesse %}<span>Vit. <strong style="color:var(--text-1);">{{ c.vitesse }}</strong></span>{% endif %}
-          {% if c.calories %}<span><strong style="color:var(--warning);">{{ c.calories }}</strong> kcal</span>{% endif %}
+        <div class="s-b4238c">
+          {% if c.duree %}<span><strong class="s-38f301">{{ c.duree }}</strong> min</span>{% endif %}
+          {% if c.distance %}<span><strong class="s-38f301">{{ c.distance|round(2) }}</strong></span>{% endif %}
+          {% if c.vitesse %}<span>Vit. <strong class="s-38f301">{{ c.vitesse }}</strong></span>{% endif %}
+          {% if c.calories %}<span><strong class="s-52df2b">{{ c.calories }}</strong> kcal</span>{% endif %}
           {% if c.rpe %}<span class="badge badge-info">{{ c.rpe }}</span>{% endif %}
         </div>
         {% if c.note %}
-          <div style="margin-top:6px; font-size:0.82rem; color:var(--text-2); font-style:italic;">{{ c.note }}</div>
+          <div class="s-a9d81b">{{ c.note }}</div>
         {% endif %}
       </div>
     {% endfor %}
   {% endif %}
 
   {# ── Bloc cardio inline (optionnel, ajoute un cardio à cette séance) ── #}
-  <div class="card" x-data="cardioBlock()" style="margin-top:14px;">
-    <button type="button" class="btn label-icon" style="width:100%; justify-content:center;" @click="open = !open">
+  <div class="card s-d6f2af" x-data="cardioBlock()">
+    <button type="button" class="btn label-icon s-9f1047" @click="open = !open">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#flame"/></svg>
       <span x-text="open ? 'Fermer le cardio' : 'Ajouter du cardio'"></span>
     </button>
-    <form method="post" action="/seance/add-cardio" x-show="open" x-transition style="margin-top:10px;">
+    <form class="s-d2c171" method="post" action="/seance/add-cardio" x-show="open" x-transition>
       <input type="hidden" name="mode" value="{{ mode }}">
       <input type="hidden" name="name" value="{{ seance_name }}">
       <input type="hidden" name="seance_name" value="{{ seance_name }}">
       <input type="hidden" name="date" value="{{ date_iso }}">
-      <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:4px;">Type</label>
-      <select name="activite" x-model="activite" class="cell-input" style="width:100%;">
+      <label class="s-8af194">Type</label>
+      <select name="activite" x-model="activite" class="cell-input s-046678">
         <option>Course</option>
         <option>Vélo</option>
         <option>Rameur</option>
@@ -889,42 +886,41 @@
         <option>Montée d'escaliers</option>
         <option>Autre</option>
       </select>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+      <div class="s-c669ae">
         <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Durée (min)</label>
-          <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input" style="width:100%;" placeholder="20">
+          <label class="s-b0be71">Durée (min)</label>
+          <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input s-046678" placeholder="20">
         </div>
         <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().dist"></label>
-          <input type="number" inputmode="decimal" :step="units().pas" min="0" name="distance_km" x-model="distance" class="cell-input" style="width:100%;" :placeholder="autoDistance() || '0'">
-        </div>
-      </div>
-      <div x-show="activite === 'Course' || activite === 'Marche'" style="margin-top:8px;">
-        <label for="seance-incline" style="display:block; font-size:0.78rem; color:var(--text-mute);">Inclinaison (<span x-text="incline"></span>%)</label>
-        <input type="range" id="seance-incline" name="incline" min="0" max="20" step="0.5"
-               x-model.number="incline" :aria-valuetext="incline + ' %'"
-               style="width:100%; height:28px; accent-color: var(--accent);">
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
-        <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().vit || 'Vitesse'"></label>
-          <input type="number" inputmode="decimal" step="0.01" min="0" name="vitesse" x-model="vitesse" class="cell-input" style="width:100%;" :placeholder="autoVitesse()">
-        </div>
-        <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);">Calories (kcal)</label>
-          <input type="number" inputmode="numeric" min="0" name="calories" x-model="calories" class="cell-input" style="width:100%;" placeholder="auto">
+          <label class="s-b0be71" x-text="units().dist"></label>
+          <input type="number" inputmode="decimal" :step="units().pas" min="0" name="distance_km" x-model="distance" class="cell-input s-046678" :placeholder="autoDistance() || '0'">
         </div>
       </div>
-      <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:8px;">Intensité</label>
-      <select name="rpe" class="cell-input" style="width:100%;">
+      <div class="s-8a77e5" x-show="activite === 'Course' || activite === 'Marche'">
+        <label class="s-b0be71" for="seance-incline">Inclinaison (<span x-text="incline"></span>%)</label>
+        <input class="s-fb4324" type="range" id="seance-incline" name="incline" min="0" max="20" step="0.5"
+               x-model.number="incline" :aria-valuetext="incline + ' %'">
+      </div>
+      <div class="s-c669ae">
+        <div>
+          <label class="s-b0be71" x-text="units().vit || 'Vitesse'"></label>
+          <input type="number" inputmode="decimal" step="0.01" min="0" name="vitesse" x-model="vitesse" class="cell-input s-046678" :placeholder="autoVitesse()">
+        </div>
+        <div>
+          <label class="s-b0be71">Calories (kcal)</label>
+          <input type="number" inputmode="numeric" min="0" name="calories" x-model="calories" class="cell-input s-046678" placeholder="auto">
+        </div>
+      </div>
+      <label class="s-680601">Intensité</label>
+      <select name="rpe" class="cell-input s-046678">
         <option value="">—</option>
         <option>Facile</option>
         <option>Modéré</option>
         <option>Intense</option>
       </select>
-      <label style="display:block; font-size:0.78rem; color:var(--text-mute); margin-top:8px;">Remarque</label>
-      <input type="text" name="note" class="cell-input" style="width:100%;" maxlength="80" placeholder="ex: fractionné, tempo, lieu…">
-      <button type="submit" class="btn primary label-icon" style="width:100%; margin-top:10px; justify-content:center;" data-haptic="1">
+      <label class="s-680601">Remarque</label>
+      <input type="text" name="note" class="cell-input s-046678" maxlength="80" placeholder="ex: fractionné, tempo, lieu…">
+      <button type="submit" class="btn primary label-icon s-aa44fc" data-haptic="1">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer le cardio
       </button>
     </form>
@@ -940,14 +936,14 @@
     <input type="hidden" name="rating" id="finish-rating" value="">
     <input type="hidden" name="comment" id="finish-comment" value="">
     <input type="hidden" name="duration_min" id="finish-duration-input" value="">
-    <button type="button" id="finish-open" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
+    <button type="button" id="finish-open" class="btn primary label-icon s-d5b41c" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
   </form>
 
   {# ── Bilan de séance : note sur 5 + commentaire (skippable) ──────── #}
   <div id="finish-modal" class="exo-info-modal" style="display:none;">
-    <div class="exo-info-box" style="max-width:340px;" onclick="event.stopPropagation()">
-      <h4 style="text-align:center; font-size:1.05rem;">Séance terminée 💪</h4>
-      <div style="text-align:center; font-size:0.82rem; color:var(--text-3); margin-bottom:2px;">Comment elle s'est passée ?</div>
+    <div class="exo-info-box s-b86dc2" onclick="event.stopPropagation()">
+      <h4 class="s-8d0f29">Séance terminée 💪</h4>
+      <div class="s-9e661f">Comment elle s'est passée ?</div>
       <div id="finish-duration" class="finish-duration"></div>
 
       <div class="seance-rating-stars" id="finish-stars">
@@ -957,12 +953,11 @@
       </div>
       <div class="seance-rating-label" id="finish-rating-label"></div>
 
-      <textarea id="finish-comment-input" rows="3" maxlength="500"
-                placeholder="Un mot sur ta séance ? (sensations, forme, douleurs…)"
-                style="width:100%; box-sizing:border-box; background:var(--bg-input, rgba(255,255,255,0.05)); border:0.5px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-1); padding:10px; font-size:0.88rem; font-family:inherit; resize:none;"></textarea>
+      <textarea class="s-10e689" id="finish-comment-input" rows="3" maxlength="500"
+                placeholder="Un mot sur ta séance ? (sensations, forme, douleurs…)"></textarea>
 
-      <button type="button" class="btn primary" id="finish-save" style="width:100%; justify-content:center; margin-top:10px;">Enregistrer la séance</button>
-      <button type="button" class="btn" id="finish-skip" style="width:100%; justify-content:center; margin-top:6px; color:var(--text-3);">Passer</button>
+      <button type="button" class="btn primary s-d5b41c" id="finish-save">Enregistrer la séance</button>
+      <button type="button" class="btn s-25e5b7" id="finish-skip">Passer</button>
     </div>
   </div>
 
@@ -975,7 +970,7 @@
   <div id="exo-info-modal" class="exo-info-modal" style="display:none;" onclick="this.style.display='none'">
     <div class="exo-info-box" onclick="event.stopPropagation()">
       <h4 id="exo-info-title"></h4>
-      <div id="exo-info-image" style="text-align:center; margin-bottom:12px;"></div>
+      <div class="s-d30c74" id="exo-info-image"></div>
 
       <div class="exo-info-tabs" role="tablist">
         <button type="button" class="exo-info-tab active" data-tab="fiche" onclick="switchExoTab('fiche')">Fiche</button>
@@ -983,10 +978,10 @@
       </div>
 
       <div id="exo-tab-fiche" class="exo-tab-pane">
-        <div id="exo-info-bodymap" class="mini-bodymap" style="display:flex; justify-content:center; gap:8px; margin-bottom:10px;"></div>
+        <div id="exo-info-bodymap" class="mini-bodymap s-0e86c0"></div>
         <div class="info-section">
           <div class="info-label">MUSCLES</div>
-          <div id="exo-info-muscles" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
+          <div class="s-33e7ae" id="exo-info-muscles"></div>
         </div>
         <div class="info-section">
           <div class="info-label">EXÉCUTION</div>
@@ -994,30 +989,29 @@
         </div>
         <div class="info-section" id="exo-info-tips-section">
           <div class="info-label">CONSEILS</div>
-          <ul id="exo-info-tips" style="padding-left:18px; margin:4px 0 0; font-size:0.88rem; line-height:1.5;"></ul>
+          <ul class="s-9abd94" id="exo-info-tips"></ul>
         </div>
-        <a id="exo-info-coach-link" href="/coach" class="btn label-icon"
-           style="width:100%; justify-content:center; margin-top:10px; color:var(--accent);">
+        <a id="exo-info-coach-link" href="/coach" class="btn label-icon s-0bd857">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#message-circle"/></svg>
           Demander conseil au coach
         </a>
       </div>
 
       <div id="exo-tab-rm" class="exo-tab-pane" style="display:none;">
-        <div id="exo-rm-empty" class="info-section" style="text-align:center; color:var(--text-dim); padding:14px 0;">
+        <div id="exo-rm-empty" class="info-section s-cb035c">
           Aucun 1RM estimé pour cet exercice — fais d'abord quelques séries pour débloquer la Table RM.
         </div>
         <div id="exo-rm-content" style="display:none;">
           <div class="info-section">
             <div class="info-label">1RM ESTIMÉ</div>
-            <div style="font-size:1.2rem; font-weight:700; color:var(--accent);"><span id="exo-rm-value"></span> kg</div>
+            <div class="s-388038"><span id="exo-rm-value"></span> kg</div>
           </div>
-          <div class="info-label" style="margin-top:8px;">POIDS PAR NOMBRE DE REPS</div>
-          <table class="ltable rm-table" style="margin-top:4px;">
+          <div class="info-label s-8a77e5">POIDS PAR NOMBRE DE REPS</div>
+          <table class="ltable rm-table s-96ad60">
             <thead><tr><th>Reps</th><th>Poids</th><th>% 1RM</th></tr></thead>
             <tbody id="exo-rm-rows"></tbody>
           </table>
-          <div style="font-size:0.72rem; color:var(--text-dim); margin-top:6px; font-style:italic;">
+          <div class="s-c2ce36">
             Formule Epley : poids = 1RM / (1 + reps/30)
           </div>
         </div>

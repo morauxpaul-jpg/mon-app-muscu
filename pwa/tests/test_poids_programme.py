@@ -75,7 +75,7 @@ def test_les_cartes_du_catalogue_restent_visibles(compte_charge, logged_in):
     """On allège le détail, pas la liste : chaque programme garde sa carte,
     son titre et son bouton. Sinon la page serait légère et vide."""
     html = _page(logged_in)
-    assert html.count('class="card catalog-card"') >= 10
+    assert html.count('class="card catalog-card') >= 10
     assert html.count("Détail des séances") >= 10
     assert "catalog-detail" in html
 

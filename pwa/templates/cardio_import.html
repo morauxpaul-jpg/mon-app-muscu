@@ -4,7 +4,7 @@
 {% block content %}
 <main class="page">
 
-  <a href="/cardio" class="btn mini label-icon" style="margin-bottom:12px;">
+  <a href="/cardio" class="btn mini label-icon s-da12f2">
     <svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour au cardio
   </a>
 
@@ -15,13 +15,13 @@
   {# ── Étape 1 : déposer le fichier ─────────────────────────── #}
   {% if etape == "depot" %}
     {% if erreur %}
-      <div class="card" style="border-color:rgba(255,69,58,0.35); background:var(--danger-bg);">
-        <p style="margin:0; font-size:0.88rem; color:var(--text-1);">{{ erreur }}</p>
+      <div class="card s-1b1970">
+        <p class="s-acee0e">{{ erreur }}</p>
       </div>
     {% endif %}
 
     <div class="card">
-      <div class="label-icon" style="color:var(--accent); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+      <div class="label-icon s-155f11">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#download"/></svg>RÉCUPÉRER TON ARCHIVE
       </div>
       <p class="aide">
@@ -38,16 +38,16 @@
     </div>
 
     <form method="post" action="/cardio/import" enctype="multipart/form-data" class="card">
-      <div class="label-icon" style="color:var(--accent); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+      <div class="label-icon s-155f11">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>DÉPOSER LE FICHIER
       </div>
       <label class="field-label" for="fichier">activities.csv</label>
       <input type="file" id="fichier" name="fichier" accept=".csv,text/csv" class="field" required>
-      <p class="aide" style="margin-top:8px;">
+      <p class="aide s-8a77e5">
         Le fichier <b>.csv</b>, pas l'archive <b>.zip</b>. Rien ne sera écrit :
         l'écran suivant te montre ce qui entrerait, et c'est toi qui valides.
       </p>
-      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;">
+      <button type="submit" class="btn primary label-icon s-d5b41c">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Lire le fichier
       </button>
     </form>
@@ -57,7 +57,7 @@
     <div class="card">
       <div class="apercu-chiffres">
         <div>
-          <div class="apercu-nombre" style="color:var(--success);">{{ a_importer|length }}</div>
+          <div class="apercu-nombre s-5a4529">{{ a_importer|length }}</div>
           <div class="apercu-label">à importer</div>
         </div>
         <div>
@@ -91,7 +91,7 @@
 
     {% if a_importer %}
       <div class="card">
-        <div class="label-icon" style="color:var(--accent); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+        <div class="label-icon s-155f11">
           <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#history"/></svg>CE QUI VA ENTRER
         </div>
         <ul class="liste-seances">
@@ -112,36 +112,36 @@
 
       <form method="post" action="/cardio/import/confirmer">
         <input type="hidden" name="charge" value="{{ charge }}">
-        <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-haptic="1">
+        <button type="submit" class="btn primary label-icon s-9f1047" data-haptic="1">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Importer ces {{ a_importer|length }} séances
         </button>
       </form>
-      <a href="/cardio/import" class="btn" style="width:100%; justify-content:center; margin-top:8px;">Annuler</a>
+      <a href="/cardio/import" class="btn s-ac0370">Annuler</a>
     {% else %}
       <div class="card">
-        <p style="margin:0; font-size:0.9rem;">Rien de nouveau à importer — tout ce
+        <p class="s-85a05b">Rien de nouveau à importer — tout ce
         que contient ce fichier est déjà dans ton historique.</p>
       </div>
-      <a href="/cardio" class="btn" style="width:100%; justify-content:center; margin-top:10px;">Retour au cardio</a>
+      <a href="/cardio" class="btn s-d5b41c">Retour au cardio</a>
     {% endif %}
 
   {# ── Étape 3 : c'est fait ─────────────────────────────────── #}
   {% elif etape == "fini" %}
-    <div class="card" style="border-color:var(--success); background:var(--success-bg);">
-      <div class="label-icon" style="color:var(--success); font-size:0.9rem;">
+    <div class="card s-1f5861">
+      <div class="label-icon s-9525d9">
         <svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>
         {{ nb_ecrites }} séance{{ "s" if nb_ecrites > 1 }} importée{{ "s" if nb_ecrites > 1 }}
       </div>
       {% if nb_ecrites < nb_proposees %}
-        <p class="aide" style="margin-top:8px;">
+        <p class="aide s-8a77e5">
           {{ nb_proposees - nb_ecrites }} n'ont pas pu être écrites. Relance
           l'import avec le même fichier : celles déjà entrées seront reconnues
           et ne seront pas doublées.
         </p>
       {% endif %}
     </div>
-    <a href="/progres" class="btn primary" style="width:100%; justify-content:center; margin-top:10px;">Voir mes progrès</a>
-    <a href="/cardio" class="btn" style="width:100%; justify-content:center; margin-top:8px;">Retour au cardio</a>
+    <a href="/progres" class="btn primary s-d5b41c">Voir mes progrès</a>
+    <a href="/cardio" class="btn s-ac0370">Retour au cardio</a>
   {% endif %}
 
   <style>

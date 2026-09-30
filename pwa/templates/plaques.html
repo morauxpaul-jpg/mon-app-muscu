@@ -32,10 +32,10 @@
 {% endblock %}
 
 {% block content %}
-  <a href="/seance" class="btn label-icon" style="display:inline-flex; margin-bottom:12px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/seance" class="btn label-icon s-7dc027"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>Calcul de plaques</h1>
-  <p style="font-size:0.85rem; color:var(--text-dim); margin-top:-4px;">Combien de disques mettre de chaque côté pour atteindre ton poids cible.</p>
+  <p class="s-eb503d">Combien de disques mettre de chaque côté pour atteindre ton poids cible.</p>
 
   <div class="card plaque-tool"
        x-data="plaqueCalc()" x-init="init()">
@@ -66,17 +66,16 @@
     </div>
 
     <div>
-      <label class="muscle-check" style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-2);">
+      <label class="muscle-check s-a9ee7e">
         <input type="checkbox" x-model="limitMode">
         <span>Je limite mon stock de disques (matériel maison)</span>
       </label>
-      <div x-show="limitMode" x-transition.duration.150ms class="flex-show" style="margin-top:8px; flex-direction:column; gap:6px;">
-        <div style="font-size:0.72rem; color:var(--text-3);">Combien de disques de chaque tu possèdes <b>par côté</b> (vide = illimité) :</div>
+      <div x-show="limitMode" x-transition.duration.150ms class="flex-show s-bfae15">
+        <div class="s-2f4568">Combien de disques de chaque tu possèdes <b>par côté</b> (vide = illimité) :</div>
         <template x-for="p in allPlates.filter(x => enabled.includes(x))" :key="'q'+p">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <span style="font-size:0.82rem; color:var(--text-2);"><span class="plaque-swatch" :style="`background:${colors[p] || '#888'}`"></span><span x-text="String(p).replace('.', ',') + ' kg'"></span></span>
-            <input type="number" inputmode="numeric" min="0" step="1" placeholder="∞"
-                   style="width:80px; text-align:center;" class="field"
+          <div class="s-a2cd8b">
+            <span class="s-f5701a"><span class="plaque-swatch" :style="`background:${colors[p] || '#888'}`"></span><span x-text="String(p).replace('.', ',') + ' kg'"></span></span>
+            <input type="number" inputmode="numeric" min="0" step="1" placeholder="∞" class="field s-0ae5f0"
                    :value="counts[p] ?? ''" @input="setCount(p, $event.target.value)">
           </div>
         </template>
@@ -113,7 +112,7 @@
     <div class="plaque-warn" x-show="perSide < 0">La cible est inférieure au poids de la barre.</div>
   </div>
 
-  <div class="card" style="font-size:0.78rem; color:var(--text-dim);">
+  <div class="card s-6f1d76">
     Astuce : les couleurs suivent le standard (rouge 25, bleu 20, jaune 15, vert 10, blanc 5…). Désactive un disque que tu n'as pas en salle.
   </div>
 {% endblock %}

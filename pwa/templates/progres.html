@@ -126,13 +126,13 @@
       {% endfor %}
     </div>
     <div class="cal-rate">Assiduité : <b>{{ cal_rate }}%</b> des séances prévues</div>
-    <div class="cal-legend" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:8px; font-size:.7rem; color:var(--text-3);">
-      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--success); vertical-align:middle; margin-right:4px;"></span>Faite</span>
-      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--danger); vertical-align:middle; margin-right:4px;"></span>Manquée</span>
-      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--text-3); vertical-align:middle; margin-right:4px;"></span>Rattrapée</span>
-      <span><span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:var(--accent); vertical-align:middle; margin-right:4px;"></span>À venir</span>
+    <div class="cal-legend s-3c2204">
+      <span><span class="s-4c0bb1"></span>Faite</span>
+      <span><span class="s-e7295c"></span>Manquée</span>
+      <span><span class="s-d53781"></span>Rattrapée</span>
+      <span><span class="s-00a7ee"></span>À venir</span>
     </div>
-    <div style="text-align:center; font-size:.7rem; color:var(--text-3); margin-top:4px;">Touche un jour pour voir la séance.</div>
+    <div class="s-b577c8">Touche un jour pour voir la séance.</div>
   </div>
 
   {% if not has_data %}
@@ -145,10 +145,10 @@
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire</h3>
 
     {# Sélecteur de période #}
-    <div style="display:flex; gap:4px; margin-bottom:10px; justify-content:center;">
+    <div class="s-28af69">
       {% for days, label in [(7, "Cette semaine"), (30, "Ce mois"), (90, "30 derniers jours")] %}
         <a href="/progres?bm_period={{ days }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}&cy={{ cal_year }}&cm={{ cal_month }}"
-           class="vbtn{% if bm_days == days %} active{% endif %}" style="font-size:0.7rem; padding:5px 10px;">{{ label }}</a>
+           class="vbtn{% if bm_days == days %} active{% endif %} s-efd044">{{ label }}</a>
       {% endfor %}
     </div>
 
@@ -160,19 +160,19 @@
       <div id="bm-svg-container">
         {% include "_body_map_svg.html" %}
       </div>
-      <div class="legend" style="font-size:0.7rem;">
-        <span><i style="background:#555555"></i>Non travaill&eacute;</span>
-        <span><i style="background:#7EC8E3"></i>Faible</span>
-        <span><i style="background:#3B82F6"></i>Mod&eacute;r&eacute;</span>
-        <span><i style="background:#2563EB"></i>&Eacute;lev&eacute;</span>
-        <span><i style="background:#00FFFF"></i>Dominant</span>
+      <div class="legend s-8e87b7">
+        <span><i class="s-d00feb"></i>Non travaill&eacute;</span>
+        <span><i class="s-23dd8e"></i>Faible</span>
+        <span><i class="s-545a74"></i>Mod&eacute;r&eacute;</span>
+        <span><i class="s-5b9a49"></i>&Eacute;lev&eacute;</span>
+        <span><i class="s-5433bd"></i>Dominant</span>
       </div>
     </div>
 
     {# Tooltip pour muscle cliqué #}
-    <div id="bm-tooltip" style="display:none; margin-top:10px; padding:10px; border-radius:var(--radius-md); background: var(--accent-bg); border: 0.5px solid var(--border-default);">
-      <div style="font-weight:700; color:var(--accent); margin-bottom:4px;" id="bm-tt-name"></div>
-      <div style="font-size:0.82rem; color:var(--text);">
+    <div class="s-898303" id="bm-tooltip" style="display:none;">
+      <div class="s-dc7353" id="bm-tt-name"></div>
+      <div class="s-22151a">
         <div class="mrow"><span>Volume (séries)</span><b id="bm-tt-sets"></b></div>
         <div class="mrow"><span>% du volume total</span><b id="bm-tt-pct"></b></div>
         <div class="mrow"><span>Dernier entraînement</span><b id="bm-tt-last"></b></div>
@@ -185,21 +185,21 @@
     <button class="back label-icon" onclick="closeDetail()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
     <h3 id="md-title">—</h3>
     <div id="md-content"></div>
-    <div id="md-chart" style="width:100%; height:180px; margin-top:10px;"></div>
+    <div class="s-3dcc32" id="md-chart"></div>
   </div>
   {% else %}
   {# ── Carte du corps — aperçu verrouillé pour les non-VIP ── #}
-  <div class="card" style="position:relative; padding:0; overflow:hidden;">
-    <div style="padding:14px 14px 6px;">
-      <h3 class="label-icon" style="margin:0;"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire <span class="badge-pro" style="margin-left:6px;">PRO</span></h3>
+  <div class="card s-50f038">
+    <div class="s-f4083a">
+      <h3 class="label-icon s-116966"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire <span class="badge-pro s-391ef1">PRO</span></h3>
     </div>
-    <div style="position:relative;">
-      <div style="padding:20px 14px 24px; filter:blur(4px); user-select:none; pointer-events:none; text-align:center; color:var(--text-2); font-size:0.8rem;">
-        <div style="height:260px; background:linear-gradient(180deg,var(--bg-elevated),var(--bg-surface)); border-radius:var(--radius-md); margin:8px 16px;"></div>
+    <div class="s-d461c9">
+      <div class="s-dd8096">
+        <div class="s-944e32"></div>
       </div>
-      <a href="/premium" class="lock-overlay" style="flex-direction:column; gap:8px;">
+      <a href="/premium" class="lock-overlay s-d704ea">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span style="display:flex; align-items:center; gap:8px;">Débloquer <span class="badge-pro">PRO</span></span>
+        <span class="s-42e4ac">Débloquer <span class="badge-pro">PRO</span></span>
       </a>
     </div>
   </div>
@@ -219,7 +219,7 @@
         {% endfor %}
       </div>
       {% if sel_exo %}<input type="hidden" name="exo" value="{{ sel_exo }}">{% endif %}
-      <button type="submit" class="btn label-icon" style="width:100%; justify-content:center; margin-top:8px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sliders"/></svg>Filtrer</button>
+      <button type="submit" class="btn label-icon s-ac0370"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sliders"/></svg>Filtrer</button>
     </form>
     {% if podium %}
       <div class="podium">
@@ -235,25 +235,25 @@
         {% endfor %}
       </div>
     {% else %}
-      <p style="text-align:center; color:var(--text-dim); font-size:0.85rem;">Aucun mouvement pour ce filtre.</p>
+      <p class="s-8d96a8">Aucun mouvement pour ce filtre.</p>
     {% endif %}
   </div>
   {% else %}
-  <div class="card" style="position:relative; padding:0; overflow:hidden;">
-    <div style="padding:14px 14px 6px;">
-      <h3 class="label-icon" style="margin:0;"><svg class="icon icon-md icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>Hall of Fame <span class="badge-pro" style="margin-left:6px;">PRO</span></h3>
+  <div class="card s-50f038">
+    <div class="s-f4083a">
+      <h3 class="label-icon s-116966"><svg class="icon icon-md icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>Hall of Fame <span class="badge-pro s-391ef1">PRO</span></h3>
     </div>
-    <div style="position:relative;">
-      <div style="padding:14px; filter:blur(4px); user-select:none; pointer-events:none;">
+    <div class="s-d461c9">
+      <div class="s-158183">
         <div class="podium">
           <div class="podium-item podium-gold"><div class="rank">1</div><div class="exo">Développé couché</div><div class="rm">1RM — kg</div></div>
           <div class="podium-item podium-silver"><div class="rank">2</div><div class="exo">Squat</div><div class="rm">1RM — kg</div></div>
           <div class="podium-item podium-bronze"><div class="rank">3</div><div class="exo">Soulevé de terre</div><div class="rm">1RM — kg</div></div>
         </div>
       </div>
-      <a href="/premium" class="lock-overlay" style="flex-direction:column; gap:8px;">
+      <a href="/premium" class="lock-overlay s-d704ea">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span style="display:flex; align-items:center; gap:8px;">Débloquer le Hall of Fame <span class="badge-pro">PRO</span></span>
+        <span class="s-42e4ac">Débloquer le Hall of Fame <span class="badge-pro">PRO</span></span>
       </a>
     </div>
   </div>
@@ -262,7 +262,7 @@
   {# ── Zoom mouvement ─────────────────────────────────── #}
   <div class="card" id="zoom">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#search"/></svg>Suivre un exercice</h3>
-    <p class="note" style="margin:2px 0 10px; color:var(--text-2); font-size:0.84rem;">
+    <p class="note s-b7cffc">
       Toutes tes séances sur un mouvement : charge, volume, force estimée et
       historique série par série.
     </p>
@@ -274,10 +274,10 @@
             <option value="{{ e }}" {% if e == sel_exo %}selected{% endif %}>{{ e }}</option>
           {% endfor %}
         </select>
-        <noscript><button type="submit" class="btn primary" style="width:100%; margin-top:8px;">Voir</button></noscript>
+        <noscript><button type="submit" class="btn primary s-a4a5b8">Voir</button></noscript>
       </form>
       {% if top_exos %}
-        <div class="field-label" style="margin-top:12px;">Tes mouvements les plus travaillés</div>
+        <div class="field-label s-56f435">Tes mouvements les plus travaillés</div>
         <div class="exo-quick">
           {% for e in top_exos %}
             <a class="exo-quick-chip" href="/progres/exercice?exo={{ e.name|urlencode }}">
@@ -288,7 +288,7 @@
         </div>
       {% endif %}
     {% else %}
-      <p class="note" style="color:var(--text-3);">Fais une première séance pour voir tes exercices ici.</p>
+      <p class="note s-ab23bb">Fais une première séance pour voir tes exercices ici.</p>
     {% endif %}
   </div>
 
@@ -415,7 +415,7 @@
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Poids corporel</h3>
 
     {% if weight %}
-      <div class="detail-row" style="margin-top: 10px;">
+      <div class="detail-row s-e5a6d3">
         <div class="detail-metric">
           <div class="detail-label">Actuel</div>
           <div class="detail-value">{{ weight.current|round(1) }} kg</div>
@@ -426,13 +426,13 @@
           {% if weight.delta_30 is not none %}
             <div class="detail-value {{ weight.delta_class }}">{{ '+' if weight.delta_30 > 0 else '' }}{{ weight.delta_30|round(1) }} kg</div>
           {% else %}
-            <div class="detail-value" style="color:var(--text-3);">—</div>
+            <div class="detail-value s-ab23bb">—</div>
             <div class="weight-sub">pas encore 30 j</div>
           {% endif %}
         </div>
         <div class="detail-metric">
           <div class="detail-label">Min · Max</div>
-          <div class="detail-value" style="font-size:0.95rem;">{{ weight.min|round(1) }} · {{ weight.max|round(1) }}</div>
+          <div class="detail-value s-b28f1d">{{ weight.min|round(1) }} · {{ weight.max|round(1) }}</div>
           <div class="weight-sub">90 jours</div>
         </div>
       </div>
@@ -454,7 +454,7 @@
         <div class="weight-axis"><span>{{ weight.first_label }}</span><span>{{ weight.last_label }}</span></div>
       {% endif %}
     {% else %}
-      <p style="color:var(--text-3); font-size:0.85rem; margin:8px 0 0;">Pèse-toi une fois par semaine, toujours dans les mêmes conditions : la courbe apparaît ici et ta nutrition suit ton poids réel.</p>
+      <p class="s-3e3fe1">Pèse-toi une fois par semaine, toujours dans les mêmes conditions : la courbe apparaît ici et ta nutrition suit ton poids réel.</p>
     {% endif %}
 
     <form method="post" action="/progres/poids" class="weight-form">
@@ -469,8 +469,8 @@
         {% for e in weight.recent %}
           <div class="mrow">
             <span>{{ e.date[8:10] }}/{{ e.date[5:7] }}/{{ e.date[0:4] }}</span>
-            <span style="display:flex; align-items:center; gap:10px;"><b>{{ e.poids_kg|round(1) }} kg</b>
-              <form method="post" action="/progres/poids/delete" style="display:inline; margin:0;">
+            <span class="s-26c3ae"><b>{{ e.poids_kg|round(1) }} kg</b>
+              <form class="s-374855" method="post" action="/progres/poids/delete">
                 <input type="hidden" name="date" value="{{ e.date }}">
                 <button type="submit" class="mini-btn" title="Supprimer cette pesée" aria-label="Supprimer la pesée du {{ e.date }}">×</button>
               </form>
@@ -483,26 +483,26 @@
 
   {# ── Cardio ────────────────────────────────────────── #}
   {% if cardio %}
-  <div class="card" style="border-color:var(--warning);">
-    <h3 class="label-icon" style="color:var(--warning);"><svg class="icon icon-md" style="color:var(--warning);"><use href="/static/img/icons.svg#heart"/></svg>Cardio</h3>
+  <div class="card s-fd6601">
+    <h3 class="label-icon s-52df2b"><svg class="icon icon-md s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>Cardio</h3>
 
-    <div class="detail-row" style="margin-top: 10px;">
-      <div class="detail-metric" style="background:var(--warning-bg); border-color:var(--warning);">
-        <div class="detail-label" style="color:var(--warning);">Total min</div>
-        <div class="detail-value" style="color:var(--warning);">{{ cardio.total_min }}</div>
+    <div class="detail-row s-e5a6d3">
+      <div class="detail-metric s-98ae0f">
+        <div class="detail-label s-52df2b">Total min</div>
+        <div class="detail-value s-52df2b">{{ cardio.total_min }}</div>
       </div>
-      <div class="detail-metric" style="background:var(--warning-bg); border-color:var(--warning);">
-        <div class="detail-label" style="color:var(--warning);">Total km</div>
-        <div class="detail-value" style="color:var(--warning);">{{ cardio.total_km }}</div>
+      <div class="detail-metric s-98ae0f">
+        <div class="detail-label s-52df2b">Total km</div>
+        <div class="detail-value s-52df2b">{{ cardio.total_km }}</div>
       </div>
-      <div class="detail-metric" style="background:var(--warning-bg); border-color:var(--warning);">
-        <div class="detail-label" style="color:var(--warning);">Sessions</div>
-        <div class="detail-value" style="color:var(--warning);">{{ cardio.sessions }}</div>
+      <div class="detail-metric s-98ae0f">
+        <div class="detail-label s-52df2b">Sessions</div>
+        <div class="detail-value s-52df2b">{{ cardio.sessions }}</div>
       </div>
     </div>
 
     {% if cardio['values'] %}
-      <div class="field-label" style="margin-top: 12px;">Minutes par semaine</div>
+      <div class="field-label s-4bb900">Minutes par semaine</div>
       <svg class="cardio-chart" viewBox="0 0 {{ cardio['values']|length * 50 }} 140" preserveAspectRatio="xMinYMid meet">
         {% for v in cardio['values'] %}
           {% set bar_h = (v / cardio.max_val * 90) if cardio.max_val > 0 else 0 %}
@@ -514,7 +514,7 @@
       </svg>
     {% endif %}
 
-    <div class="field-label" style="margin-top: 10px;">Records</div>
+    <div class="field-label s-e5a6d3">Records</div>
     <div class="mrow"><span>Plus longue session</span><b>{{ cardio.longest_session_min }} min</b></div>
     {% if cardio.longest_run_min > 0 %}
       <div class="mrow"><span>Plus longue course</span><b>{{ cardio.longest_run_min }} min</b></div>
@@ -524,7 +524,7 @@
     {% endif %}
 
     {% if cardio.repartition %}
-      <div class="field-label" style="margin-top: 10px;">Répartition</div>
+      <div class="field-label s-e5a6d3">Répartition</div>
       {% for name, mn in cardio.repartition %}
         <div class="mrow"><span>{{ name }}</span><b>{{ mn }} min</b></div>
       {% endfor %}
