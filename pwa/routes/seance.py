@@ -39,7 +39,8 @@ from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
 from core.seance_saisie import (_form_date, _known_exo_names, _parse_session_note,
                                 _pr_check, _rows_from_sets, _session_duration_min,
                                 _session_totals)
-from core.seance_cardio import _build_cardio_done
+from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done,
+                                completer_mesures)
 
 bp = Blueprint("seance", __name__)
 
@@ -300,6 +301,7 @@ def seance():
             exos=exos_ctx,
             exos_done=exos_done,
             exos_total=exos_total,
+            unites_cardio=UNITES_CARDIO,
             recup=_recup_status(hist, s_act),
             vol_curr=int(vol_curr),
             vol_prev=int(vol_prev),
@@ -356,6 +358,7 @@ def seance():
             exos=exos_ctx,
             exos_done=exos_done,
             exos_total=exos_total,
+            unites_cardio=UNITES_CARDIO,
             recup=_recup_status(hist, s_act),
             vol_curr=0, vol_prev=0, vol_ratio=0, vol_overload=False,
             all_prog_exos=list(all_prog_exos.values()),
@@ -657,6 +660,11 @@ def add_cardio():
         vitesse = max(0.0, float((f.get("vitesse") or "0").replace(",", ".")))
     except ValueError:
         vitesse = 0.0
+    # Deux valeurs sur trois suffisent. La vitesse était calculée dans le
+    # formulaire mais seulement AFFICHÉE en suggestion : elle n'arrivait
+    # jamais jusqu'ici. Et le sens inverse manquait — le tapis affiche
+    # 10 km/h pendant 30 min, c'est la distance qu'on ignore.
+    distance_val, vitesse = completer_mesures(activite, duree_min, distance_val, vitesse)
     try:
         cal_saisie = int(float(f.get("calories") or 0))
     except ValueError:

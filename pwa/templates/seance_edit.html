@@ -901,8 +901,8 @@
           <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input" style="width:100%;" placeholder="20">
         </div>
         <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().distLabel"></label>
-          <input type="number" inputmode="decimal" :step="units().distStep" min="0" name="distance_km" x-model="distance" class="cell-input" style="width:100%;" placeholder="0">
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().dist"></label>
+          <input type="number" inputmode="decimal" :step="units().pas" min="0" name="distance_km" x-model="distance" class="cell-input" style="width:100%;" :placeholder="autoDistance() || '0'">
         </div>
       </div>
       <div x-show="activite === 'Course' || activite === 'Marche'" style="margin-top:8px;">
@@ -913,7 +913,7 @@
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div>
-          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().vitLabel || 'Vitesse'"></label>
+          <label style="display:block; font-size:0.78rem; color:var(--text-mute);" x-text="units().vit || 'Vitesse'"></label>
           <input type="number" inputmode="decimal" step="0.01" min="0" name="vitesse" x-model="vitesse" class="cell-input" style="width:100%;" :placeholder="autoVitesse()">
         </div>
         <div>
@@ -1040,7 +1040,8 @@
     "mode": mode, "seance": seance_name, "date": date_iso,
     "semaine": s_act, "weekOffset": week_offset,
     "autoRestTimer": auto_rest_timer, "showRpe": show_rpe,
-    "exosTotal": exos_total|default(exos|length)
+    "exosTotal": exos_total|default(exos|length),
+    "cardioUnits": unites_cardio
   }|tojson }}</script>
   <script type="application/json" id="body-polygons">{{ body_polygons|tojson }}</script>
   {# Sans « defer » : Alpine (chargé en defer par base.html) démarre dès son

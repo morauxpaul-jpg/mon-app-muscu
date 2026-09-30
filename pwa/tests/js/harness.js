@@ -89,7 +89,15 @@ function createEnv(options) {
     title: '',
     body: makeElement('body'),
     createElement: makeElement,
-    getElementById: () => null,
+    // Les scripts lisent leur configuration dans des <script type="json">.
+    // `createEnv({ json: { "seance-config": {...} } })` les sert ; tout autre
+    // identifiant reste absent, comme avant.
+    getElementById: (id) => (
+      Object.prototype.hasOwnProperty.call(opts.json || {}, id)
+        ? Object.assign(makeElement('script'),
+                        { textContent: JSON.stringify(opts.json[id]) })
+        : null
+    ),
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener(type, fn, capture) {

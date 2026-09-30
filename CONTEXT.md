@@ -424,6 +424,13 @@ pwa/
 - `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
 
+### Cardio : durée, distance, vitesse (core/seance_cardio.py)
+- **Deux valeurs sur trois suffisent.** `completer_mesures(activite, duree, distance, vitesse)` déduit celle qui manque, dans les deux sens. Une valeur saisie prime toujours : si l'utilisateur donne les deux, on ne corrige rien. La durée n'est jamais déduite — c'est elle qui identifie la séance.
+- Trois défauts trouvés en mesurant : la vitesse calculée dans le formulaire de séance était **affichée en suggestion et jamais enregistrée** ; la page `/cardio` **n'avait aucun champ vitesse** alors que l'écran de séance en a un ; et la règle de conversion se devinait à partir du **libellé** de l'unité (`indexOf("km/h")`), si bien que « Allure (min/500m) » ne tombait dans aucun cas et que l'allure du rameur ne se calculait jamais, en silence.
+- `UNITES_CARDIO` est la **seule** table : `/cardio` la reçoit dans son gabarit, l'écran de séance dans `#seance-config`. `static/js/seance.js` en gardait une copie en dur ; un test interdit son retour. La règle y est **nommée** (`par_heure`, `m_par_min`, `par_min`, ou vide) au lieu d'être devinée.
+- `tests/test_cardio_mesures.py` (31) et `tests/js/test_cardio_mesures.js` (10) tiennent l'ensemble, dont l'arrivée effective en base par les deux routes.
+- Le harnais JS sait maintenant servir une configuration : `createEnv({ json: {"seance-config": {…}} })`.
+
 ### Saisie d'une série (templates/seance_edit.html + static/js/seance.js)
 - Le tableau `.sets-table` de six colonnes donnait, **mesuré à 375 px** : Reps 67, Poids 70, RPE **25** (un `<select>`), Remarque 87. Les deux champs qu'on remplit à chaque série se partageaient la largeur avec trois autres choses.
 - Une série remplie se replie désormais en une ligne (`.serie-faite`, touchable pour corriger) et seule la courante reste ouverte (`.serie-encours`), avec deux champs de **133 px** et un bouton de **277 px**. RPE et remarque se déplient à la demande.

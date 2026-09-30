@@ -657,18 +657,9 @@
 
   // ── Bloc cardio inline ───────────────────────────────────────────
   window.cardioBlock = function () {
-    var UNITS = {
-      "Course":              { distLabel: "Distance (km)",       vitLabel: "Vitesse (km/h)",    distStep: "0.01" },
-      "Vélo":                { distLabel: "Distance (km)",       vitLabel: "Vitesse (km/h)",    distStep: "0.01" },
-      "Rameur":              { distLabel: "Distance (km)",       vitLabel: "Allure (min/500m)", distStep: "0.01" },
-      "Natation":            { distLabel: "Distance (km)",       vitLabel: "Vitesse (m/min)",   distStep: "0.01" },
-      "Corde":               { distLabel: "Nombre de sauts",     vitLabel: "Sauts/min",         distStep: "1" },
-      "HIIT":                { distLabel: "Rounds",              vitLabel: "",                  distStep: "1" },
-      "Marche":              { distLabel: "Distance (km)",       vitLabel: "Vitesse (km/h)",    distStep: "0.01" },
-      "Elliptique":          { distLabel: "Distance (km)",       vitLabel: "Vitesse (km/h)",    distStep: "0.01" },
-      "Montée d'escaliers":  { distLabel: "Étages (ou marches)", vitLabel: "Marches/min",       distStep: "1" },
-      "Autre":               { distLabel: "Distance (km)",       vitLabel: "Vitesse (km/h)",    distStep: "0.01" },
-    };
+    // Les unités viennent du serveur (`core/seance_cardio.py`, servies dans
+    // `#seance-config`) : une seule table, et la règle de conversion avec.
+    var UNITS = CONFIG.cardioUnits || {};
     return {
       open: false,
       activite: "Course",
@@ -677,15 +668,30 @@
       vitesse: "",
       calories: "",
       incline: 0,
-      units: function () { return UNITS[this.activite] || UNITS["Autre"]; },
+      units: function () { return UNITS[this.activite] || UNITS["Autre"] || {}; },
+      // Combien d'unités de distance pour une unité de vitesse. La règle est
+      // nommée côté serveur : la deviner à partir du LIBELLÉ, comme avant,
+      // marchait par accident — « Allure (min/500m) » ne tombait dans aucun
+      // cas et l'allure du rameur ne se calculait jamais.
+      _facteur: function () {
+        var t = parseFloat(this.duree) || 0, r = this.units().regle;
+        if (!r || t <= 0) return 0;
+        return r === "par_heure" ? t / 60 : (r === "m_par_min" ? t / 1000 : t);
+      },
+      _arrondi: function (n) {
+        return n.toFixed(this.units().pas === "1" ? 0 : 2);
+      },
       autoVitesse: function () {
-        var d = parseFloat(this.distance), t = parseFloat(this.duree);
-        if (!d || !t) return "";
-        var u = this.units();
-        if (u.vitLabel.indexOf("km/h") >= 0) return (d / (t / 60)).toFixed(2);
-        if (u.vitLabel.indexOf("m/min") >= 0) return ((d * 1000) / t).toFixed(0);
-        if (u.vitLabel.indexOf("/min") >= 0) return (d / t).toFixed(0);
-        return "";
+        var f = this._facteur(), d = parseFloat(String(this.distance).replace(",", "."));
+        if (!f || !d) return "";
+        return this._arrondi(d / f);
+      },
+      // Le sens que le formulaire ne savait pas faire : le tapis affiche
+      // 10 km/h pendant 30 min, c'est la distance qu'on ignore.
+      autoDistance: function () {
+        var f = this._facteur(), v = parseFloat(String(this.vitesse).replace(",", "."));
+        if (!f || !v) return "";
+        return this._arrondi(v * f);
       },
     };
   };

@@ -48,8 +48,23 @@
     <div class="card">
       <div class="label-icon" style="color: var(--accent); font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 10px;"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#activity"/></svg>PERFORMANCE</div>
 
-      <label class="field-label">Distance (km, optionnel)</label>
-      <input type="text" inputmode="decimal" name="distance_km" class="field" x-model="distanceKm" placeholder="ex. 5.2">
+      {# Distance et vitesse se déduisent l'une de l'autre avec la durée : on
+         demande les deux, chacune suggérant l'autre en filigrane, et le
+         serveur complète ce qui manque (core/seance_cardio.py). #}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div>
+          <label class="field-label" for="cardio-dist" x-text="unites().dist"></label>
+          <input type="text" inputmode="decimal" id="cardio-dist" name="distance_km" class="field"
+                 x-model="distanceKm" :placeholder="autoDistance() || 'ex. 5.2'">
+        </div>
+        <div x-show="unites().vit">
+          <label class="field-label" for="cardio-vit" x-text="unites().vit"></label>
+          <input type="text" inputmode="decimal" id="cardio-vit" name="vitesse" class="field"
+                 x-model="vitesse" :placeholder="autoVitesse() || 'ex. 10'">
+        </div>
+      </div>
+      <p style="font-size:0.72rem; color:var(--text-3); margin:4px 0 0;"
+         x-show="unites().vit">Remplis l'un ou l'autre : le second se calcule.</p>
 
       <template x-if="activite === 'Course' || activite === 'Marche'">
         <div style="margin-top: 2px;">
@@ -97,9 +112,13 @@
           <div class="summary-label">Durée</div>
           <div class="summary-value" x-text="dureeMin + ' min'"></div>
         </div>
-        <div class="summary-item" x-show="distanceKm">
-          <div class="summary-label">Distance</div>
-          <div class="summary-value" x-text="distanceKm + ' km'"></div>
+        <div class="summary-item" x-show="distanceKm || autoDistance()">
+          <div class="summary-label" x-text="unites().dist.replace(/ *\(.*/, '')"></div>
+          <div class="summary-value" x-text="(distanceKm || autoDistance())"></div>
+        </div>
+        <div class="summary-item" x-show="unites().vit && (vitesse || autoVitesse())">
+          <div class="summary-label" x-text="unites().vit.replace(/ *\(.*/, '')"></div>
+          <div class="summary-value" x-text="(vitesse || autoVitesse())"></div>
         </div>
         <div class="summary-item" x-show="incline > 0 && (activite === 'Course' || activite === 'Marche')">
           <div class="summary-label">Inclinaison</div>
@@ -227,6 +246,10 @@
       "Corde": 11.0, "HIIT": 9.0, "Marche": 3.5, "Elliptique": 6.5, "Autre": 6.0
     };
     const INCLINE_BONUS = { "Course": 0.5, "Marche": 0.35 };
+    // Unités et règle de conversion : table UNIQUE, servie par le serveur
+    // (core/seance_cardio.py). Le formulaire de séance en gardait une copie
+    // en JavaScript ; elles auraient fini par diverger.
+    const UNITES = {{ unites_cardio|tojson }};
     const POIDS_KG = parseFloat({{ poids_kg|tojson }}) || 70;
 
     function cardioForm() {
@@ -234,6 +257,7 @@
         activite: {{ (pre_activite or "Course")|tojson }},
         dureeMin: {{ pre_duree or 0 }},
         distanceKm: "",
+        vitesse: "",
         fcMoy: "",
         rpe: "",
         calories: "",
@@ -328,6 +352,24 @@
           var base = MET[this.activite] || 6.0;
           var bonus = INCLINE_BONUS[this.activite] || 0;
           return base + (this.incline * bonus);
+        },
+        unites() { return UNITES[this.activite] || UNITES["Autre"]; },
+        // Combien d'unités de distance pour une unité de vitesse.
+        _facteur() {
+          const t = parseFloat(this.dureeMin) || 0;
+          const r = this.unites().regle;
+          if (!r || t <= 0) return 0;
+          return r === "par_heure" ? t / 60 : (r === "m_par_min" ? t / 1000 : t);
+        },
+        autoVitesse() {
+          const f = this._facteur(), d = parseFloat(String(this.distanceKm).replace(",", "."));
+          if (!f || !d) return "";
+          return (d / f).toFixed(this.unites().pas === "1" ? 0 : 2);
+        },
+        autoDistance() {
+          const f = this._facteur(), v = parseFloat(String(this.vitesse).replace(",", "."));
+          if (!f || !v) return "";
+          return (v * f).toFixed(this.unites().pas === "1" ? 0 : 2);
         },
         estimatedCal() {
           const met = this.adjustedMet();

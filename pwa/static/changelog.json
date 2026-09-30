@@ -1,6 +1,16 @@
 {
-  "current": "v61",
+  "current": "v62",
   "entries": [
+    {
+      "version": "v62",
+      "date": "2026-09-30",
+      "title": "Cardio : tu donnes deux chiffres, le troisième se calcule",
+      "changes": [
+        "Tu connais ta durée et ta vitesse mais pas ta distance ? Entre les deux que tu as, le troisième apparaît. Ça ne marchait que dans un sens jusqu'ici — et la vitesse calculée s'affichait sans jamais être enregistrée",
+        "L'écran Cardio a enfin un champ vitesse : il n'en avait aucun, alors que celui des séances en avait un",
+        "Chaque activité compte dans son unité : km/h en course et vélo, mètres par minute en natation, sauts par minute à la corde"
+      ]
+    },
     {
       "version": "v61",
       "date": "2026-09-29",

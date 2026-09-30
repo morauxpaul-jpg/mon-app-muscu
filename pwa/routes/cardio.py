@@ -13,6 +13,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for
 
 from core.data import append_exo_rows, get_profile
+from core.seance_cardio import UNITES_CARDIO, completer_mesures
 from core.dates import today_paris, today_paris_str, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 
@@ -118,6 +119,7 @@ def new():
         poids_kg=poids_kg,
         pre_activite=pre_activite,
         pre_duree=pre_duree,
+        unites_cardio=UNITES_CARDIO,
     )
 
 
@@ -142,6 +144,14 @@ def save():
         distance_km = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
     except ValueError:
         distance_km = 0.0
+    try:
+        vitesse = max(0.0, float((f.get("vitesse") or "0").replace(",", ".")))
+    except ValueError:
+        vitesse = 0.0
+    # Deux valeurs sur trois suffisent : le tapis affiche 10 km/h pendant
+    # 30 min, c'est la distance qu'on ignore. Cet écran n'avait même pas de
+    # champ vitesse, alors que celui de la séance en a un.
+    distance_km, vitesse = completer_mesures(activite, duree_min, distance_km, vitesse)
     try:
         fc_moy = int(float(f.get("fc_moy") or 0))
     except ValueError:
@@ -178,6 +188,8 @@ def save():
         remarque_parts.append(f"FC:{fc_moy}")
     if calories > 0:
         remarque_parts.append(f"Cal:{calories}")
+    if vitesse > 0:
+        remarque_parts.append(f"Vit:{vitesse:g}")
     if incline_pct > 0:
         remarque_parts.append(f"Incl:{incline_pct:g}%")
     if rpe:
