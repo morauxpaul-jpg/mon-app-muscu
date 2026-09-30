@@ -116,9 +116,9 @@
   <a href="#main-content" class="skip-link">Aller au contenu</a>
   {% if is_authenticated %}
   <div class="topbar">
-    <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg>{{ current_user_email }}{% if is_vip_full %}<span class="badge-pro" style="margin-left:8px;">PRO</span>{% elif is_trial %}<span class="badge-pro" style="margin-left:8px;">ESSAI</span>{% endif %}</span>
+    <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg><span class="topbar-email">{{ current_user_email }}</span>{% if is_vip_full %}<span class="badge-pro topbar-badge">PRO</span>{% elif is_trial %}<span class="badge-pro topbar-badge">ESSAI</span>{% endif %}</span>
     <form method="post" action="/logout" style="margin:0;">
-      <button type="submit" class="btn topbar-logout label-icon" title="Déconnexion"><svg class="icon icon-sm"><use href="/static/img/icons.svg#log-out"/></svg>Déconnexion</button>
+      <button type="submit" class="btn topbar-logout label-icon" title="Déconnexion" aria-label="Déconnexion"><svg class="icon icon-sm"><use href="/static/img/icons.svg#log-out"/></svg><span class="topbar-logout-txt">Déconnexion</span></button>
     </form>
   </div>
   {% endif %}

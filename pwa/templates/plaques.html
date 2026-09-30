@@ -17,7 +17,7 @@
              margin:14px 0; min-height:90px; flex-wrap:nowrap; overflow-x:auto; padding:6px 0; }
   .bar-rod { width:46px; height:6px; background:var(--text-3); flex-shrink:0; }
   .disc { border-radius:3px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-          color:#fff; font-size:0.6rem; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+          color:#fff; font-size:0.7rem; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
   .plaque-rows { display:flex; flex-direction:column; gap:6px; }
   .plaque-row { display:flex; align-items:center; justify-content:space-between;
                 padding:8px 12px; background:var(--bg-elevated); border-radius:var(--radius-sm); }
@@ -44,7 +44,7 @@
       <label class="field-label">Poids de la barre</label>
       <div class="bar-btns">
         <template x-for="b in barOptions" :key="b">
-          <button type="button" class="bar-btn" :class="{ active: bar === b }" @click="bar = b" x-text="b + ' kg'"></button>
+          <button type="button" class="bar-btn" :class="{ active: bar === b }" @click="bar = b" x-text="String(b).replace('.', ',') + ' kg'"></button>
         </template>
       </div>
     </div>
@@ -60,7 +60,7 @@
       <div class="plaque-grid">
         <template x-for="p in allPlates" :key="p">
           <button type="button" class="plaque-chip" :class="{ on: enabled.includes(p) }"
-                  @click="toggle(p)" x-text="p + ' kg'"></button>
+                  @click="toggle(p)" x-text="String(p).replace('.', ',') + ' kg'"></button>
         </template>
       </div>
     </div>
@@ -74,7 +74,7 @@
         <div style="font-size:0.72rem; color:var(--text-3);">Combien de disques de chaque tu possèdes <b>par côté</b> (vide = illimité) :</div>
         <template x-for="p in allPlates.filter(x => enabled.includes(x))" :key="'q'+p">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <span style="font-size:0.82rem; color:var(--text-2);"><span class="plaque-swatch" :style="`background:${colors[p] || '#888'}`"></span><span x-text="p + ' kg'"></span></span>
+            <span style="font-size:0.82rem; color:var(--text-2);"><span class="plaque-swatch" :style="`background:${colors[p] || '#888'}`"></span><span x-text="String(p).replace('.', ',') + ' kg'"></span></span>
             <input type="number" inputmode="numeric" min="0" step="1" placeholder="∞"
                    style="width:80px; text-align:center;" class="field"
                    :value="counts[p] ?? ''" @input="setCount(p, $event.target.value)">
@@ -102,7 +102,7 @@
     <div class="plaque-rows" x-show="breakdown.length">
       <template x-for="row in breakdown" :key="row.plate">
         <div class="plaque-row">
-          <span><span class="plaque-swatch" :style="`background:${row.color}`"></span><span x-text="row.plate + ' kg'"></span></span>
+          <span><span class="plaque-swatch" :style="`background:${row.color}`"></span><span x-text="String(row.plate).replace('.', ',') + ' kg'"></span></span>
           <b x-text="'× ' + row.count"></b>
         </div>
       </template>

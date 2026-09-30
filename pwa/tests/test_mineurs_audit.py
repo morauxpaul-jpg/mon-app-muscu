@@ -191,3 +191,36 @@ def test_les_stats_admin_lisent_la_vue_quand_elle_existe(fake_db):
     s = db.get_admin_stats()
     assert s == {"total_rows": 12, "total_tonnage": 3400, "total_seances": 3,
                  "active_7d": 1, "active_30d": 2}
+
+
+# ── M9 : lisible, et rien ne se chevauche ────────────────────────
+
+
+def test_aucune_police_sous_0_7rem():
+    """Une quarantaine de tailles descendaient jusqu'à 0,55 rem (≈ 9 px)."""
+    import re
+    trop_petit = re.compile(r"font-size:\s*0\.(?:[0-5]\d*|6\d*)rem")
+    fautifs = []
+    for p in list((PWA / "templates").glob("*.html")) + list((PWA / "static" / "css").glob("*.css")):
+        for n, ligne in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            if trop_petit.search(ligne):
+                fautifs.append(f"{p.name}:{n}")
+    assert not fautifs, fautifs
+
+
+def test_le_badge_pro_ne_se_tronque_pas_avec_le_mail(fake_db, logged_in):
+    html = logged_in.get("/plus").get_data(as_text=True)
+    assert '<span class="topbar-email">' in html
+    assert 'class="badge-pro topbar-badge">PRO<' in html
+    assert 'aria-label="Déconnexion"' in html
+
+
+def test_un_lien_bouton_nest_pas_inline():
+    css = (PWA / "static" / "css" / "theme.css").read_text(encoding="utf-8")
+    assert "a.btn { display: inline-flex;" in css
+
+
+def test_les_decimales_du_record_sont_a_la_francaise():
+    t = _tpl("seance_edit.html")
+    assert "record.one_rm + 'kg'" not in t
+    assert "_kg(record.one_rm)" in t

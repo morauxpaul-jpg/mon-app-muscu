@@ -78,7 +78,9 @@
   font-size: 1.02rem;
   font-weight: 600;
   color: var(--text-1, #fff);
-  padding-right: 64px;
+  /* Place du bouton « Passer ✕ » (≈ 85 px depuis qu'a11y.css l'a agrandi
+     pour le doigt) : avec 64 px, il recouvrait la fin du titre. */
+  padding-right: 92px;
   letter-spacing: 0.2px;
 }
 #tuto-bubble p {
@@ -154,7 +156,9 @@
   transform: translate(-50%, -50%);
   text-align: center;
 }
-#tuto-bubble.center h4 { padding-right: 0; }
+/* Titre centré : sous le bouton « Passer ✕ », pas dessous lui (audit du
+   30/09, M9 : il recouvrait « Bienvenue sur Muscu Tracker »). */
+#tuto-bubble.center h4 { padding-right: 0; margin-top: 30px; }
 #tuto-bubble.center .tuto-actions { justify-content: center; }
 #tuto-bubble.center .tuto-dots { flex: 0; }
 

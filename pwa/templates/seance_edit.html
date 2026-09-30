@@ -150,7 +150,7 @@
 }
 .exo-info-box h4 { color: var(--text-1); margin: 0 0 6px; font-size: 0.95rem; font-weight: 500; }
 .exo-info-box .info-section { margin-bottom: 6px; }
-.exo-info-box .info-label { font-size: 0.68rem; color: var(--text-3); letter-spacing: 0.8px; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
+.exo-info-box .info-label { font-size: 0.7rem; color: var(--text-3); letter-spacing: 0.8px; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
 .exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; color: var(--text-2); }
 /* Deux tailles, deux plafonds. Le dessin au trait reste petit ;
    l'illustration rendue mérite sa place. Un plafond unique à 90 px
@@ -201,7 +201,7 @@
   {# ── Bilan enregistré à la fin de cette séance ──────────────── #}
   {% if session_note %}
   <div class="card" style="border-color:var(--border-default); padding:10px 12px; margin-bottom:10px;">
-    <div class="label-icon" style="font-size:0.68rem; color:var(--text-3); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:4px;">
+    <div class="label-icon" style="font-size:0.7rem; color:var(--text-3); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:4px;">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#clipboard"/></svg>Ton bilan
     </div>
     {% if session_note.rating %}
@@ -428,9 +428,9 @@
               <span>Record : <b x-text="record.reps + ' reps'"></b></span>
             </template>
             <template x-if="!isBw">
-              <span>Record : <b x-text="record.weight + 'kg'"></b>
+              <span>Record : <b x-text="_kg(record.weight) + ' kg'"></b>
               <svg class="icon icon-sm icon-accent" style="margin-left:4px;"><use href="/static/img/icons.svg#zap"/></svg>
-              1RM : <b x-text="record.one_rm + 'kg'"></b></span>
+              1RM : <b x-text="_kg(record.one_rm) + ' kg'"></b></span>
             </template>
           </div>
         </template>

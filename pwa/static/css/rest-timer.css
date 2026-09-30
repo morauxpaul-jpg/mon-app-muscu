@@ -68,7 +68,7 @@
   background: var(--bg-elevated);
   border: 0.5px solid var(--border-default);
   color: var(--text-2);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   padding: 3px 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -102,7 +102,7 @@
 @media (max-width: 370px) {
   .rest-timer-bar .rest-timer-bar-label .rt-word { display: none; }
   .rest-timer-bar-content { gap: 5px; padding: 8px; }
-  .rest-timer-bar-presets button { padding: 3px 5px; font-size: 0.64rem; }
+  .rest-timer-bar-presets button { padding: 3px 5px; font-size: 0.7rem; }
   .rest-timer-bar-time { font-size: 1.15rem; min-width: 38px; }
   .rest-timer-sound { padding: 4px 2px; }
 }
