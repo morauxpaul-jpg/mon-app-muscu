@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Importer depuis Strava · Muscu Tracker{% endblock %}
+
+{% block content %}
+<main class="page">
+
+  <a href="/cardio" class="btn mini label-icon" style="margin-bottom:12px;">
+    <svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour au cardio
+  </a>
+
+  <h1 class="page-title label-icon">
+    <svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Importer depuis Strava
+  </h1>
+
+  {# ── Étape 1 : déposer le fichier ─────────────────────────── #}
+  {% if etape == "depot" %}
+    {% if erreur %}
+      <div class="card" style="border-color:rgba(255,69,58,0.35); background:var(--danger-bg);">
+        <p style="margin:0; font-size:0.88rem; color:var(--text-1);">{{ erreur }}</p>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="label-icon" style="color:var(--accent); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#download"/></svg>RÉCUPÉRER TON ARCHIVE
+      </div>
+      <p class="aide">
+        L'API de Strava est payante depuis juin 2026. L'export de tes propres
+        données, lui, reste gratuit — et contient tout ce qu'il faut.
+      </p>
+      <ol class="etapes">
+        <li>Sur <b>strava.com</b>, ouvre <b>Paramètres → Mon compte</b>.</li>
+        <li>Clique <b>« Télécharger ou supprimer votre compte »</b>, puis
+            <b>« Demander votre archive »</b>.</li>
+        <li>Strava t'envoie l'archive par e-mail — quelques minutes en général.</li>
+        <li>Décompresse-la et dépose ici le fichier <b>activities.csv</b>.</li>
+      </ol>
+    </div>
+
+    <form method="post" action="/cardio/import" enctype="multipart/form-data" class="card">
+      <div class="label-icon" style="color:var(--accent); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>DÉPOSER LE FICHIER
+      </div>
+      <label class="field-label" for="fichier">activities.csv</label>
+      <input type="file" id="fichier" name="fichier" accept=".csv,text/csv" class="field" required>
+      <p class="aide" style="margin-top:8px;">
+        Le fichier <b>.csv</b>, pas l'archive <b>.zip</b>. Rien ne sera écrit :
+        l'écran suivant te montre ce qui entrerait, et c'est toi qui valides.
+      </p>
+      <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center; margin-top:10px;">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Lire le fichier
+      </button>
+    </form>
+
+  {# ── Étape 2 : ce qui entrerait ───────────────────────────── #}
+  {% elif etape == "apercu" %}
+    <div class="card">
+      <div class="apercu-chiffres">
+        <div>
+          <div class="apercu-nombre" style="color:var(--success);">{{ a_importer|length }}</div>
+          <div class="apercu-label">à importer</div>
+        </div>
+        <div>
+          <div class="apercu-nombre">{{ nb_deja }}</div>
+          <div class="apercu-label">déjà chez toi</div>
+        </div>
+        <div>
+          <div class="apercu-nombre">{{ rapport.lignes }}</div>
+          <div class="apercu-label">lignes lues</div>
+        </div>
+      </div>
+
+      {# Ce qui a été écarté se dit. Un import muet sur ce qu'il laisse de
+         côté oblige à tout recompter à la main pour savoir si rien ne manque. #}
+      <ul class="ecartes">
+        {% for nom, n in (rapport.hors_cardio or {}).items() %}
+          <li>{{ n }} séance{{ "s" if n > 1 }} de {{ nom }} — l'app les suit ailleurs.</li>
+        {% endfor %}
+        {% if rapport.sans_date %}
+          <li>{{ rapport.sans_date }} ligne{{ "s" if rapport.sans_date > 1 }} sans date lisible.</li>
+        {% endif %}
+        {% if rapport.sans_duree %}
+          <li>{{ rapport.sans_duree }} ligne{{ "s" if rapport.sans_duree > 1 }} sans durée.</li>
+        {% endif %}
+        {% if nb_deja %}
+          <li>{{ nb_deja }} séance{{ "s" if nb_deja > 1 }} déjà dans ton historique —
+              même jour, même activité, même durée. Elles ne seront pas doublées.</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    {% if a_importer %}
+      <div class="card">
+        <div class="label-icon" style="color:var(--accent); font-size:0.75rem; letter-spacing:3px; margin-bottom:10px;">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#history"/></svg>CE QUI VA ENTRER
+        </div>
+        <ul class="liste-seances">
+          {% for s in seances if not s.deja %}
+            <li>
+              <span class="ls-date">{{ s.date }}</span>
+              <span class="ls-act">{{ s.activite }}</span>
+              <span class="ls-perf">
+                {{ s.duree_min }} min{% if s.distance_km %} · {{ "%.2f"|format(s.distance_km)|replace(".", ",") }} km{% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+        {% if nb_total > 200 %}
+          <p class="aide">Les 200 plus récentes sont affichées ; toutes seront importées.</p>
+        {% endif %}
+      </div>
+
+      <form method="post" action="/cardio/import/confirmer">
+        <input type="hidden" name="charge" value="{{ charge }}">
+        <button type="submit" class="btn primary label-icon" style="width:100%; justify-content:center;" data-haptic="1">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Importer ces {{ a_importer|length }} séances
+        </button>
+      </form>
+      <a href="/cardio/import" class="btn" style="width:100%; justify-content:center; margin-top:8px;">Annuler</a>
+    {% else %}
+      <div class="card">
+        <p style="margin:0; font-size:0.9rem;">Rien de nouveau à importer — tout ce
+        que contient ce fichier est déjà dans ton historique.</p>
+      </div>
+      <a href="/cardio" class="btn" style="width:100%; justify-content:center; margin-top:10px;">Retour au cardio</a>
+    {% endif %}
+
+  {# ── Étape 3 : c'est fait ─────────────────────────────────── #}
+  {% elif etape == "fini" %}
+    <div class="card" style="border-color:var(--success); background:var(--success-bg);">
+      <div class="label-icon" style="color:var(--success); font-size:0.9rem;">
+        <svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>
+        {{ nb_ecrites }} séance{{ "s" if nb_ecrites > 1 }} importée{{ "s" if nb_ecrites > 1 }}
+      </div>
+      {% if nb_ecrites < nb_proposees %}
+        <p class="aide" style="margin-top:8px;">
+          {{ nb_proposees - nb_ecrites }} n'ont pas pu être écrites. Relance
+          l'import avec le même fichier : celles déjà entrées seront reconnues
+          et ne seront pas doublées.
+        </p>
+      {% endif %}
+    </div>
+    <a href="/progres" class="btn primary" style="width:100%; justify-content:center; margin-top:10px;">Voir mes progrès</a>
+    <a href="/cardio" class="btn" style="width:100%; justify-content:center; margin-top:8px;">Retour au cardio</a>
+  {% endif %}
+
+  <style>
+    .aide { font-size: 0.78rem; color: var(--text-3); line-height: 1.55; margin: 0; }
+    .etapes {
+      margin: 10px 0 0; padding-left: 20px;
+      font-size: 0.84rem; color: var(--text-2); line-height: 1.7;
+    }
+    .etapes b { color: var(--text-1); }
+    .apercu-chiffres {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; text-align: center;
+    }
+    .apercu-nombre {
+      font-size: 1.6rem; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .apercu-label {
+      font-size: 0.7rem; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px;
+    }
+    .ecartes {
+      margin: 14px 0 0; padding-left: 18px;
+      font-size: 0.78rem; color: var(--text-3); line-height: 1.6;
+    }
+    .liste-seances { list-style: none; margin: 0; padding: 0; }
+    .liste-seances li {
+      display: grid; grid-template-columns: 82px 1fr auto;
+      gap: 8px; align-items: baseline;
+      padding: 7px 0; font-size: 0.82rem;
+      border-bottom: 1px solid var(--border-default);
+      font-variant-numeric: tabular-nums;
+    }
+    .liste-seances li:last-child { border-bottom: 0; }
+    .ls-date { color: var(--text-3); }
+    .ls-perf { color: var(--text-2); }
+  </style>
+</main>
+{% endblock %}

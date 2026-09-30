@@ -1,6 +1,17 @@
 {
-  "current": "v63",
+  "current": "v64",
   "entries": [
+    {
+      "version": "v64",
+      "date": "2026-09-30",
+      "title": "Rapatrier ton historique Strava",
+      "changes": [
+        "Sur l'écran Cardio, « Importer mon historique Strava » : tu déposes le fichier `activities.csv` de ton archive Strava, et tes courses, sorties vélo et longueurs de piscine rejoignent tes stats",
+        "L'app te montre EXACTEMENT ce qui va entrer avant d'écrire quoi que ce soit — et ce qu'elle écarte : les séances de muscu que tu suis déjà ici, et celles que tu avais déjà saisies à la main",
+        "Tu peux relancer l'import sans crainte : une séance déjà présente n'entre pas deux fois",
+        "L'archive se demande sur strava.com, dans Paramètres → Mon compte. C'est gratuit — contrairement à leur API, devenue payante"
+      ]
+    },
     {
       "version": "v63",
       "date": "2026-09-30",

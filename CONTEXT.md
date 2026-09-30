@@ -45,6 +45,7 @@ pwa/
 │   ├── db_push.py                 # push_subscriptions, newsletter, relance des inactifs
 │   ├── db_coach.py                # coach_messages / coach_conversations
 │   ├── db_admin.py                # Stats globales, funnel, fiche user, suppression de compte
+│   ├── strava_import.py           # Lecture de `activities.csv` (export Strava) : types, dates, unités, doublons
 │   ├── data.py                    # Façade Flask (lit user_id depuis flask.g) + helpers nutrition/coach
 │   ├── dates.py                   # Helpers dates (timezone Paris), DAYS_FR, MONTHS_FR
 │   ├── muscu.py                   # Logique muscu (1RM, muscles, base_name, overload_suggestion)
@@ -423,6 +424,15 @@ pwa/
 - Les six modules sont **purs** : on leur passe l'historique et le programme, ils rendent des dictionnaires. Aucun n'importe `flask`, `core.data`, `core.db` ni `core.limiter` — un test le vérifie module par module.
 - `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
+
+### Import Strava (core/strava_import.py, /cardio/import)
+- **Par le fichier, pas par l'API.** Depuis juin 2026 l'API « Standard » de Strava exige un abonnement actif (11,99 $/mois) ; l'export de ses propres données reste gratuit. Bâtir sur l'API, c'était bâtir quelque chose qui s'éteint le jour où l'abonnement s'arrête — et il fallait manipuler un client_secret.
+- `activities.csv` n'est pas un fichier propre. Trois précautions, chacune contre un piège réel : les **en-têtes changent avec la langue** du compte (on compare des noms normalisés à des alias, jamais une position de colonne) ; la **date est au format local** (plusieurs formes essayées, les illisibles comptées) ; le **séparateur** est une virgule ou un point-virgule.
+- **L'unité de distance se déduit de la vitesse qu'elle implique**, elle ne se suppose pas : 5 000 pour une heure de course, c'est des mètres ; 5, des kilomètres. Se tromper multiplierait — ou diviserait — tout un historique par mille sans que rien ne le signale.
+- **Rien n'est écrit avant l'aperçu.** `/cardio/import` (POST) lit et montre ; `/cardio/import/confirmer` écrit. Le contenu revient par le formulaire et est **revalidé entièrement** (date, activité dans la liste, durée et distance bornées) : une ligne trafiquée n'a pas à devenir une ligne d'historique.
+- Dédoublonnage sur (date, activité, durée ± 2 min). La durée entre dans la comparaison parce que **deux footings le même jour sont deux séances** — l'app les distingue déjà, l'import ne doit pas les confondre. Relancer le même fichier ne double donc rien.
+- La musculation Strava est écartée (l'app la suit ailleurs) mais **annoncée** : un import muet sur ce qu'il laisse de côté oblige à tout recompter à la main.
+- `tests/test_strava_import.py` (52 tests).
 
 ### Suivi GPS (static/js/gps-track.js)
 - `GpsTrack.creerSuivi()` accumule la distance à partir des positions du navigateur. Module autonome, sans DOM : `tests/js/test_gps_track.js` (18) l'exerce sous Node en lui poussant des positions à la main.

@@ -9,6 +9,12 @@
     <div class="choix-titre">Séance cardio</div>
   </div>
 
+  {# L'import de l'export Strava : discret, il ne sert qu'une fois ou deux. #}
+  <a href="/cardio/import" class="btn mini label-icon"
+     style="display:inline-flex; margin-bottom:10px;">
+    <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#upload"/></svg>Importer mon historique Strava
+  </a>
+
   <form method="post" action="/cardio/save" x-data="cardioForm()" x-init="init()">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="poids_kg" value="{{ poids_kg }}">

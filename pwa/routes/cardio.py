@@ -8,12 +8,15 @@ Stockage dans la même table `history` que la muscu, avec convention :
   Muscle   = "Cardio"
   Série    = 1
 """
+import json
 import logging
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from core.data import append_exo_rows, get_profile
+from core.data import append_exo_rows, get_hist, get_profile
 from core.seance_cardio import UNITES_CARDIO, completer_mesures
+from core.strava_import import lire_activites, lire_date, marquer_doublons
+from core.analytics import track
 from core.dates import today_paris, today_paris_str, continuous_week, DAYS_FR, MONTHS_FR
 from core.limiter import limiter
 
@@ -226,3 +229,120 @@ def save():
         ), 503
 
     return redirect(url_for("accueil.index"))
+
+# ── Import de l'export Strava ────────────────────────────────────
+# L'API Strava exige un abonnement depuis juin 2026 ; l'export de ses propres
+# données reste gratuit. On lit donc le fichier plutôt que d'appeler l'API :
+# rien à payer, rien à renouveler, aucun secret à manipuler.
+
+MAX_IMPORT_OCTETS = 8 * 1024 * 1024   # un `activities.csv` de 10 ans ≈ 1 Mo
+MAX_IMPORT_SEANCES = 800
+
+
+@bp.route("/cardio/import")
+def import_page():
+    return render_template("cardio_import.html", active="seance", etape="depot")
+
+
+@bp.route("/cardio/import", methods=["POST"])
+@limiter.limit("10 per minute")
+def import_apercu():
+    """Lit le fichier et montre ce qui ENTRERAIT. N'écrit rien.
+
+    Un import qui écrit d'abord et explique ensuite oblige à défaire à la
+    main. On montre, l'utilisateur confirme, et alors seulement on écrit.
+    """
+    fichier = request.files.get("fichier")
+    if not fichier or not fichier.filename:
+        return render_template("cardio_import.html", active="seance",
+                               etape="depot", erreur="Choisis le fichier "
+                               "`activities.csv` de ton archive Strava.")
+    brut = fichier.read(MAX_IMPORT_OCTETS + 1)
+    if len(brut) > MAX_IMPORT_OCTETS:
+        return render_template("cardio_import.html", active="seance",
+                               etape="depot", erreur="Fichier trop volumineux "
+                               "(plus de 8 Mo). Est-ce bien `activities.csv` ?")
+    try:
+        seances, rapport = lire_activites(brut)
+    except Exception as e:
+        logger.warning("import Strava illisible : %s", type(e).__name__)
+        return render_template("cardio_import.html", active="seance",
+                               etape="depot", erreur="Fichier illisible. "
+                               "Envoie `activities.csv`, pas l'archive .zip.")
+    if not rapport.get("colonnes", {}).get("date"):
+        return render_template("cardio_import.html", active="seance",
+                               etape="depot", erreur="Ce fichier n'a pas la "
+                               "forme d'un `activities.csv` Strava : aucune "
+                               "colonne de date reconnue.")
+
+    seances = marquer_doublons(seances, get_hist())
+    a_importer = [s for s in seances if not s["deja"]][:MAX_IMPORT_SEANCES]
+    return render_template(
+        "cardio_import.html", active="seance", etape="apercu",
+        seances=seances[:200], a_importer=a_importer, rapport=rapport,
+        nb_total=len(seances),
+        nb_deja=sum(1 for s in seances if s["deja"]),
+        charge=json.dumps(a_importer, ensure_ascii=False),
+    )
+
+
+@bp.route("/cardio/import/confirmer", methods=["POST"])
+@limiter.limit("5 per minute")
+def import_confirmer():
+    """Écrit ce que l'utilisateur vient de voir.
+
+    Le contenu revient par le formulaire : on le REVALIDE entièrement plutôt
+    que de lui faire confiance, une ligne trafiquée n'ayant pas à devenir une
+    ligne d'historique.
+    """
+    try:
+        proposees = json.loads(request.form.get("charge") or "[]")
+    except (TypeError, ValueError):
+        proposees = []
+    if not isinstance(proposees, list):
+        proposees = []
+
+    lignes, ecrites = [], 0
+    for s in proposees[:MAX_IMPORT_SEANCES]:
+        if not isinstance(s, dict):
+            continue
+        date = lire_date(s.get("date"))
+        activite = s.get("activite") if s.get("activite") in ACTIVITES_MAP else "Autre"
+        try:
+            duree = max(1, min(1440, int(s.get("duree_min") or 0)))
+            km = max(0.0, min(1000.0, float(s.get("distance_km") or 0)))
+            cal = max(0, min(30000, int(s.get("calories") or 0)))
+        except (TypeError, ValueError):
+            continue
+        if date is None:
+            continue
+        date_str = date.strftime("%Y-%m-%d")
+        km, vitesse = completer_mesures(activite, duree, km, 0)
+        parts = ["Import Strava"]
+        if cal > 0:
+            parts.insert(0, f"Cal:{cal}")
+        if vitesse > 0:
+            parts.insert(-1, f"Vit:{vitesse:g}")
+        lignes.append({
+            "Semaine": continuous_week(date), "Séance": f"Cardio {activite}",
+            "Exercice": f"CARDIO:{activite}", "Série": 1, "Reps": duree,
+            "Poids": km, "Remarque": " | ".join(parts), "Muscle": "Cardio",
+            "Date": date_str,
+        })
+
+    # Une séance à la fois : `append_exo_rows` numérote les séries par
+    # (date, séance, exercice), donc deux footings du même jour cohabitent.
+    for l in lignes:
+        try:
+            append_exo_rows(l["Date"], l["Séance"], l["Exercice"], [l])
+            ecrites += 1
+        except Exception as e:
+            logger.error("import Strava : ligne %s perdue (%s)", l["Date"],
+                         type(e).__name__)
+    try:
+        track("strava_import", {"seances": ecrites})
+    except Exception:
+        pass
+    return render_template("cardio_import.html", active="seance",
+                           etape="fini", nb_ecrites=ecrites,
+                           nb_proposees=len(lignes))
