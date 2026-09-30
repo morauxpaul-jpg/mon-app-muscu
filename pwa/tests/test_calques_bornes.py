@@ -147,14 +147,13 @@ def test_purger_signale_ce_quil_a_retire():
 
 def test_les_deux_purges_partagent_la_meme_fenetre():
     """Bilans et ordre des cartes suivent la même règle : une seule à retenir."""
-    from core.seance_calques import (SESSION_NOTES_KEEP_DAYS,
-                                     _purge_old_seance_order,
+    from core.seance_calques import (SESSION_NOTES_KEEP_DAYS, _purger_calque,
                                      _purge_old_session_notes)
     vieux = (LUNDI - dt.timedelta(days=SESSION_NOTES_KEEP_DAYS + 1)).isoformat()
     prog = {"_session_notes": {f"Push|{vieux}": {"rating": 5}},
             "_seance_order": {f"Push|{vieux}": ["A"]}}
     assert _purge_old_session_notes(prog, today=LUNDI) is True
-    assert _purge_old_seance_order(prog, today=LUNDI) is True
+    assert _purger_calque(prog, "_seance_order", today=LUNDI) is True
     assert prog["_session_notes"] == {} and prog["_seance_order"] == {}
 
 

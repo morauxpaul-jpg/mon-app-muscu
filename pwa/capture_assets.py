@@ -2,7 +2,7 @@
 écran accueil anonymisé. Assets destinés au motion design (Motion).
 
 Prérequis : serveur fake sur http://127.0.0.1:5123 (python run_local_fake.py)
-Sortie : pwa/static/promo/asset_*.png
+Sortie : marketing/promo/asset_*.png (hors de static/ : non servi par l'app)
 """
 import json
 import urllib.request
@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:5123"
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "static" / "promo"
+OUT = HERE.parent / "marketing" / "promo"
 OUT.mkdir(parents=True, exist_ok=True)
 
 seed = json.loads(urllib.request.urlopen(f"{BASE}/test-seed").read().decode())

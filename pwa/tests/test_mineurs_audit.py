@@ -120,3 +120,29 @@ def test_la_page_de_connexion_ne_charge_rien_dun_cdn():
         assert "cdn.jsdelivr" not in t and "unpkg" not in t
         assert "/static/vendor/supabase-js-" in t
     assert list((PWA / "static" / "vendor").glob("supabase-js-*.umd.js"))
+
+
+# ── M4 : une seule copie de chaque chose ─────────────────────────
+
+
+def test_env_na_quune_definition():
+    import routes.auth as auth
+    import core.db_base as base
+    assert auth._env is base._env
+
+
+def test_progres_utilise_la_normalisation_commune():
+    """Un exercice du programme sans muscle renseigné n'efface plus celui de
+    l'historique (c'est ce que faisait la copie de routes/progres.py)."""
+    from routes.progres import _normalize
+    hist = [{"Exercice": "Squat", "Muscle": "Quadriceps", "Reps": 5, "Poids": 100.0,
+             "Semaine": 1, "Séance": "A", "Série": 1, "Remarque": "", "Date": "2026-09-01"}]
+    prog = {"A": [{"name": "Squat", "sets": 3, "muscle": ""}]}
+    assert _normalize(hist, prog)[0]["Muscle"] == "Quadriceps"
+
+
+def test_les_medias_marketing_ne_sont_pas_servis():
+    """5,4 Mo déployés et servis sans qu'aucune page ne s'en serve (M11)."""
+    assert not (PWA / "static" / "promo").exists()
+    assert not (PWA / "static" / "promo-vip.mp4").exists()
+    assert (PWA / "static" / "promo-vip-motion.mp4").exists(), "celle-là, la page PRO s'en sert"

@@ -27,19 +27,9 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("auth", __name__)
 
 
-def _env(name: str) -> str:
-    """Lit une env var et nettoie espaces + quotes parasites (Railway copie
-    parfois des valeurs entourées de guillemets ou des noms avec espaces)."""
-    v = os.getenv(name, "") or ""
-    v = v.strip().strip('"').strip("'").lstrip("=").strip()
-    if v:
-        return v
-    for k, val in os.environ.items():
-        if k.strip() == name:
-            v = val.strip().strip('"').strip("'").lstrip("=").strip()
-            if v:
-                return v
-    return ""
+# Lecture tolérante des variables d'environnement : la même que la couche
+# données (elle était recopiée ici, audit du 30/09, M4).
+from core.db_base import _env  # noqa: E402
 
 
 def _public_config() -> dict:

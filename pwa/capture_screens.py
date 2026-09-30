@@ -3,7 +3,7 @@
 Prérequis : le serveur fake doit tourner sur http://127.0.0.1:5123
   cd pwa && python run_local_fake.py   (dans un autre terminal)
 Puis : python capture_screens.py
-Sortie : pwa/static/promo/promo_*.png
+Sortie : marketing/promo/promo_*.png (hors de static/ : non servi par l'app)
 """
 import json
 import urllib.request
@@ -11,7 +11,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:5123"
-OUT = Path(__file__).resolve().parent / "static" / "promo"
+OUT = Path(__file__).resolve().parent.parent / "marketing" / "promo"
 OUT.mkdir(parents=True, exist_ok=True)
 
 # Récupère un conversation_id frais (et amorce la base)

@@ -54,8 +54,8 @@ Que tu débutes ou que tu vises la performance, Muscu Tracker t'accompagne à ch
 
 ## Assets graphiques requis
 - [x] **Icône** 512×512 PNG → `pwa/static/icon-512.png` (déjà dispo)
-- [x] **Image de présentation (feature graphic)** 1024×500 → `pwa/static/promo/feature_graphic_1024x500.png`
-- [x] **Captures téléphone** (min 2, max 8) → `pwa/static/promo/promo_*.png` (5 dispo)
+- [x] **Image de présentation (feature graphic)** 1024×500 → `marketing/promo/feature_graphic_1024x500.png`
+- [x] **Captures téléphone** (min 2, max 8) → `marketing/promo/promo_*.png` (5 dispo)
 - [ ] (Optionnel) Captures tablette 7" et 10"
 
 ## Déclarations obligatoires (questionnaires Play Console)

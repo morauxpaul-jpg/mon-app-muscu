@@ -145,7 +145,3 @@ def purger_les_calques(prog_dict, today=None) -> bool:
             retire = True
     return retire
 
-
-def _purge_old_seance_order(prog_dict, today=None):
-    """L'ordre des cartes seul. Gardé pour les tests qui le visent."""
-    return _purger_calque(prog_dict, "_seance_order", today)

@@ -66,6 +66,8 @@ def _continuous_week_of(date_str: str):
         return None
 
 def _env(name: str) -> str:
+    """Lit une env var et nettoie espaces + quotes parasites (Railway copie
+    parfois des valeurs entourées de guillemets ou des noms avec espaces)."""
     v = os.getenv(name, "") or ""
     v = v.strip().strip('"').strip("'").lstrip("=").strip()
     if v:

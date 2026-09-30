@@ -103,14 +103,16 @@ def _sid(m):
 
 
 def _normalize(hist, prog):
-    prog_seances = {k: v for k, v in prog.items() if not k.startswith("_")}
+    """Historique normalisé (la normalisation commune, core.seance_semaine)
+    + l'archive des records, propre aux écrans de progrès.
+
+    Cette route en avait sa propre copie — la troisième, non mémoïsée, et
+    qui effaçait le muscle de l'historique quand le programme n'en donnait
+    pas (audit du 30/09, M4)."""
+    from core.seance_semaine import _normalize_hist
+    hist, prog_seances = _normalize_hist(hist, prog)
     muscle_mapping = {ex["name"]: ex.get("muscle", "Autre")
                       for s in prog_seances for ex in prog_seances[s]}
-    for r in hist:
-        base = get_base_name(r["Exercice"])
-        if base in muscle_mapping:
-            r["Muscle"] = muscle_mapping[base]
-        r["Muscle"] = fix_muscle(r["Exercice"], r["Muscle"])
     # Ajoute l'archive si présente
     archive = prog.get("_archive", [])
     for a in archive:
