@@ -198,21 +198,27 @@ def _norm_date(date_str: str) -> str:
 
 
 def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
-    """Remplace les séries d'un exercice pour UNE séance (date + nom) :
-    supprime les lignes existantes de cette date puis insère les nouvelles."""
+    """Remplace les séries d'un exercice pour UNE séance (date + nom).
+
+    Même ordre que `save_hist` : on INSÈRE les nouvelles lignes, puis on
+    supprime les anciennes par id. Avant, c'était DELETE puis INSERT, sans
+    transaction : une coupure entre les deux effaçait les séries déjà
+    enregistrées de l'exercice. Maintenant, un échec d'insertion laisse
+    l'ancien état intact."""
     date_str = _norm_date(date_str)
     client = get_client()
-    (
-        client.table("history").delete()
+    old_ids = [r["id"] for r in (
+        client.table("history").select("id")
         .eq("user_id", user_id)
         .eq("date", date_str)
         .eq("seance", seance)
         .eq("exercice", exercice)
         .execute()
-    )
+    ).data or [] if r.get("id") is not None]
     if new_rows:
         payload = [_row_to_supabase(user_id, {**r, "Date": date_str}) for r in new_rows]
         _insert_history(client, payload)
+    _delete_history_ids(client, old_ids)
     _cache_invalidate(f"hist:{user_id}")
 
 

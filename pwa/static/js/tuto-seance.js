@@ -28,43 +28,51 @@
       text: "Voici tes exercices, dans l'ordre de ton programme. Touche un exercice (ou son +) pour le déplier.",
     },
     {
-      target: "#exo-anchor-0 .sets-table",
-      title: "Le tableau de saisie",
-      text: "Chaque exercice se déplie sur un tableau : une ligne par série. C'est ici que tu notes ta performance.",
+      // Les cibles suivent la saisie série par série : l'ancien tableau
+      // (.sets-table, placeholder « reps », sélecteur « — ») n'existe plus,
+      // et trois bulles sur sept flottaient au centre de l'écran.
+      target: "#exo-anchor-0 .serie-encours",
+      title: "Une série à la fois",
+      text: "Chaque exercice se déplie sur sa série en cours. Les séries faites se replient en une ligne, que tu peux toucher pour corriger.",
       onEnter: function (cb) { openFirstExo(cb); },
     },
     {
-      target: '#exo-anchor-0 input[placeholder="reps"]',
+      target: '#exo-anchor-0 .serie-encours input[inputmode="numeric"]',
       title: "Les répétitions",
       text: "Saisis le nombre de répétitions de la série. Exemple : 10.",
       onEnter: function (cb) { openFirstExo(cb); },
     },
     {
       target: function () {
-        return document.querySelector('#exo-anchor-0 input[placeholder="kg"]')
-            || document.querySelector("#exo-anchor-0 .sets-table");
+        return document.querySelector('#exo-anchor-0 .serie-encours input[inputmode="decimal"]')
+            || document.querySelector("#exo-anchor-0 .serie-encours");
       },
       title: "Le poids",
       text: "Saisis le poids en kg. S'il est pré-rempli depuis ta dernière séance, tu peux le corriger.",
     },
     {
       target: function () {
-        return document.querySelector("#exo-anchor-0 .sets-table select")
-            || document.querySelector("#exo-anchor-0 .sets-table");
+        return document.querySelector("#exo-anchor-0 .serie-options .serie-puce")
+            || document.querySelector("#exo-anchor-0 .serie-encours");
       },
       title: "Le RPE (optionnel)",
-      text: "Le RPE note la difficulté ressentie : 6 = facile, 8 = il restait 2 reps en réserve, 10 = échec. Pratique pour piloter ton intensité — laisse « — » si tu ne veux pas l'utiliser.",
+      text: "Le RPE note la difficulté ressentie : 6 = facile, 8 = il restait 2 reps en réserve, 10 = échec. Il se cache derrière « RPE, remarque » — ignore-le si tu ne veux pas l'utiliser.",
+    },
+    {
+      target: "#exo-anchor-0 .serie-valider",
+      title: "Série faite",
+      text: "Touche « Série faite » : la série est enregistrée tout de suite, et le chrono de repos démarre. Sans réseau, elle est gardée sur le téléphone et part au retour du réseau.",
     },
     {
       target: '[data-tuto-seance="chrono"]',
       title: "Le chrono de repos",
-      text: "Après chaque série validée, un chrono de repos se lance en bas de l'écran. Tu peux changer sa durée ou le passer.",
+      text: "Le chrono de repos s'affiche en bas de l'écran. Tu peux changer sa durée ou le passer.",
       onEnter: function (cb) { scrollToThen('[data-tuto-seance="chrono"]', cb); },
     },
     {
       target: '[data-tuto-seance="finish"]',
       title: "Terminer la séance",
-      text: "Une fois tous tes exercices faits, touche « Terminer la séance » : tout est enregistré dans ton historique.",
+      text: "Une fois tes exercices faits, touche « Terminer la séance » pour noter ta séance. Ce qui n'était pas encore parti est envoyé avant : rien ne se perd.",
       finalLabel: "Compris !",
       onEnter: function (cb) { scrollToThen('[data-tuto-seance="finish"]', cb); },
     },

@@ -56,6 +56,14 @@ def _known_exo_names(hist, prog, prog_seances):
     return sorted(seen.values(), key=lambda s: s.lower())
 
 
+def _reps_saisies(s) -> int:
+    """Répétitions d'une série saisie (JSON du client) ; 0 si illisible."""
+    try:
+        return int(float(s.get("reps") or 0))
+    except (ValueError, TypeError, AttributeError):
+        return 0
+
+
 def _rows_from_sets(sets, *, semaine, seance, exo_final, muscle, date_str, is_bw):
     """Lignes history à partir des séries saisies (JSON du client)."""
     rows = []

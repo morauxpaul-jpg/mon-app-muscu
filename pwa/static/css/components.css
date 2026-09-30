@@ -589,6 +589,13 @@
 
 .serie-valider { width: 100%; justify-content: center; margin-top: 10px; min-height: 46px; }
 
+/* Ce que devient la saisie : enregistrée, en attente de réseau, refusée. */
+.exo-etat { margin: 8px 0 0; font-size: 0.8rem; color: var(--text-3); text-align: center; }
+.exo-etat-ok { color: var(--success); }
+.exo-etat-attente { color: var(--warning); }
+.exo-etat-erreur { color: var(--danger); }
+.finish-erreur { margin: 10px 0 0; font-size: 0.84rem; color: var(--danger); text-align: center; }
+
 .sets-table {
   width: 100%;
   border-collapse: collapse;
@@ -646,7 +653,7 @@
   margin-top: 6px;
 }
 .exo-actions form { margin: 0; }
-.exo-actions button { width: 100%; }
+.exo-actions button { width: 100%; white-space: nowrap; }
 
 .recup-container {
   display: flex;

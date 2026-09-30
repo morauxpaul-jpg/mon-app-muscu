@@ -500,9 +500,8 @@
            Une série remplie se replie donc en une ligne, et seule la
            courante reste ouverte, avec deux champs de 140 px.
 
-           Ce n'est que de la mise en page : `serializedSets()` envoie
-           toujours toutes les séries, et « Enregistrer » reste ce qui
-           écrit en base. #}
+           « Série faite » enregistre (envoi partiel des séries remplies) ;
+           « Enregistrer » envoie tout et marque les séries vides SKIP. #}
         <template x-if="!isIso">
           <div class="series">
             <template x-for="(s, i) in sets" :key="i">
@@ -579,6 +578,11 @@
               </div>
             </template>
 
+            {# Ce que devient ce qui a été saisi : sans lui, rien ne disait
+               si une série cochée était vraiment gardée. #}
+            <p class="exo-etat" :class="'exo-etat-' + etat" x-show="etat" x-cloak
+               role="status" aria-live="polite" x-text="etatTexte()"></p>
+
             <button type="button" class="btn label-icon" style="width:100%; margin-top:8px; justify-content:center;" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
             <button type="button" @click="clearWeights()"
                     title="Efface les poids pré-remplis de la dernière séance"
@@ -615,7 +619,7 @@
             <input type="hidden" name="exo_base" value="{{ exo.base }}">
             <input type="hidden" name="muscle" value="{{ exo.muscle }}">
             <input type="hidden" name="variant" :value="variant">
-            <button type="submit" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#skip-forward"/></svg>Skip</button>
+            <button type="submit" class="btn label-icon" :class="skipArme ? 'btn-danger' : ''"><svg class="icon icon-sm"><use href="/static/img/icons.svg#skip-forward"/></svg><span x-text="skipArme ? 'Effacer ?' : 'Skip'">Skip</span></button>
           </form>
         </div>
 

@@ -456,6 +456,15 @@ pwa/
 - `tests/js/test_saisie_serie.js` (16 tests) tient l'ensemble, dont le recalcul des index après `removeSet` — sans lui, retirer une série en rouvrait une autre.
 - Le mode isométrique (`isIso`, gainage) garde son propre chrono, intouché.
 
+### Une série saisie ne se perd plus (audit du 30/09, C1 + I4 + I5 + I9 + I18 + I21 + M7)
+- **Remplace le point « C'est de la mise en page » ci-dessus.** « Série faite » ENREGISTRE : `save-exo` avec `partiel=1`, qui n'écrit que les séries remplies (les autres ne deviennent pas des SKIP en cours d'exercice). Avant, elle cochait en vert sans rien écrire, et « Terminer » effaçait les brouillons : trois séries cochées, séance terminée, zéro ligne en base.
+- « Enregistrer » garde son sens (tout, vides en SKIP). « Terminer » envoie d'abord ce qui n'est pas encore reçu (`_rev` ≠ `_revServeur`), vide la file si le réseau est là, et n'efface les brouillons qu'ensuite ; en cas de refus, la modale le dit et rien n'est effacé.
+- Réseau faible : délai de 8 s (`AbortController`), puis mise en file. 5xx / 408 / 429 / pas de réponse = file ; 4xx = refus affiché, brouillon gardé.
+- File hors-ligne (`offline.js`) : une entrée par exercice (`cle`, la plus récente remplace l'ancienne ; `drop(cle)` après un envoi direct réussi), jeton CSRF de la page au rejeu, refus définitif mis de côté dans `muscu_offline_rejets` au lieu de bloquer la file, déconnexion avec envois en attente = avertissement puis second appui.
+- `replace_exo_rows` insère avant d'effacer (par id). « Skip » sur des séries réelles : confirmation en ligne côté client, 409 côté serveur sans `confirme=1`.
+- Le SW ne recharge plus la page à sa première installation, ni sur `/seance` lors d'une mise à jour.
+- Tests : `tests/test_series_sures.py` (serveur), `tests/js/test_saisie_serie.js` + `test_offline.js`, et **`tests/e2e/test_seance_navigateur.py`** — la séance jouée dans Chromium via `run_local_fake.py` (`/test-vierge`, `/test-historique`) : en ligne, mode avion, réseau qui ne répond pas, Skip. S'ignore sans Playwright ; la CI installe Chromium.
+
 ### Coût d'un affichage de /accueil
 - Mesuré avec un an d'entraînement (1 872 séries) : **8 requêtes Supabase**, dont le **programme trois fois**. La page pouvait le sauvegarder **jusqu'à quatre fois** en un seul affichage (badges, record de streak, bandeau PRO, défi gagné), chacune relisant et réécrivant tout le blob sous verrou optimiste. Les quatre posent désormais un drapeau et **une seule écriture** les porte : 8 → 7 requêtes.
 - `_compute_badges` ne persiste plus rien : elle calcule, la vue décide d'écrire. Une fonction de calcul qui sauvegarde était la raison pour laquelle l'une des quatre écritures passait inaperçue.

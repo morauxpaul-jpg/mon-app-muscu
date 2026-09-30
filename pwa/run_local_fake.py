@@ -23,10 +23,13 @@ core_db.use_client(FakeSupabase())
 
 import app as appmod  # noqa: E402
 from flask import session, redirect, request  # noqa: E402
+from core.limiter import limiter  # noqa: E402
 
 # L'auth gate tourne avant la route : /test-login doit être public.
 appmod._PUBLIC_PATHS.add("/test-login")
 appmod._PUBLIC_PATHS.add("/test-seed")
+appmod._PUBLIC_PATHS.add("/test-vierge")
+appmod._PUBLIC_PATHS.add("/test-historique")
 
 
 @appmod.app.route("/test-login")
@@ -185,5 +188,48 @@ def test_seed():
     return jsonify({"ok": True, "conversation_id": conv, "history_rows": len(rows)})
 
 
+@appmod.app.route("/test-vierge")
+@limiter.exempt
+def test_vierge():
+    """Compte neuf avec un programme « Push » de deux exercices, sans
+    historique : le décor des tests navigateur (tests/e2e/)."""
+    import time
+    from flask import jsonify
+    c = core_db.current_client()
+    c.tables.clear()
+    c._id = 0
+    core_db._data_cache.clear()
+    core_db._prog_base.clear()
+    c.table("profiles").insert({"id": USER_ID, "tier": "free", "prenom": "Alex"}).execute()
+    c.table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-01-01"}).execute()
+    c.table("programs").insert({"user_id": USER_ID, "data": {
+        "Push": [
+            {"name": "Développé couché", "sets": 3, "muscle": "Pecs", "reps": "5", "rest": 120},
+            {"name": "Développé militaire", "sets": 2, "muscle": "Épaules"},
+        ],
+        "_planning": {j: "Push" for j in ("Lundi", "Mardi", "Mercredi", "Jeudi",
+                                          "Vendredi", "Samedi", "Dimanche")},
+        "_settings": {},
+    }}).execute()
+    session.clear()
+    session["user_id"] = USER_ID
+    session["email"] = "test@example.com"
+    session["is_vip"] = False
+    session["is_vip_full"] = False
+    session["is_vip_ts"] = time.time()
+    session["onboarded"] = True
+    return jsonify({"ok": True})
+
+
+@appmod.app.route("/test-historique")
+@limiter.exempt
+def test_historique():
+    """Lignes d'historique telles qu'en base (fausse), pour les assertions."""
+    from flask import jsonify
+    c = core_db.current_client()
+    return jsonify(c.tables.get("history", []))
+
+
 if __name__ == "__main__":
-    appmod.app.run(host="127.0.0.1", port=5123, debug=False)
+    import os
+    appmod.app.run(host="127.0.0.1", port=int(os.getenv("PORT", "5123")), debug=False)

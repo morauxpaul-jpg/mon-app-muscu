@@ -4,11 +4,17 @@
  * Extrait de seance_edit.html (qui portait ~750 lignes de script inline, donc
  * non testables, non mises en cache et incompatibles avec une CSP stricte).
  *
- * Principe : « Enregistrer » n'envoie plus un formulaire qui recharge toute la
- * page — il POSTe en JSON et met à jour la carte sur place. En salle, cela
- * supprime 1 à 2 secondes d'attente entre chaque exercice, et le clavier ne
- * se referme plus. Le formulaire HTML reste présent et fonctionnel : sans
- * JavaScript (ou s'il échoue), la soumission classique prend le relais.
+ * Principe : chaque « Série faite » ENREGISTRE (envoi partiel : les séries
+ * remplies). Avant, elle ne faisait que cocher la ligne en vert ; seul
+ * « Enregistrer » écrivait, et « Terminer » effaçait les brouillons — une
+ * séance entière cochée pouvait disparaître sans un mot (audit du 30/09, C1).
+ *
+ * Un envoi qui ne répond pas en 8 s, ou qui échoue côté réseau, part dans la
+ * file hors-ligne : au sous-sol, le téléphone se croit souvent en ligne, et
+ * `navigator.onLine` seul laissait le bouton bloqué sur « En cours… ».
+ * « Terminer » envoie d'abord ce qui reste, et n'efface un brouillon que
+ * quand le serveur (ou la file) a la donnée. Le formulaire HTML reste
+ * fonctionnel sans JavaScript.
  *
  * Les données de la page arrivent par <script type="application/json"> :
  *   #seance-config  → {mode, seance, date, semaine, weekOffset, autoRestTimer,
@@ -31,6 +37,59 @@
   function csrf() {
     var m = document.querySelector('meta[name="csrf-token"]');
     return (m && m.getAttribute("content")) || "";
+  }
+
+  // ── Envoi d'un formulaire de carte ───────────────────────────────
+  // Tous les blocs exercice de la page, pour que « Terminer » puisse
+  // envoyer ce qui reste avant de clore la séance.
+  var BLOCS = [];
+  var DELAI_ENVOI = 8000;
+
+  function lireChamps(form) {
+    var champs = {};
+    new FormData(form).forEach(function (v, k) { champs[k] = v; });
+    return champs;
+  }
+
+  // La file hors-ligne attend un objet qui sait `forEach(valeur, clé)`.
+  function versFormData(champs) {
+    return {
+      forEach: function (cb) {
+        Object.keys(champs).forEach(function (k) { cb(champs[k], k); });
+      },
+    };
+  }
+
+  // → {statut: "ok", d} | {statut: "reseau"} | {statut: "refus", d}.
+  // « reseau » = rien de sûr n'est arrivé : délai dépassé, pas de réponse,
+  // erreur serveur, quota. La donnée doit alors partir dans la file.
+  function posterFormulaire(url, champs) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var minuterie = ctrl ? setTimeout(function () { ctrl.abort(); }, DELAI_ENVOI) : null;
+    return fetch(url, {
+      method: "POST",
+      body: new URLSearchParams(champs),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "X-CSRFToken": csrf(),
+      },
+      credentials: "same-origin",
+      signal: ctrl ? ctrl.signal : undefined,
+    })
+      .then(function (r) {
+        if (r.status >= 500 || r.status === 408 || r.status === 429) return { statut: "reseau" };
+        return r.json().then(function (d) {
+          return (r.ok && d && d.ok) ? { statut: "ok", d: d } : { statut: "refus", d: d || {} };
+        });
+      })
+      // Pas de réponse, délai dépassé, ou une page HTML à la place du JSON
+      // (session expirée) : la file rejouera, et saura reconnaître la session.
+      .catch(function () { return { statut: "reseau" }; })
+      .then(function (res) {
+        if (minuterie) clearTimeout(minuterie);
+        return res;
+      });
   }
 
   // ── Séance en cours + durée ──────────────────────────────────────
@@ -152,9 +211,21 @@
   window.exoBlock = function (index, data) {
     var draftKey = DRAFT_PREFIX + data.base + "_" +
                    (data.exo_index != null ? data.exo_index : index);
+    // Clé de la file hors-ligne : un envoi plus récent du même exercice
+    // remplace celui qui attendait.
+    var cle = draftKey;
     return {
       open: !data.completed,
       saving: false,
+      // Révision des séries : `_rev` bouge à chaque modification,
+      // `_revServeur` est la dernière que le serveur (ou la file) a reçue.
+      _rev: 0,
+      _revServeur: 0,
+      // "" | "envoi" | "ok" | "attente" | "erreur" — affiché sous les séries.
+      etat: "",
+      _enCours: null,
+      _suite: null,
+      skipArme: false,
       // Panneau « aujourd'hui, à la place : ». Replié par défaut : on
       // change d'exercice de temps en temps, pas à chaque séance.
       showVariantes: false,
@@ -240,17 +311,21 @@
       _firedSets: [],
 
       init: function () {
+        BLOCS.push(this);
         try {
           var saved = localStorage.getItem(draftKey);
           if (saved) {
             var d = JSON.parse(saved);
             if (d.sets && d.sets.length) this.sets = d.sets;
             if (d.variant) this.variant = d.variant;
+            // Un brouillon est, par définition, ce que le serveur n'a pas.
+            this._rev = 1;
           }
         } catch (e) {}
         var self = this;
-        this.$watch("sets", function () { self._saveDraft(); });
+        this.$watch("sets", function () { self._rev++; self._saveDraft(); });
         this.$watch("variant", function (val) {
+          self._rev++;
           self._saveDraft();
           self._fetchVariantHistory(val);
         });
@@ -350,6 +425,9 @@
         // sur un geste voulu. `onSetFilled` ne se déclenche qu'une fois par
         // série, donc les deux chemins ne se marchent pas dessus.
         this.onSetFilled(i);
+        // Et la série part en base : cocher en vert sans écrire, c'était
+        // promettre ce qu'on ne tenait pas.
+        if (this._estRemplie(this.sets[i])) this._envoyer("partiel");
       },
       rouvrir: function (i) {
         this.faits = this.faits.filter(function (x) { return x !== i; });
@@ -407,118 +485,180 @@
         if (window.RestTimer) window.RestTimer.start(dur);
       },
 
-      // ── Enregistrement sans rechargement ──
-      save: function (ev) {
-        var form = ev.target.closest("form");
-        if (!form || this.saving) return;
-        ev.preventDefault();
-        // Hors ligne : on met en file NOUS-MÊMES et on valide la carte tout
-        // de suite. Avant, la page ne bougeait pas après « Enregistrer » :
-        // rien n'indiquait que la série était gardée, donc l'utilisateur la
-        // ressaisissait — et se retrouvait avec des doublons en attente.
-        if (!navigator.onLine) {
-          this._queueOffline(form);
-          return;
-        }
-        this.saving = true;
+      // ── Enregistrement ──
+      _carte: function () {
+        return this.$el && this.$el.closest ? this.$el.closest(".exo-card") : null;
+      },
+      _form: function () {
+        var c = this._carte();
+        return c ? c.querySelector('form[action="/seance/save-exo"]') : null;
+      },
+      _aDesSeries: function () {
         var self = this;
-        var card = form.closest(".exo-card");
-        var body = new FormData(form);
-        body.set("sets_json", this.serializedSets());
-        body.set("_csrf", csrf());
-
-        fetch(form.action, {
-          method: "POST",
-          body: new URLSearchParams(body),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "X-CSRFToken": csrf(),
-          },
-          credentials: "same-origin",
-        })
-          .then(function (r) {
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            return r.json();
-          })
-          .then(function (d) {
-            if (!d.ok) throw new Error(d.error || "échec");
-            try { localStorage.removeItem(draftKey); } catch (e) {}
-            self.completed = !!d.completed;
-            self.record = d.record || self.record;
-            self.suggestion = d.suggestion || null;
-            self.suggestionApplied = false;
-            self.lastSummary = d.last_summary || self.lastSummary;
-            if (card) card.classList.toggle("done", self.completed);
-            refreshProgress(d.volume);
-            if (d.pr) showPr(card, d.pr);
-            self.startRestTimer();
-            // Referme la carte terminée et ouvre la suivante : l'utilisateur
-            // n'a rien à chercher entre deux exercices.
-            if (self.completed) {
-              self.open = false;
-              openNextPending(card);
-            }
-          })
-          .catch(function (err) {
-            toast("Pas enregistré — tes séries restent sur l'appareil.", "error");
-            if (window.console) console.warn("save-exo", err);
-          })
-          .finally(function () { self.saving = false; });
+        return this.sets.some(function (s) { return self._estRemplie(s); });
+      },
+      // Ce que « Terminer » doit encore envoyer.
+      _aEnvoyer: function () {
+        return this._rev !== this._revServeur && this._aDesSeries();
+      },
+      etatTexte: function () {
+        return {
+          envoi: "Enregistrement…",
+          ok: "Enregistré",
+          attente: "Gardé sur l'appareil — envoi au retour du réseau",
+          erreur: "Pas enregistré — touche « Enregistrer » pour réessayer",
+        }[this.etat] || "";
       },
 
-      _queueOffline: function (form) {
-        var body = new FormData(form);
-        body.set("sets_json", this.serializedSets());
-        body.set("_csrf", csrf());
-        try {
-          window.OfflineQueue.enqueue(form.action, body);
-        } catch (e) {
-          form.submit();   // pas de file disponible : comportement d'origine
-          return;
+      // mode "partiel" (Série faite, Terminer) : les séries remplies seules.
+      // mode "complet" (Enregistrer) : toutes, les vides deviennent SKIP.
+      // Résout "ok" | "attente" | "erreur" pour l'état le plus récent : un
+      // envoi demandé pendant qu'un autre est en vol part juste après lui.
+      _envoyer: function (mode) {
+        var self = this;
+        if (this._enCours) {
+          if (this._suite !== "complet") this._suite = mode;
+          return this._enCours;
         }
-        try { localStorage.removeItem(draftKey); } catch (e) {}
-        var card = form.closest(".exo-card");
-        this.completed = true;
-        this.open = false;
-        if (card) card.classList.add("done");
-        refreshProgress();
-        openNextPending(card);
-        toast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
+        if (mode === "partiel" && !this._aDesSeries()) return Promise.resolve("ok");
+        var form = this._form();
+        if (!form) return Promise.resolve("erreur");
+        var rev = this._rev;
+        var champs = lireChamps(form);
+        champs.sets_json = this.serializedSets();
+        champs._csrf = csrf();
+        if (mode === "partiel") champs.partiel = "1";
+        this.etat = "envoi";
+        if (mode === "complet") this.saving = true;
+
+        var envoi = navigator.onLine
+          ? posterFormulaire(form.action, champs)
+          : Promise.resolve({ statut: "reseau" });
+        var p = envoi
+          .then(function (res) {
+            if (res.statut === "ok") {
+              self._recu(res.d, rev, mode);
+              return "ok";
+            }
+            if (res.statut === "reseau" && window.OfflineQueue) {
+              window.OfflineQueue.enqueue(form.action, versFormData(champs), cle);
+              // En file = en sûreté : « Terminer » n'a pas à le renvoyer. Le
+              // brouillon reste, il ne coûte rien et survit à un rechargement.
+              if (self._rev === rev) self._revServeur = rev;
+              return "attente";
+            }
+            if (window.console) console.warn("save-exo refusé", res.d);
+            return "erreur";
+          })
+          .then(function (statut) {
+            self.etat = statut;
+            self.saving = false;
+            self._enCours = null;
+            var suite = self._suite;
+            self._suite = null;
+            if (suite && (suite === "complet" || self._rev !== self._revServeur)) {
+              return self._envoyer(suite);
+            }
+            return statut;
+          });
+        this._enCours = p;
+        return p;
       },
 
-      skip: function (ev) {
+      _recu: function (d, rev, mode) {
+        if (this._rev === rev) {
+          this._revServeur = rev;
+          try { localStorage.removeItem(draftKey); } catch (e) {}
+        }
+        // Ce qui attendait pour cet exercice est plus ancien que ce que le
+        // serveur vient de recevoir : le rejouer l'écraserait.
+        if (window.OfflineQueue && window.OfflineQueue.drop) window.OfflineQueue.drop(cle);
+        var card = this._carte();
+        this.completed = !!d.completed;
+        this.record = d.record || this.record;
+        this.suggestion = d.suggestion || null;
+        this.suggestionApplied = false;
+        this.lastSummary = d.last_summary || this.lastSummary;
+        if (card) card.classList.toggle("done", this.completed);
+        refreshProgress(d.volume);
+        if (d.pr) showPr(card, d.pr);
+        // « Enregistrer » ou dernière série faite : on referme la carte et on
+        // ouvre la suivante — l'utilisateur n'a rien à chercher.
+        var fini = mode === "complet" || (!this.isIso && this.indexCourant() === -1);
+        if (mode === "complet") this.startRestTimer();
+        if (this.completed && fini) {
+          this.open = false;
+          openNextPending(card);
+        }
+      },
+
+      save: function (ev) {
         var form = ev.target.closest("form");
         if (!form) return;
         ev.preventDefault();
-        if (!navigator.onLine) {
-          this._queueOffline(form);
-          return;
-        }
         var self = this;
-        var card = form.closest(".exo-card");
-        var body = new FormData(form);
-        body.set("_csrf", csrf());
-        fetch(form.action, {
-          method: "POST",
-          body: new URLSearchParams(body),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "X-CSRFToken": csrf(),
-          },
-          credentials: "same-origin",
-        })
-          .then(function (r) { return r.json(); })
-          .then(function () {
-            try { localStorage.removeItem(draftKey); } catch (e) {}
+        this._envoyer("complet").then(function (statut) {
+          if (statut === "attente") {
+            var card = self._carte();
             self.completed = true;
             self.open = false;
             if (card) card.classList.add("done");
             refreshProgress();
             openNextPending(card);
-          })
-          .catch(function () { form.submit(); });
+            toast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
+          } else if (statut === "erreur") {
+            toast("Pas enregistré — tes séries restent sur l'appareil.", "error");
+          }
+        });
+      },
+
+      // « Skip » sur un exercice qui a déjà des séries les effaçait sans
+      // question. Premier appui : on arme (« Effacer ? »),
+      // second appui dans les 5 s : on efface. Le serveur refuse aussi un
+      // SKIP sans confirmation s'il a des séries réelles.
+      skip: function (ev) {
+        var form = ev.target.closest("form");
+        if (!form) return;
+        ev.preventDefault();
+        var self = this;
+        var aDesSeries = this._aDesSeries() || this.completed;
+        if (aDesSeries && !this.skipArme) {
+          this.skipArme = true;
+          setTimeout(function () { self.skipArme = false; }, 5000);
+          return;
+        }
+        this.skipArme = false;
+        var champs = lireChamps(form);
+        champs._csrf = csrf();
+        if (aDesSeries) champs.confirme = "1";
+        var card = this._carte();
+        function fini() {
+          try { localStorage.removeItem(draftKey); } catch (e) {}
+          self._revServeur = self._rev;
+          self.completed = true;
+          self.open = false;
+          if (card) card.classList.add("done");
+          refreshProgress();
+          openNextPending(card);
+        }
+        var envoi = navigator.onLine
+          ? posterFormulaire(form.action, champs)
+          : Promise.resolve({ statut: "reseau" });
+        return envoi.then(function (res) {
+          if (res.statut === "ok") {
+            if (window.OfflineQueue && window.OfflineQueue.drop) window.OfflineQueue.drop(cle);
+            fini();
+          } else if (res.statut === "reseau" && window.OfflineQueue) {
+            window.OfflineQueue.enqueue(form.action, versFormData(champs), cle);
+            fini();
+            toast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
+          } else if (res.d && res.d.a_confirmer) {
+            self.skipArme = true;
+            setTimeout(function () { self.skipArme = false; }, 5000);
+          } else {
+            toast("Pas enregistré — réessaie.", "error");
+          }
+        });
       },
 
       // ── Chrono isométrique ──
@@ -588,6 +728,7 @@
           this.sets.push({ reps: this.targetSeconds, poids: 0, remarque: "", rpe: "" });
         }
         this.isoRemaining = this.targetSeconds;
+        this._envoyer("partiel");
       },
       isoClearLast: function () {
         for (var i = this.sets.length - 1; i >= 0; i--) {
@@ -724,19 +865,54 @@
       });
     });
 
+    function erreurFinish(msg) {
+      var el = document.getElementById("finish-erreur");
+      if (!el) {
+        el = document.createElement("p");
+        el.id = "finish-erreur";
+        el.setAttribute("role", "alert");
+        el.className = "finish-erreur";
+        var save = document.getElementById("finish-save");
+        save.parentNode.insertBefore(el, save);
+      }
+      el.textContent = msg;
+    }
+
+    // Avant de clore : tout ce qui n'est pas encore chez le serveur part.
+    // Rien n'est effacé tant qu'une série n'est ni en base ni dans la file.
     function submitFinish() {
       var save = document.getElementById("finish-save");
       var skipBtn = document.getElementById("finish-skip");
       save.disabled = true;
       skipBtn.disabled = true;
       save.textContent = "Enregistrement…";
+      var restants = BLOCS.filter(function (b) { return b._aEnvoyer(); });
+      Promise.all(restants.map(function (b) { return b._envoyer("partiel"); }))
+        .then(function (statuts) {
+          if (statuts.indexOf("erreur") >= 0) {
+            save.disabled = false;
+            skipBtn.disabled = false;
+            save.textContent = "Enregistrer la séance";
+            erreurFinish("Des séries n'ont pas pu être enregistrées. Rien n'est " +
+                         "effacé : réessaie dans un instant.");
+            return;
+          }
+          var Q = window.OfflineQueue;
+          if (Q && Q.pending() > 0 && navigator.onLine) {
+            return Q.sync().then(function () { terminer(Q.pending() > 0); });
+          }
+          terminer(!navigator.onLine || (Q && Q.pending() > 0));
+        });
+    }
+
+    function terminer(parLaFile) {
       document.getElementById("finish-duration-input").value = String(elapsedMinutes());
       if (window.RestTimer) window.RestTimer.finishSession();
       clearAllDrafts();
       clearActiveSession();
-      if (!navigator.onLine && window.OfflineQueue) {
-        // Hors ligne : la séance est close côté appareil, le bilan part plus
-        // tard. On ne laisse pas l'utilisateur bloqué sur la modale.
+      if (parLaFile && window.OfflineQueue) {
+        // Des séries attendent le réseau : le bilan passe derrière elles dans
+        // la file, dans l'ordre. On ne laisse pas l'utilisateur bloqué.
         window.OfflineQueue.enqueue(form.action, new FormData(form));
         modal.style.display = "none";
         if (window.showToast) {
@@ -799,7 +975,10 @@
     // classique : ce sont des actions rares où un aller-retour est acceptable.
     document.addEventListener("submit", function (e) {
       var form = e.target;
-      if (form.dataset.noLoading != null) return;
+      // Un formulaire pris en main par le script (Enregistrer, Skip) gère son
+      // propre bouton : écraser son texte cassait le libellé réactif et le
+      // laissait sur « En cours… ».
+      if (e.defaultPrevented || form.dataset.noLoading != null) return;
       var btn = form.querySelector('button[type="submit"]');
       if (btn && !btn.classList.contains("loading")) {
         btn.classList.add("loading");

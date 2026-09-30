@@ -63,6 +63,12 @@ jobs:
       - name: Dépendances des tests et des outils
         run: pip install -r requirements-dev.txt
 
+      # Chromium pour pwa/tests/e2e : la séance jouée comme un utilisateur.
+      # Sans lui, ces tests s'ignoreraient — et c'est précisément ce qu'aucun
+      # test par route n'avait vu (séries cochées puis effacées, audit du 30/09).
+      - name: Navigateur des tests de parcours
+        run: python -m playwright install --with-deps chromium
+
       - uses: actions/setup-node@v7
         with:
           node-version: '22'

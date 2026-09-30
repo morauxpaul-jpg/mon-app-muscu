@@ -61,15 +61,38 @@
     } catch (e) {}
   }
 
-  function enqueue(url, formData) {
+  // `cle` (facultative) identifie ce qui est envoyé — un exercice d'une
+  // séance. Un envoi plus récent pour la même clé REMPLACE l'ancien encore
+  // en attente : l'enregistrement d'un exercice réécrit toutes ses séries,
+  // donc rejouer un état périmé après le récent effacerait des séries.
+  var _enVol = null;   // id de l'élément en cours d'envoi : on n'y touche pas
+
+  function enqueue(url, formData, cle) {
     var data = {};
     formData.forEach(function (val, key) {
       data[key] = val;
     });
     var q = getQueue();
-    q.push({ url: url, data: data, ts: Date.now() });
+    if (cle) {
+      q = q.filter(function (it) { return it.cle !== cle || it.id === _enVol; });
+    }
+    q.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+             url: url, data: data, ts: Date.now(), cle: cle || null });
     saveQueue(q);
     updateBadge();
+  }
+
+  // Un envoi direct a réussi pour cette clé : ce qui attendait pour elle est
+  // plus ancien, le rejouer écraserait l'état que le serveur vient de recevoir.
+  function drop(cle) {
+    if (!cle) return;
+    saveQueue(getQueue().filter(function (it) { return it.cle !== cle || it.id === _enVol; }));
+    updateBadge();
+  }
+
+  function csrfCourant() {
+    var m = document.querySelector && document.querySelector('meta[name="csrf-token"]');
+    return (m && m.getAttribute("content")) || "";
   }
 
   // ── Badge "en attente de sync" ────────────────────────────
@@ -90,7 +113,7 @@
         "box-shadow:0 2px 12px rgba(255,159,10,0.5);";
       document.body.appendChild(existing);
     }
-    existing.textContent = q.length + " série(s) à envoyer";
+    existing.textContent = q.length + " envoi(s) en attente";
     existing.title = "Enregistrées sur l'appareil, elles partiront au retour du réseau.";
   }
 
@@ -107,14 +130,26 @@
     _syncing = true;
     var synced = 0;
 
+    function retirer(id) {
+      saveQueue(getQueue().filter(function (it) { return it.id !== id; }));
+    }
+
     function step() {
       var queue = getQueue();
       if (!queue.length) return Promise.resolve();
       var item = queue[0];
+      _enVol = item.id;
+      // Le jeton CSRF gardé avec l'envoi a pu changer (reconnexion entre-
+      // temps) : le serveur répondait 400 et la tête de file restait bloquée
+      // pour toujours. On rejoue avec le jeton de la page actuelle.
+      var data = Object.assign({}, item.data);
+      var jeton = csrfCourant();
+      if (jeton) data._csrf = jeton;
       return fetch(item.url, {
         method: "POST",
-        body: new URLSearchParams(item.data),
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(data),
+        headers: { "Content-Type": "application/x-www-form-urlencoded",
+                   "X-CSRFToken": jeton },
         credentials: "same-origin",
         redirect: "follow",
       }).then(function (resp) {
@@ -129,9 +164,21 @@
           showToast("Reconnecte-toi pour envoyer tes séries en attente.", "warn");
           throw new Error("auth");
         }
-        if (!resp.ok && !resp.redirected) throw new Error("http " + resp.status);
+        if (!resp.ok && !resp.redirected) {
+          // Refus définitif (données refusées, et non réseau, session ou
+          // quota) : il bloquait toute la file derrière lui. On le met de
+          // côté — gardé, pas jeté — et on continue.
+          var s = resp.status;
+          if (s >= 400 && s < 500 && [401, 403, 408, 429].indexOf(s) < 0) {
+            mettreDeCote(item);
+            retirer(item.id);
+            updateBadge();
+            return step();
+          }
+          throw new Error("http " + s);
+        }
         synced++;
-        saveQueue(getQueue().slice(1));
+        retirer(item.id);
         updateBadge();
         return step();
       });
@@ -140,6 +187,7 @@
     return step()
       .catch(function () {})
       .then(function () {
+        _enVol = null;
         _syncing = false;
         updateBadge();
         if (synced > 0) {
@@ -147,6 +195,16 @@
         }
         return synced;
       });
+  }
+
+  var REJET_KEY = "muscu_offline_rejets";
+  function mettreDeCote(item) {
+    try {
+      var r = JSON.parse(localStorage.getItem(REJET_KEY) || "[]");
+      r.push(item);
+      localStorage.setItem(REJET_KEY, JSON.stringify(r.slice(-50)));
+    } catch (e) {}
+    showToast("Un envoi a été refusé par le serveur — il reste gardé sur l'appareil.", "warn");
   }
 
   var TOAST_COLORS = {
@@ -226,9 +284,21 @@
     } catch (e) {}
   }
 
+  // Se déconnecter avec des séries encore en file les effaçait sans un mot.
+  // Premier appui : on prévient et on arrête. Second appui (dans les 8 s) :
+  // l'utilisateur a choisi, on purge et on part.
+  var _logoutArme = 0;
   document.addEventListener("submit", function (e) {
     var form = e.target;
     if (!form || (form.getAttribute("action") || "") !== "/logout") return;
+    var n = getQueue().length;
+    if (n > 0 && Date.now() - _logoutArme > 8000) {
+      e.preventDefault();
+      _logoutArme = Date.now();
+      showToast(n + " envoi(s) pas encore parti(s) : ils seront perdus. " +
+                "Reconnecte le réseau d'abord, ou touche encore « Déconnexion ».", "warn");
+      return;
+    }
     // On laisse le POST partir mais on purge d'abord (synchrone pour localStorage,
     // best-effort pour le cache async qui aura le temps de s'exécuter).
     purgeOnLogout();
@@ -239,7 +309,8 @@
   // mettre la carte à jour immédiatement. Sans ça l'utilisateur n'avait
   // AUCUN retour : la série semblait perdue, et il la ressaisissait.
   window.OfflineQueue = {
-    enqueue: function (url, formData) { enqueue(url, formData); },
+    enqueue: function (url, formData, cle) { enqueue(url, formData, cle); },
+    drop: drop,
     pending: function () { return getQueue().length; },
     sync: syncQueue,
   };

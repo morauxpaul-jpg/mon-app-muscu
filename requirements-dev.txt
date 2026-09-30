@@ -12,3 +12,6 @@
 # planterait au démarrage du serveur.
 pytest==8.3.4
 Pillow==12.1.0
+# Tests navigateur (pwa/tests/e2e) : la séance jouée de bout en bout dans
+# Chromium. La CI installe le navigateur (`playwright install chromium`).
+playwright==1.60.0

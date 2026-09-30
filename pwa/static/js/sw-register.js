@@ -23,13 +23,21 @@ if ("serviceWorker" in navigator) {
       })
       .catch((err) => console.warn("SW registration failed:", err));
 
-    // Quand le nouveau SW prend le contrôle, on recharge l'app
+    // Quand le nouveau SW prend le contrôle, on recharge l'app — sauf dans
+    // deux cas où ce rechargement tombait mal :
+    //  - première installation : il n'y a pas d'ancienne version à remplacer,
+    //    et la page se rechargeait toute seule quelques secondes après la
+    //    toute première visite ;
+    //  - écran de séance : un rechargement entre deux séries, les jours de
+    //    déploiement. La nouvelle version s'appliquera à la page suivante.
+    const hadController = !!navigator.serviceWorker.controller;
     let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
-      refreshing = true;
+      if (refreshing || !hadController) return;
       // Flag pour que le modal patch notes s'affiche APRÈS le reload
       try { localStorage.setItem("pending_changelog", "1"); } catch(e) {}
+      if (window.location.pathname.indexOf("/seance") === 0) return;
+      refreshing = true;
       window.location.reload();
     });
   });

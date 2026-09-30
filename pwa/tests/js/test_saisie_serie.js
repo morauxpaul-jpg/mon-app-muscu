@@ -5,13 +5,33 @@
  * RPE 25, Remarque 87 — mesuré dans un navigateur. Une série remplie se
  * replie donc en une ligne et seule la courante reste ouverte.
  *
- * C'est de la MISE EN PAGE. Le test qui compte ici est celui qui vérifie
- * que rien de neuf ne part en base : `serializedSets()` doit rendre
- * exactement les mêmes quatre champs qu'avant.
+ * `serializedSets()` doit rendre exactement les mêmes quatre champs
+ * qu'avant. Et depuis l'audit du 30/09 (C1), « Série faite » ENREGISTRE :
+ * elle ne faisait que cocher en vert, et « Terminer » effaçait le reste.
+ * Le parcours complet est joué dans un navigateur (tests/e2e/).
  */
 'use strict';
 
-const { createEnv } = require('./harness');
+const { createEnv, makeForm } = require('./harness');
+
+const SAVE_URL = 'https://app.test/seance/save-exo';
+
+/** Un bloc branché sur un vrai formulaire (factice) et la file hors-ligne. */
+function blocBranche(sets, envOpts) {
+  const env = createEnv(Object.assign({ scripts: ['offline.js', 'seance.js'] }, envOpts || {}));
+  const form = makeForm(SAVE_URL, { exo_base: 'Développé couché', seance_name: 'Push' });
+  const card = {
+    querySelector: () => form,
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    nextElementSibling: null,
+  };
+  const b = env.window.exoBlock(0, {
+    base: 'Développé couché', exo_index: 0, sets, variant: 'Standard',
+  });
+  b.$el = { closest: () => card };
+  b._majFaits();
+  return { env, b };
+}
 
 /** Un bloc exercice prêt à exercer, sans Alpine ni DOM. */
 function bloc(sets, extra) {
@@ -57,6 +77,67 @@ module.exports = ({ test, assert }) => {
     b.serieFaite(1);
     assert.equal(b.serializedSets(), avant,
                  'le repli est de l’affichage, pas de la donnée');
+  });
+
+  // ── « Série faite » enregistre ────────────────────────────────
+
+  test('« Série faite » envoie les séries, en mode partiel', async () => {
+    const { env, b } = blocBranche([S(5, 100), S(), S()]);
+    b.serieFaite(0);
+    await b._enCours;
+    assert.equal(env.calls.length, 1);
+    const corps = new URLSearchParams(env.calls[0].body);
+    assert.equal(corps.get('partiel'), '1');
+    assert.equal(JSON.parse(corps.get('sets_json'))[0].reps, 5);
+  });
+
+  test('une série vide validée n’envoie rien', async () => {
+    const { env, b } = blocBranche([S(), S()]);
+    b.serieFaite(0);
+    await env.settle();
+    assert.equal(env.calls.length, 0);
+  });
+
+  test('hors ligne, la série part dans la file, une entrée par exercice', async () => {
+    const { env, b } = blocBranche([S(5, 100), S(5, 100), S()], { online: false });
+    b.serieFaite(0);
+    await b._enCours;
+    b.serieFaite(1);
+    await b._enCours;
+    const q = env.queue();
+    assert.equal(q.length, 1, 'le second envoi remplace le premier');
+    assert.equal(JSON.parse(q[0].data.sets_json).filter((x) => x.reps).length, 2);
+    assert.equal(b.etat, 'attente');
+  });
+
+  test('une erreur serveur met la série en file au lieu de la perdre', async () => {
+    const { env, b } = blocBranche([S(5, 100)]);
+    env.setResponder(() => ({ ok: false, status: 503, json: () => Promise.resolve({}) }));
+    b.serieFaite(0);
+    assert.equal(await b._enCours, 'attente');
+    assert.equal(env.queue().length, 1);
+  });
+
+  test('une fois reçue, la série n’est plus à envoyer par « Terminer »', async () => {
+    const { env, b } = blocBranche([S(5, 100), S()]);
+    b._rev = 1;   // ce que fait le $watch d'Alpine à la saisie
+    env.setResponder(() => ({ ok: true, status: 200,
+                              json: () => Promise.resolve({ ok: true, completed: true }) }));
+    b.serieFaite(0);
+    assert.equal(await b._enCours, 'ok');
+    assert.ok(!b._aEnvoyer());
+    assert.equal(b.etat, 'ok');
+  });
+
+  test('un refus (4xx) garde la série à envoyer', async () => {
+    const { env, b } = blocBranche([S(5, 100)]);
+    b._rev = 1;
+    env.setResponder(() => ({ ok: false, status: 400,
+                              json: () => Promise.resolve({ ok: false }) }));
+    b.serieFaite(0);
+    assert.equal(await b._enCours, 'erreur');
+    assert.ok(b._aEnvoyer(), '« Terminer » la renverra');
+    assert.equal(env.queue().length, 0);
   });
 
   // ── Quelle série est ouverte ──────────────────────────────────

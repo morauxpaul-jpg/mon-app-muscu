@@ -37,7 +37,7 @@ from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
                                  _purge_old_session_notes, _update_extras,
                                  _update_libre_draft, purger_les_calques)
 from core.seance_saisie import (_form_date, _known_exo_names, _parse_session_note,
-                                _pr_check, _rows_from_sets, _session_duration_min,
+                                _pr_check, _reps_saisies, _rows_from_sets, _session_duration_min,
                                 _session_totals)
 from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done,
                                 completer_mesures)
@@ -411,8 +411,18 @@ def save_exo():
         sets = []
     if not isinstance(sets, list):
         sets = []
+    # « Série faite » enregistre au fil de l'eau (partiel=1) : seules les
+    # séries remplies partent. Sans ça, les séries pas encore faites
+    # s'écriraient en SKIP au milieu de l'exercice.
+    partiel = f.get("partiel") == "1"
+    if partiel:
+        sets = [s for s in sets if isinstance(s, dict) and _reps_saisies(s) > 0]
 
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
+    if partiel and not sets:
+        # Rien de rempli : on ne touche à rien (surtout pas aux séries déjà
+        # en base) — c'est un envoi vide, pas un effacement.
+        return jsonify({"ok": True, "completed": False, "pr": None})
     new_rows = _rows_from_sets(sets, semaine=semaine, seance=seance,
                                exo_final=exo_final, muscle=muscle,
                                date_str=date_str, is_bw=is_bw)
@@ -463,6 +473,17 @@ def skip_exo():
     exo_base = f["exo_base"]
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
     date_str = _form_date(f)
+    wants_json = "application/json" in (request.headers.get("Accept") or "")
+    # Des séries réelles déjà enregistrées ne s'effacent pas sur un doigt qui
+    # glisse : « Skip » les remplaçait par une ligne SKIP, sans question.
+    if f.get("confirme") != "1":
+        deja = [r for r in get_hist()
+                if r.get("Date") == date_str and r["Séance"] == seance
+                and r["Exercice"] == exo_final and r["Reps"] > 0]
+        if deja:
+            if wants_json:
+                return jsonify({"ok": False, "a_confirmer": True, "series": len(deja)}), 409
+            return _back_to_editor(f)
     semaine = _iso_week(_parse_date(date_str) or logical_today_paris())
     new_rows = [{
         "Semaine": semaine, "Séance": seance, "Exercice": exo_final,
@@ -472,7 +493,7 @@ def skip_exo():
     }]
     replace_exo_rows(date_str, seance, exo_final, new_rows)
     clear_user_cache()
-    if "application/json" in (request.headers.get("Accept") or ""):
+    if wants_json:
         return jsonify({"ok": True, "completed": True, "skipped": True})
     return _back_to_editor(f)
 
