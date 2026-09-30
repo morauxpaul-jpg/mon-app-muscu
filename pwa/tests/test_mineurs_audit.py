@@ -221,7 +221,7 @@ def test_un_lien_bouton_nest_pas_inline():
 
 
 def test_les_decimales_du_record_sont_a_la_francaise():
-    t = _tpl("seance_edit.html")
+    t = _tpl("_seance_carte_exercice.html")
     assert "record.one_rm + 'kg'" not in t
     assert "_kg(record.one_rm)" in t
 
@@ -288,3 +288,20 @@ def test_la_feuille_generee_est_chargee_partout_ou_elle_sert(fake_db, logged_in)
         assert "/static/css/styles-extraits.css" in logged_in.get(page).get_data(as_text=True)
     visiteur = appmod.app.test_client()
     assert "/static/css/styles-extraits.css" in visiteur.get("/").get_data(as_text=True)
+
+
+
+# ── M11 : pas de fichier fourre-tout ─────────────────────────────
+
+
+def test_aucun_gabarit_ni_feuille_ne_depasse_900_lignes():
+    """seance_edit.html (1 055 l.), programme.html (1 011) et
+    components.css (1 261) ont été découpés (audit du 30/09, M11)."""
+    trop = []
+    for p in list((PWA / "templates").glob("*.html")) + list((PWA / "static" / "css").glob("*.css")):
+        if p.name == "styles-extraits.css":
+            continue  # généré
+        n = len(p.read_text(encoding="utf-8").splitlines())
+        if n > 900:
+            trop.append(f"{p.name}: {n}")
+    assert not trop, trop

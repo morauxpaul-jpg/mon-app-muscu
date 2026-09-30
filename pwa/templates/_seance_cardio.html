@@ -1,0 +1,116 @@
+{#- Inclus par seance_edit.html (découpé le 01/10/2026 : le fichier faisait
+    plus de 1 000 lignes, audit du 30/09, M11). Cardios de la séance : déjà faits + ajout. -#}
+  {# ── Cardios déjà enregistrés pour cette séance ── #}
+  {% if cardio_done %}
+    {% for c in cardio_done %}
+      <div class="card s-5e45f3">
+        <div class="s-5f28bc">
+          <div class="label-icon s-e59549">
+            <svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#flame"/></svg>
+            Cardio · {{ c.activite }}
+          </div>
+          <form class="s-116966" method="post" action="/seance/delete-cardio" x-data="{ c2:false }">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="semaine" value="{{ c.semaine }}">
+            <input type="hidden" name="activite" value="{{ c.activite }}">
+            <input type="hidden" name="serie" value="{{ c.serie }}">
+            <button type="button" class="btn mini label-icon" x-show="!c2" @click="c2=true" aria-label="Supprimer"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer</button>
+            <span class="inline-confirm s-834332" x-show="c2" x-cloak>
+              <button type="button" class="btn mini" @click="c2=false">Annuler</button>
+              <button type="submit" class="btn mini btn-danger">Confirmer</button>
+            </span>
+          </form>
+        </div>
+        <div class="s-b4238c">
+          {% if c.duree %}<span><strong class="s-38f301">{{ c.duree }}</strong> min</span>{% endif %}
+          {% if c.distance %}<span><strong class="s-38f301">{{ c.distance|round(2) }}</strong></span>{% endif %}
+          {% if c.vitesse %}<span>Vit. <strong class="s-38f301">{{ c.vitesse }}</strong></span>{% endif %}
+          {% if c.calories %}<span><strong class="s-52df2b">{{ c.calories }}</strong> kcal</span>{% endif %}
+          {% if c.rpe %}<span class="badge badge-info">{{ c.rpe }}</span>{% endif %}
+        </div>
+        {% if c.note %}
+          <div class="s-a9d81b">{{ c.note }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# ── Bloc cardio inline (optionnel, ajoute un cardio à cette séance) ── #}
+  <div class="card s-d6f2af" x-data="cardioBlock()">
+    <button type="button" class="btn label-icon s-9f1047" @click="open = !open">
+      <svg class="icon icon-sm"><use href="/static/img/icons.svg#flame"/></svg>
+      <span x-text="open ? 'Fermer le cardio' : 'Ajouter du cardio'"></span>
+    </button>
+    <form class="s-d2c171" method="post" action="/seance/add-cardio" x-show="open" x-transition>
+      <input type="hidden" name="mode" value="{{ mode }}">
+      <input type="hidden" name="name" value="{{ seance_name }}">
+      <input type="hidden" name="seance_name" value="{{ seance_name }}">
+      <input type="hidden" name="date" value="{{ date_iso }}">
+      <label class="s-8af194">Type</label>
+      <select name="activite" x-model="activite" class="cell-input s-046678">
+        <option>Course</option>
+        <option>Vélo</option>
+        <option>Rameur</option>
+        <option>Natation</option>
+        <option>Corde</option>
+        <option>HIIT</option>
+        <option>Marche</option>
+        <option>Elliptique</option>
+        <option>Montée d'escaliers</option>
+        <option>Autre</option>
+      </select>
+      <div class="s-c669ae">
+        <div>
+          <label class="s-b0be71">Durée (min)</label>
+          <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input s-046678" placeholder="20">
+        </div>
+        <div>
+          <label class="s-b0be71" x-text="units().dist"></label>
+          <input type="number" inputmode="decimal" :step="units().pas" min="0" name="distance_km" x-model="distance" class="cell-input s-046678" :placeholder="autoDistance() || '0'">
+        </div>
+      </div>
+      <div class="s-8a77e5" x-show="activite === 'Course' || activite === 'Marche'">
+        <label class="s-b0be71" for="seance-incline">Inclinaison (<span x-text="incline"></span>%)</label>
+        <input class="s-fb4324" type="range" id="seance-incline" name="incline" min="0" max="20" step="0.5"
+               x-model.number="incline" :aria-valuetext="incline + ' %'">
+      </div>
+      <div class="s-c669ae">
+        <div>
+          <label class="s-b0be71" x-text="units().vit || 'Vitesse'"></label>
+          <input type="number" inputmode="decimal" step="0.01" min="0" name="vitesse" x-model="vitesse" class="cell-input s-046678" :placeholder="autoVitesse()">
+        </div>
+        <div>
+          <label class="s-b0be71">Calories (kcal)</label>
+          <input type="number" inputmode="numeric" min="0" name="calories" x-model="calories" class="cell-input s-046678" placeholder="auto">
+        </div>
+      </div>
+      <label class="s-680601">Intensité</label>
+      <select name="rpe" class="cell-input s-046678">
+        <option value="">—</option>
+        <option>Facile</option>
+        <option>Modéré</option>
+        <option>Intense</option>
+      </select>
+      <label class="s-680601">Remarque</label>
+      <input type="text" name="note" class="cell-input s-046678" maxlength="80" placeholder="ex: fractionné, tempo, lieu…">
+      <button type="submit" class="btn primary label-icon s-aa44fc" data-haptic="1">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer le cardio
+      </button>
+    </form>
+  </div>
+
+
+  {# Le clic sur « Terminer » ouvre d'abord le bilan (note + commentaire) ;
+     la soumission réelle se fait depuis la modale (ou via « Passer »). #}
+  <form id="finish-form" method="post" action="/seance/finish">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    <input type="hidden" name="seance_name" value="{{ seance_name }}">
+    <input type="hidden" name="date" value="{{ date_iso }}">
+    <input type="hidden" name="rating" id="finish-rating" value="">
+    <input type="hidden" name="comment" id="finish-comment" value="">
+    <input type="hidden" name="duration_min" id="finish-duration-input" value="">
+    <button type="button" id="finish-open" class="btn primary label-icon s-d5b41c" data-tuto-seance="finish" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#check"/></svg>Terminer la séance</button>
+  </form>

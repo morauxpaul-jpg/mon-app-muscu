@@ -1,0 +1,56 @@
+{#- Inclus par seance_edit.html (découpé le 01/10/2026 : le fichier faisait
+    plus de 1 000 lignes, audit du 30/09, M11). Fenêtre d'info d'un exercice et table RM. -#}
+  {# ── Modal info exercice (Feature 8) ────────────────────── #}
+  <div id="exo-info-modal" class="exo-info-modal" style="display:none;" onclick="this.style.display='none'">
+    <div class="exo-info-box" onclick="event.stopPropagation()">
+      <h4 id="exo-info-title"></h4>
+      <div class="s-d30c74" id="exo-info-image"></div>
+
+      <div class="exo-info-tabs" role="tablist">
+        <button type="button" class="exo-info-tab active" data-tab="fiche" onclick="switchExoTab('fiche')">Fiche</button>
+        <button type="button" class="exo-info-tab" data-tab="rm" onclick="switchExoTab('rm')">Table RM</button>
+      </div>
+
+      <div id="exo-tab-fiche" class="exo-tab-pane">
+        <div id="exo-info-bodymap" class="mini-bodymap s-0e86c0"></div>
+        <div class="info-section">
+          <div class="info-label">MUSCLES</div>
+          <div class="s-33e7ae" id="exo-info-muscles"></div>
+        </div>
+        <div class="info-section">
+          <div class="info-label">EXÉCUTION</div>
+          <div class="info-text" id="exo-info-desc"></div>
+        </div>
+        <div class="info-section" id="exo-info-tips-section">
+          <div class="info-label">CONSEILS</div>
+          <ul class="s-9abd94" id="exo-info-tips"></ul>
+        </div>
+        <a id="exo-info-coach-link" href="/coach" class="btn label-icon s-0bd857">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#message-circle"/></svg>
+          Demander conseil au coach
+        </a>
+      </div>
+
+      <div id="exo-tab-rm" class="exo-tab-pane" style="display:none;">
+        <div id="exo-rm-empty" class="info-section s-cb035c">
+          Aucun 1RM estimé pour cet exercice — fais d'abord quelques séries pour débloquer la Table RM.
+        </div>
+        <div id="exo-rm-content" style="display:none;">
+          <div class="info-section">
+            <div class="info-label">1RM ESTIMÉ</div>
+            <div class="s-388038"><span id="exo-rm-value"></span> kg</div>
+          </div>
+          <div class="info-label s-8a77e5">POIDS PAR NOMBRE DE REPS</div>
+          <table class="ltable rm-table s-96ad60">
+            <thead><tr><th>Reps</th><th>Poids</th><th>% 1RM</th></tr></thead>
+            <tbody id="exo-rm-rows"></tbody>
+          </table>
+          <div class="s-c2ce36">
+            Formule Epley : poids = 1RM / (1 + reps/30)
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn primary exo-info-close" onclick="document.getElementById('exo-info-modal').style.display='none'">Fermer</button>
+    </div>
+  </div>

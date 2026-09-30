@@ -1,0 +1,178 @@
+/* Styles de l'écran de séance — sortis du <style> de seance_edit.html
+   (audit du 30/09, M11). Chargé au même endroit, rendu identique. */
+/* Le chrono de repos est global (base.html + /static/css/rest-timer.css) :
+   il survit aux changements d'onglet et aux rechargements de page. */
+
+/* ── Exercise info button ── */
+.exo-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 26 px visibles (seuil WCAG 2.2 : 24) ; la zone sensible fait 30×40
+     grâce au ::after plus bas. Deux boutons voisins sont espacés de
+     32 px : on ne dépasse pas cette largeur, sinon ils se marchent
+     dessus. */
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 0.5px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 0;
+  line-height: 1;
+}
+.exo-info-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+}
+.exo-vignette {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  margin-right: 10px;
+  padding: 0;
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  overflow: hidden;
+}
+.exo-vignette img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Carte repliée une fois l'exercice fait : la vignette cède la place aux
+   chiffres, qui sont alors ce qu'on vient relire. */
+.exo-card.done .exo-vignette { width: 40px; height: 40px; }
+.exo-chrono-btn { color: var(--accent); }
+.exo-swap-btn { color: var(--text-2); font-size: 1rem; line-height: 1; }
+.exo-remplace {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.exo-variantes {
+  padding: 10px 12px 12px;
+  border-top: 0.5px solid var(--border-default);
+  background: rgba(255,255,255,0.02);
+}
+.exo-variantes-titre {
+  font-size: 0.7rem;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.exo-variante {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-1);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  /* Cible tactile : on les enchaine vite, en salle, les mains moites. */
+  min-height: 44px;
+}
+.exo-variante img,
+.exo-variante-vide {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+}
+.exo-variante-nom { flex: 1; min-width: 0; }
+.exo-variante-retour { color: var(--text-2); }
+.exo-variantes-plus {
+  width: 100%;
+  padding: 8px;
+  margin: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 44px;
+}
+.exo-variantes-note {
+  font-size: 0.7rem;
+  color: var(--text-mute);
+  margin: 8px 0 0;
+}
+.exo-chrono-btn .icon { width: 13px; height: 13px; }
+.exo-info-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-overlay);
+  padding: 8px;
+  overflow: hidden;
+}
+.exo-info-box {
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  max-width: 340px;
+  width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  color: var(--text-1);
+}
+.exo-info-box h4 { color: var(--text-1); margin: 0 0 6px; font-size: 0.95rem; font-weight: 500; }
+.exo-info-box .info-section { margin-bottom: 6px; }
+.exo-info-box .info-label { font-size: 0.7rem; color: var(--text-3); letter-spacing: 0.8px; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
+.exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; color: var(--text-2); }
+/* Deux tailles, deux plafonds. Le dessin au trait reste petit ;
+   l'illustration rendue mérite sa place. Un plafond unique à 90 px
+   écrasait la hauteur fixée en ligne à 168 px et l'image sortait
+   étirée en largeur. `object-fit` garde les proportions quoi qu'il
+   arrive, même si une illustration n'est pas carrée. */
+.exo-info-box #exo-info-image img { max-width: 100%; max-height: 90px; object-fit: contain; }
+.exo-info-box #exo-info-image img.illustration { max-height: 168px; }
+.exo-info-box .mini-bodymap { margin-bottom: 6px !important; }
+.exo-info-box #exo-info-tips { padding-left: 16px; margin: 2px 0 0; font-size: 0.8rem !important; line-height: 1.35 !important; }
+.exo-info-box #exo-info-tips li { margin-bottom: 2px; }
+.exo-info-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 0.5px solid var(--border-default); }
+.exo-info-tab {
+  background: none; border: 0; padding: 6px 12px;
+  color: var(--text-3); font-size: 0.82rem;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  font-weight: 500;
+}
+.exo-info-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; color: var(--text-2); }
+.exo-info-box .rm-row-max td { color: var(--accent); background: var(--accent-bg); }
+.exo-info-close {
+  position: sticky; bottom: -12px;
+  width: 100%; margin-top: 10px;
+  padding: 10px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+}

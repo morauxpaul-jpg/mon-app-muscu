@@ -14,6 +14,8 @@ const APP_SHELL = [
   "/static/css/tokens.css",
   "/static/css/theme.css",
   "/static/css/components.css",
+  "/static/css/components-seance.css",
+  "/static/css/components-pages.css",
   "/static/css/icons.css",
   "/static/css/glass.css",
   "/static/css/tutorial.css",
