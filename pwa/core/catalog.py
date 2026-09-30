@@ -873,7 +873,7 @@ CATALOG_ORDER = [
     "circuit_salle_3j", "circuit_maison_3j", "hiit_muscu_4j", "seche_muscu_5j",
     # Spécialisations (PRO)
     "glutes_focus_4j", "bras_spe_4j",
-    # Force (5x5 Free, athlé PRO)
+    # Force (PRO : 5x5 et athlé)
     "force_5x5_3j", "force_athle_4j",
 ]
 

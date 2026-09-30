@@ -62,7 +62,7 @@ pwa/
 │   ├── coach_memory.py            # Note persistante du coach sur l'utilisateur (700 car. max)
 │   ├── debrief.py                 # Debrief de fin de séance : collecte des chiffres réels + rédaction IA
 │   ├── openfoodfacts.py           # Produit emballé par code-barres (kJ→kcal, portion, cache mémoire)
-│   ├── catalog.py                 # Catalogue de 19 programmes prédéfinis (onboarding)
+│   ├── catalog.py                 # Catalogue de 20 programmes prédéfinis (5 gratuits)
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
 │   ├── foods_data.py              # Base de ~270 aliments courants (kcal/macros pour 100 g + portions) pour la recherche Nutrition
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
@@ -167,12 +167,12 @@ pwa/
 
 - **Deux niveaux d'accès** (2026-06-14) :
   - `g.is_vip_full` = **PAYANT** (`tier == 'vip'`) → accès **complet** (Coach IA, Générateur IA, programmes PRO, multi-programmes/profils, export/import).
-  - `g.is_vip` = full **OU essai à durée limitée** (`vip_until > now()`, via `db.vip_until_active()`) → accès **restreint** : **Nutrition + stats détaillées seulement**.
+  - `g.is_vip` = full **OU essai à durée limitée** (`vip_until > now()`, via `db.vip_until_active()`) → accès **restreint** : **Nutrition + stats détaillées seulement**. L'AFFICHAGE suit : l'essai voit « Essai PRO — encore X h », un badge ESSAI et les boutons d'achat (`is_trial`, `trial_left`), jamais « Tu es VIP » (audit du 30/09, C2).
   - `vip_until` = essai « découverte » (parrainage/promo, migration v29). Volontairement court + restreint pour ne pas cannibaliser l'achat (un essai complet permettrait de générer un programme et tout extraire en 1 j).
   - **Règle de gate** : features payantes → `getattr(g, "is_vip_full", False)` ; Nutrition + stats avancées (`progres`, profondeur d'historique `gestion`) → `getattr(g, "is_vip", False)`.
   - Les deux sont résolus + cachés en session par `before_request` (`is_vip`, `is_vip_full`), exposés aux templates par le context processor. `billing.success` pose les deux ; le webhook passe le `tier` → recalculé au TTL. **TTL asymétrique** (2026-06-14) : un VIP confirmé est re-vérifié toutes les `VIP_CACHE_TTL`=120 s, un FREE toutes les `FREE_RECHECK_TTL`=15 s — pour qu'un passage VIP (grant admin ou achat Stripe) se propage en quelques secondes à la session du user, même sur un autre appareil. La vérif d'existence du compte auth (API auth, plus coûteuse) reste sur la cadence lente via `session['auth_check_ts']`.
-- **Offre « équilibrée »** (2026-06-11) — Free = séances illimitées + progrès simple + 1 programme + cardio. VIP = Coach IA (15 msg/j), **Nutrition**, stats détaillées (body map/1RM/zoom), programmes PRO, multi-programmes/profils, export.
-- **Gating Free** : Coach IA, Nutrition, Export/Import, programmes PRO du catalogue, stats avancées, multi-programmes/profils.
+- **Offre « équilibrée »** (2026-06-11) — Free = séances illimitées + progrès simple + 1 programme + cardio + **export de ses données** (gratuit depuis le 30/09, RGPD). VIP = Coach IA (15 msg/j), **Nutrition**, stats détaillées (body map/1RM/zoom), programmes PRO, multi-programmes/profils, réimport.
+- **Gating Free** : Coach IA, Nutrition, Import (l'export est gratuit), programmes PRO du catalogue, stats avancées, multi-programmes/profils.
 - **Onglet Plus** : sections épurées (Entraînement / Premium / Détente / Réglages) ; features VIP visibles avec cadenas + `vip_wall`. Incitation VIP douce sur l'accueil pour les gratuits (remplace le widget calories).
 - **Mur VIP** : `templates/partials/vip_lock.html` (inline) ou `vip_wall.html` (plein écran).
 - **Badge PRO** affiché dans la topbar pour les VIP.
@@ -183,7 +183,7 @@ pwa/
 ## Fonctionnalités clés
 
 ### Séance
-- Timer de repos auto (configurable, déclenché après saisie reps+poids)
+- Timer de repos auto (configurable, déclenché par « Série faite ») ; le repos prescrit par le programme passe avant le dernier préréglage touché
 - **Bip léger** en fin de repos (sine 600 Hz, ~80 ms, gain 0.04, généré via Web Audio API)
 - Inline history (« Dernière fois : 80 kg × 8 »)
 - Pré-remplissage automatique des poids
@@ -196,7 +196,7 @@ pwa/
 - Une même séance peut être faite **deux fois dans la semaine** : les opérations ciblent la date exacte, plus la semaine (cf. « Semaine continue »).
 
 ### Cardio
-- Activités : Course, Vélo, Rameur, Natation, Corde, HIIT, Marche (avec MET pour estimation calories)
+- 10 activités (`routes/cardio.py`, `ACTIVITES_MAP`), avec MET pour estimation calories
 - Stockage dans la même table `history` (Exercice = `CARDIO:Type`, Reps = minutes, Poids = km, Remarque = `FC:… | Cal:… | RPE:…`, Muscle = `Cardio`)
 
 ### Nutrition
@@ -242,7 +242,7 @@ pwa/
   - **Endpoints** `routes/push.py` : `GET /push/config` (clé publique + `enabled`), `POST /push/subscribe`, `POST /push/unsubscribe`. `core/push.py` : `send_push(sub, payload)` via pywebpush (retour `ok`/`expired`/`error`/`unconfigured`).
   - **Envoi** : logique unique `core/push.py:run_reactivation_push(min_days=3, max_days=30)` (hors contexte requête) → cible les inactifs 3–30 j abonnés (`db.get_inactive_user_ids`), envoie, supprime les abonnements expirés (410/404), émet l'event `reactivation_push_sent`. Deux déclencheurs :
     - **Manuel** : `POST /admin/send-reactivation` (bouton admin, inline-confirm).
-    - **Cron** (2026-06-15) : `POST /tasks/reactivation` (public, CSRF-exempt, sécurisé par `CRON_SECRET` via en-tête `X-Cron-Secret` ou `?token=`, comparaison à temps constant, 401 sinon). Ou script standalone `pwa/cron_reactivation.py` (`python cron_reactivation.py`) pour un service cron Railway sans HTTP. Planifier 1×/jour.
+    - **Cron** (2026-06-15) : `POST /tasks/reactivation` (public, CSRF-exempt, sécurisé par `CRON_SECRET` via l'en-tête `X-Cron-Secret` (seulement), comparaison à temps constant, 401 sinon). Ou script standalone `pwa/cron_reactivation.py` (`python cron_reactivation.py`) pour un service cron Railway sans HTTP. Planifier 1×/jour.
   - **Env Railway requis** : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (base64url), `VAPID_SUBJECT` (`mailto:…`), `CRON_SECRET` (pour l'endpoint cron HTTP). iOS : push seulement si l'app est installée (écran d'accueil).
 
 ### Partage de progression (croissance, 2026-06-14)
@@ -278,7 +278,7 @@ pwa/
 - **Universelles (free + PRO)** depuis 2026-06-15 : la case « Notifications de rappel & relances » dans Gestion n'est plus réservée au VIP (rétention = on veut surtout faire revenir les gratuits). Un seul contrôle : cocher la case demande la permission ET abonne au push (`handleNotifToggle` → `window.enablePush`).
 - Rappels **locaux** : retirés le 30/09 (ils ne se déclenchaient jamais — script exécuté avant le chargement de notifications.js, audit R4 — et n'auraient prévenu que quelqu'un qui regarde déjà l'app). Seuls les rappels serveur (core/reminders.py) existent.
 - **Rappel de séance à l'heure choisie** (`core/reminders.py`) : réglage `_settings.reminder_hour` (6→22 h, 0 = aucun) dans Gestion. `POST /tasks/reminders` (même secret `CRON_SECRET`) est appelé **toutes les heures** par un cron externe et ne notifie que les comptes dont l'heure correspond ET qui ont une séance prévue non faite. Script équivalent : `pwa/cron_reminders.py`.
-- Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Un envoi par utilisateur au maximum tous les 27 jours (`push_subscriptions.last_reactivation_at`, migration v34) — avant, un inactif recevait la même relance 27 jours d'affilée.
+- Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Au plus 3 relances par arrêt, espacées d'au moins 4 jours (`push_subscriptions.last_reactivation_at` / `reactivation_count`, migration v34) ; une relance antérieure à la dernière séance appartient à un arrêt terminé et ne compte plus (audit du 30/09, I14).
 - Désactivable dans Gestion > Paramètres.
 
 ### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
@@ -319,12 +319,12 @@ pwa/
 
 ### Onboarding
 - 4 étapes : Identité → Niveau → Objectif → Programme
-- 19 programmes au catalogue (`core/catalog.py`), regroupés par niveau (débutant / intermédiaire / avancé)
+- 20 programmes au catalogue (`core/catalog.py`), dont 5 gratuits, regroupés par niveau (débutant / intermédiaire / avancé)
 - Cartes enrichies : icône, étoiles de difficulté, durée, muscles tags, badge Free/PRO
 - Tooltips « ? » sur les niveaux, preview modale des séances avant choix
 - Bouton retour fonctionnel à chaque étape
 
-### Catalogue de programmes (19)
+### Catalogue de programmes (20, dont 5 gratuits)
 - Plusieurs splits : Full Body, PPL, Upper/Lower, Bro Split, Home, etc.
 - Gating Free / PRO selon le programme (les programmes avancés sont VIP)
 
@@ -379,7 +379,7 @@ pwa/
 - Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`).
 
 ### Tests (pwa/tests)
-- `cd pwa && python -m pytest tests -q` — **293 tests** (dont 13 tests JavaScript), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
+- `cd pwa && python -m pytest tests -q` — **≈ 870 tests** au 01/10/2026 (dont les tests navigateur de `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 100 tests), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
 - **Tests JavaScript** : `pwa/tests/js/` — lanceur maison sous Node nu (`node tests/js/run.js`), sans npm install ni jsdom ; `harness.js` fournit un DOM/localStorage/fetch minimal. Couvre la **file hors-ligne** (ordre d'envoi, reprise après échec, session expirée, double synchronisation, phase d'écoute). `tests/test_js.py` le branche sur pytest (ignoré si Node manque).
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
