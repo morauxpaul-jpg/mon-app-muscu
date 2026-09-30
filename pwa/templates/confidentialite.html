@@ -5,7 +5,7 @@
   <a href="{% if is_authenticated %}/plus{% else %}/{% endif %}" class="btn label-icon" style="display:inline-flex; margin-bottom:10px;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#lock"/></svg>Politique de confidentialité</h1>
-  <p style="font-size:0.78rem; color:var(--text-3); margin:4px 0 16px;">Dernière mise à jour : 10 juin 2026</p>
+  <p style="font-size:0.78rem; color:var(--text-3); margin:4px 0 16px;">Dernière mise à jour : 30 septembre 2026</p>
 
   <div class="card privacy-card">
     <h3>1. Qui est responsable de tes données ?</h3>
@@ -20,9 +20,13 @@
       <li><strong>Entraînement</strong> : séances, exercices, séries, poids, cardio, programme, planning.</li>
       <li><strong>Nutrition</strong> : repas et macros que tu enregistres.</li>
       <li><strong>Coach IA</strong> : tes messages et les réponses du coach.</li>
+      <li><strong>Notifications</strong> : si tu les actives, l'adresse technique d'abonnement de ton navigateur ou de ton téléphone, pour t'envoyer les rappels.</li>
+      <li><strong>Newsletter</strong> : ton e-mail, seulement si tu as coché l'inscription dans Gestion (retirable à tout moment).</li>
+      <li><strong>Paiement</strong> (membres PRO) : l'identifiant client attribué par Stripe. L'app ne voit jamais ton numéro de carte.</li>
+      <li><strong>Mesure d'usage interne</strong> : quelques événements (séance terminée, page PRO consultée…) enregistrés chez nous, sans outil tiers, pour savoir ce qui sert et ce qui ne sert pas.</li>
       <li><strong>Identifiant publicitaire</strong> : sur la version gratuite de l'app Android, pour afficher des annonces (Google AdMob). La version Premium n'en utilise pas.</li>
     </ul>
-    <p>Aucune donnée de localisation, aucun contact, aucune photo. La version gratuite de l'app Android affiche des publicités via Google AdMob, qui peut utiliser l'identifiant publicitaire de ton appareil ; la version Premium est sans publicité. En dehors d'AdMob, aucun pisteur tiers ni analytics externe.</p>
+    <p><strong>Position et caméra</strong> : si tu utilises le suivi GPS d'une activité cardio, ta position est lue <em>sur ton appareil</em> pour calculer la distance ; seule la distance est enregistrée, jamais le tracé ni les coordonnées. Si tu scannes un code-barres (Nutrition), l'image reste sur ton appareil ; seul le numéro lu part vers notre serveur. Aucun contact, aucune photo. La version gratuite de l'app Android affiche des publicités via Google AdMob, qui peut utiliser l'identifiant publicitaire de ton appareil ; la version Premium est sans publicité. En dehors d'AdMob, aucun pisteur tiers ni outil de mesure d'audience externe.</p>
   </div>
 
   <div class="card privacy-card">
@@ -38,19 +42,24 @@
       <li><strong>Google</strong> : uniquement pour l'authentification (Google Sign-In).</li>
       <li><strong>Anthropic</strong> : quand tu utilises le Coach IA, ton message et ton contexte d'entraînement (programme, dernières séances, profil) sont envoyés à l'API Claude pour générer la réponse. Anthropic n'utilise pas ces données pour entraîner ses modèles.</li>
       <li><strong>Google AdMob</strong> : sur la version gratuite (Android), l'identifiant publicitaire de l'appareil est transmis à Google pour diffuser les annonces.</li>
+      <li><strong>Stripe</strong> : paiement des abonnements PRO (carte, Apple Pay, Google Pay). Stripe traite tes données de paiement ; l'app n'en garde que l'identifiant client.</li>
+      <li><strong>Brevo</strong> : envoi de la newsletter, uniquement pour les personnes qui s'y sont inscrites (e-mail seulement).</li>
+      <li><strong>Sentry</strong> : suivi des erreurs techniques du serveur, sans ton e-mail ni tes données d'entraînement.</li>
+      <li><strong>Open Food Facts</strong> : quand tu scannes un produit, notre serveur envoie le numéro du code-barres pour retrouver ses valeurs nutritionnelles. Rien d'autre.</li>
+      <li><strong>Services de notifications</strong> (Google, Apple, Mozilla selon ton appareil) : acheminent les rappels si tu les as activés.</li>
     </ul>
     <p>Seul toi (via ton compte) et l'administrateur de l'app (à des fins de maintenance) peuvent accéder à tes données. Les échanges sont chiffrés (HTTPS).</p>
   </div>
 
   <div class="card privacy-card">
     <h3>5. Combien de temps sont-elles conservées ?</h3>
-    <p>Tant que ton compte existe. Si tu supprimes ton compte, <strong>toutes</strong> tes données sont effacées immédiatement et définitivement.</p>
+    <p>Tant que ton compte existe. Si tu supprimes ton compte, <strong>toutes</strong> tes données sont effacées immédiatement et définitivement, y compris la mesure d'usage, et un abonnement PRO en cours est résilié. Les données de paiement conservées par Stripe le sont selon ses propres obligations légales (comptabilité).</p>
   </div>
 
   <div class="card privacy-card">
     <h3>6. Tes droits (RGPD)</h3>
     <ul>
-      <li><strong>Accès / portabilité</strong> : exporte toutes tes données en JSON depuis <a href="/gestion">Gestion</a> (membres Premium) ou sur demande par e-mail.</li>
+      <li><strong>Accès / portabilité</strong> : exporte toutes tes données en JSON depuis <a href="/gestion">Gestion → Sauvegarde complète</a> — gratuit, pour tout le monde — ou sur demande par e-mail.</li>
       <li><strong>Rectification</strong> : modifie ton profil, ton programme et ton historique directement dans l'app.</li>
       <li><strong>Effacement</strong> : supprime ton compte et toutes tes données depuis <a href="/gestion">Gestion → Supprimer mon compte</a>, ou par e-mail à <a href="mailto:muscutracker@gmail.com">muscutracker@gmail.com</a>.</li>
       <li><strong>Réclamation</strong> : tu peux saisir la CNIL (cnil.fr) si tu estimes que tes droits ne sont pas respectés.</li>
@@ -59,7 +68,7 @@
 
   <div class="card privacy-card">
     <h3>7. Cookies</h3>
-    <p>Un seul cookie, strictement nécessaire : le cookie de session qui te garde connecté (30 jours). Aucun cookie publicitaire ou de mesure d'audience.</p>
+    <p>Deux cookies, strictement nécessaires : le cookie de session qui te garde connecté (30 jours), et, si tu arrives par un lien d'invitation, un cookie qui retient le code de parrainage jusqu'à ton inscription (30 jours au plus). Aucun cookie publicitaire ou de mesure d'audience.</p>
   </div>
 
   <div class="card privacy-card">

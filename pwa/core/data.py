@@ -185,6 +185,14 @@ def list_session_notes():
     return db.list_session_notes(_uid())
 
 
+def list_all_nutrition():
+    return db.list_all_nutrition(_uid())
+
+
+def export_coach():
+    return db.export_coach(_uid())
+
+
 # ── Renommage / fusion d'exercices (UPDATE ciblé, pas de réécriture) ────
 def rename_seance_rows(old_name, new_name):
     return db.rename_seance_rows(_uid(), old_name, new_name)

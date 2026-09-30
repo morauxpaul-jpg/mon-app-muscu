@@ -65,7 +65,7 @@ from core.db_profil import (
 
 # ── les repas ───────────────────────────────────────────────────
 from core.db_nutrition import (
-    delete_nutrition, insert_nutrition, list_nutrition, sum_nutrition_day,
+    delete_nutrition, insert_nutrition, list_all_nutrition, list_nutrition, sum_nutrition_day,
     sum_nutrition_range
 )
 
@@ -86,7 +86,7 @@ from core.db_push import (
 
 # ── les conversations du coach ──────────────────────────────────
 from core.db_coach import (
-    clear_coach_messages, create_coach_conversation, delete_coach_conversation,
+    clear_coach_messages, create_coach_conversation, delete_coach_conversation, export_coach,
     insert_coach_message, list_coach_conversations, list_coach_messages,
     rename_coach_conversation, touch_coach_conversation
 )

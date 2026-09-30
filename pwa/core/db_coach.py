@@ -1,7 +1,7 @@
 """Les conversations du coach — `coach_messages` et `coach_conversations`."""
 import datetime as _dt
 
-from core.db_base import get_client
+from core.db_base import _fetch_all, get_client
 
 # ── Messages du coach (migration v26) ────────────────────────────
 def list_coach_messages(user_id: str, conversation_id: str | None = None,
@@ -41,6 +41,20 @@ def insert_coach_message(user_id: str, role: str, content: str,
             client.table("coach_messages").insert(row).execute()
         else:
             raise
+
+
+def export_coach(user_id: str) -> dict:
+    """Toutes les conversations et tous les messages du coach (export RGPD)."""
+    client = get_client()
+    conversations = _fetch_all(lambda: (
+        client.table("coach_conversations").select("id, title, updated_at")
+        .eq("user_id", user_id).order("id")
+    ))
+    messages = _fetch_all(lambda: (
+        client.table("coach_messages").select("conversation_id, role, content, created_at")
+        .eq("user_id", user_id).order("id")
+    ))
+    return {"conversations": conversations, "messages": messages}
 
 
 def clear_coach_messages(user_id: str) -> None:

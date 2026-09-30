@@ -335,11 +335,13 @@
     </div>
   </div>
 
-  {% if is_vip %}
+  {# L'EXPORT est pour tout le monde (droit à la portabilité, RGPD art. 20) ;
+     seule la réimportation reste PRO. #}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegarde complète</h3>
-    <p style="font-size:0.8rem; color:var(--text-dim); margin:0 0 8px;">Exporte <strong>toutes</strong> tes données (programme + historique + archives) dans un fichier JSON. Pour partager seulement ton programme à un ami, utilise plutôt l'export depuis <a href="/programme" style="color:var(--violet);">Programme</a>.</p>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin:0 0 8px;">Exporte <strong>toutes</strong> tes données (programme, historique, pesées, bilans, nutrition, conversations du coach) dans un fichier JSON.</p>
     <a href="/gestion/export" class="btn primary label-icon" style="width:100%; justify-content:center; text-align:center; text-decoration:none;"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
+    {% if is_vip_full %}
     <form method="post" action="/gestion/import" enctype="multipart/form-data" style="margin-top:10px;"
           x-data="{ c:false }">
       <label class="field-label" for="import-json">Importer un fichier JSON</label>
@@ -351,17 +353,10 @@
         <button type="submit" class="btn btn-danger">Confirmer</button>
       </div>
     </form>
+    {% else %}
+    <p style="font-size:0.75rem; color:var(--text-2); margin:10px 0 0;">Réimporter un fichier : <a href="/premium" style="color:var(--violet);">avec PRO</a>.</p>
+    {% endif %}
   </div>
-  {% else %}
-  <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
-    <svg class="icon icon-lg icon-mute"><use href="/static/img/icons.svg#save"/></svg>
-    <div style="flex:1;">
-      <div style="font-weight:500; color:var(--text-1); font-size:0.9rem;">Sauvegarde complète <span class="badge-pro" style="margin-left:4px;">PRO</span></div>
-      <div style="font-size:0.75rem; color:var(--text-2);">Exporte / importe toutes tes données (programme + historique + archives) en JSON.</div>
-    </div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
-  {% endif %}
 
   <div class="card" style="border-color: rgba(255,159,10,0.4);">
     <h3 class="label-icon" style="color:#FF9F0A;"><svg class="icon icon-md" style="color:#FF9F0A;"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>

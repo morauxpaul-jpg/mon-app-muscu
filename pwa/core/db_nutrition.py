@@ -3,7 +3,7 @@
 Lecture, ajout, suppression, et les deux sommes (jour et intervalle) qui
 alimentent les compteurs de macros.
 """
-from core.db_base import get_client
+from core.db_base import _fetch_all, get_client
 
 # ────────────────────────────────────────────────────────────
 # Nutrition (Prompt C)
@@ -21,6 +21,14 @@ def list_nutrition(user_id: str, date_str: str) -> list[dict]:
         .execute()
     )
     return resp.data or []
+
+
+def list_all_nutrition(user_id: str) -> list[dict]:
+    """Tous les repas de l'utilisateur (export RGPD), paginé."""
+    client = get_client()
+    return _fetch_all(lambda: (
+        client.table("nutrition").select("*").eq("user_id", user_id).order("id")
+    ))
 
 
 def insert_nutrition(user_id: str, row: dict) -> None:

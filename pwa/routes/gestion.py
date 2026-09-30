@@ -17,6 +17,7 @@ from core.data import (
     get_hist, get_prog, save_prog, save_prog_body, save_hist, get_profile,
     get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
     upsert_body_weight, rename_exercise_rows, list_session_notes,
+    list_all_nutrition, export_coach,
 )
 
 logger = logging.getLogger(__name__)
@@ -548,9 +549,11 @@ def _sanitize_program(raw: dict) -> dict:
 
 @bp.route("/gestion/export")
 def export_data():
-    """Exporte toutes les données utilisateur en JSON (VIP uniquement)."""
-    if not getattr(g, "is_vip_full", False):
-        return paywall("Export complet", 403)
+    """Exporte TOUTES les données de l'utilisateur en JSON — pour tout le
+    monde. C'est le droit à la portabilité (RGPD, art. 20) : il était réservé
+    aux membres PRO, et la page de suppression de compte conseillait
+    d'exporter… vers un mur de paiement (audit du 30/09, I12). La
+    RÉimportation reste une fonction PRO."""
     prog = get_prog()
     hist = get_hist()
     profile = get_profile() or {}
@@ -565,8 +568,15 @@ def export_data():
     except Exception as e:  # migration v34 absente
         logger.error("export list_session_notes FAILED: %s", e)
         bilans = []
+    optionnels = {}
+    for nom, lire in (("nutrition", list_all_nutrition), ("coach", export_coach)):
+        try:
+            optionnels[nom] = lire()
+        except Exception as e:  # table absente : export sans elle
+            logger.error("export %s FAILED: %s", nom, e)
+            optionnels[nom] = [] if nom == "nutrition" else {}
     payload = {
-        "version": 2,
+        "version": 3,
         "exported_at": date.today().isoformat(),
         "programme": prog,
         "historique": hist,
@@ -574,6 +584,9 @@ def export_data():
         "bilans": bilans,
         "profil": {k: v for k, v in profile.items() if k != "id"},
         "onboarding": {k: v for k, v in onboarding.items() if k not in ("user_id", "id")},
+        "nutrition": [{k: v for k, v in r.items() if k != "user_id"}
+                      for r in optionnels["nutrition"]],
+        "coach": optionnels["coach"],
     }
     filename = f"muscu-tracker-backup-{date.today().isoformat()}.json"
     return Response(
