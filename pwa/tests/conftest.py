@@ -233,7 +233,7 @@ class FakeAdmin:
             raise Exception("User not found")
         return types.SimpleNamespace(user=types.SimpleNamespace(id=uid))
 
-    def list_users(self):
+    def list_users(self, page=None, per_page=None):
         return []
 
 

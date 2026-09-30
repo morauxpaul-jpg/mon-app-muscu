@@ -95,7 +95,7 @@ from core.db_coach import (
 from core.db_admin import (
     auth_user_exists, delete_user_account, get_admin_stats, get_funnel_stats,
     get_user_details, insert_event, list_all_users_with_tier, reset_user_coach_quota,
-    _FUNNEL_STEPS
+    _FUNNEL_STEPS, _tous_les_comptes
 )
 
 # ── les bilans de séance ────────────────────────────────────────

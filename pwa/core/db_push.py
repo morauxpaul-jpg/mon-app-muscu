@@ -80,17 +80,17 @@ def list_newsletter_emails() -> list[str]:
     """E-mails distincts ayant consenti à la newsletter (pour export Brevo)."""
     client = get_client()
     try:
-        resp = (
+        lignes = _fetch_all(lambda: (
             client.table("profiles")
             .select("newsletter_email")
             .eq("newsletter_opt_in", True)
-            .execute()
-        )
+            .order("id")
+        ))
     except Exception as e:
         logger.error("list_newsletter_emails FAILED: %s", e)
         return []
     seen = []
-    for r in (resp.data or []):
+    for r in lignes:
         em = (r.get("newsletter_email") or "").strip().lower()
         if em and em not in seen:
             seen.append(em)
@@ -104,8 +104,10 @@ def _last_activity_by_user() -> dict:
     client = get_client()
     out: dict = {}
     try:
-        resp = client.table("user_last_activity").select("user_id, last_date").execute()
-        for r in (resp.data or []):
+        lignes = _fetch_all(lambda: (
+            client.table("user_last_activity").select("user_id, last_date").order("user_id")
+        ))
+        for r in lignes:
             uid, d = r.get("user_id"), str(r.get("last_date") or "")[:10]
             if uid and d:
                 out[uid] = d

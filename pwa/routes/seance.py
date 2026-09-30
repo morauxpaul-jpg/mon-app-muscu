@@ -819,6 +819,14 @@ def finish():
         from core.data import save_prog
         save_prog(prog)
         clear_user_cache()
+    # Une séance « terminée » sans une seule série n'est pas une séance faite :
+    # la compter gonflait le funnel (et proposait un debrief de rien).
+    series = [r for r in get_hist()
+              if r.get("Date") == date_str and r.get("Séance") == seance_name
+              and int(r.get("Reps") or 0) > 0]
+    if not series:
+        track("workout_finished_empty", {"mode": mode, "seance": seance_name})
+        return redirect(url_for("accueil.index"))
     # L'accueil (écran suivant) propose le debrief de CETTE séance.
     session["last_workout"] = {"seance": seance_name, "date": date_str}
     track("workout_finished", {

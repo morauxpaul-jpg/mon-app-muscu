@@ -18,7 +18,7 @@ from conftest import USER_ID
 @pytest.fixture()
 def admin(fake_db, logged_in, monkeypatch):
     monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
-    fake_db.auth.admin.list_users = lambda: [types.SimpleNamespace(
+    fake_db.auth.admin.list_users = lambda **k: [types.SimpleNamespace(
         id=USER_ID, email='a"b@example.com', created_at="2026-09-01")]
     fake_db.table("profiles").insert(
         {"id": USER_ID, "tier": "free", "prenom": "<img src=x onerror=alert(1)>"}).execute()

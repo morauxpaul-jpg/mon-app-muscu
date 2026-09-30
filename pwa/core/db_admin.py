@@ -8,6 +8,21 @@ import datetime as _dt
 import logging
 
 from core.db_base import _fetch_all, clear_user_cache, get_client
+
+
+def _tous_les_comptes(client) -> list:
+    """Tous les comptes auth, page par page. `list_users()` sans pagination
+    renvoie la première page seulement (50 par défaut) : au-delà de 50
+    comptes, la liste admin et le haut du funnel étaient tronqués."""
+    out: list = []
+    page = 1
+    while True:
+        resp = client.auth.admin.list_users(page=page, per_page=1000)
+        lot = list(getattr(resp, "users", None) or resp or [])
+        out.extend(lot)
+        if len(lot) < 1000 or page >= 100:
+            return out
+        page += 1
 from core.db_profil import _profile_upsert
 
 logger = logging.getLogger(__name__)
@@ -20,17 +35,15 @@ def list_all_users_with_tier() -> list[dict]:
     client = get_client()
     # auth.users via Admin API
     try:
-        users_resp = client.auth.admin.list_users()
-        # Le SDK peut retourner soit une liste directe soit un objet .users
-        auth_users = getattr(users_resp, "users", None) or users_resp or []
+        auth_users = _tous_les_comptes(client)
     except Exception as e:
         logger.error("list_all_users_with_tier auth FAILED: %s", e)
         auth_users = []
 
     # profiles
     try:
-        prof_resp = client.table("profiles").select("id, tier, prenom").execute()
-        profiles = {p["id"]: p for p in (prof_resp.data or [])}
+        profiles = {p["id"]: p for p in _fetch_all(
+            lambda: client.table("profiles").select("id, tier, prenom").order("id"))}
     except Exception as e:
         logger.error("list_all_users_with_tier profiles FAILED: %s", e)
         profiles = {}
@@ -147,13 +160,13 @@ def get_funnel_stats(days: int = 30) -> dict:
     users_by_event: dict[str, set] = {}
     coach_users: set = set()
     try:
-        resp = (
+        lignes = _fetch_all(lambda: (
             client.table("events")
             .select("user_id, event, created_at")
             .gte("created_at", cutoff)
-            .execute()
-        )
-        for r in (resp.data or []):
+            .order("id")
+        ))
+        for r in lignes:
             uid = r.get("user_id")
             ev = r.get("event") or ""
             if not uid:
@@ -168,9 +181,7 @@ def get_funnel_stats(days: int = 30) -> dict:
     cutoff_day = cutoff[:10]
     signups = 0
     try:
-        users_resp = client.auth.admin.list_users()
-        auth_users = getattr(users_resp, "users", None) or users_resp or []
-        for u in auth_users:
+        for u in _tous_les_comptes(client):
             created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else "")
             if str(created or "")[:10] >= cutoff_day:
                 signups += 1
@@ -180,8 +191,8 @@ def get_funnel_stats(days: int = 30) -> dict:
     # VIP actuels (étape finale).
     vip_count = 0
     try:
-        prof = client.table("profiles").select("tier").execute()
-        vip_count = sum(1 for p in (prof.data or []) if (p.get("tier") or "") == "vip")
+        prof = _fetch_all(lambda: client.table("profiles").select("tier").order("id"))
+        vip_count = sum(1 for p in prof if (p.get("tier") or "") == "vip")
     except Exception as e:
         logger.error("get_funnel_stats vip FAILED: %s", e)
 
@@ -216,8 +227,10 @@ def get_user_details(user_id: str) -> dict:
     client = get_client()
     # Historique
     try:
-        resp = client.table("history").select("date, seance, reps, poids").eq("user_id", user_id).execute()
-        rows = resp.data or []
+        rows = _fetch_all(lambda: (
+            client.table("history").select("date, seance, reps, poids")
+            .eq("user_id", user_id).order("id")
+        ))
     except Exception as e:
         logger.error("get_user_details history FAILED user=%s: %s", user_id, e)
         rows = []

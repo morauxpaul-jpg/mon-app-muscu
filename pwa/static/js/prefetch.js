@@ -24,7 +24,10 @@
     if (seen.size >= MAX) return;
     seen.add(url);
     try {
-      fetch(url, { credentials: "same-origin", mode: "same-origin" }).catch(function () {});
+      // X-Prefetch : le serveur ne compte pas une page chargée d'avance comme
+      // une page vue (les vieux navigateurs n'envoient pas Sec-Fetch-Mode).
+      fetch(url, { credentials: "same-origin", mode: "same-origin",
+                   headers: { "X-Prefetch": "1" } }).catch(function () {});
     } catch (e) {}
   }
 

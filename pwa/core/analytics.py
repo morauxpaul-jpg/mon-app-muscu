@@ -9,11 +9,26 @@ serveur en `service_role` (cf. core.db.insert_event, table `events`).
 """
 import logging
 
-from flask import g, render_template
+from flask import g, has_request_context, render_template, request
 
 from core import db as core_db
 
 logger = logging.getLogger(__name__)
+
+
+def _est_un_prechargement() -> bool:
+    """Une page chargée d'avance (prefetch.js, au survol ou au toucher d'un
+    lien) n'a pas été VUE. Toucher quatre cartes de « Plus » sans cliquer
+    enregistrait quatre « offre vue » (audit du 30/09, R13) : le funnel
+    comptait des murs que personne n'avait vus.
+
+    Seules les lectures sont concernées : un POST est toujours un geste."""
+    if not has_request_context() or request.method != "GET":
+        return False
+    if request.headers.get("X-Prefetch") == "1":
+        return True
+    mode = request.headers.get("Sec-Fetch-Mode")
+    return mode is not None and mode != "navigate"
 
 
 def track(event: str, props: dict | None = None, *,
@@ -25,6 +40,8 @@ def track(event: str, props: dict | None = None, *,
       requête n'est pas authentifiée et `g.user_id` est absent).
     - `tier` : par défaut déduit de `g.is_vip` ('vip' / 'free').
     """
+    if _est_un_prechargement():
+        return
     try:
         uid = user_id if user_id is not None else getattr(g, "user_id", None)
         t = tier if tier is not None else ("vip" if getattr(g, "is_vip", False) else "free")
