@@ -70,8 +70,8 @@ def append_exo_rows(date_str, seance, exercice, new_rows):
     return db.append_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
 
-def delete_exo_rows(date_str, seance, exercice):
-    return db.delete_exo_rows(_uid(), date_str, seance, exercice)
+def delete_exo_rows(date_str, seance, exercice, serie=None):
+    return db.delete_exo_rows(_uid(), date_str, seance, exercice, serie)
 
 
 def delete_session_rows(date_str, seance):

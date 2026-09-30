@@ -114,6 +114,26 @@ public class MainActivity extends BridgeActivity {
                 // silencieux : sans écriture, adsDisabled() reste à true
             }
         }
+
+        /** Séance en cours ou non : pas de pub « App Open » pendant une séance. */
+        @JavascriptInterface
+        public void setInSession(boolean active) {
+            try {
+                SharedPreferences p = ctx.getSharedPreferences(
+                        MainApplication.ADS_PREFS, Context.MODE_PRIVATE);
+                SharedPreferences.Editor e = p.edit()
+                        .putBoolean(MainApplication.KEY_IN_SESSION, active);
+                // L'horodatage ne bouge qu'au début : une séance oubliée
+                // cesse de bloquer les pubs 4 h après, pas 4 h après la
+                // dernière page vue.
+                if (active && !p.getBoolean(MainApplication.KEY_IN_SESSION, false)) {
+                    e.putLong(MainApplication.KEY_SESSION_AT, System.currentTimeMillis());
+                }
+                e.apply();
+            } catch (Exception e) {
+                // silencieux
+            }
+        }
     }
 
     /**

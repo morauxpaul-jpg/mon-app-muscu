@@ -254,17 +254,23 @@ def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
     return depart
 
 
-def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str):
+def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
+                    serie: int | None = None):
+    """Supprime les lignes d'un exercice pour une séance ; avec `serie`, une
+    seule — deux blocs du même cardio dans une séance sont deux séries, et
+    en supprimer un ne doit pas emporter l'autre."""
     date_str = _norm_date(date_str)
     client = get_client()
-    (
+    q = (
         client.table("history").delete()
         .eq("user_id", user_id)
         .eq("date", date_str)
         .eq("seance", seance)
         .eq("exercice", exercice)
-        .execute()
     )
+    if serie is not None:
+        q = q.eq("serie", int(serie))
+    q.execute()
     _cache_invalidate(f"hist:{user_id}")
 
 

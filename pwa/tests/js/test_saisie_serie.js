@@ -140,6 +140,18 @@ module.exports = ({ test, assert }) => {
     assert.equal(env.queue().length, 0);
   });
 
+  test('la première série prévient l’app Android qu’une séance est en cours', () => {
+    // Sinon la pub « App Open » s'affichait au retour dans l'app, entre deux
+    // séries (audit du 30/09, I17).
+    const { env, b } = blocBranche([S(5, 100), S()], { online: false });
+    const appels = [];
+    env.window.MTAds = { setInSession: (v) => appels.push(v) };
+    b.serieFaite(0);
+    assert.deepEqual(appels, [true]);
+    b.serieFaite(0);
+    assert.deepEqual(appels, [true], 'une seule fois par séance');
+  });
+
   // ── Quelle série est ouverte ──────────────────────────────────
 
   test('une série déjà remplie s’ouvre repliée', () => {

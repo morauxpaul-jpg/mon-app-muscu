@@ -67,3 +67,37 @@ def test_lutilisateur_apprend_quand_meme_quoi_faire(
                              headers={"X-CSRFToken": CSRF}).get_json()["error"]
     assert "indisponible" in message.lower()
     assert "réessaie" in message.lower()
+
+
+# ── Quand le fournisseur répond une erreur ───────────────────────
+
+
+@pytest.mark.parametrize("erreur", [
+    "Your credit balance is too low to access the Anthropic API",
+    "authentication_error: invalid x-api-key",
+    "Internal server error",
+])
+def test_le_generateur_ne_raconte_pas_lerreur_du_fournisseur(
+        fake_db, logged_in, monkeypatch, erreur):
+    """Il affichait « Crédit Anthropic épuisé » ou « Clé API Anthropic
+    invalide » — audit du 30/09, I22. Le coach, lui, était déjà propre."""
+    import sys
+    import types
+    _seed(fake_db)
+    monkeypatch.setattr("routes.generator._env", lambda *a, **k: "cle-de-test", raising=False)
+
+    class Client:
+        def __init__(self, **k):
+            self.messages = types.SimpleNamespace(create=self._create)
+
+        def _create(self, **k):
+            raise RuntimeError(erreur)
+
+    monkeypatch.setitem(sys.modules, "anthropic", types.SimpleNamespace(Anthropic=Client))
+    r = logged_in.post("/generator/generate", json={"objectif": "prise de masse"},
+                       headers={"X-CSRFToken": CSRF})
+    assert r.status_code == 502
+    message = r.get_json()["error"]
+    fuites = [m for m in INTERDITS if m in message.lower()]
+    assert not fuites, message
+    assert "réessaie" in message.lower()

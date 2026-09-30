@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from core.data import (
     get_hist, get_prog, clear_user_cache,
-    replace_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
+    replace_exo_rows, append_exo_rows, delete_exo_rows, delete_session_rows, mark_session_missed,
 )
 from core.dates import (today_paris, today_paris_str, logical_today_paris, now_paris,
                         continuous_week, DAYS_FR, MONTHS_FR)
@@ -728,11 +728,18 @@ def add_cardio():
         "Muscle": "Cardio",
         "Date": date_str,
     }]
+    # AJOUTER, pas remplacer : 10 min de rameur en échauffement puis 8 min en
+    # finisher sont deux blocs. `replace_exo_rows` ne gardait que le second.
     try:
-        replace_exo_rows(date_str, seance_name, exo_final, rows)
+        append_exo_rows(date_str, seance_name, exo_final, rows)
         clear_user_cache()
     except Exception as e:
         logger.error("add-cardio FAILED: %s", e)
+        # L'échec était avalé puis la page revenait comme si de rien n'était.
+        return render_template(
+            "error.html", code=503,
+            message="Le cardio n'a pas pu être enregistré. Réessaie dans un instant.",
+        ), 503
     return _back_to_editor(f)
 
 
@@ -746,7 +753,11 @@ def delete_cardio():
     if not activite:
         return _back_to_editor(f)
     try:
-        delete_exo_rows(_form_date(f), seance_name, f"CARDIO:{activite}")
+        serie = int(f["serie"]) if (f.get("serie") or "").isdigit() else None
+    except ValueError:
+        serie = None
+    try:
+        delete_exo_rows(_form_date(f), seance_name, f"CARDIO:{activite}", serie)
         clear_user_cache()
     except Exception as e:
         logger.error("delete-cardio FAILED: %s", e)

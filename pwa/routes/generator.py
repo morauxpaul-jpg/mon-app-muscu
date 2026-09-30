@@ -359,7 +359,10 @@ def generate():
     try:
         import anthropic  # type: ignore
     except ImportError:
-        return jsonify({"error": "Bibliothèque anthropic absente."}), 503
+        logger.error("paquet anthropic absent : générateur indisponible")
+        return jsonify({"error": "La génération de programme est "
+                                 "momentanément indisponible. Réessaie "
+                                 "plus tard."}), 503
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
@@ -374,13 +377,14 @@ def generate():
         err_type = type(e).__name__
         err_msg = str(e)[:300]
         logger.error("/generator anthropic FAILED (%s): %s", err_type, err_msg)
+        # Le détail (fournisseur, clé, crédit) reste dans les logs, comme
+        # pour le coach : l'utilisateur lisait « Crédit Anthropic épuisé ».
         lower = err_msg.lower()
-        if "authentication" in lower or ("invalid" in lower and "api" in lower):
-            msg = "Clé API Anthropic invalide."
-        elif "credit" in lower or "billing" in lower or "quota" in lower:
-            msg = "Crédit Anthropic épuisé."
+        if "overloaded" in lower or "rate" in lower:
+            msg = "Le générateur est très sollicité. Réessaie dans quelques secondes."
         else:
-            msg = f"Erreur Anthropic ({err_type})."
+            msg = ("La génération de programme est momentanément indisponible. "
+                   "Réessaie plus tard — ton quota n'a pas été entamé.")
         return jsonify({"error": msg}), 502
 
     try:

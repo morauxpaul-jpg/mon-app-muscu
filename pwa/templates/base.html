@@ -143,6 +143,13 @@
       if (window.MTAds && typeof window.MTAds.setTier === "function") {
         window.MTAds.setTier("{{ 'vip' if is_vip else 'free' }}");
       }
+      // Séance en cours (posée par seance.js à la première série, retirée à
+      // « Terminer ») : pas de pub plein écran au retour dans l'app.
+      if (window.MTAds && typeof window.MTAds.setInSession === "function") {
+        var enSeance = false;
+        try { enSeance = !!JSON.parse(localStorage.getItem("active_session") || "{}").active_session; } catch (e2) {}
+        window.MTAds.setInSession(enSeance);
+      }
     } catch (e) {}
   })();
   </script>

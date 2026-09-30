@@ -102,6 +102,8 @@
       }
       var existing = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
       if (existing.active_session) return;
+      // Dans l'app Android : pas de pub plein écran pendant la séance.
+      if (window.MTAds && window.MTAds.setInSession) window.MTAds.setInSession(true);
       localStorage.setItem(SESSION_KEY, JSON.stringify({
         active_session: true,
         session_id: CONFIG.seance,
@@ -123,6 +125,7 @@
     try {
       localStorage.removeItem(SESSION_KEY);
       localStorage.removeItem(START_KEY);
+      if (window.MTAds && window.MTAds.setInSession) window.MTAds.setInSession(false);
     } catch (e) {}
   }
 

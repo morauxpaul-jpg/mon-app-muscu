@@ -41,6 +41,11 @@ public class MainApplication extends Application
     static final String ADS_PREFS = "mt_ads";
     static final String KEY_NO_ADS = "no_ads";
     static final String KEY_TIER_AT = "tier_at";
+    /** Séance en cours (écrit par la WebView, cf. AdsBridge.setInSession). */
+    static final String KEY_IN_SESSION = "in_session";
+    static final String KEY_SESSION_AT = "session_at";
+    /** Une séance jamais « terminée » ne bloque pas les pubs indéfiniment. */
+    private static final long SESSION_MAX_MS = 4 * 60 * 60 * 1000L;
 
     private AppOpenAd appOpenAd = null;
     private boolean isLoadingAd = false;
@@ -64,6 +69,21 @@ public class MainApplication extends Application
 
     private boolean isAdAvailable() {
         return appOpenAd != null;
+    }
+
+    /**
+     * True si une séance est en cours. Revenir dans l'app après avoir lu un
+     * message entre deux séries déclenchait une pub plein écran par-dessus
+     * la saisie (audit du 30/09, I17).
+     */
+    private boolean inSession() {
+        try {
+            SharedPreferences p = getSharedPreferences(ADS_PREFS, Context.MODE_PRIVATE);
+            return p.getBoolean(KEY_IN_SESSION, false)
+                    && System.currentTimeMillis() - p.getLong(KEY_SESSION_AT, 0L) < SESSION_MAX_MS;
+        } catch (Exception e) {
+            return true; // dans le doute, pas de pub
+        }
     }
 
     /**
@@ -107,7 +127,7 @@ public class MainApplication extends Application
     }
 
     private void showAdIfAvailable() {
-        if (isShowingAd || adsDisabled()) {
+        if (isShowingAd || adsDisabled() || inSession()) {
             return;
         }
         if (System.currentTimeMillis() - lastShownAt < SHOW_INTERVAL_MS) {

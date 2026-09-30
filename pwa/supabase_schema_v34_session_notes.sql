@@ -91,5 +91,6 @@ create or replace view public.user_last_activity as
      and exercice <> 'SESSION'
    group by user_id;
 
--- Les vues héritent des droits de l'appelant ; service_role y accède.
+-- ⚠ Faux : une vue s'exécute avec les droits de son propriétaire. Corrigé en v37
+-- (security_invoker + révocation pour anon et authenticated).
 grant select on public.user_last_activity to service_role;

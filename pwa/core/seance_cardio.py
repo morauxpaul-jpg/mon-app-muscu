@@ -124,6 +124,7 @@ def _build_cardio_done(hist, seance_name, date_iso):
             "duree": int(r.get("Reps") or 0),
             "distance": float(r.get("Poids") or 0),
             "semaine": int(r.get("Semaine") or 0),
+            "serie": int(r.get("Série") or 1),
             **parsed,
         })
     return out

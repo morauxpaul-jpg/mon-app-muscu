@@ -195,6 +195,23 @@ def test_la_couche_java_consulte_le_statut_avant_dafficher():
     act = io.open("../android/app/src/main/java/com/muscutracker/fit/MainActivity.java",
                   encoding="utf-8").read()
     assert "adsDisabled()" in app
-    assert "if (isShowingAd || adsDisabled())" in app, "showAdIfAvailable ne filtre plus"
+    assert "if (isShowingAd || adsDisabled() || inSession())" in app, "showAdIfAvailable ne filtre plus"
     assert "isAdAvailable() || adsDisabled()" in app, "loadAd ne filtre plus"
     assert '"MTAds"' in act, "le pont JS a disparu de MainActivity"
+
+
+def test_pas_de_pub_app_open_pendant_une_seance():
+    """Audit du 30/09, I17 : revenir dans l'app entre deux séries affichait
+    une pub plein écran par-dessus la saisie. La WebView signale la séance
+    en cours (seance.js à la première série, base.html à chaque page)."""
+    import io
+    app = io.open("../android/app/src/main/java/com/muscutracker/fit/MainApplication.java",
+                  encoding="utf-8").read()
+    act = io.open("../android/app/src/main/java/com/muscutracker/fit/MainActivity.java",
+                  encoding="utf-8").read()
+    base = io.open("templates/base.html", encoding="utf-8").read()
+    seance = io.open("static/js/seance.js", encoding="utf-8").read()
+    assert "private boolean inSession()" in app
+    assert "public void setInSession(boolean active)" in act
+    assert "MTAds.setInSession(enSeance)" in base
+    assert "setInSession(true)" in seance and "setInSession(false)" in seance
