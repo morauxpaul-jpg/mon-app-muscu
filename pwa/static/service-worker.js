@@ -5,6 +5,8 @@
 // forcer un refresh en local (pas de SHA) ou changer l'APP_SHELL.
 const CACHE_VERSION = "v127";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
+// Au-delà, une page déjà gardée est servie depuis le cache (réseau faible).
+const NAV_DELAI = 3500;
 
 const APP_SHELL = [
   "/accueil",
@@ -201,40 +203,53 @@ self.addEventListener("fetch", (event) => {
                 (req.headers.get("accept") || "").includes("text/html");
 
   if (isNav) {
-    event.respondWith(
-      fetch(req)
-        .then((resp) => {
-          if (resp && resp.status === 200 && resp.type === "basic") {
-            const copy = resp.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return resp;
-        })
-        .catch(async () => {
-          const cache = await caches.open(CACHE);
-          // 1. La page exacte demandée.
-          const exact = await cache.match(req);
-          if (exact) return exact;
-          // 2. La même page sans les paramètres (une séance ouverte hier
-          //    reste utile aujourd'hui : l'utilisateur y retrouve ses exos).
-          const bare = await cache.match(url.pathname);
-          if (bare) return bare;
-          // 3. Dernier recours : l'accueil, mais en le DISANT. Un retour
-          //    silencieux à l'accueil ressemble à un bug.
-          const home = await cache.match("/accueil");
-          if (home) {
-            const html = await home.text();
-            return new Response(
-              html.replace("</body>", OFFLINE_BANNER + "</body>"),
-              { headers: { "Content-Type": "text/html; charset=utf-8" } }
-            );
-          }
-          return new Response(OFFLINE_PAGE, {
-            status: 503,
-            headers: { "Content-Type": "text/html; charset=utf-8" },
-          });
-        })
-    );
+    // Réseau d'abord… mais pas indéfiniment. Au sous-sol, le téléphone se
+    // croit en ligne et la requête ne revient pas : l'utilisateur regardait
+    // un écran blanc alors qu'une copie de la page attendait dans le cache
+    // (audit du 30/09, I4). Si une copie existe, on ne l'attend pas plus de
+    // NAV_DELAI ; la réponse réseau, si elle arrive, remplit le cache pour
+    // la prochaine fois.
+    const reseau = fetch(req).then((resp) => {
+      if (resp && resp.status === 200 && resp.type === "basic") {
+        const copy = resp.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+      }
+      return resp;
+    });
+    event.waitUntil(reseau.catch(() => {}));
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      // 1. La page exacte demandée. 2. La même page sans les paramètres (une
+      //    séance ouverte hier reste utile aujourd'hui : l'utilisateur y
+      //    retrouve ses exos).
+      const gardee = (await cache.match(req)) || (await cache.match(url.pathname));
+      if (gardee) {
+        const delai = new Promise((r) => setTimeout(() => r(null), NAV_DELAI));
+        try {
+          const premier = await Promise.race([reseau, delai]);
+          if (premier) return premier;
+        } catch (e) { /* réseau en échec : la copie */ }
+        return gardee;
+      }
+      try {
+        return await reseau;
+      } catch (e) {
+        // 3. Dernier recours : l'accueil, mais en le DISANT. Un retour
+        //    silencieux à l'accueil ressemble à un bug.
+        const home = await cache.match("/accueil");
+        if (home) {
+          const html = await home.text();
+          return new Response(
+            html.replace("</body>", OFFLINE_BANNER + "</body>"),
+            { headers: { "Content-Type": "text/html; charset=utf-8" } }
+          );
+        }
+        return new Response(OFFLINE_PAGE, {
+          status: 503,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+    })());
     return;
   }
 

@@ -202,3 +202,22 @@ def test_un_envoi_sans_reponse_part_en_file_au_lieu_de_bloquer(page, serveur):
     page.unroute("**/seance/save-exo")
     page.evaluate("window.OfflineQueue.sync()")
     assert _attendre(lambda: _series(serveur) == [(1, 5, 100.0)])
+
+
+def test_une_page_deja_vue_souvre_meme_si_le_reseau_ne_repond_pas(page, serveur):
+    """I4, côté ouverture de page : au sous-sol, le téléphone se croit en
+    ligne et la requête ne revient jamais. Le service worker attendait le
+    réseau indéfiniment — écran blanc — alors que la page était en cache."""
+    url = serveur + "/seance?mode=prefaite&name=Push"
+    # Le service worker contrôle la page et l'a gardée.
+    page.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller !== null",
+                           timeout=15000)
+    page.goto(url)
+    page.wait_for_selector(".serie-valider")
+    # Désormais, le serveur ne répond plus aux pages (le SW compris).
+    page.context.route("**/seance?**", lambda route: None)
+    debut = time.time()
+    page.goto(url, timeout=15000)
+    page.wait_for_selector(".serie-valider", timeout=15000)
+    assert time.time() - debut < 8, "la copie gardée arrive après le délai, pas après l'abandon"
+    page.context.unroute("**/seance?**")
