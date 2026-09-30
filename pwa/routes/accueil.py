@@ -528,8 +528,12 @@ def index():
             en_retrait = days_inactive >= REACTIVATION_DAYS and manquees >= 1
         if en_retrait:
             show_reactivation = True
-            # Event seulement sur une vraie navigation (pas un prefetch).
-            if request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate":
+            # Une fois par jour et par personne : écrit à chaque affichage de
+            # l'accueil, il faisait grossir la table events pour rien (M5).
+            # (track() ignore déjà les préchargements.)
+            jour = today.isoformat()
+            if session.get("nudge_day") != jour:
+                session["nudge_day"] = jour
                 try:
                     track("reactivation_nudge_shown", {"days": days_inactive})
                 except Exception:

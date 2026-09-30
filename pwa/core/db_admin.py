@@ -74,6 +74,16 @@ def get_admin_stats() -> dict:
     active_7d, active_30d (distinct user_id avec date récente)."""
     import datetime as _dt
     client = get_client()
+    # Vue d'agrégats (migration v39) : une ligne au lieu de tout l'historique
+    # de tous les comptes. Repli sur le calcul complet si elle n'existe pas.
+    try:
+        resp = client.table("admin_history_stats").select("*").execute()
+        ligne = (resp.data or [None])[0]
+        if ligne:
+            return {k: int(ligne.get(k) or 0) for k in
+                    ("total_rows", "total_tonnage", "total_seances", "active_7d", "active_30d")}
+    except Exception as e:
+        logger.info("admin_history_stats indisponible (%s) — calcul complet", e)
     try:
         rows = _fetch_all(lambda: (
             client.table("history").select("user_id, date, seance, reps, poids").order("id")
@@ -111,6 +121,16 @@ def get_admin_stats() -> dict:
 
 
 # ── Analytics produit (events de conversion / funnel) ────────────
+EVENTS_RETENTION_DAYS = 395   # ≈ 13 mois
+
+
+def purge_old_events(retention_days: int = EVENTS_RETENTION_DAYS) -> None:
+    """Efface la mesure d'usage de plus de 13 mois. Sans rétention, la table
+    grossissait sans limite (audit du 30/09, M5) — et une mesure d'usage
+    n'a pas à être gardée indéfiniment (RGPD : durée proportionnée)."""
+    cutoff = (_dt.datetime.now(_dt.timezone.utc)
+              - _dt.timedelta(days=retention_days)).isoformat()
+    get_client().table("events").delete().lte("created_at", cutoff).execute()
 def insert_event(user_id, event: str, props: dict | None = None,
                  tier: str | None = None) -> None:
     """Enregistre un event analytics (table `events`, migration v28).

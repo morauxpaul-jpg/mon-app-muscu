@@ -94,7 +94,8 @@ from core.db_coach import (
 # ── console d'administration ────────────────────────────────────
 from core.db_admin import (
     auth_user_exists, delete_user_account, get_admin_stats, get_funnel_stats,
-    get_user_details, insert_event, list_all_users_with_tier, reset_user_coach_quota,
+    get_user_details, insert_event, list_all_users_with_tier, purge_old_events,
+    reset_user_coach_quota, EVENTS_RETENTION_DAYS,
     _FUNNEL_STEPS, _tous_les_comptes
 )
 

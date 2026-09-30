@@ -146,3 +146,48 @@ def test_les_medias_marketing_ne_sont_pas_servis():
     assert not (PWA / "static" / "promo").exists()
     assert not (PWA / "static" / "promo-vip.mp4").exists()
     assert (PWA / "static" / "promo-vip-motion.mp4").exists(), "celle-là, la page PRO s'en sert"
+
+
+# ── M5 : la mesure d'usage ne grossit pas sans fin ───────────────
+
+
+def test_les_events_de_plus_de_13_mois_sont_effaces(fake_db):
+    import datetime as dt
+    import core.db as db
+    vieux = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=400)).isoformat()
+    recent = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=10)).isoformat()
+    fake_db.table("events").insert({"user_id": "a", "event": "x", "created_at": vieux}).execute()
+    fake_db.table("events").insert({"user_id": "a", "event": "y", "created_at": recent}).execute()
+    db.purge_old_events()
+    assert [e["event"] for e in fake_db.tables["events"]] == ["y"]
+
+
+def test_la_relance_affichee_ne_compte_quune_fois_par_jour(fake_db, logged_in, monkeypatch):
+    import datetime as dt
+    import routes.accueil as accueil
+    monkeypatch.setattr(accueil, "logical_today_paris", lambda: dt.date(2026, 9, 30))
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    fake_db.table("programs").insert({"user_id": USER_ID, "data": {
+        "A": [{"name": "Squat", "sets": 3, "muscle": "Jambes"}],
+        "_planning": {"Lundi": "A", "Mercredi": "A", "Vendredi": "A"}, "_settings": {}}}).execute()
+    fake_db.table("history").insert({
+        "user_id": USER_ID, "date": "2026-09-14", "semaine": 1, "seance": "A",
+        "exercice": "Squat", "serie": 1, "reps": 5, "poids": 100.0,
+        "remarque": "", "muscle": "Jambes"}).execute()
+    for _ in range(3):
+        logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"})
+    vus = [e for e in fake_db.tables.get("events", []) if e["event"] == "reactivation_nudge_shown"]
+    assert len(vus) == 1
+
+
+# ── M6 : les stats admin viennent d'une vue d'agrégats ───────────
+
+
+def test_les_stats_admin_lisent_la_vue_quand_elle_existe(fake_db):
+    import core.db as db
+    fake_db.table("admin_history_stats").insert({
+        "total_rows": 12, "total_tonnage": 3400, "total_seances": 3,
+        "active_7d": 1, "active_30d": 2}).execute()
+    s = db.get_admin_stats()
+    assert s == {"total_rows": 12, "total_tonnage": 3400, "total_seances": 3,
+                 "active_7d": 1, "active_30d": 2}

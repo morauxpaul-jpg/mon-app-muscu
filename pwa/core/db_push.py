@@ -177,17 +177,27 @@ def list_push_subscriptions_for_users(user_ids: set) -> list[dict]:
 
 
 def list_all_programs() -> list[dict]:
-    """[{user_id, data}] pour tous les comptes — cron des rappels de séance.
+    """[{user_id, data}] des comptes ABONNÉS aux notifications — cron des
+    rappels de séance.
 
     Le planning vit dans `programs.data['_planning']` : sans lecture groupée,
-    il faudrait une requête par utilisateur à chaque heure. On ne prend que
-    les deux colonnes utiles.
+    il faudrait une requête par utilisateur à chaque heure. Mais lire le blob
+    de TOUS les comptes chaque heure, pour n'écrire qu'aux abonnés, coûtait
+    de plus en plus (audit du 30/09, M6) : on ne lit que les leurs.
     """
     client = get_client()
     try:
-        return _fetch_all(lambda: (
-            client.table("programs").select("user_id, data").order("user_id")
-        ))
+        abonnes = sorted({r["user_id"] for r in _fetch_all(lambda: (
+            client.table("push_subscriptions").select("user_id").order("id")
+        )) if r.get("user_id")})
+        out: list = []
+        for i in range(0, len(abonnes), 100):
+            lot = abonnes[i:i + 100]
+            out.extend(_fetch_all(lambda: (
+                client.table("programs").select("user_id, data")
+                .in_("user_id", lot).order("user_id")
+            )))
+        return out
     except Exception as e:
         logger.error("list_all_programs FAILED: %s", e)
         return []

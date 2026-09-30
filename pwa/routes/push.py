@@ -97,13 +97,20 @@ def cron_reminders():
 def cron_reactivation():
     """Endpoint cron : envoie la relance push aux inactifs.
 
-    Pas de session — sécurisé par CRON_SECRET (en-tête X-Cron-Secret ou ?token=).
+    Pas de session — sécurisé par CRON_SECRET (en-tête X-Cron-Secret seulement).
     Public + exempté de CSRF (cf. app.py _PUBLIC_PATHS / _CSRF_EXEMPT_PATHS).
     À appeler par un scheduler externe (Railway cron, cron-job.org, GitHub Actions)
     une fois par jour :  curl -X POST -H "X-Cron-Secret: …" https://…/tasks/reactivation
     """
     if not _cron_authorized():
         return jsonify({"error": "unauthorized"}), 401
+    # Tâche quotidienne : on en profite pour appliquer la rétention de la
+    # mesure d'usage (13 mois). Best-effort, n'empêche jamais la relance.
+    try:
+        from core import db as core_db
+        core_db.purge_old_events()
+    except Exception as e:
+        logger.warning("purge_old_events FAILED: %s", e)
     result = core_push.run_reactivation_push(min_days=3, max_days=30)
     if not result.get("ok"):
         code = 503 if result.get("error") == "unconfigured" else 500

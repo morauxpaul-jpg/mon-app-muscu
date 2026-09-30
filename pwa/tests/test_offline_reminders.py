@@ -103,6 +103,7 @@ def test_reglage_heure_visible_dans_gestion(fake_db, logged_in):
 
 def test_rappel_cible_qui_sentraine_aujourdhui(fake_db):
     _seed(fake_db, settings={"notifications": True, "reminder_hour": 18})
+    _sub(fake_db)
     targets = reminders.targets_for_hour(18)
     assert [t["user_id"] for t in targets] == [USER_ID]
     assert targets[0]["seance"] == "Push"
@@ -221,3 +222,26 @@ def test_relance_change_de_message_a_chaque_envoi():
     from core.push import REACTIVATION_MESSAGES
     titres = {m["title"] for m in REACTIVATION_MESSAGES}
     assert len(titres) == len(REACTIVATION_MESSAGES)   # aucun doublon
+
+
+def test_le_cron_ne_lit_que_les_programmes_des_abonnes(fake_db, monkeypatch):
+    """Audit du 30/09, M6 : chaque heure, le blob de TOUS les comptes était
+    lu pour n'écrire qu'aux abonnés."""
+    import conftest
+    _seed(fake_db, settings={"notifications": True, "reminder_hour": 18})
+    _sub(fake_db)
+    for i in range(5):
+        _seed(fake_db, settings={"notifications": True, "reminder_hour": 18},
+              user_id=f"sans-abonnement-{i}")
+    lus = []
+    vraie = conftest.FakeQuery.execute
+
+    def espion(self):
+        r = vraie(self)
+        if self._table == "programs":
+            lus.extend(row.get("user_id") for row in (r.data or []))
+        return r
+
+    monkeypatch.setattr(conftest.FakeQuery, "execute", espion)
+    assert [t["user_id"] for t in reminders.targets_for_hour(18)] == [USER_ID]
+    assert lus == [USER_ID]
