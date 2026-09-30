@@ -28,34 +28,53 @@ def get_hist(user_id: str) -> list[dict]:
 
     client = get_client()
     rows = _lire_history(client, user_id)
-    cleaned = []
-    for r in rows:
-        date_str = str(r.get("date") or "")
-        # Semaine = index CONTINU recalculé depuis la date (le n° ISO stocké
-        # recommence chaque année → collisions au-delà d'un an d'historique).
-        # Repli sur la valeur stockée pour les rares lignes sans date.
-        week = _continuous_week_of(date_str)
-        if week is None:
-            week = int(r.get("semaine") or 1)
-        remarque = r.get("remarque") or ""
-        # RPE : colonne dédiée (migration v34) sinon token « @RPE8 » hérité.
-        rpe = r.get("rpe")
-        if rpe is None:
-            rpe = parse_rpe(remarque)
-        cleaned.append({
-            "Semaine": week,
-            "Séance": r.get("seance") or "",
-            "Exercice": r.get("exercice") or "",
-            "Série": int(r.get("serie") or 1),
-            "Reps": int(r.get("reps") or 0),
-            "Poids": float(r.get("poids") or 0),
-            "Remarque": remarque,
-            "Muscle": r.get("muscle") or "",
-            "Date": date_str,
-            "RPE": float(rpe) if rpe is not None else None,
-        })
+    cleaned = [_nettoyer_ligne(r) for r in rows]
     _cache_set(key, cleaned)
     return [dict(r) for r in cleaned]
+
+
+def _nettoyer_ligne(r: dict) -> dict:
+    """Ligne `history` telle qu'en base → forme lue par l'app."""
+    date_str = str(r.get("date") or "")
+    # Semaine = index CONTINU recalculé depuis la date (le n° ISO stocké
+    # recommence chaque année → collisions au-delà d'un an d'historique).
+    # Repli sur la valeur stockée pour les rares lignes sans date.
+    week = _continuous_week_of(date_str)
+    if week is None:
+        week = int(r.get("semaine") or 1)
+    remarque = r.get("remarque") or ""
+    # RPE : colonne dédiée (migration v34) sinon token « @RPE8 » hérité.
+    rpe = r.get("rpe")
+    if rpe is None:
+        rpe = parse_rpe(remarque)
+    return {
+        "Semaine": week,
+        "Séance": r.get("seance") or "",
+        "Exercice": r.get("exercice") or "",
+        "Série": int(r.get("serie") or 1),
+        "Reps": int(r.get("reps") or 0),
+        "Poids": float(r.get("poids") or 0),
+        "Remarque": remarque,
+        "Muscle": r.get("muscle") or "",
+        "Date": date_str,
+        "RPE": float(rpe) if rpe is not None else None,
+    }
+
+
+def _reporter_dans_le_cache(user_id, date_str, seance, exercice, payload):
+    """Après avoir réécrit les séries d'un exercice, on corrige l'historique
+    en cache au lieu de le jeter. Le jeter forçait la relecture complète de
+    l'historique juste après chaque « Série faite » — 4 pages sur un an
+    d'entraînement, pour des lignes qu'on venait soi-même d'écrire (audit du
+    30/09, I15). Sans cache, rien à corriger : la prochaine lecture lira."""
+    key = f"hist:{user_id}"
+    cached = _cache_get(key)
+    if cached is None:
+        return
+    garde = [r for r in cached
+             if not (r.get("Date") == date_str and r.get("Séance") == seance
+                     and r.get("Exercice") == exercice)]
+    _cache_set(key, garde + [_nettoyer_ligne(p) for p in payload])
 
 
 def save_hist(user_id: str, rows: list[dict]):
@@ -215,11 +234,15 @@ def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, ne
         .eq("exercice", exercice)
         .execute()
     ).data or [] if r.get("id") is not None]
-    if new_rows:
-        payload = [_row_to_supabase(user_id, {**r, "Date": date_str}) for r in new_rows]
-        _insert_history(client, payload)
-    _delete_history_ids(client, old_ids)
-    _cache_invalidate(f"hist:{user_id}")
+    payload = [_row_to_supabase(user_id, {**r, "Date": date_str}) for r in (new_rows or [])]
+    try:
+        if payload:
+            _insert_history(client, payload)
+        _delete_history_ids(client, old_ids)
+    except Exception:
+        _cache_invalidate(f"hist:{user_id}")
+        raise
+    _reporter_dans_le_cache(user_id, date_str, seance, exercice, payload)
 
 
 def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,

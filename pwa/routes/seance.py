@@ -431,8 +431,10 @@ def save_exo():
     try:
         hist_before = get_hist() if wants_json else []
         pr = _pr_check(hist_before, new_rows, exo_final, is_bw) if wants_json else None
+        # Pas de clear_user_cache() : replace_exo_rows corrige l'historique en
+        # cache avec ce qu'il vient d'écrire. Le vider forçait à relire tout
+        # l'historique (et le programme) juste en dessous (audit I15).
         replace_exo_rows(date_str, seance, exo_final, new_rows)
-        clear_user_cache()
     except Exception as e:
         logger.error("save-exo FAILED seance=%s exo=%s: %s", seance, exo_final, e)
         if wants_json:
