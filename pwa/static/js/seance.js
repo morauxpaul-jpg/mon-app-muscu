@@ -242,6 +242,7 @@
       isBwBase: data.is_bw_base || false,
       get showWeight() { return !this.isBwBase || this.variant === "Lesté"; },
       restSeconds: data.rest_seconds || 90,
+      restPrescrit: !!data.rest_prescrit,
       targetReps: data.target_reps || "",
       rpeOptions: ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"],
       completed: !!data.completed,
@@ -476,16 +477,21 @@
         this.startRestTimer();
       },
 
+      // Le repos prescrit par le programme (180 s au squat) passe avant le
+      // dernier préréglage touché dans la barre : un appui sur « 1:00 » un
+      // jour de fatigue remplaçait le repos de TOUS les exercices, à vie.
+      // Le préréglage reste le repos des exercices sans prescription.
+      _dureeRepos: function () {
+        return (this.restPrescrit ? this.restSeconds : 0) ||
+               parseInt(localStorage.getItem("restTimerDefault"), 10) ||
+               this.restSeconds || 90;
+      },
       startRestTimer: function () {
         if (!CONFIG.autoRestTimer) return;
-        var dur = parseInt(localStorage.getItem("restTimerDefault"), 10) ||
-                  this.restSeconds || 90;
-        if (window.RestTimer) window.RestTimer.start(dur);
+        if (window.RestTimer) window.RestTimer.start(this._dureeRepos());
       },
       manualRestTimer: function () {
-        var dur = parseInt(localStorage.getItem("restTimerDefault"), 10) ||
-                  this.restSeconds || 90;
-        if (window.RestTimer) window.RestTimer.start(dur);
+        if (window.RestTimer) window.RestTimer.start(this._dureeRepos());
       },
 
       // ── Enregistrement ──

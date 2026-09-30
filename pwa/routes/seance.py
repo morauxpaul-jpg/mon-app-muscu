@@ -31,7 +31,7 @@ from core.seance_semaine import (_date_label, _display_week, _find_done_session,
                                  _iso_week, _normalize_hist, _parse_date)
 from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows,
                                     _last_session_sets, _norm, _previous_weeks_data,
-                                    _recup_status, _suggestion_for)
+                                    _recup_status, _suggestion_for, _cible_du_programme)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
                                  _purge_old_session_notes, _update_extras,
@@ -457,7 +457,8 @@ def save_exo():
         "volume": totals["volume"],
         "sets_done": totals["sets"],
         "record": _best_record(hist, exo_final, is_bw),
-        "suggestion": _suggestion_for(hist, exo_final, seance, date_str, is_bw),
+        "suggestion": _suggestion_for(hist, exo_final, seance, date_str, is_bw,
+                                      _cible_du_programme(get_prog(), seance, exo_base)),
         "last_summary": ", ".join(
             "%gkg × %d" % (r["Poids"], r["Reps"]) for r in new_rows if r["Reps"] > 0
         ),
@@ -950,7 +951,8 @@ def api_variant_history():
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
     suggestion = None
     if prog.get("_settings", {}).get("show_overload_hint", True) and not detect_isometric(exo_base)[0]:
-        suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw)
+        suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw,
+                                     _cible_du_programme(prog, seance, exo_base))
 
     last_summary = ""
     if last_sets:

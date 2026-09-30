@@ -152,6 +152,27 @@ module.exports = ({ test, assert }) => {
     assert.deepEqual(appels, [true], 'une seule fois par séance');
   });
 
+  // ── Le repos ──────────────────────────────────────────────────
+
+  test('sans prescription, le préréglage reste la règle', () => {
+    const e = createEnv({ scripts: ['seance.js'] });
+    e.localStorage.setItem('restTimerDefault', '60');
+    const b = e.window.exoBlock(0, { base: 'Curl', exo_index: 0, sets: [S()],
+                                     variant: 'Standard', rest_seconds: 90 });
+    assert.equal(b._dureeRepos(), 60);
+  });
+
+  test('le repos prescrit passe avant le dernier préréglage touché', () => {
+    // Un appui sur « 1:00 » un jour de fatigue remplaçait à vie les 180 s
+    // prescrites au squat (audit du 30/09, R12).
+    const e = createEnv({ scripts: ['seance.js'] });
+    e.localStorage.setItem('restTimerDefault', '60');
+    const b = e.window.exoBlock(0, { base: 'Squat', exo_index: 0, sets: [S()],
+                                     variant: 'Standard', rest_seconds: 180,
+                                     rest_prescrit: true });
+    assert.equal(b._dureeRepos(), 180);
+  });
+
   // ── Quelle série est ouverte ──────────────────────────────────
 
   test('une série déjà remplie s’ouvre repliée', () => {

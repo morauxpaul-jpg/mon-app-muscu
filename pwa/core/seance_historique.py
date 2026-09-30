@@ -14,7 +14,7 @@ from datetime import datetime
 
 from core.dates import now_paris
 from core.exercises_data import variantes
-from core.muscu import VARIANTS, calc_1rm, overload_suggestion, parse_rpe
+from core.muscu import VARIANTS, calc_1rm, overload_suggestion, parse_cible_reps, parse_rpe
 
 logger = logging.getLogger(__name__)
 
@@ -207,10 +207,21 @@ def _last_session_sets(hist, exo_final, seance, date_str):
     return recent[0] if recent else []
 
 
-def _suggestion_for(hist, exo_final, seance, date_str, is_bw):
+def _suggestion_for(hist, exo_final, seance, date_str, is_bw, cible_reps=None):
     """Suggestion de surcharge (cf. core.muscu.overload_suggestion) à partir
-    des deux dernières séances de cet exo."""
+    des deux dernières séances de cet exo. `cible_reps` : la fourchette du
+    programme (« 5 », « 8-12 ») — sans elle, la suggestion ignorait ce que
+    le programme demande."""
     recent = _recent_sessions_sets(hist, exo_final, seance, date_str, n=2)
     if not recent:
         return None
-    return overload_suggestion(recent[0], recent[1] if len(recent) > 1 else None, is_bw=is_bw)
+    return overload_suggestion(recent[0], recent[1] if len(recent) > 1 else None,
+                               is_bw=is_bw, cible=parse_cible_reps(cible_reps))
+
+
+def _cible_du_programme(prog, seance, exo_base):
+    """Fourchette de reps prévue par le programme pour cet exercice, ou ""."""
+    for e in (prog or {}).get(seance) or []:
+        if isinstance(e, dict) and e.get("name") == exo_base:
+            return str(e.get("reps") or "")
+    return ""

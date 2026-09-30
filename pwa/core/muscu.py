@@ -163,13 +163,68 @@ def parse_rpe(remarque):
     return float(m.group(1)) if m else None
 
 
+def _suggestion_dans_la_fourchette(weight, same_weight, min_reps, avg_rpe, cible):
+    """Double progression dans la fourchette (lo, hi) du programme."""
+    lo, hi = cible
+    if avg_rpe is not None and avg_rpe >= 9.5 and min_reps < hi:
+        return {
+            "kind": "hold", "poids": weight, "reps": min_reps,
+            "label": f"Consolide : {weight:g} kg × {min_reps} (RPE {avg_rpe:g} la dernière fois)",
+            "why": "rpe_high",
+        }
+    # Haut de la fourchette atteint sur toutes les séries, à la même charge
+    # (ou sans effort, RPE ≤ 7, dès le bas) : on monte.
+    facile = avg_rpe is not None and avg_rpe <= 7 and min_reps >= lo
+    if same_weight and (min_reps >= hi or facile):
+        step = _load_step(weight)
+        target = weight + step
+        return {
+            "kind": "load", "poids": target, "reps": lo,
+            "label": f"Monte à {target:g} kg (+{step:g})",
+            "why": "range_top" if min_reps >= hi else "rpe_low",
+        }
+    vise = min(hi, max(lo, min_reps + 1))
+    if vise <= min_reps:
+        # Déjà au haut de la fourchette, mais charges inégales : on consolide.
+        return {
+            "kind": "hold", "poids": weight, "reps": min_reps,
+            "label": f"Même charge, {min_reps} reps sur toutes les séries",
+            "why": "uneven",
+        }
+    return {
+        "kind": "reps", "poids": weight, "reps": vise,
+        "label": f"Même charge, vise {vise} reps",
+        "why": "add_rep",
+    }
+
+
 def _load_step(weight):
     """Incrément de charge réaliste : 2,5 kg à partir de 30 kg (barre, disques
     de 1,25), 1 kg en dessous (haltères légers, machines, isolation)."""
     return 2.5 if weight >= 30 else 1.0
 
 
-def overload_suggestion(last_sets, prev_sets=None, is_bw=False):
+def parse_cible_reps(texte):
+    """Fourchette de reps d'un programme → (min, max), ou None.
+
+    « 5 » → (5, 5) ; « 8-12 », « 8–12 », « 8 à 12 » → (8, 12). Tout le reste
+    (« AMRAP », « max », vide) → None : pas de cible, règles par défaut."""
+    import re
+    t = str(texte or "").strip().lower()
+    m = re.fullmatch(r"(\d{1,2})\s*(?:-|–|à|a)\s*(\d{1,2})", t)
+    if m:
+        lo, hi = int(m.group(1)), int(m.group(2))
+    else:
+        m = re.fullmatch(r"(\d{1,2})", t)
+        if not m:
+            return None
+        lo = hi = int(m.group(1))
+    if lo > hi:
+        lo, hi = hi, lo
+    return (lo, hi) if 1 <= lo <= 50 else None
+
+
+def overload_suggestion(last_sets, prev_sets=None, is_bw=False, cible=None):
     """Double progression simplifiée à partir des 1–2 dernières séances.
 
     last_sets / prev_sets : listes de dicts {reps, poids, rpe?} (série la plus
@@ -181,7 +236,13 @@ def overload_suggestion(last_sets, prev_sets=None, is_bw=False):
       label : phrase courte pour l'UI
       why   : justification en un mot-clé
 
-    Règles :
+    cible : fourchette de reps du programme (min, max), cf. parse_cible_reps.
+    Avec elle, c'est une vraie double progression DANS la fourchette : on
+    monte la charge quand toutes les séries atteignent le haut, et on ne vise
+    jamais au-dessus. Sans elle, les seuils codés en dur ci-dessous — qui,
+    sur un 3 × 5, faisaient afficher « vise 6 reps » (audit du 30/09, R15).
+
+    Règles (sans cible) :
       - RPE moyen ≥ 9,5 la dernière fois → hold (la charge n'est pas digérée).
       - Toutes les séries à la même charge ET (≥ 12 reps partout, OU ≥ 8 reps
         avec RPE moyen ≤ 8, OU ≥ 8 reps deux séances de suite à cette charge
@@ -208,6 +269,9 @@ def overload_suggestion(last_sets, prev_sets=None, is_bw=False):
     if weight <= 0:
         return None
     same_weight = len(weights) == 1
+
+    if cible:
+        return _suggestion_dans_la_fourchette(weight, same_weight, min_reps, avg_rpe, cible)
 
     if avg_rpe is not None and avg_rpe >= 9.5 and min_reps < 12:
         return {

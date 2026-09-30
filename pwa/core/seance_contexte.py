@@ -32,6 +32,9 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
     p_sets = int(exo_obj.get("sets", 3))
     muscle = exo_obj.get("muscle", "Autre")
     rest_seconds = int(exo_obj.get("rest_seconds", 90))
+    # Le programme prescrit-il un repos ? Si oui, il passe avant le dernier
+    # préréglage touché dans la barre du chrono (audit du 30/09, R12).
+    rest_prescrit = "rest_seconds" in exo_obj
     # Cible de répétitions du programme (« 8-12 ») : affichée en filigrane
     # dans les cases reps. Sans elle, un programme n'est qu'une liste de noms.
     target_reps = str(exo_obj.get("reps") or "").strip()[:20]
@@ -51,7 +54,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
     is_iso, target_sec = detect_isometric(base)
     suggestion = None
     if show_overload_hint and not is_iso:
-        suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw)
+        suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw, target_reps)
 
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
     n_rows = max(p_sets, len(curr)) if curr else p_sets
@@ -109,6 +112,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         "p_sets": p_sets,
         "rest_seconds": rest_seconds,
         "target_reps": target_reps,
+        "rest_prescrit": rest_prescrit,
         "is_extra": is_extra,
         "exo_index": exo_index,
         "variant": var,
