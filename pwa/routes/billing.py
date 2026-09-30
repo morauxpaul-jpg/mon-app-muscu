@@ -22,8 +22,10 @@ from flask import (
 
 from core.db import _env
 from core import db as core_db
-from core.data import get_profile
 from core.limiter import limiter
+from core.stripe_client import (
+    client as _stripe, to_plain as _to_plain, resoudre_client as _resolve_customer_id,
+)
 from core.analytics import track
 
 logger = logging.getLogger(__name__)
@@ -38,64 +40,11 @@ PLANS = {
 }
 
 
-def _stripe():
-    """Module stripe configuré, ou None si non installé / non configuré."""
-    key = _env("STRIPE_SECRET_KEY")
-    if not key:
-        return None
-    try:
-        import stripe
-    except ImportError:
-        logger.error("billing: paquet stripe absent")
-        return None
-    stripe.api_key = key
-    return stripe
-
-
 def _base_url() -> str:
     return request.url_root.rstrip("/")
 
 
-def _to_plain(obj):
-    """Convertit un objet Stripe en dict Python simple.
-
-    ⚠️ Le SDK Stripe v15 n'expose PAS `.get()` sur ses objets (StripeObject) :
-    `obj.get("x")` lève AttributeError. Mais `str(obj)` renvoie du JSON valide.
-    On normalise donc tout en dict avant lecture. Les dicts simples (tests)
-    passent au travers inchangés."""
-    import json
-    try:
-        d = json.loads(str(obj))
-        if isinstance(d, dict):
-            return d
-    except Exception:
-        pass
-    return obj
-
-
 # ── Helpers customer / abonnements ───────────────────────────────
-def _resolve_customer_id(stripe, profile=None):
-    """ID client Stripe : depuis le profil, sinon recherche par email."""
-    if profile is None:
-        try:
-            profile = get_profile() or {}
-        except Exception:
-            profile = {}
-    cid = profile.get("stripe_customer_id")
-    if cid:
-        return cid
-    email = (session.get("email") or "").strip()
-    if email:
-        try:
-            res = _to_plain(stripe.Customer.list(email=email, limit=1))
-            data = res.get("data") or []
-            if data:
-                return data[0]["id"]
-        except Exception as e:
-            logger.error("billing resolve customer FAILED: %s", e)
-    return None
-
-
 def _active_subscriptions(stripe, customer_id):
     if not customer_id:
         return []
@@ -156,10 +105,9 @@ def _activate_vip(user_id: str, customer_id=None) -> None:
     """Passe l'utilisateur en VIP et mémorise son customer Stripe (best-effort :
     la colonne stripe_customer_id peut ne pas exister si la migration SQL n'a
     pas encore été appliquée — on n'échoue pas le passage VIP pour autant)."""
-    try:
-        core_db.set_user_tier(user_id, "vip")
-    except Exception as e:
-        logger.error("billing activate_vip set_tier FAILED user=%s: %s", user_id, e)
+    # Pas de try ici : si le passage VIP échoue, le webhook doit répondre
+    # en erreur pour que Stripe rejoue — sinon le payeur reste gratuit.
+    core_db.set_user_tier(user_id, "vip")
     # Event funnel : émis hors contexte requête authentifiée (webhook) → user_id
     # explicite, tier forcé 'vip'.
     track("vip_activated", user_id=user_id, tier="vip")
@@ -216,7 +164,7 @@ def checkout():
 
     # Upgrade : si l'utilisateur est déjà abonné, on note son abonnement courant
     # pour l'annuler une fois le nouveau plan payé (pas de double facturation).
-    if getattr(g, "is_vip", False):
+    if getattr(g, "is_vip_full", False):
         try:
             prev_subs = _active_subscriptions(stripe, _resolve_customer_id(stripe))
             if prev_subs:
@@ -235,7 +183,7 @@ def checkout():
             "error.html", code=502,
             message="Le paiement n'a pas pu démarrer. Réessaie dans un instant.",
         ), 502
-    track("checkout_started", {"plan": plan_key, "upgrade": bool(getattr(g, "is_vip", False))})
+    track("checkout_started", {"plan": plan_key, "upgrade": bool(getattr(g, "is_vip_full", False))})
     return redirect(cs.url, code=303)
 
 
@@ -326,9 +274,12 @@ def webhook():
             if status in ("canceled", "unpaid", "incomplete_expired"):
                 _downgrade_from_subscription(obj)
     except Exception as e:
+        # 500 : Stripe rejoue l'événement (plusieurs jours, avec délai
+        # croissant). Répondre 200 ici laissait un payeur gratuit — ou un
+        # résilié PRO — dès qu'une écriture échouait. Les traitements
+        # ci-dessus sont idempotents : un rejeu ne double rien.
         logger.error("billing webhook handler FAILED type=%s: %s", etype, e)
-        # 200 quand même : inutile que Stripe rejoue indéfiniment une erreur
-        # applicative ; on a loggé pour investiguer.
+        return "", 500
     return "", 200
 
 
@@ -341,13 +292,15 @@ def _downgrade_from_subscription(obj) -> None:
     if (obj.get("metadata") or {}).get("superseded"):
         logger.info("billing: abonnement supersédé (upgrade) — pas de rétrogradation")
         return
+    if (obj.get("metadata") or {}).get("account_deleted"):
+        # Résilié par la suppression du compte : rétrograder recréerait un
+        # profil pour un compte qui n'existe plus.
+        return
     uid = (obj.get("metadata") or {}).get("user_id")
     if not uid:
-        try:
-            uid = core_db.get_user_by_stripe_customer(obj.get("customer"))
-        except Exception as e:
-            logger.error("billing downgrade lookup FAILED: %s", e)
-            uid = None
+        # Une erreur de lecture remonte (le webhook rejouera) ; un client
+        # inconnu, lui, n'a personne à rétrograder.
+        uid = core_db.get_user_by_stripe_customer(obj.get("customer"))
     if uid:
         core_db.set_user_tier(uid, "free")
 

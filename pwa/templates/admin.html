@@ -61,7 +61,7 @@
 
     {% for u in users %}
       <div class="admin-user" data-email="{{ (u.email or '')|lower }}" data-prenom="{{ (u.prenom or '')|lower }}">
-        <div style="flex:1; min-width:0; cursor:pointer;" onclick="adminShowUser('{{ u.id }}', {{ (u.email or '—')|tojson }})">
+        <div class="admin-user-open" style="flex:1; min-width:0; cursor:pointer;" data-uid="{{ u.id }}" data-label="{{ u.email or '—' }}">
           <div style="font-size:0.88rem; color:var(--text-1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.email or '—' }}</div>
           <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">
             {% if u.prenom %}{{ u.prenom }} · {% endif %}Inscrit le {{ u.created_at or '?' }}
@@ -141,7 +141,23 @@
       });
     })();
 
-    // Fiche user
+    // Fiche user. Ouverte par délégation depuis data-* : un onclick avec
+    // |tojson dans un attribut entre guillemets se coupait au premier " et la
+    // fiche ne s'ouvrait plus.
+    document.addEventListener('click', function(e) {
+      var row = e.target.closest('.admin-user-open');
+      if (row) adminShowUser(row.dataset.uid, row.dataset.label);
+    });
+
+    // Tout ce qui vient d'un utilisateur (prénom…) passe par esc() avant
+    // innerHTML : un prénom « <img onerror=…> » s'exécutait dans la session
+    // de l'admin.
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+        return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+      });
+    }
+
     function adminShowUser(uid, email) {
       var modal = document.getElementById('admin-user-modal');
       var body = document.getElementById('admin-u-body');
@@ -154,18 +170,21 @@
           var tonnageKg = d.total_tonnage || 0;
           var tonnageT = (tonnageKg / 1000).toFixed(1);
           var html =
-            '<div class="mrow-admin"><span>Tier</span><b>' + (d.tier || 'free').toUpperCase() + '</b></div>' +
-            '<div class="mrow-admin"><span>Prénom</span><b>' + (d.prenom || '—') + '</b></div>' +
-            '<div class="mrow-admin"><span>Séances loggées</span><b>' + (d.total_seances || 0) + '</b></div>' +
-            '<div class="mrow-admin"><span>Séries totales</span><b>' + (d.total_rows || 0) + '</b></div>' +
-            '<div class="mrow-admin"><span>Tonnage total</span><b>' + tonnageKg + ' kg (' + tonnageT + ' t)</b></div>' +
-            '<div class="mrow-admin"><span>Dernière séance</span><b>' + (d.last_date || '—') + '</b></div>' +
-            '<div class="mrow-admin"><span>Msg coach (total)</span><b>' + (d.coach_msgs_total || 0) + '</b></div>' +
-            '<div class="mrow-admin"><span>Quota coach (jour)</span><b>' + (d.coach_quota_used || 0) + ' / 15</b></div>' +
+            '<div class="mrow-admin"><span>Tier</span><b>' + esc(String(d.tier || 'free').toUpperCase()) + '</b></div>' +
+            '<div class="mrow-admin"><span>Prénom</span><b>' + esc(d.prenom || '—') + '</b></div>' +
+            '<div class="mrow-admin"><span>Séances loggées</span><b>' + esc(d.total_seances || 0) + '</b></div>' +
+            '<div class="mrow-admin"><span>Séries totales</span><b>' + esc(d.total_rows || 0) + '</b></div>' +
+            '<div class="mrow-admin"><span>Tonnage total</span><b>' + esc(tonnageKg) + ' kg (' + esc(tonnageT) + ' t)</b></div>' +
+            '<div class="mrow-admin"><span>Dernière séance</span><b>' + esc(d.last_date || '—') + '</b></div>' +
+            '<div class="mrow-admin"><span>Msg coach (total)</span><b>' + esc(d.coach_msgs_total || 0) + '</b></div>' +
+            '<div class="mrow-admin"><span>Quota coach (jour)</span><b>' + esc(d.coach_quota_used || 0) + ' / 15</b></div>' +
             '<div style="margin-top:12px;">' +
-            '  <button type="button" class="btn" style="width:100%;" onclick="adminResetQuota(\'' + uid + '\', this)">Remettre à 0 le quota coach</button>' +
+            '  <button type="button" class="btn" style="width:100%;" id="admin-reset-quota">Remettre à 0 le quota coach</button>' +
             '</div>';
           body.innerHTML = html;
+          document.getElementById('admin-reset-quota').addEventListener('click', function() {
+            adminResetQuota(uid, this);
+          });
         })
         .catch(function() { body.textContent = 'Erreur de chargement.'; });
     }

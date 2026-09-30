@@ -165,9 +165,13 @@ def test_reset_exo_ne_touche_que_la_seance_du_jour(fake_db, logged_in):
     ])
 
 
-def test_streak_traverse_le_nouvel_an(fake_db, logged_in):
+def test_streak_traverse_le_nouvel_an(fake_db, logged_in, monkeypatch):
     """3 semaines consécutives W51-2025 → W1-2026 = streak 3 (cassait en ISO :
-    [52, 51, 1] non consécutifs)."""
+    [52, 51, 1] non consécutifs). Vu le mercredi de W1 : le streak part
+    d'aujourd'hui, pas de la dernière semaine active."""
+    import routes.accueil as accueil
+    monkeypatch.setattr(accueil, "logical_today_paris",
+                        lambda: MONDAY_W01 + dt.timedelta(days=2))
     _seed_prog(fake_db)
     for monday in (MONDAY_W51, MONDAY_W52, MONDAY_W01):
         _hist_row(fake_db, monday)

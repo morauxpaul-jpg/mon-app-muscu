@@ -395,7 +395,7 @@
 
   <div class="card" style="border-color: rgba(255,69,58,0.5);">
     <h3 class="label-icon" style="color: var(--danger);"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#user"/></svg>Supprimer mon compte</h3>
-    <p style="font-size:0.85rem; color:var(--text-dim);">Supprime <strong>définitivement</strong> ton compte et toutes tes données (historique, programme, profil, nutrition, conversations coach). Aucune récupération possible. Pense à <a href="/gestion/export" style="color:var(--violet);">exporter tes données</a> avant si tu veux les garder.</p>
+    <p style="font-size:0.85rem; color:var(--text-dim);">Supprime <strong>définitivement</strong> ton compte et toutes tes données (historique, programme, profil, nutrition, conversations coach). Aucune récupération possible. Un abonnement PRO en cours est résilié au même moment. Pense à <a href="/gestion/export" style="color:var(--violet);">exporter tes données</a> avant si tu veux les garder.</p>
     <form method="post" action="/gestion/delete-account" x-data="{ c:false }">
       <label class="muscle-check" style="display:flex; margin:6px 0;">
         <input type="checkbox" name="confirm" value="yes" required>

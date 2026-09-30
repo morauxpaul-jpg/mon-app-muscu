@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 from core.muscu import MUSCLE_LIST, auto_muscles, get_base_name
 from core.exercises_data import canoniser, NIVEAUX_SURS
 from core.limiter import limiter
+from core import stripe_client
 from core.analytics import paywall
 
 PROFIL_OPTIONS = ["Maison", "Salle", "Les deux"]
@@ -484,6 +485,18 @@ def delete_account():
     stores : doit être faisable dans l'app, pas seulement par email)."""
     if request.form.get("confirm") != "yes":
         return redirect(url_for("gestion.gestion"))
+    # D'abord l'abonnement : un compte effacé ne doit plus être prélevé. Si
+    # Stripe ne répond pas, on ne supprime rien.
+    try:
+        stripe_client.resilier_avant_suppression(stripe_client.client())
+    except Exception as e:
+        logger.error("delete-account stripe FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
+        return render_template(
+            "error.html", code=502,
+            message="Ton abonnement n'a pas pu être résilié, donc ton compte n'a "
+                    "pas été supprimé. Réessaie dans un instant, ou résilie depuis "
+                    "« Gérer mon abonnement » (page PRO) puis reviens ici.",
+        ), 502
     try:
         delete_user_account()
     except Exception as e:

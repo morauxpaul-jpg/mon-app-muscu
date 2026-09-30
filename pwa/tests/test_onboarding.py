@@ -42,6 +42,22 @@ def test_le_formulaire_demande_le_poids_et_la_taille(fake_db, nouveau):
     assert 'id="onb-taille"' in html
 
 
+def test_le_formulaire_envoye_contient_tout_ce_que_la_route_lit(fake_db, nouveau):
+    """Le navigateur ne poste pas les champs visibles : il poste le formulaire
+    caché `onb-form`. Poids et taille y manquaient — la route les attendait,
+    les tests les lui donnaient directement, et en vrai ils partaient à la
+    poubelle. On compare donc le formulaire RENDU à ce que la route lit."""
+    import re
+    html = nouveau.get("/onboarding").get_data(as_text=True)
+    bloc = re.search(r'<form id="onb-form".*?</form>', html, re.S).group(0)
+    envoyes = set(re.findall(r'name="([^"]+)"', bloc))
+    attendus = {
+        "_csrf", "prenom", "age", "sexe", "poids_kg", "taille_cm", "niveau",
+        "frequence", "objectif", "equipement", "programme_id", "equipment_details",
+    }
+    assert attendus <= envoyes, f"absents du formulaire envoyé : {attendus - envoyes}"
+
+
 def test_on_ne_peut_pas_passer_letape_sans_le_gabarit(fake_db, nouveau):
     """Facultatif, personne ne le remplit, et les trois écrans restent vides."""
     html = nouveau.get("/onboarding").get_data(as_text=True)

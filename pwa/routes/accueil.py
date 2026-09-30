@@ -9,7 +9,7 @@ from flask import Blueprint, render_template, g, request, session
 from datetime import date as _date, datetime as _datetime
 
 from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
-from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, DAYS_FR, MONTHS_FR
+from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, continuous_week, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 # La normalisation du muscle vivait ici EN DOUBLE, et les deux copies
 # avaient divergé. Une seule désormais, dans core/.
@@ -43,6 +43,20 @@ BADGE_DEFS = [
     ("regulier",      "Régulier", "4 semaines consécutives sans manquer une séance", "flame"),
     ("costaud",       "Costaud", "1RM supérieur à ton propre poids sur un exo", "medal-gold"),
 ]
+
+
+def streak_semaines(semaines_actives, semaine_courante):
+    """Semaines consécutives avec au moins une perf, en remontant depuis
+    aujourd'hui. La semaine en cours n'est pas encore finie : vide, elle ne
+    casse rien et on compte à partir de la précédente. Mais si la précédente
+    est vide aussi, le streak est tombé — avant, il comptait depuis la
+    dernière semaine active et survivait à des mois d'arrêt."""
+    w = semaine_courante if semaine_courante in semaines_actives else semaine_courante - 1
+    streak = 0
+    while w in semaines_actives:
+        streak += 1
+        w -= 1
+    return streak
 
 
 def _compute_badges(hist, prog, profile, planning_map, streak):
@@ -245,7 +259,10 @@ def index():
     date_str = f"{today.day} {MONTHS_FR[today.month - 1]} {today.year}"
 
     # Semaine en cours — index continu (interne, sert au filtrage des stats).
-    s_act = max((r["Semaine"] for r in hist), default=1)
+    # C'est la semaine d'AUJOURD'HUI, pas la dernière où existe une ligne :
+    # sinon, après un mois d'arrêt, l'accueil présentait la dernière semaine
+    # active comme « cette semaine ».
+    s_act = continuous_week(today)
     # Numéro affiché à l'utilisateur : relatif au début du programme.
     from core.seance_semaine import _display_week
     try:
@@ -279,14 +296,7 @@ def index():
     sessions_done = len({r["Séance"] for r in cur_week_real})
     total_sessions = len(prog_seances)
 
-    # Streak : semaines consécutives avec au moins une perf (muscu avec poids OU cardio avec durée)
-    weeks_with_data = sorted({r["Semaine"] for r in hist if _is_perf(r)}, reverse=True)
-    streak = 0
-    for i, w in enumerate(weeks_with_data):
-        if i == 0 or w == weeks_with_data[i - 1] - 1:
-            streak += 1
-        else:
-            break
+    streak = streak_semaines({r["Semaine"] for r in hist if _is_perf(r)}, s_act)
 
     # Record de streak (stocké dans prog._streak_record)
     streak_record = int(prog.get("_streak_record", 0) or 0)

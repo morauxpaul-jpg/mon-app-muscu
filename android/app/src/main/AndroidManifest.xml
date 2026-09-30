@@ -55,4 +55,13 @@
          il lui reste la saisie manuelle du code. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Position : uniquement le suivi GPS d'une activité cardio (/cardio).
+         La WebView de Capacitor relaie la demande de navigator.geolocation
+         vers Android, qui ne pose la question que si l'app déclare ces
+         permissions — sans elles, le refus est silencieux. Demandée au
+         premier suivi, pas au lancement. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>

@@ -25,8 +25,11 @@ PREFETCH = {"Sec-Fetch-Mode": "same-origin"}
 
 
 @pytest.fixture()
-def compte(fake_db):
-    """Assez d'historique pour débloquer des badges ET un record de streak."""
+def compte(fake_db, monkeypatch):
+    """Assez d'historique pour débloquer des badges ET un record de streak.
+    Vu le jour de la dernière séance : le streak part d'aujourd'hui."""
+    import routes.accueil as accueil
+    monkeypatch.setattr(accueil, "logical_today_paris", lambda: LUNDI)
     fake_db.table("profiles").insert({"id": USER_ID, "tier": "free"}).execute()
     fake_db.table("programs").insert({"user_id": USER_ID, "data": {
         "Push": [{"name": "Développé couché", "sets": 3, "muscle": "Pecs"}],

@@ -235,3 +235,19 @@ def test_la_relecture_retrouve_la_vitesse(compte, logged_in):
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
     relu = _parse_cardio_remarque(_ligne_cardio(compte)["remarque"])
     assert relu["vitesse"] == "10"
+
+
+# ── Le GPS n'est pas bloqué par nos propres en-têtes ─────────────
+
+
+def test_la_position_est_autorisee_pour_notre_propre_page(fake_db, logged_in):
+    """Permissions-Policy geolocation=() refusait la position avant tout code
+    JS : la page disait « Autorise la position » à qui l'avait autorisée."""
+    policy = logged_in.get("/cardio").headers.get("Permissions-Policy", "")
+    assert "geolocation=(self)" in policy
+
+
+def test_lapp_android_declare_la_permission_de_position():
+    manifest = (Path(__file__).resolve().parents[2]
+                / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+    assert "android.permission.ACCESS_FINE_LOCATION" in manifest

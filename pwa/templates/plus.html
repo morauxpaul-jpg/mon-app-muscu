@@ -5,7 +5,16 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#grid"/></svg>Plus</h1>
 
   {# ── Bandeau Premium ───────────────────────────────────────── #}
-  {% if is_premium %}
+  {% if is_trial %}
+    <a href="/premium" class="card plus-link plus-promo" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+      <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
+      <div style="flex:1;">
+        <div style="font-weight:600; color: var(--text-1); font-size:0.95rem;">Essai PRO{% if trial_left %} · {{ trial_left }}{% endif %}</div>
+        <div style="font-size:0.78rem; color:var(--text-2);">Passe en PRO pour le garder et débloquer le Coach IA.</div>
+      </div>
+      <span class="plus-promo-cta">Voir</span>
+    </a>
+  {% elif is_vip_full %}
     <a href="/premium" class="card plus-link" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px; border-color:rgba(255,215,0,0.25);">
       <svg class="icon icon-lg" style="color: var(--gold);"><use href="/static/img/icons.svg#gem"/></svg>
       <div style="flex:1;">

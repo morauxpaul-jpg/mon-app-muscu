@@ -65,6 +65,29 @@ def vip_until_active(vip_until) -> bool:
         return False
 
 
+def essai_restant(vip_until, maintenant=None):
+    """« encore 5 h », « encore 3 jours »… pour un essai `vip_until` encore
+    valide ; None sinon. Sans ça, l'essai ne disait jamais quand il finissait
+    et se refermait sans un mot."""
+    if not vip_until:
+        return None
+    try:
+        fin = _dt.datetime.fromisoformat(str(vip_until).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    if fin.tzinfo is None:
+        fin = fin.replace(tzinfo=_dt.timezone.utc)
+    reste = fin - (maintenant or _dt.datetime.now(_dt.timezone.utc))
+    heures = reste.total_seconds() / 3600
+    if heures <= 0:
+        return None
+    if heures < 1:
+        return "moins d'une heure"
+    if heures < 48:
+        return f"encore {int(heures)} h"
+    return f"encore {int(heures // 24)} jours"
+
+
 def get_or_create_referral_code(user_id: str) -> str:
     """Code de parrainage stable de l'utilisateur. Généré (déterministe, dérivé
     de l'user_id) et persisté au premier appel. Sert au lien d'invitation et à

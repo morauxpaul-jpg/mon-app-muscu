@@ -72,7 +72,7 @@ from core.db_nutrition import (
 from core.db_abonnement import (
     count_referrals, get_or_create_referral_code, get_referred_by,
     get_user_by_referral_code, get_user_by_stripe_customer, grant_vip_days,
-    set_referred_by, set_stripe_customer, set_user_tier, vip_until_active
+    set_referred_by, set_stripe_customer, set_user_tier, vip_until_active, essai_restant
 )
 
 # ── notifications, newsletter, relances ─────────────────────────

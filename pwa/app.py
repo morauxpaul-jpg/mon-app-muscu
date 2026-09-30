@@ -174,7 +174,11 @@ def _require_login():
     # TTL asymétrique : un FREE est re-vérifié vite (pour capter un upgrade
     # admin/Stripe), un VIP confirmé l'est rarement (économise les appels DB).
     ttl = VIP_CACHE_TTL if cached_vip else FREE_RECHECK_TTL
-    if cached_vip is None or cached_full is None or (time.time() - checked_at) > ttl:
+    # Un essai qui vient de finir est revérifié tout de suite, sans attendre
+    # le TTL long des VIP.
+    essai_fini = (cached_vip and not cached_full and session.get("vip_until")
+                  and not core_db.vip_until_active(session.get("vip_until")))
+    if cached_vip is None or cached_full is None or essai_fini or (time.time() - checked_at) > ttl:
         # La vérification d'existence du compte auth (API auth, plus coûteuse)
         # reste sur la cadence LENTE : inutile de la refaire toutes les
         # FREE_RECHECK_TTL s. Elle invalide les sessions d'un compte supprimé
@@ -198,6 +202,9 @@ def _require_login():
             is_paid = (profile.get("tier") or "free").strip().lower() == "vip"
             cached_full = is_paid
             cached_vip = is_paid or core_db.vip_until_active(profile.get("vip_until"))
+            # Fin de l'essai, pour l'afficher (« encore 5 h ») et le clore à l'heure.
+            session["vip_until"] = (profile.get("vip_until")
+                                    if cached_vip and not is_paid else None)
         except Exception:
             # En cas d'erreur DB transitoire, on garde la valeur connue plutôt
             # que de rétrograder à tort en free.
@@ -350,9 +357,10 @@ def _security_headers(response):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     # camera=(self) : le scan de code-barres (Nutrition) ouvre la caméra depuis
-    # notre propre page. Les iframes tierces restent bloquées, comme le micro et
-    # la géolocalisation qui ne servent nulle part.
-    response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(self), microphone=()")
+    # notre propre page. geolocation=(self) : le suivi GPS de /cardio — avec
+    # geolocation=(), le navigateur refusait la position avant même de poser
+    # la question. Les iframes tierces restent bloquées, comme le micro.
+    response.headers.setdefault("Permissions-Policy", "geolocation=(self), camera=(self), microphone=()")
 
     if os.getenv("CSP_DISABLED", "").strip().lower() in ("1", "true", "yes", "on"):
         return response
@@ -416,14 +424,16 @@ def _sans_prive(dictionnaire):
 
 @app.context_processor
 def _inject_user():
-    # is_premium : exposé à tous les templates pour gater des features (Coach
-    # IA, export, stats avancées…). Pour l'instant tout le monde est free,
-    # donc is_premium = False — mais l'infra est prête.
-    # is_vip est déjà résolu et caché en session par le before_request — on le
+    # is_vip / is_premium = payant OU essai (vip_until) : ouvre Nutrition et
+    # les stats. is_vip_full = payant seulement : Coach, générateur… et tout ce
+    # qui DIT « tu es PRO ». is_trial = l'essai seul — il voit le temps restant
+    # et les boutons d'achat, au lieu de « Débloqué à vie » sans rien à payer.
+    # Tout est déjà résolu et caché en session par le before_request — on le
     # réutilise au lieu de refaire un get_profile() en DB à chaque rendu de page.
     uid = session.get("user_id")
     premium = bool(uid) and bool(session.get("is_vip", False))
     premium_full = bool(uid) and bool(session.get("is_vip_full", False))
+    trial = premium and not premium_full
     email = (session.get("email") or "").strip().lower()
     admin_emails = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
     return {
@@ -432,6 +442,8 @@ def _inject_user():
         "is_premium": premium,
         "is_vip": premium,
         "is_vip_full": premium_full,
+        "is_trial": trial,
+        "trial_left": core_db.essai_restant(session.get("vip_until")) if trial else None,
         "is_admin": bool(email) and email in admin_emails,
         "is_native": _is_native_app(),
         "hide_billing": _hide_native_billing(),

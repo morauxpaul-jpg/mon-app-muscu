@@ -37,6 +37,16 @@ def test_login():
     session["email"] = "test@example.com"
     session["is_vip"] = (request.args.get("vip") == "1")
     session["is_vip_ts"] = time.time()
+    if request.args.get("essai") == "1":
+        # Essai PRO de 20 h (parrainage) : profil free + vip_until, statut
+        # relu en base par le before_request.
+        import datetime as dt
+        fin = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=20)).isoformat()
+        c = core_db.current_client()
+        c.tables["profiles"] = [p for p in c.tables.get("profiles", []) if p.get("id") != USER_ID]
+        c.table("profiles").insert({"id": USER_ID, "tier": "free", "vip_until": fin}).execute()
+        session.pop("is_vip", None)
+        session.pop("is_vip_full", None)
     session["onboarded"] = (request.args.get("onb") != "0")
     session.permanent = True
     return redirect(request.args.get("to") or "/accueil")
