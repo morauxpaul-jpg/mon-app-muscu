@@ -1,0 +1,20 @@
+# Mises à jour des dépendances (audit du 30/09, M10) : elles étaient figées
+# à des versions de 2024 sans rien pour signaler un correctif de sécurité.
+# Dependabot ouvre une PR par lot ; la CI (tests Python, JS et navigateur)
+# tourne dessus avant toute fusion. Les correctifs de sécurité arrivent en
+# plus, hors calendrier.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      mineures:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
