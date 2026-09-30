@@ -20,6 +20,8 @@ from core.dates import DAYS_FR
 from core.limiter import limiter
 from core.muscu import MUSCLE_LIST, auto_muscles
 from core import catalog
+from core.programmes_dossiers import (ensure_programmes, fusionner_dans_le_programme_en_cours,
+                                      gen_prog_id, remplacer_programme_en_cours)
 from core.analytics import paywall
 
 logger = logging.getLogger(__name__)
@@ -55,48 +57,10 @@ def _ensure_planning(prog):
     return planning
 
 
-def _gen_prog_id() -> str:
-    return "p_" + uuid.uuid4().hex[:8]
-
-
-def _ensure_programmes(prog):
-    """Migre l'ancien schéma (dict plat de séances) vers le nouveau schéma
-    multi-programmes : _programmes = liste de {id, name} et _seance_prog = map
-    seance_name → prog_id. Les séances non mappées tombent dans "Non classé".
-    """
-    progs = prog.get("_programmes")
-    mapping = prog.get("_seance_prog")
-    seance_names = [k for k in prog.keys() if not k.startswith("_")]
-
-    if not isinstance(progs, list):
-        progs = []
-    if not isinstance(mapping, dict):
-        mapping = {}
-
-    if not progs:
-        # Premier chargement avec l'ancien schéma : crée un programme par
-        # défaut et y assigne toutes les séances existantes.
-        default_name = (prog.get("_name") or "").strip()
-        origin = prog.get("_origin")
-        if not default_name and origin:
-            src = catalog.get_program(origin)
-            if src:
-                default_name = src["title"]
-        if not default_name:
-            default_name = "Mon programme"
-        default_id = _gen_prog_id()
-        progs = [{"id": default_id, "name": default_name[:80]}]
-        for sname in seance_names:
-            mapping[sname] = default_id
-    else:
-        # Normalise : garde uniquement les entrées valides
-        valid_ids = {p.get("id") for p in progs if isinstance(p, dict) and p.get("id")}
-        existing = set(seance_names)
-        mapping = {s: pid for s, pid in mapping.items() if s in existing and pid in valid_ids}
-
-    prog["_programmes"] = progs
-    prog["_seance_prog"] = mapping
-    return progs, mapping
+# Dossiers de programmes : la logique vit dans core/programmes_dossiers.py,
+# partagée avec le générateur (qui ne peut pas importer ce blueprint).
+_gen_prog_id = gen_prog_id
+_ensure_programmes = ensure_programmes
 
 
 def _gen_profile_id() -> str:
@@ -717,9 +681,8 @@ def import_program():
     if not isinstance(raw_seances, dict):
         return redirect(url_for("programme.programme") + "?import_err=format")
 
-    # Construction du nouveau programme : remplace toutes les séances mais
-    # préserve _settings / _archive / _legacy_volume / _extras (données de
-    # l'user qui n'appartiennent pas au programme partagé).
+    # Le programme importé remplace le programme EN COURS ; les autres
+    # dossiers et les données personnelles restent.
     old = get_prog()
     new_prog: dict = {}
     for sname, exos in raw_seances.items():
@@ -747,24 +710,24 @@ def import_program():
         for d in DAYS_FR
     }
     # Nom du programme importé (ne casse rien : _name est libre)
-    if data.get("name"):
-        new_prog["_name"] = str(data["name"])[:80]
-    # Programme importé = plus aucune origine catalogue valide
-    new_prog.pop("_origin", None)
-
     from core.dates import today_paris_str
-    new_prog["_started_at"] = today_paris_str()
-    save_prog_body(new_prog)
+    planning = new_prog.pop("_planning")
+    nom = str(data.get("name") or "Programme importé")[:80]
+    # Programme importé = plus aucune origine catalogue valide (pas d'_origin).
+    save_prog_body(remplacer_programme_en_cours(old, new_prog, planning, nom,
+                                                today_paris_str()))
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
 
 # ── Changer de programme (catalogue) ──────────────────────────────
 @bp.route("/programme/change-program", methods=["POST"])
 def change_program():
-    """Remplace ou fusionne le programme courant avec un autre du catalogue.
-    mode=replace (défaut) : écrase toutes les séances actuelles.
+    """Remplace ou fusionne le programme EN COURS avec un autre du catalogue.
+    mode=replace (défaut) : remplace les séances du programme en cours.
     mode=merge : ajoute les séances du nouveau prog qui n'existent pas déjà.
-    Conserve historique + settings + archive dans tous les cas.
+    Dans les deux cas, les AUTRES programmes (dossiers) restent intacts —
+    avant, « Remplacer » les effaçait tous — ainsi que l'historique et les
+    réglages.
     """
     prog_id = (request.form.get("programme_id") or "").strip()
     mode = (request.form.get("mode") or "replace").strip()
@@ -773,8 +736,8 @@ def change_program():
 
     if prog_id == "custom":
         from core.dates import today_paris_str
-        save_prog_body({"_planning": {d: "" for d in DAYS_FR},
-                        "_started_at": today_paris_str()})
+        save_prog_body(remplacer_programme_en_cours(
+            get_prog(), {}, {d: "" for d in DAYS_FR}, "Mon programme", today_paris_str()))
         return redirect(url_for("programme.programme") + "?program_changed=1")
 
     src = catalog.get_program(prog_id)
@@ -796,29 +759,15 @@ def change_program():
         user_freq = int(src["freq"])
     built = catalog.build_program(prog_id, user_freq)
 
+    seances = {k: v for k, v in built.items() if not k.startswith("_")}
     if mode == "merge":
-        # Garde les séances existantes, ajoute celles du nouveau qui n'existent pas
-        merged: dict = {}
-        for sname, exos in _seance_items(old):
-            merged[sname] = exos
-        for sname, exos in built.items():
-            if sname.startswith("_"):
-                continue
-            if sname not in merged:
-                merged[sname] = exos
-        # Planning : on garde l'ancien (l'utilisateur a déjà fait ses choix)
-        merged["_planning"] = old.get("_planning") or built.get("_planning", {})
-        # Pas d'origine unique après merge — c'est devenu un programme custom
-        merged.pop("_origin", None)
-        if "_name" in old:
-            merged["_name"] = old["_name"]
-        save_prog_body(merged)
+        save_prog_body(fusionner_dans_le_programme_en_cours(old, seances))
     else:
-        new_prog = built
-        # Reset programme start date
         from core.dates import today_paris_str
-        new_prog["_started_at"] = today_paris_str()
-        save_prog_body(new_prog)
+        extra = {k: built[k] for k in ("_origin", "_cardio") if k in built}
+        save_prog_body(remplacer_programme_en_cours(
+            old, seances, built.get("_planning") or {}, src["title"],
+            today_paris_str(), extra))
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
 

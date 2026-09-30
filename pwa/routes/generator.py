@@ -17,7 +17,8 @@ import logging
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g
 
-from core.data import save_prog_body
+from core.data import get_prog, save_prog_body
+from core.programmes_dossiers import remplacer_programme_en_cours
 from core.dates import DAYS_FR, today_paris_str
 from core.db import _env
 from core import db as core_db
@@ -424,13 +425,13 @@ def apply():
             "name": e["name"], "sets": e["sets"], "muscle": e["muscle"],
             "reps": e.get("reps") or "", "rest_seconds": e.get("rest_seconds") or 90,
         } for e in exos]
-    new_prog["_planning"] = dict(program["planning"])
-    if program.get("cardio"):
-        new_prog["_cardio"] = program["cardio"]
-    new_prog["_name"] = program["name"]
-    new_prog["_started_at"] = today_paris_str()
-    # Remplace le corps du programme, conserve les données personnelles.
-    save_prog_body(new_prog)
+    extra = {"_cardio": program["cardio"]} if program.get("cardio") else {}
+    # Remplace le programme EN COURS ; les autres dossiers (« Maison »,
+    # « Vacances »…) et les données personnelles restent. Avant, adopter
+    # réécrivait tout le corps du blob et les effaçait tous.
+    save_prog_body(remplacer_programme_en_cours(
+        get_prog(), new_prog, dict(program["planning"]), program["name"],
+        today_paris_str(), extra))
 
     track("program_adopted", {"name": program["name"], "seances": len(program["seances"]),
                               "cardio": len(program.get("cardio") or [])})
