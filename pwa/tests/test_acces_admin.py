@@ -89,3 +89,52 @@ def test_un_admin_qui_passe_ne_laisse_pas_de_refus(fake_db, logged_in, monkeypat
     monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
     logged_in.get("/admin/blob")
     assert "admin refuse" not in journal.text
+
+
+# ── L'adresse seule ne suffit pas (audit du 03/10, CC2) ─────────────────
+# Le jeton Supabase porte l'adresse, et la clé anon est publique : si le
+# projet acceptait l'inscription par e-mail sans confirmation, n'importe qui
+# obtiendrait un jeton à l'adresse de l'administrateur. Google seul vérifie.
+
+def _fournisseurs(client, liste):
+    with client.session_transaction() as s:
+        s["fournisseurs"] = liste
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_une_session_sans_google_est_refusee(page, fake_db, logged_in, monkeypatch):
+    monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
+    _fournisseurs(logged_in, ["email"])
+    assert logged_in.get(page).status_code == 404
+
+
+def test_une_session_davant_la_regle_doit_se_reconnecter(fake_db, logged_in, monkeypatch, journal):
+    monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
+    with logged_in.session_transaction() as s:
+        s.pop("fournisseurs", None)
+    assert logged_in.get("/admin/blob").status_code == 404
+    assert "sans connexion Google" in journal.text
+
+
+def test_le_lien_admin_suit_la_meme_regle(fake_db, logged_in, monkeypatch):
+    monkeypatch.setenv("ADMIN_EMAILS", "test@example.com")
+    _fournisseurs(logged_in, ["email"])
+    assert "/admin" not in logged_in.get("/plus").get_data(as_text=True)
+    _fournisseurs(logged_in, ["google"])
+    assert "/admin" in logged_in.get("/plus").get_data(as_text=True)
+
+
+def test_la_connexion_garde_les_fournisseurs_du_jeton(fake_db, client, monkeypatch):
+    import routes.auth as auth
+    monkeypatch.setattr(auth, "_verify_supabase_jwt", lambda t: {
+        "sub": USER_ID, "email": "test@example.com",
+        "app_metadata": {"provider": "email", "providers": ["email"]}})
+    assert client.post("/auth/session", json={"access_token": "x"}).status_code == 200
+    with client.session_transaction() as s:
+        assert s["fournisseurs"] == ["email"]
+    monkeypatch.setattr(auth, "_verify_supabase_jwt", lambda t: {
+        "sub": USER_ID, "email": "test@example.com",
+        "app_metadata": {"provider": "google", "providers": ["google"]}})
+    client.post("/auth/session", json={"access_token": "x"})
+    with client.session_transaction() as s:
+        assert s["fournisseurs"] == ["google"]

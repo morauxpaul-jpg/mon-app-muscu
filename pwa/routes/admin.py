@@ -4,7 +4,6 @@ Accès restreint par ADMIN_EMAILS (variable d'env, séparateur virgule).
 Exemple : ADMIN_EMAILS="moraux.paul@gmail.com"
 """
 import logging
-import os
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, abort, jsonify, Response
 
@@ -17,9 +16,7 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("admin", __name__)
 
 
-def _admin_emails() -> set[str]:
-    raw = os.getenv("ADMIN_EMAILS", "") or ""
-    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+from core.admin_acces import adresses_admin as _admin_emails, connecte_par_google  # noqa: E402
 
 
 def _require_admin():
@@ -48,6 +45,12 @@ def _require_admin():
         logger.warning("admin refuse : l'adresse de la session n'est pas dans "
                        "ADMIN_EMAILS, qui en compte %d (path=%s)",
                        len(autorises), request.path)
+        abort(404)
+    # L'adresse seule ne prouve rien : elle vient d'un jeton que n'importe
+    # quelle méthode de connexion Supabase peut produire (audit du 03/10, CC2).
+    if not connecte_par_google(session):
+        logger.warning("admin refuse : session sans connexion Google "
+                       "(reconnexion necessaire) (path=%s)", request.path)
         abort(404)
 
 

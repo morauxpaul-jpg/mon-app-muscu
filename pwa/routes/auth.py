@@ -118,6 +118,10 @@ def set_session():
     session.clear()
     session["user_id"] = user_id
     session["email"] = email or ""
+    # Fournisseur d'identité (google…) : l'accès admin l'exige, une adresse
+    # seule ne prouvant rien (cf. core/admin_acces.py).
+    from core.admin_acces import fournisseurs_du_jeton
+    session["fournisseurs"] = fournisseurs_du_jeton(payload)
     # Jeton CSRF posé dès la connexion : toute session authentifiée en a un,
     # donc aucune requête mutante n'a besoin d'être exemptée (cf. app.py).
     import secrets as _secrets
@@ -142,9 +146,8 @@ def debug_env():
     # Désactivé par défaut (diagnostic terminé). Réactivable via DEBUG_ENDPOINT=1.
     if os.getenv("DEBUG_ENDPOINT", "").strip().lower() not in ("1", "true", "yes", "on"):
         abort(404)
-    email = (session.get("email") or "").strip().lower()
-    admins = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
-    if not email or email not in admins:
+    from core.admin_acces import est_admin
+    if not est_admin(session):
         abort(404)
     url = _env("SUPABASE_URL")
     anon = _env("SUPABASE_ANON_KEY")

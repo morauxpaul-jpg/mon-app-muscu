@@ -25,7 +25,11 @@ import pytest
 
 from conftest import USER_ID, CSRF
 
-LUNDI = dt.date(2026, 9, 14)
+# Relatif à aujourd'hui : la purge compte ses 12 semaines depuis la date du
+# jour. Une date écrite en dur faisait de ces tests des bombes à retardement :
+# rouges à partir de fin novembre 2026 (audit du 03/10).
+from core.dates import logical_today_paris, monday_of  # noqa: E402
+LUNDI = monday_of(logical_today_paris())
 CALQUES = ("_extras", "_libre_draft", "_substituts", "_seance_order")
 
 
