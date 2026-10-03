@@ -260,3 +260,21 @@ def test_sans_charge_ni_reps_la_serie_nest_pas_pretendue_faite(page, serveur):
     assert "Indique tes répétitions" in carte.locator(".exo-etat").inner_text()
     # La série 1 est toujours celle qu'on remplit.
     assert page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).indexCourant()") == 0
+
+
+# ── Le premier écran (audit du 03/10, Q3) ────────────────────────
+
+
+def test_la_premiere_serie_tient_dans_le_premier_ecran(page, serveur):
+    """Le premier champ de reps était à 836 px sur un compte neuf (sous
+    l'écran de 812 px) et à 1 355 px avec un historique : il fallait défiler
+    avant de noter quoi que ce soit. Le champ ET « Série faite » doivent être
+    visibles au-dessus de la barre de navigation, sans défiler."""
+    page.evaluate("window.scrollTo(0, 0)")
+    pos = page.evaluate("""() => {
+      const s = document.querySelector('#exo-anchor-0 .serie-encours');
+      const nav = document.querySelector('.bottom-nav').getBoundingClientRect().top;
+      return {champ: s.querySelector('input').getBoundingClientRect().top,
+              bouton: s.querySelector('.serie-valider').getBoundingClientRect().bottom, nav};
+    }""")
+    assert pos["champ"] > 0 and pos["bouton"] <= pos["nav"], pos

@@ -49,25 +49,30 @@
             <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · repos {{ exo.rest_seconds }} s</span>
             <template x-if="completed"><svg class="icon icon-sm icon-success" aria-label="terminé"><use href="/static/img/icons.svg#check-circle"/></svg></template>
           </div>
-          {# ── Historique inline (Feature 2) — Alpine-driven for variant reactivity ── #}
-          <template x-if="lastSummary">
-            <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : <span x-text="lastSummary"></span></div>
-          </template>
-          <template x-if="!lastSummary && !completed">
-            <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
-          </template>
-          {# ── Suggestion de surcharge (double progression, cf. core.muscu.overload_suggestion) ── #}
-          <template x-if="suggestion && !completed">
-            <div class="exo-suggestion" :class="'exo-suggestion--' + suggestion.kind">
-              <svg class="icon icon-sm"><use :href="'/static/img/icons.svg#' + (suggestion.kind === 'load' ? 'arrow-up' : (suggestion.kind === 'hold' ? 'shield-check' : 'target'))"/></svg>
-              <span x-text="suggestion.label"></span>
-              <button type="button" class="exo-suggestion-apply" x-show="suggestion.kind === 'load' && !suggestionApplied"
-                      @click.stop="applySuggestion()">Appliquer</button>
-              <span class="exo-suggestion-done" x-show="suggestionApplied"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check"/></svg></span>
-            </div>
-          </template>
         </div>
         <div class="exo-toggle s-c01db1" @click="open = !open" x-text="open ? '−' : '+'"></div>
+      </div>
+      {# Pleine largeur : dans la colonne étroite à côté de l'illustration,
+         « Dernière fois » prenait trois lignes et repoussait la série en
+         cours sous la barre de navigation (audit du 03/10, Q3). #}
+      <div class="exo-repere">
+        {# ── Historique inline (Feature 2) — Alpine-driven for variant reactivity ── #}
+        <template x-if="lastSummary">
+          <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : <span x-text="lastSummary"></span></div>
+        </template>
+        <template x-if="!lastSummary && !completed">
+          <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
+        </template>
+        {# ── Suggestion de surcharge (double progression, cf. core.muscu.overload_suggestion) ── #}
+        <template x-if="suggestion && !completed">
+          <div class="exo-suggestion" :class="'exo-suggestion--' + suggestion.kind">
+            <svg class="icon icon-sm"><use :href="'/static/img/icons.svg#' + (suggestion.kind === 'load' ? 'arrow-up' : (suggestion.kind === 'hold' ? 'shield-check' : 'target'))"/></svg>
+            <span x-text="suggestion.label"></span>
+            <button type="button" class="exo-suggestion-apply" x-show="suggestion.kind === 'load' && !suggestionApplied"
+                    @click.stop="applySuggestion()">Appliquer</button>
+            <span class="exo-suggestion-done" x-show="suggestionApplied"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check"/></svg></span>
+          </div>
+        </template>
       </div>
 
       {# ── Variantes du jour ─────────────────────────────────────
@@ -128,47 +133,6 @@
       {% endif %}
 
       <div class="exo-body" x-show="open" x-transition.duration.200ms>
-
-        <template x-if="record">
-          <div class="record-line label-icon">
-            <svg class="icon icon-sm icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>
-            <template x-if="isBw">
-              <span>Record : <b x-text="record.reps + ' reps'"></b></span>
-            </template>
-            <template x-if="!isBw">
-              <span>Record : <b x-text="_kg(record.weight) + ' kg'"></b>
-              <svg class="icon icon-sm icon-accent s-46cec8"><use href="/static/img/icons.svg#zap"/></svg>
-              1RM : <b x-text="_kg(record.one_rm) + ' kg'"></b></span>
-            </template>
-          </div>
-        </template>
-
-        <label class="field-label">Équipement</label>
-        <select class="field" x-model="variant">
-          {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
-        </select>
-
-        <template x-for="pw in prevWeeks" :key="pw.week">
-          <div>
-            <template x-if="pw.missed">
-              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span> — <svg class="icon icon-sm icon-danger s-46cec8"><use href="/static/img/icons.svg#flag"/></svg><span class="s-497726">SÉANCE MANQUÉE</span></div>
-            </template>
-            <template x-if="!pw.missed">
-              <div>
-                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span><template x-if="pw.cross_session"><span class="s-1065cb">· autre séance</span></template></div>
-                <table class="prev-table">
-                  <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
-                  <tbody>
-                    <template x-for="r in pw.rows" :key="r.serie">
-                      <tr><td x-text="r.serie"></td><td x-text="r.reps"></td><td x-text="r.poids"></td>
-                          <td><span x-show="r.rpe" class="rpe-chip" x-text="'RPE ' + r.rpe"></span><span x-text="r.remarque"></span></td></tr>
-                    </template>
-                  </tbody>
-                </table>
-              </div>
-            </template>
-          </div>
-        </template>
 
         {# ── Chrono isométrique (gainage, planche, wall sit...) ── #}
         <template x-if="isIso">
@@ -292,10 +256,6 @@
                role="status" aria-live="polite" x-text="etatTexte()"></p>
 
             <button type="button" class="btn label-icon s-e0d5fc" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
-            <button class="s-b4e066" type="button" @click="clearWeights()"
-                    title="Efface les poids pré-remplis de la dernière séance">
-              Réinitialiser les poids
-            </button>
           </div>
         </template>
 
@@ -330,6 +290,58 @@
           </form>
         </div>
 
+        {# Ce qui sert de temps en temps, replié sous les séries : l'écran de
+           séance mettait le premier champ à 1 355 px du haut, derrière le
+           record, l'équipement et deux tableaux de semaines précédentes
+           (audit du 03/10, Q3). « Dernière fois » reste visible en tête. #}
+        <details class="exo-plus">
+          <summary>Historique, équipement et options</summary>
+          <div class="exo-plus-corps">
+        <template x-if="record">
+          <div class="record-line label-icon">
+            <svg class="icon icon-sm icon-gold"><use href="/static/img/icons.svg#trophy"/></svg>
+            <template x-if="isBw">
+              <span>Record : <b x-text="record.reps + ' reps'"></b></span>
+            </template>
+            <template x-if="!isBw">
+              <span>Record : <b x-text="_kg(record.weight) + ' kg'"></b>
+              <svg class="icon icon-sm icon-accent s-46cec8"><use href="/static/img/icons.svg#zap"/></svg>
+              1RM : <b x-text="_kg(record.one_rm) + ' kg'"></b></span>
+            </template>
+          </div>
+        </template>
+
+        <label class="field-label">Équipement</label>
+        <select class="field" x-model="variant">
+          {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+        </select>
+
+        <template x-for="pw in prevWeeks" :key="pw.week">
+          <div>
+            <template x-if="pw.missed">
+              <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span> — <svg class="icon icon-sm icon-danger s-46cec8"><use href="/static/img/icons.svg#flag"/></svg><span class="s-497726">SÉANCE MANQUÉE</span></div>
+            </template>
+            <template x-if="!pw.missed">
+              <div>
+                <div class="prev-week-line label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#calendar"/></svg>Semaine <span x-text="pw.week"></span><template x-if="pw.cross_session"><span class="s-1065cb">· autre séance</span></template></div>
+                <table class="prev-table">
+                  <thead><tr><th>S</th><th>Reps</th><th>Poids</th><th>Remarque</th></tr></thead>
+                  <tbody>
+                    <template x-for="r in pw.rows" :key="r.serie">
+                      <tr><td x-text="r.serie"></td><td x-text="r.reps"></td><td x-text="r.poids"></td>
+                          <td><span x-show="r.rpe" class="rpe-chip" x-text="'RPE ' + r.rpe"></span><span x-text="r.remarque"></span></td></tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <button class="s-b4e066" type="button" @click="clearWeights()"
+                title="Efface les poids pré-remplis de la dernière séance">
+          Réinitialiser les poids
+        </button>
         <form class="s-fe7b49" method="post" action="/seance/reset-exo" x-data="{ c:false }">
           <input type="hidden" name="mode" value="{{ mode }}">
           <input type="hidden" name="name" value="{{ seance_name }}">
@@ -357,5 +369,7 @@
             <button type="submit" class="btn label-icon s-9f1047"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg>Retirer cet exercice</button>
           </form>
         {% endif %}
+          </div>
+        </details>
       </div>
     </div>

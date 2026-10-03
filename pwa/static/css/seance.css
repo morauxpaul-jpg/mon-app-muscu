@@ -176,3 +176,23 @@
   color: #fff;
   border-radius: var(--radius-md);
 }
+
+/* Écran de séance allégé (audit du 03/10, Q3) : le premier champ de saisie
+   doit tenir dans le premier écran d'un téléphone de 375 × 812. */
+.seance-retour { color: var(--accent); text-decoration: none; font-weight: 600; }
+.seance-retour:hover { text-decoration: underline; }
+details.exo-plus, details.seance-options { margin-top: 12px; border-top: 1px solid var(--border-default, rgba(255,255,255,0.08)); padding-top: 8px; }
+details.exo-plus > summary, details.seance-options > summary {
+  cursor: pointer; list-style: none; color: var(--text-2); font-size: 0.85rem;
+  min-height: 44px; display: flex; align-items: center; gap: 6px;
+}
+details.exo-plus > summary::-webkit-details-marker, details.seance-options > summary::-webkit-details-marker { display: none; }
+details.exo-plus > summary::before, details.seance-options > summary::before { content: "▸"; transition: transform .15s; }
+details[open].exo-plus > summary::before, details[open].seance-options > summary::before { transform: rotate(90deg); }
+.exo-plus-corps, .seance-options-corps { display: grid; gap: 10px; padding-top: 6px; }
+details.seance-options { margin: 18px 0 8px; }
+@media (prefers-reduced-motion: reduce) { details.exo-plus > summary::before, details.seance-options > summary::before { transition: none; } }
+.exo-repere { display: grid; gap: 4px; margin: 6px 0 2px; }
+.exo-repere:empty { display: none; }
+.exo-repere .exo-last-session { display: block; }
+.exo-repere .exo-last-session svg { vertical-align: -2px; margin-right: 6px; }

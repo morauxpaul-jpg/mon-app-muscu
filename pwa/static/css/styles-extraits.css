@@ -336,7 +336,6 @@
 .s-ac52d8:not(#_s):not(#_s) { display:flex; gap:6px; margin-bottom:10px; }
 .s-acee0e:not(#_s):not(#_s) { margin:0; font-size:0.88rem; color:var(--text-1); }
 .s-acf69f:not(#_s):not(#_s) { background:var(--bg-elevated,#16181c); border:1px solid rgba(255,215,0,0.30); border-radius:22px; padding:24px 22px; width:100%; max-width:420px; box-shadow:0 12px 56px rgba(0,0,0,0.65); animation:upsellIn .28s ease; }
-.s-ad0098:not(#_s):not(#_s) { display:inline-block; margin-bottom: 10px; }
 .s-ae9427:not(#_s):not(#_s) { font-size:0.86rem; font-weight:500; }
 .s-b0be71:not(#_s):not(#_s) { display:block; font-size:0.78rem; color:var(--text-mute); }
 .s-b16da2:not(#_s):not(#_s) { display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; color:var(--text-1); margin-bottom:6px; }
