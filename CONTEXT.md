@@ -325,6 +325,13 @@ pwa/
 ### Catalogue de programmes (20, dont 5 gratuits)
 - Plusieurs splits : Full Body, PPL, Upper/Lower, Bro Split, Home, etc.
 - Gating Free / PRO selon le programme (les programmes avancés sont VIP)
+- `build_program` garde **toutes** les séances du catalogue, quelle que soit la fréquence (on tronquait : un PPL sur 2 jours perdait Legs).
+
+### Rotation des séances (`prog._rotation`, core/rotation.py)
+- Liste des séances dans l'ordre du cycle. Les jours d'entraînement restent ceux de `_planning` (jour non vide) ; chaque jour prend la séance suivante du cycle, d'une semaine à l'autre : A/B sur Lun-Mer-Ven donne A B A, puis B A B.
+- Posée par le catalogue quand le nombre de jours n'est pas un multiple du nombre de séances ; réglable sur la page Programme (case « Alterner les séances d'une semaine à l'autre »). Suit les renommages et suppressions, voyage avec l'export/import.
+- Le rang d'un jour ne dépend que du calendrier (semaines depuis `_started_at`, le premier jour d'entraînement à partir de cette date ouvre le cycle), pas de l'historique : accueil, choix de séance, calendrier Progrès, rappel du soir et coach lisent tous `seance_prevue(prog, date)`. Ne jamais relire `_planning[jour]` directement pour savoir ce qui est prévu un jour donné.
+- Sans `_rotation` valide (moins de deux séances existantes), comportement inchangé.
 
 ### Admin
 - Routes : `/admin` (dashboard), `/admin/funnel` (conversion), `/admin/set-tier`, `/admin/user/<id>`, `/admin/reset-quota`

@@ -14,8 +14,9 @@ from core.data import (
     get_hist, get_prog, get_onboarding, get_profile, save_profile,
     list_body_weight, upsert_body_weight, delete_body_weight,
 )
-from core.dates import today_paris, today_paris_str, DAYS_FR
+from core.dates import today_paris, today_paris_str
 from core.limiter import limiter
+from core.rotation import seance_prevue
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_table
 from core.body_map import get_body_polygons
 from core import strength, exercise_stats
@@ -53,7 +54,7 @@ FILTER_MUSCLES = list(MUSCLES.keys())
 MAKEUP_WINDOW_DAYS = 3  # même tolérance que l'accueil (routes/accueil.py)
 
 
-def _was_made_up(planned, d, today, planning_map, done_dates_by_seance, window=MAKEUP_WINDOW_DAYS):
+def _was_made_up(planned, d, today, prog, done_dates_by_seance, window=MAKEUP_WINDOW_DAYS):
     """True si la séance `planned` planifiée le jour `d` (passé, non faite ce
     jour-là) a été rattrapée dans les `window` jours suivants — sur un jour qui
     n'est pas lui-même planifié pour cette même séance. Réplique la logique de
@@ -62,8 +63,7 @@ def _was_made_up(planned, d, today, planning_map, done_dates_by_seance, window=M
         d2 = d + timedelta(days=off)
         if d2 > today:
             break
-        d2_name_fr = DAYS_FR[d2.weekday()]
-        if planning_map.get(d2_name_fr) == planned:
+        if seance_prevue(prog, d2) == planned:
             continue  # jour où la même séance est re-planifiée → pas un rattrapage
         if planned in done_dates_by_seance.get(d2.isoformat(), set()):
             return True
@@ -593,7 +593,6 @@ def progres():
         cal_year, cal_month = today.year, today.month
 
     _prog_for_cal = get_prog() or {}
-    planning_map = _prog_for_cal.get("_planning", {})
     # Date plancher : ne jamais marquer « manquée » une journée antérieure
     # à la création du compte / au démarrage du programme. Couvre le cas
     # de l'onboarding en fin de semaine (vendredi/samedi) où Lundi/Mercredi
@@ -641,8 +640,8 @@ def progres():
     for day_num in range(1, days_in_month + 1):
         d = date(cal_year, cal_month, day_num)
         d_str = d.isoformat()
-        day_name_fr = DAYS_FR[d.weekday()]
-        is_training_day = bool(planning_map.get(day_name_fr, ""))
+        planned = seance_prevue(_prog_for_cal, d)
+        is_training_day = bool(planned)
 
         if d_str in hist_dates_done:
             status = "done"
@@ -659,8 +658,7 @@ def progres():
             # Rattrapage : la séance planifiée a-t-elle été faite dans les
             # jours suivants ? Si oui → neutre "makeup" (gris), comptée comme
             # faite (pas pénalisant), au lieu de "missed" (rouge).
-            planned = planning_map.get(day_name_fr, "")
-            if planned and _was_made_up(planned, d, today, planning_map, done_dates_by_seance):
+            if _was_made_up(planned, d, today, _prog_for_cal, done_dates_by_seance):
                 status = "makeup"
                 done_count += 1
             else:

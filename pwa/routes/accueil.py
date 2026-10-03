@@ -14,6 +14,7 @@ from core.muscu import get_base_name, fix_muscle
 # La normalisation du muscle vivait ici EN DOUBLE, et les deux copies
 # avaient divergé. Une seule désormais, dans core/.
 from core.seance_semaine import _normalize_hist
+from core.rotation import planning_semaine, seance_prevue
 from core.hist import is_cardio as _is_cardio_row, is_perf as _is_perf, is_logged as _is_real_perf, tonnage
 from core.analytics import track
 
@@ -156,13 +157,17 @@ def _compute_badges(hist, prog, profile, planning_map, streak):
 MAKEUP_WINDOW_DAYS = 3  # tolérance : séance du lundi faite mardi/merc/jeu = OK
 
 
-def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
-    """Statut d'une journée — porté de _day_status() app.py 1751-1784."""
+def _day_status(day_date, hist_rows, prog, today, joined_date=None):
+    """Statut d'une journée — porté de _day_status() app.py 1751-1784.
+
+    La séance prévue vient de `seance_prevue` : avec une rotation, le lundi
+    n'est pas toujours la même séance."""
     d_str = day_date.strftime("%Y-%m-%d")
     day_rows = [r for r in hist_rows if r["Date"] == d_str]
+    planning_map = (prog or {}).get("_planning") or {}
     day_name_fr = DAYS_FR[day_date.weekday()]
-    is_rest = day_name_fr in planning_map and not planning_map.get(day_name_fr, "")
-    planned_seance = planning_map.get(day_name_fr, "") if day_name_fr in planning_map else ""
+    planned_seance = seance_prevue(prog, day_date) if day_name_fr in planning_map else ""
+    is_rest = day_name_fr in planning_map and not planned_seance
 
     real = [r for r in day_rows if _is_real_perf(r)]
     if real:
@@ -204,8 +209,7 @@ def _day_status(day_date, hist_rows, planning_map, today, joined_date=None):
             d2 = day_date + timedelta(days=off)
             if d2 > today:
                 break
-            d2_name_fr = DAYS_FR[d2.weekday()]
-            if planning_map.get(d2_name_fr) == planned_seance:
+            if seance_prevue(prog, d2) == planned_seance:
                 continue  # jour où la même séance est re-planifiée → pas un rattrapage
             d2_iso = d2.strftime("%Y-%m-%d")
             d2_rows = [r for r in hist_rows if r["Date"] == d2_iso]
@@ -293,7 +297,7 @@ def index():
     week = []
     for i in range(7):
         d = monday + timedelta(days=i)
-        info = _day_status(d, hist, planning_map, today, joined_date)
+        info = _day_status(d, hist, prog, today, joined_date)
         week.append({
             "index": i,
             "day_label": DAYS_FR[i],
@@ -316,7 +320,7 @@ def index():
     # affichait « 2/2 » à qui avait fait Full Body A, B, A (et « 3/9 » à un
     # membre à trois dossiers) — audit du 03/10, I8.
     sessions_done = len({(r["Date"], r["Séance"]) for r in cur_week_real if r.get("Date")})
-    total_sessions = sum(1 for v in planning_map.values() if v) or len(prog_seances)
+    total_sessions = sum(1 for v in planning_semaine(prog, today).values() if v) or len(prog_seances)
 
     streak = streak_semaines({r["Semaine"] for r in hist if _is_perf(r)}, s_act)
 
@@ -331,8 +335,7 @@ def index():
             prog_a_sauver = True
 
     # Streak en danger ? (aujourd'hui est un jour de séance et pas fait)
-    today_day_name = DAYS_FR[today.weekday()]
-    today_seance = planning_map.get(today_day_name, "")
+    today_seance = seance_prevue(prog, today)
     today_iso = today.strftime("%Y-%m-%d")
     today_done = any(r for r in hist if r["Date"] == today_iso and _is_perf(r))
     # Si la séance du jour a été rattrapée récemment, on ne considère pas
@@ -340,8 +343,7 @@ def index():
     if today_seance and not today_done:
         for off in range(1, MAKEUP_WINDOW_DAYS + 1):
             d_prev = today - timedelta(days=off)
-            d_prev_name = DAYS_FR[d_prev.weekday()]
-            if planning_map.get(d_prev_name) == today_seance:
+            if seance_prevue(prog, d_prev) == today_seance:
                 d_prev_iso = d_prev.strftime("%Y-%m-%d")
                 d_prev_done = any(
                     r for r in hist
@@ -358,8 +360,7 @@ def index():
     next_session = None
     for offset in range(0, 14):
         d = today + timedelta(days=offset)
-        d_name = DAYS_FR[d.weekday()]
-        seance_name = planning_map.get(d_name, "")
+        seance_name = seance_prevue(prog, d)
         if not seance_name:
             continue
         d_iso = d.strftime("%Y-%m-%d")
@@ -372,8 +373,7 @@ def index():
             covered = False
             for off_prev in range(1, MAKEUP_WINDOW_DAYS + 1):
                 d_prev = d - timedelta(days=off_prev)
-                d_prev_name = DAYS_FR[d_prev.weekday()]
-                if planning_map.get(d_prev_name) == seance_name:
+                if seance_prevue(prog, d_prev) == seance_name:
                     d_prev_iso = d_prev.strftime("%Y-%m-%d")
                     if any(
                         r for r in hist
@@ -407,7 +407,7 @@ def index():
     precache_urls = []
     for off in (0, 1):
         d = today + timedelta(days=off)
-        sname = planning_map.get(DAYS_FR[d.weekday()], "")
+        sname = seance_prevue(prog, d)
         if not sname:
             continue
         d_iso = d.strftime("%Y-%m-%d")
@@ -471,7 +471,7 @@ def index():
     badges_avant = set(prog.get("_badges", []) or [])
     try:
         badges_unlocked, badges_new = _compute_badges(
-            hist, prog, profile, planning_map, streak)
+            hist, prog, profile, planning_semaine(prog, today), streak)
     except Exception as e:
         badges_unlocked, badges_new = set(), []
     if is_navigation and badges_unlocked and badges_unlocked != badges_avant:

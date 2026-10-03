@@ -540,6 +540,10 @@ def _sanitize_program(raw: dict) -> dict:
     raw_planning = raw.get("_planning") if isinstance(raw.get("_planning"), dict) else {}
     out["_planning"] = {d: (raw_planning.get(d) if raw_planning.get(d) in names else "")
                         for d in _DAYS}
+    from core.rotation import rotation_nettoyee
+    rotation = rotation_nettoyee(raw.get("_rotation"), names)
+    if rotation:
+        out["_rotation"] = rotation
     for key in ("_name", "_origin", "_started_at"):
         val = raw.get(key)
         if isinstance(val, str) and val.strip():

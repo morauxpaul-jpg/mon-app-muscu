@@ -110,7 +110,16 @@ def remplacer_programme_en_cours(old, seances, planning, nom, started_at, extra=
     body["_started_at"] = started_at
     for k, v in (extra or {}).items():
         body[k] = v
+    _renommer_rotation(body, renomme)
     return body
+
+
+def _renommer_rotation(body, renomme):
+    """La rotation suit les séances renommées pour éviter un doublon de nom
+    (« Push » déjà pris → « Push (2) »)."""
+    rot = body.get("_rotation")
+    if isinstance(rot, list):
+        body["_rotation"] = [renomme.get(s, s) for s in rot]
 
 
 def ajouter_et_planifier(old, seances, planning, nom, started_at, extra=None):
@@ -140,6 +149,7 @@ def ajouter_et_planifier(old, seances, planning, nom, started_at, extra=None):
     body["_started_at"] = started_at
     for k, v in (extra or {}).items():
         body[k] = v
+    _renommer_rotation(body, renomme)
     return body
 
 
@@ -164,7 +174,7 @@ def fusionner_dans_le_programme_en_cours(old, seances):
     # Plus d'origine unique après une fusion : c'est devenu un programme perso.
     if old.get("_name"):
         body["_name"] = old["_name"]
-    for k in ("_started_at", "_cardio"):
+    for k in ("_started_at", "_cardio", "_rotation"):
         if k in old:
             body[k] = old[k]
     return body

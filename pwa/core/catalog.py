@@ -1075,20 +1075,16 @@ def build_program(prog_id: str, frequence: int, equipment: list[str] | None = No
     if "banc_inclinable" in effective_equipment:
         effective_equipment.add("banc_plat")
 
-    # Cohérence avec la fréquence demandée par l'utilisateur :
-    #   - si user_freq <= séances dispo : on tronque la liste pour avoir
-    #     exactement user_freq séances distinctes ET user_freq jours planifiés
-    #     (corrige le bug : 2 j/sem → 2 séances, pas 3) ;
-    #   - si user_freq > séances dispo (programmes cyclés type PPL 5j avec
-    #     Push/Pull/Legs sur 5 jours) : on garde toutes les séances du
-    #     catalogue et on cycle sur user_freq jours.
+    # Toutes les séances du catalogue sont gardées, quelle que soit la
+    # fréquence. On tronquait à `freq` séances : un PPL sur 2 jours perdait
+    # Legs, un Full Body A/B sur 3 jours faisait A-B-A chaque semaine. Quand
+    # le nombre de jours n'est pas un multiple du nombre de séances, une
+    # rotation (`_rotation`, cf. core/rotation.py) les enchaîne d'une semaine
+    # à l'autre : A B A, puis B A B (audit du 03/10).
     catalog_seance_names = list(src["seances"].keys())
     freq_eff = int(frequence or src["freq"])
     freq_eff = max(2, min(6, freq_eff))
-    if freq_eff <= len(catalog_seance_names):
-        seance_names = catalog_seance_names[:freq_eff]
-    else:
-        seance_names = catalog_seance_names
+    seance_names = catalog_seance_names
 
     prog: dict = {}
     # Copie des séances (les cibles _reps_hint/_rest deviennent reps/rest_seconds)
@@ -1112,5 +1108,7 @@ def build_program(prog_id: str, frequence: int, equipment: list[str] | None = No
         prog[seance_name] = built_exos
 
     prog["_planning"] = planning_for(freq_eff, seance_names)
+    if len(seance_names) >= 2 and freq_eff % len(seance_names):
+        prog["_rotation"] = list(seance_names)
     prog["_origin"] = prog_id
     return deepcopy(prog)

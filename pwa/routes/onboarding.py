@@ -182,7 +182,7 @@ def submit():
         merged = save_prog_body(ajouter_et_planifier(
             get_prog(), seances, prog.get("_planning") or {},
             catalog.get_program(programme_id)["title"], today_iso,
-            {"_origin": prog.get("_origin")}))
+            {k: prog[k] for k in ("_origin", "_rotation") if k in prog}))
         # L'équipement est une donnée personnelle : posé après la fusion.
         merged["_equipment_details"] = equipment_details
         merged["_equipement"] = equipement

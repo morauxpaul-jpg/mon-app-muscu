@@ -576,3 +576,24 @@ html.has-ad-banner .topbar {
   border-bottom-color: var(--accent);
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* Rotation des séances, sous le planning de la page programme. */
+.rotation-bloc {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.rotation-choix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.rotation-choix input { width: 18px; height: 18px; accent-color: var(--accent); }
+.rotation-aide {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-2);
+}

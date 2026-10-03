@@ -16,7 +16,7 @@ Le rappel arrive donc avant la séance, pas trois jours après l'avoir ratée.
 """
 import logging
 
-from core.dates import DAYS_FR, logical_today_paris, now_paris
+from core.dates import logical_today_paris, now_paris
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,9 @@ def clean_hour(value, default=DEFAULT_HOUR) -> int:
     return max(MIN_HOUR, min(MAX_HOUR, h))
 
 
-def _planned_today(prog: dict, day_name: str) -> str:
-    planning = (prog or {}).get("_planning") or {}
-    return planning.get(day_name) or ""
+def _planned_today(prog: dict, day) -> str:
+    from core.rotation import seance_prevue
+    return seance_prevue(prog, day)
 
 
 def targets_for_hour(hour: int) -> list[dict]:
@@ -52,7 +52,6 @@ def targets_for_hour(hour: int) -> list[dict]:
     from core import db as core_db
 
     today = logical_today_paris()
-    day_name = DAYS_FR[today.weekday()]
     today_iso = today.isoformat()
 
     try:
@@ -68,7 +67,7 @@ def targets_for_hour(hour: int) -> list[dict]:
         data = row.get("data") or {}
         if not uid or uid in done:
             continue
-        seance = _planned_today(data, day_name)
+        seance = _planned_today(data, today)
         if not seance:
             continue
         settings = data.get("_settings") or {}

@@ -278,3 +278,28 @@ def test_la_premiere_serie_tient_dans_le_premier_ecran(page, serveur):
               bouton: s.querySelector('.serie-valider').getBoundingClientRect().bottom, nav};
     }""")
     assert pos["champ"] > 0 and pos["bouton"] <= pos["nav"], pos
+
+
+def test_case_alterner_enregistre_la_rotation(serveur, navigateur):
+    """Page Programme : cocher « Alterner » enregistre le cycle, le décocher
+    l'efface (core/rotation.py)."""
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');")
+    pg = ctx.new_page()
+    pg.goto(serveur + "/test-vierge?ab=1")
+    pg.goto(serveur + "/programme")
+    pg.select_option('#planning select[data-day="Mercredi"]', "Pull")
+    case = pg.locator(".rotation-choix input")
+    case.check()
+    pg.wait_for_timeout(1200)                     # sauvegarde différée (500 ms)
+
+    def blob():
+        with urllib.request.urlopen(serveur + "/test-programme") as r:
+            return json.loads(r.read())
+
+    assert blob()["_rotation"] == ["Push", "Pull"]
+    assert "Push → Pull" in pg.locator(".rotation-aide").inner_text()
+    case.uncheck()
+    pg.wait_for_timeout(1200)
+    assert "_rotation" not in blob()
+    ctx.close()

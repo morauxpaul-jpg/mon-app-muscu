@@ -30,6 +30,7 @@ appmod._PUBLIC_PATHS.add("/test-login")
 appmod._PUBLIC_PATHS.add("/test-seed")
 appmod._PUBLIC_PATHS.add("/test-vierge")
 appmod._PUBLIC_PATHS.add("/test-historique")
+appmod._PUBLIC_PATHS.add("/test-programme")
 
 
 @appmod.app.route("/test-login")
@@ -210,6 +211,8 @@ def test_vierge():
         "_planning": {j: "Push" for j in ("Lundi", "Mardi", "Mercredi", "Jeudi",
                                           "Vendredi", "Samedi", "Dimanche")},
         "_settings": {},
+        **({"Pull": [{"name": "Rowing barre", "sets": 3, "muscle": "Dos"}]}
+           if request.args.get("ab") else {}),
     }}).execute()
     session.clear()
     session["user_id"] = USER_ID
@@ -228,6 +231,15 @@ def test_historique():
     from flask import jsonify
     c = core_db.current_client()
     return jsonify(c.tables.get("history", []))
+
+
+@appmod.app.route("/test-programme")
+@limiter.exempt
+def test_programme():
+    """Blob du programme tel qu'en base (fausse), pour les assertions."""
+    from flask import jsonify
+    rows = core_db.current_client().tables.get("programs", [])
+    return jsonify(rows[0]["data"] if rows else {})
 
 
 if __name__ == "__main__":

@@ -119,13 +119,22 @@ def _programme_detail(prog):
     seances = {k: v for k, v in prog.items() if not k.startswith("_")}
     if not seances:
         return "Aucun programme défini."
-    planning = prog.get("_planning") or {}
+    from core.dates import logical_today_paris
+    from core.rotation import planning_semaine, rotation_de
+    # Cette semaine-ci : avec une rotation, les jours d'une séance changent
+    # d'une semaine à l'autre.
+    planning = planning_semaine(prog, logical_today_paris())
     seance_to_days = {}
     for day, sname in planning.items():
         if sname:
             seance_to_days.setdefault(sname, []).append(day)
     name = prog.get("_name") or "Programme personnalisé"
     lines = [f"Nom : {name}"]
+    rot = rotation_de(prog)
+    if rot:
+        lines.append("Rotation : " + " → ".join(rot)
+                     + " (les séances s'enchaînent dans cet ordre, d'une semaine à l'autre ;"
+                     " jours ci-dessous = cette semaine)")
     for sname, exos in seances.items():
         days = seance_to_days.get(sname, [])
         day_str = ", ".join(days) if days else "non planifiée"
