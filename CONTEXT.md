@@ -429,6 +429,15 @@ pwa/
 - `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Cinq autres imports entre blueprints subsistent** (mesurés le 03/10) ; le calcul cardio est sorti dans `core/cardio_activites.py`. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
 
+### Import Hevy / Strong (core/import_muscu.py, /gestion/import-muscu)
+- Pour tout le monde (c'est ce qui permet de venir sans repartir de zéro). Même parcours que Strava : déposer le CSV, aperçu (rien n'est écrit), confirmer. Rien n'est jamais effacé.
+- En-têtes comparés normalisés contre des alias ; séparateur `,` `;` ou tabulation ; dates ISO ou locales anglaises ; livres converties en kg (colonne `weight_lbs` ou `Weight Unit`). Échauffements (`set_type=warmup`, `Set Order=W`) et lignes sans reps (cardio, chrono) écartés et comptés.
+- Noms anglais → catalogue via `resoudre` (table `_ANGLAIS` complétée) ; le matériel entre parenthèses devient la variante sauf s'il est déjà supposé par l'exercice (« Lat Pulldown (Cable) » → « Tirage vertical »). Un exercice inconnu garde son nom d'origine.
+- Doublon = même jour + même nom de séance : réimporter le même fichier ne double rien. Écriture par paquets de séances entières (`ajouter_lignes`, lots de 500), donc jamais de séance à moitié écrite. Remarque « Import Hevy » / « Import Strong ».
+
+### Échauffement (core.muscu.series_echauffement)
+- Rampe affichée, repliée, sur la carte d'exercice : barre vide (mouvements à la barre), 40/60/80 %, 90 % au-delà de 100 kg, arrondi 2,5 kg, vers la charge suggérée sinon la plus lourde de la dernière fois. Seuil 30 kg. Jamais enregistrée (volume, records et suggestion resteraient faussés).
+
 ### Import Strava (core/strava_import.py, /cardio/import)
 - **Par le fichier, pas par l'API.** Depuis juin 2026 l'API « Standard » de Strava exige un abonnement actif (11,99 $/mois) ; l'export de ses propres données reste gratuit. Bâtir sur l'API, c'était bâtir quelque chose qui s'éteint le jour où l'abonnement s'arrête — et il fallait manipuler un client_secret.
 - `activities.csv` n'est pas un fichier propre. Trois précautions, chacune contre un piège réel : les **en-têtes changent avec la langue** du compte (on compare des noms normalisés à des alias, jamais une position de colonne) ; la **date est au format local** (plusieurs formes essayées, les illisibles comptées) ; le **séparateur** est une virgule ou un point-virgule.

@@ -1420,6 +1420,34 @@ _ANGLAIS = {
     "kick back": "Kickback triceps",
     "tirage poitrine": "Tirage vertical",
     "tirage poitrine poulie haute": "Tirage vertical",
+    # Noms de Hevy et de Strong, pour leur import (core/import_muscu.py) :
+    # le matériel entre parenthèses est détaché avant, il ne reste ici que
+    # ce que les jeux de mots ne relient à rien.
+    "seated cable row": "Tirage horizontal poulie",
+    "seated row": "Tirage horizontal poulie",
+    "cable row": "Tirage horizontal poulie",
+    "bent over row": "Rowing barre",
+    "barbell row": "Rowing barre",
+    "pendlay row": "Rowing barre",
+    "dumbbell row": "Rowing haltère",
+    "single arm row": "Rowing unilatéral haltère",
+    "inverted row": "Rowing inversé",
+    "plank": "Planche",
+    "side plank": "Gainage latéral",
+    "standing calf raise": "Mollets debout",
+    "calf raise": "Mollets debout",
+    "seated calf raise": "Mollets assis",
+    "skullcrusher": "Barre au front",
+    "skull crusher": "Barre au front",
+    "lying triceps extension": "Barre au front",
+    "cable crossover": "Écartés poulie",
+    "preacher curl": "Curl biceps",
+    "ez bar curl": "Curl biceps",
+    "concentration curl": "Curl biceps",
+    "lunge": "Fentes",
+    "walking lunge": "Fentes marchées",
+    "hanging leg raise": "Relevé de jambes",
+    "leg raise": "Relevé de jambes",
 }
 
 def _index_par_jetons():

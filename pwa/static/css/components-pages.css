@@ -597,3 +597,39 @@ html.has-ad-banner .topbar {
   line-height: 1.45;
   color: var(--text-2);
 }
+
+/* Écrans d'import (Strava, Hevy/Strong) : aperçu avant d'écrire. */
+.aide { font-size: 0.78rem; color: var(--text-3); line-height: 1.55; margin: 0; }
+.etapes {
+  margin: 10px 0 0; padding-left: 20px;
+  font-size: 0.84rem; color: var(--text-2); line-height: 1.7;
+}
+.etapes b { color: var(--text-1); }
+.apercu-chiffres {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; text-align: center;
+}
+.apercu-nombre {
+  font-size: 1.6rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.apercu-label {
+  font-size: 0.7rem; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px;
+}
+.ecartes {
+  margin: 14px 0 0; padding-left: 18px;
+  font-size: 0.78rem; color: var(--text-3); line-height: 1.6;
+}
+.liste-seances { list-style: none; margin: 0; padding: 0; }
+.liste-seances li {
+  display: grid; grid-template-columns: 82px 1fr auto;
+  gap: 8px; align-items: baseline;
+  padding: 7px 0; font-size: 0.82rem;
+  border-bottom: 1px solid var(--border-default);
+  font-variant-numeric: tabular-nums;
+}
+.liste-seances li:last-child { border-bottom: 0; }
+.ls-date { color: var(--text-3); }
+.ls-perf { color: var(--text-2); }
+.liste-renommes li { grid-template-columns: 1fr 1fr; }

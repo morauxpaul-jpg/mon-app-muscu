@@ -66,6 +66,10 @@ def replace_exo_rows(date_str, seance, exercice, new_rows):
     return db.replace_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
 
+def ajouter_lignes(rows):
+    return db.ajouter_lignes(_uid(), rows)
+
+
 def append_exo_rows(date_str, seance, exercice, new_rows):
     return db.append_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
