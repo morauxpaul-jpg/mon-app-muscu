@@ -410,10 +410,11 @@ def _generer():
         "frequence": params["frequence"], "seances": len(program["seances"]),
         "cardio": len(program.get("cardio") or []),
     })
+    # L'événement vient d'être écrit (synchrone) : le compte l'inclut.
     return jsonify({
         "ok": True,
         "program": program,
-        "quota_remaining": max(0, WEEKLY_GEN_QUOTA - (used + 1)),
+        "quota_remaining": max(0, WEEKLY_GEN_QUOTA - _gen_used_week(g.user_id)),
     })
 
 

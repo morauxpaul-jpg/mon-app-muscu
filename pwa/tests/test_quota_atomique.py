@@ -91,3 +91,31 @@ def test_route_generateur_compte_les_generations_en_cours(fake_db, logged_in, mo
     assert r.status_code == 502 and len(appels) == 1          # échec de l'IA
     r = logged_in.post("/generator/generate", json={"objectif": "force"}, headers=entete)
     assert r.status_code == 502 and len(appels) == 2          # la place a été rendue
+
+
+def test_generation_reussie_renvoie_le_programme_et_le_quota(fake_db, logged_in, monkeypatch):
+    import json
+    import sys
+    import types
+    from conftest import CSRF, USER_ID
+    import routes.generator as gen
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    monkeypatch.setattr("routes.generator._env", lambda *a, **k: "cle-de-test", raising=False)
+    compte = [0]
+    monkeypatch.setattr(gen, "_gen_used_week", lambda uid: compte[0])
+    monkeypatch.setattr(gen, "track", lambda *a, **k: compte.__setitem__(0, compte[0] + 1))
+    reponse = json.dumps({"name": "Force", "seances": {"A": [
+        {"name": "Squat", "sets": 5, "reps": "5", "rest_seconds": 180, "muscle": "Quadriceps"}]},
+        "planning": {"Lundi": "A"}})
+
+    class Client:
+        def __init__(self, **k):
+            self.messages = types.SimpleNamespace(create=lambda **k: types.SimpleNamespace(
+                content=[types.SimpleNamespace(text=reponse)]))
+
+    monkeypatch.setitem(sys.modules, "anthropic", types.SimpleNamespace(Anthropic=Client))
+    r = logged_in.post("/generator/generate", json={"objectif": "force"}, headers={"X-CSRFToken": CSRF})
+    assert r.status_code == 200, r.get_data(as_text=True)[:300]
+    d = r.get_json()
+    assert d["ok"] and d["program"]["seances"]["A"][0]["name"] == "Squat"
+    assert d["quota_remaining"] == gen.WEEKLY_GEN_QUOTA - 1
