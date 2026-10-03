@@ -47,7 +47,7 @@ from core.db_historique import (
     save_hist, _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _nettoyer_ligne, _norm_date,
     _reporter_dans_le_cache,
-    _row_to_supabase
+    _row_to_supabase, _VERROUS, _verrou, _replace_exo_rows, _append_exo_rows
 )
 
 # ── le programme et son planning ────────────────────────────────
