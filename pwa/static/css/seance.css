@@ -60,6 +60,17 @@
   color: var(--accent);
   margin-bottom: 2px;
 }
+/* Superset : les deux cartes se touchent et partagent un liseré, pour
+   qu'on voie d'un coup d'œil qu'elles s'enchaînent sans repos. */
+.exo-superset {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.exo-card--ss-debut, .exo-card--ss-fin { box-shadow: inset 3px 0 0 var(--accent); }
+.exo-card--ss-debut { margin-bottom: 2px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+.exo-card--ss-fin { margin-top: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; }
 .exo-variantes {
   padding: 10px 12px 12px;
   border-top: 0.5px solid var(--border-default);

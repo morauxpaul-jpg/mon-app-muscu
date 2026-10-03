@@ -633,3 +633,16 @@ html.has-ad-banner .topbar {
 .ls-date { color: var(--text-3); }
 .ls-perf { color: var(--text-2); }
 .liste-renommes li { grid-template-columns: 1fr 1fr; }
+
+/* Superset dans l'éditeur de programme : « enchaîner avec le suivant ». */
+.prog-superset {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.prog-superset input { width: 16px; height: 16px; accent-color: var(--accent); }

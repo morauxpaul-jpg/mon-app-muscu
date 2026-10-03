@@ -244,6 +244,8 @@
       isBwBase: data.is_bw_base || false,
       get showWeight() { return !this.isBwBase || this.variant === "Lesté"; },
       restSeconds: data.rest_seconds || 90,
+      supersetAvec: data.superset_avec || "",
+      supersetDe: data.superset_de || "",
       restPrescrit: !!data.rest_prescrit,
       targetReps: data.target_reps || "",
       rpeOptions: ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"],
@@ -501,13 +503,16 @@
 
       onSetFilled: function (i) {
         markSessionActive();
-        if (!CONFIG.autoRestTimer) return;
         var cur = this.sets[i];
         if (!cur) return;
         if (!(cur.reps !== "" && cur.reps != null && Number(cur.reps) > 0)) return;
         if (this._firedSets.indexOf(i) >= 0) return;
         this._firedSets.push(i);
-        this.startRestTimer();
+        // Superset : pas de repos entre les deux exercices. Après le premier,
+        // on passe au second ; après le second, repos, puis retour au premier.
+        if (this.supersetAvec) { allerAuPartenaire(this._carte(), 1); return; }
+        this.startRestTimer();          // ne fait rien si le chrono auto est coupé
+        if (this.supersetDe) allerAuPartenaire(this._carte(), -1);
       },
 
       // Le repos prescrit par le programme (180 s au squat) passe avant le
@@ -628,7 +633,7 @@
         // « Enregistrer » ou dernière série faite : on referme la carte et on
         // ouvre la suivante — l'utilisateur n'a rien à chercher.
         var fini = mode === "complet" || (!this.isIso && this.indexCourant() === -1);
-        if (mode === "complet") this.startRestTimer();
+        if (mode === "complet" && !this.supersetAvec) this.startRestTimer();
         if (this.completed && fini) {
           this.open = false;
           openNextPending(card);
@@ -784,6 +789,24 @@
       },
     };
   };
+
+  // Superset : ouvre la carte voisine (sens 1 = suivante, -1 = précédente)
+  // si elle n'est pas terminée, et l'amène à l'écran.
+  function allerAuPartenaire(card, sens) {
+    if (!card) return;
+    var autre = sens > 0 ? card.nextElementSibling : card.previousElementSibling;
+    while (autre && !autre.classList.contains("exo-card")) {
+      autre = sens > 0 ? autre.nextElementSibling : autre.previousElementSibling;
+    }
+    if (!autre || autre.classList.contains("done")) return;
+    try {
+      var comp = window.Alpine && window.Alpine.$data(autre);
+      if (comp) comp.open = true;
+    } catch (e) {}
+    setTimeout(function () {
+      autre.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  }
 
   // Ouvre le premier exercice non terminé après celui qu'on vient de valider.
   function openNextPending(card) {

@@ -89,6 +89,10 @@
             <label class="field-label s-96ad60">Séries</label>
             <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()"
                    aria-label="Nombre de séries">
+            <label class="prog-superset" x-show="exIdx < prog[sname].length - 1">
+              <input type="checkbox" x-model="ex.superset" @change="scheduleSave()">
+              <span>Enchaîner avec le suivant (superset)</span>
+            </label>
             <label class="field-label">Muscle(s)</label>
             <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
               <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">

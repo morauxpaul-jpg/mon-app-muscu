@@ -303,3 +303,29 @@ def test_case_alterner_enregistre_la_rotation(serveur, navigateur):
     pg.wait_for_timeout(1200)
     assert "_rotation" not in blob()
     ctx.close()
+
+
+def test_superset_enchaine_sans_repos_puis_repos_apres_le_second(serveur, navigateur):
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script(
+        "localStorage.setItem('tutoSeen','true');"
+        "localStorage.setItem('tutoSeanceSeen','true');")
+    pg = ctx.new_page()
+    pg.goto(serveur + "/test-vierge?ss=1")
+    pg.goto(serveur + "/seance?mode=prefaite&name=Push")
+    pg.wait_for_selector(".serie-valider")
+    pg.evaluate("window.__repos = 0; var s = RestTimer.start;"
+                "RestTimer.start = function () { window.__repos++; return s.apply(this, arguments); }; 0")
+    assert "enchaîne avec Développé militaire" in pg.locator("#exo-anchor-0").inner_text()
+
+    _serie_faite(pg, 5, 60)
+    second = "Alpine.$data(document.querySelector('#exo-anchor-1'))"
+    assert _attendre(lambda: pg.evaluate(second + ".open"), 5)
+    assert pg.evaluate("window.__repos") == 0               # pas de repos entre les deux
+
+    carte = pg.locator("#exo-anchor-1")
+    carte.get_by_label("Répétitions série 1", exact=True).fill("10")
+    carte.get_by_label("Poids série 1", exact=True).fill("30")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: pg.evaluate("window.__repos") == 1, 5)
+    ctx.close()

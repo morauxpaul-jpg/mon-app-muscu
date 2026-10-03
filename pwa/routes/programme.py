@@ -47,6 +47,10 @@ def _exo_entry(name, sets, muscle, src=None):
            "rest_seconds": max(30, min(300, rest))}
     if reps:
         out["reps"] = reps
+    # Superset : cet exercice s'enchaîne avec le suivant, sans repos entre
+    # les deux (le chrono part après le second).
+    if src.get("superset") is True:
+        out["superset"] = True
     return out
 
 
@@ -156,7 +160,8 @@ def programme():
                 {"name": e.get("name", ""), "sets": int(e.get("sets") or 3),
                  "muscle": e.get("muscle") or "Autre",
                  "reps": e.get("reps") or "",
-                 "rest_seconds": int(e.get("rest_seconds") or 90)}
+                 "rest_seconds": int(e.get("rest_seconds") or 90),
+                 "superset": e.get("superset") is True}
                 for e in exos
             ]
             for sname, exos in seances

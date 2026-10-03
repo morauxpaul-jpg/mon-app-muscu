@@ -205,7 +205,8 @@ def test_vierge():
     c.table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-01-01"}).execute()
     c.table("programs").insert({"user_id": USER_ID, "data": {
         "Push": [
-            {"name": "Développé couché", "sets": 3, "muscle": "Pecs", "reps": "5", "rest": 120},
+            {"name": "Développé couché", "sets": 3, "muscle": "Pecs", "reps": "5", "rest": 120,
+             **({"superset": True} if request.args.get("ss") else {})},
             {"name": "Développé militaire", "sets": 2, "muscle": "Épaules"},
         ],
         "_planning": {j: "Push" for j in ("Lundi", "Mardi", "Mercredi", "Jeudi",

@@ -440,6 +440,10 @@ pwa/
 - Noms anglais → catalogue via `resoudre` (table `_ANGLAIS` complétée) ; le matériel entre parenthèses devient la variante sauf s'il est déjà supposé par l'exercice (« Lat Pulldown (Cable) » → « Tirage vertical »). Un exercice inconnu garde son nom d'origine.
 - Doublon = même jour + même nom de séance : réimporter le même fichier ne double rien. Écriture par paquets de séances entières (`ajouter_lignes`, lots de 500), donc jamais de séance à moitié écrite. Remarque « Import Hevy » / « Import Strong ».
 
+### Supersets (`superset: true` sur un exercice du programme)
+- « Enchaîner avec le suivant » : case dans l'éditeur de programme, conservée par `_exo_entry` (booléen strict). `_build_all_exo_contexts` nomme le partenaire des deux côtés (`superset_avec`, `superset_de`).
+- En séance : cartes reliées par un liseré ; après une série du premier exercice, pas de chrono, la carte du second s'ouvre ; après une série du second, chrono puis retour au premier (`allerAuPartenaire`, static/js/seance.js).
+
 ### Échauffement (core.muscu.series_echauffement)
 - Rampe affichée, repliée, sur la carte d'exercice : barre vide (mouvements à la barre), 40/60/80 %, 90 % au-delà de 100 kg, arrondi 2,5 kg, vers la charge suggérée sinon la plus lourde de la dernière fois. Seuil 30 kg. Jamais enregistrée (volume, records et suggestion resteraient faussés).
 

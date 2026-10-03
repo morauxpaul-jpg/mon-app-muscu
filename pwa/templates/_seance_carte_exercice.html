@@ -1,7 +1,7 @@
 {#- Inclus par seance_edit.html (découpé le 01/10/2026 : le fichier faisait
     plus de 1 000 lignes, audit du 30/09, M11). Une carte d'exercice : attend `exo` et `exo_index` (Jinja ne passe
     pas `loop` à un fichier inclus). -#}
-    <div class="exo-card {% if exo.completed %}done{% endif %}" :class="{ done: completed }"
+    <div class="exo-card {% if exo.completed %}done{% endif %}{% if exo.superset_avec %} exo-card--ss-debut{% endif %}{% if exo.superset_de %} exo-card--ss-fin{% endif %}" :class="{ done: completed }"
          id="exo-anchor-{{ exo_index }}"
          data-exo-base="{{ exo.base }}"
          x-data='exoBlock({{ exo_index }}, {{ exo|sans_prive|tojson }})'>
@@ -44,6 +44,11 @@
           <div class="exo-meta">
             {% if exo.remplace %}
             <span class="exo-remplace">remplace {{ exo.remplace }} aujourd'hui</span>
+            {% endif %}
+            {% if exo.superset_avec %}
+            <span class="exo-superset">Superset · enchaîne avec {{ exo.superset_avec }} ↓</span>
+            {% elif exo.superset_de %}
+            <span class="exo-superset">Superset · après {{ exo.superset_de }} ↑, puis repos</span>
             {% endif %}
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
             <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · repos {{ exo.rest_seconds }} s</span>
