@@ -311,8 +311,12 @@ def index():
     cur_week_real = [r for r in cur_week_muscu if _is_perf(r)]
     vol_week = int(sum(r["Poids"] * r["Reps"] for r in cur_week_muscu))
     vol_week_fmt = f"{vol_week:,}".replace(",", " ")
-    sessions_done = len({r["Séance"] for r in cur_week_real})
-    total_sessions = len(prog_seances)
+    # Séances faites = (date, séance) distinctes, sur les séances PRÉVUES de la
+    # semaine. Compter les NOMS distincts sur toutes les séances du programme
+    # affichait « 2/2 » à qui avait fait Full Body A, B, A (et « 3/9 » à un
+    # membre à trois dossiers) — audit du 03/10, I8.
+    sessions_done = len({(r["Date"], r["Séance"]) for r in cur_week_real if r.get("Date")})
+    total_sessions = sum(1 for v in planning_map.values() if v) or len(prog_seances)
 
     streak = streak_semaines({r["Semaine"] for r in hist if _is_perf(r)}, s_act)
 

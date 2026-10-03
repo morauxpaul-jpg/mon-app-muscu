@@ -101,6 +101,6 @@ from core.db_admin import (
 
 # ── les bilans de séance ────────────────────────────────────────
 from core.db_bilans import (
-    get_session_note, list_session_notes, upsert_session_note,
+    get_session_note, list_session_notes, rename_session_notes, upsert_session_note,
     _mark_duration_unsupported, _session_duration_supported, _session_note_columns
 )

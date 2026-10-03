@@ -183,6 +183,10 @@ def list_session_notes():
     return db.list_session_notes(_uid())
 
 
+def rename_session_notes(old_name, new_name):
+    return db.rename_session_notes(_uid(), old_name, new_name)
+
+
 def list_all_nutrition():
     return db.list_all_nutrition(_uid())
 

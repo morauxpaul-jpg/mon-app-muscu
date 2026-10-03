@@ -419,6 +419,11 @@ def rename_seance():
         logger.error("rename_seance historique FAILED user=%s: %s",
                      getattr(g, "user_id", "?"), e)
         return jsonify({"ok": False, "error": "historique"}), 500
+    try:
+        from core.data import rename_session_notes
+        rename_session_notes(ancien, nouveau)
+    except Exception as e:  # table absente (v34) : l'historique est déjà suivi
+        logger.warning("rename_seance bilans FAILED: %s", e)
     return jsonify({"ok": True, "series": lignes})
 
 
