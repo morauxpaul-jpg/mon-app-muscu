@@ -495,6 +495,9 @@ pwa/
 - Le SW ne recharge plus la page à sa première installation, ni sur `/seance` lors d'une mise à jour.
 - Tests : `tests/test_series_sures.py` (serveur), `tests/js/test_saisie_serie.js` + `test_offline.js`, et **`tests/e2e/test_seance_navigateur.py`** — la séance jouée dans Chromium via `run_local_fake.py` (`/test-vierge`, `/test-historique`) : en ligne, mode avion, réseau qui ne répond pas, Skip. S'ignore sans Playwright ; la CI installe Chromium.
 
+### Quotas coach et générateur (core/quota.py)
+- Vérifier et réserver d'un seul geste, sous verrou par utilisateur (un processus : même condition que le cache). Coach : profil relu sous verrou avant d'incrémenter. Générateur : compte en base (événements) lu sous verrou + générations en cours ; la réservation tombe à la fin de l'appel, réussi ou non. À plusieurs instances, il faudra un incrément atomique côté base.
+
 ### Compression HTTP (core/compression.py)
 - gzip niveau 6 sur les réponses texte de 200 et ≥ 1 ko (HTML, CSS, JS, JSON, SVG), y compris les fichiers statiques. Jamais sur les flux (SSE du coach) ni sur une réponse déjà encodée. ETag rendu faible, `Vary: Accept-Encoding`. Hook déclaré AVANT les autres `after_request` pour s'exécuter en dernier. `COMPRESSION_DISABLED=1` coupe tout.
 - Mesuré : /programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko, seance.js 43 → 12 ko.

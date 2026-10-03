@@ -323,11 +323,22 @@ def generate():
     if not getattr(g, "is_vip_full", False):
         return jsonify({"error": "Réservé aux membres PRO."}), 403
 
-    used = _gen_used_week(g.user_id)
-    if used >= WEEKLY_GEN_QUOTA:
+    # Vérifier ET réserver d'un seul geste : compté après l'appel, le quota
+    # laissait passer des générations lancées en parallèle (audit du 03/10, M8).
+    from core.quota import liberer, reserver
+    user_id = g.user_id
+    if not reserver("generateur", user_id, lambda: _gen_used_week(user_id), WEEKLY_GEN_QUOTA):
         return jsonify({
             "error": f"Limite hebdomadaire atteinte ({WEEKLY_GEN_QUOTA}/semaine). Reviens dans quelques jours.",
         }), 429
+    try:
+        return _generer()
+    finally:
+        liberer("generateur", user_id)
+
+
+def _generer():
+    """Corps de la génération, une fois le quota réservé."""
 
     f = request.get_json(silent=True) or {}
     # Types de cardio demandés : on ne garde que les libellés reconnus.
