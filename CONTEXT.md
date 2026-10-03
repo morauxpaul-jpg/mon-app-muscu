@@ -251,6 +251,10 @@ pwa/
 - **Paywall au bon moment** : un compte **free** qui atteint `UPSELL_AFTER_SESSIONS`=3 séances distinctes voit, **une seule fois**, une modale d'invitation PRO sur l'accueil (l'écran qui suit sa séance milestone → motivation haute). Distinct de la carte « Passe en PRO » discrète toujours présente en bas d'accueil.
 - Logique 100 % dans `routes/accueil.py` (pas de modif de `/seance/finish`) : flag durable `prog._upsell_seen` (méta programme, pas de migration). Event `upsell_shown` ({trigger:"post_workout", sessions}) — un `premium_viewed` qui suit = clic sur la modale (mesure de l'efficacité dans le funnel). Jamais affiché aux VIP.
 
+### Semaine allégée (core/decharge.py)
+- Proposée sur l'accueil quand, après ≥ 4 semaines d'affilée sans semaine déjà allégée, l'e1RM de la dernière semaine complète recule de ≥ 3 % sur plusieurs exercices et/ou le RPE moyen atteint 9 (deux signes, ou un recul sur ≥ 3 exercices).
+- `POST /accueil/decharge` : `appliquer` pose `_decharge_semaine` (séries ÷ 2, charges suggérées et pré-remplies −10 %, pour les séances de cette semaine seulement), `ignorer` pose `_decharge_ignoree`, `annuler` retire. Clés personnelles du blob. Le coach est prévenu.
+
 ### Séries par muscle et par semaine (core/volume_muscle.py)
 - Page Progrès, pour tous : séries faites cette semaine par muscle (principal 1, secondaires ½, hors cardio/SESSION/SKIP), face au repère 10-20 (6-16 pour les petits muscles), avec la semaine passée. La carte du corps PRO garde la part relative.
 

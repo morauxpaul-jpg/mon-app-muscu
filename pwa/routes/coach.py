@@ -130,6 +130,11 @@ def _programme_detail(prog):
             seance_to_days.setdefault(sname, []).append(day)
     name = prog.get("_name") or "Programme personnalisé"
     lines = [f"Nom : {name}"]
+    from core.dates import continuous_week
+    from core.decharge import semaine_allegee
+    if semaine_allegee(prog, continuous_week(logical_today_paris())):
+        lines.append("Semaine allégée en cours (acceptée par l'utilisateur) : moitié des séries, "
+                     "charges −10 %, loin de l'échec. Ne pas l'inciter à charger cette semaine.")
     rot = rotation_de(prog)
     if rot:
         lines.append("Rotation : " + " → ".join(rot)

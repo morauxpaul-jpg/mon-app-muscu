@@ -237,8 +237,10 @@ def seance():
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
+        from core.decharge import semaine_allegee
         exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, date_iso,
-                                           auto_prefill_weight, show_overload_hint)
+                                           auto_prefill_weight, show_overload_hint,
+                                           decharge=semaine_allegee(prog, s_act))
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).

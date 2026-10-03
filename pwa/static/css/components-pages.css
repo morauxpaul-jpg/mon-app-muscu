@@ -678,3 +678,12 @@ html.has-ad-banner .topbar {
 .sm-chiffre small { color: var(--text-3); }
 .sm-avant { grid-area: avant; font-size: 0.7rem; color: var(--text-3); }
 .sm-aide { margin: 10px 0 0; font-size: 0.72rem; line-height: 1.5; color: var(--text-3); }
+
+/* Proposition de semaine allégée (accueil, core/decharge.py). */
+.decharge-carte { border-color: rgba(255, 159, 10, 0.45); margin-bottom: 12px; }
+.decharge-en-cours { border-color: rgba(52, 199, 89, 0.45); }
+.decharge-titre { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; }
+.decharge-texte { margin: 0 0 6px; font-size: 0.82rem; line-height: 1.5; color: var(--text-2); }
+.decharge-detail { color: var(--text-3); }
+.decharge-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.decharge-actions .btn { flex: 1 1 auto; }
