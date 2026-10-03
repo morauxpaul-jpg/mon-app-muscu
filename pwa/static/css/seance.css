@@ -196,3 +196,13 @@ details.seance-options { margin: 18px 0 8px; }
 .exo-repere:empty { display: none; }
 .exo-repere .exo-last-session { display: block; }
 .exo-repere .exo-last-session svg { vertical-align: -2px; margin-right: 6px; }
+
+/* Échauffement : replié sous le repère, une ligne quand il est fermé. */
+details.exo-echauffement { font-size: 12px; color: var(--text-2); }
+details.exo-echauffement summary { cursor: pointer; list-style: none; padding: 2px 0; }
+details.exo-echauffement summary::-webkit-details-marker { display: none; }
+details.exo-echauffement summary::before { content: "▸ "; color: var(--accent); }
+details.exo-echauffement[open] summary::before { content: "▾ "; }
+details.exo-echauffement ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; padding: 0; list-style: none; }
+details.exo-echauffement li { padding: 3px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); color: var(--text-1); font-variant-numeric: tabular-nums; }
+details.exo-echauffement small { color: var(--text-3); }

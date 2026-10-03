@@ -308,3 +308,55 @@ def overload_suggestion(last_sets, prev_sets=None, is_bw=False, cible=None):
         "label": f"Même charge, vise {min_reps + 1} reps",
         "why": "add_rep",
     }
+
+
+# ── Échauffement ────────────────────────────────────────────────────
+# Hevy et Strong proposent des séries d'échauffement ; ici, rien : on
+# attaquait un squat à 100 kg à froid, ou on improvisait (audit du 03/10).
+# Rampe classique en pourcentage de la charge de travail, arrondie au
+# 2,5 kg, barre vide en tête pour les mouvements à la barre. Ces séries
+# s'affichent, elles ne s'enregistrent pas : elles fausseraient volume,
+# records et suggestion.
+SEUIL_ECHAUFFEMENT = 30.0
+POIDS_BARRE = 20.0
+_PALIERS_ECHAUFFEMENT = ((0.4, 8), (0.6, 5), (0.8, 3))
+_EXOS_BARRE = {"Squat", "Soulevé de terre", "Soulevé de terre roumain", "Développé couché",
+               "Développé militaire", "Développé incliné barre", "Rowing barre",
+               "Front squat", "Hip thrust"}
+
+
+def est_a_la_barre(base: str) -> bool:
+    if base in _EXOS_BARRE:
+        return True
+    try:
+        from core.exercises_data import EQUIPMENT_FOR_EXERCISE
+        if "barre" in (EQUIPMENT_FOR_EXERCISE.get(base) or []):
+            return True
+    except ImportError:
+        pass
+    return " barre" in f" {(base or '').casefold()}" and "traction" not in (base or "").casefold()
+
+
+def series_echauffement(poids_travail, barre: bool = False) -> list[dict]:
+    """[{poids, reps}] avant une charge de travail donnée, ou [] si elle est
+    trop légère pour qu'un échauffement spécifique serve à quelque chose."""
+    try:
+        travail = float(poids_travail or 0)
+    except (TypeError, ValueError):
+        return []
+    if travail < SEUIL_ECHAUFFEMENT:
+        return []
+    out: list[dict] = []
+    if barre and travail > POIDS_BARRE + 10:
+        out.append({"poids": POIDS_BARRE, "reps": 10})
+    paliers = list(_PALIERS_ECHAUFFEMENT)
+    if travail >= 100:
+        paliers.append((0.9, 1))
+    for pct, reps in paliers:
+        p = round(travail * pct / 2.5) * 2.5
+        if barre:
+            p = max(p, POIDS_BARRE)
+        if p >= travail or (out and p <= out[-1]["poids"]):
+            continue
+        out.append({"poids": p, "reps": reps})
+    return out

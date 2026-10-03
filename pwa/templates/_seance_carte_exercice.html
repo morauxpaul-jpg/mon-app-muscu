@@ -73,6 +73,17 @@
             <span class="exo-suggestion-done" x-show="suggestionApplied"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check"/></svg></span>
           </div>
         </template>
+        {# Replié : utile avant une charge lourde, du bruit le reste du temps.
+           Affiché, pas enregistré (cf. core.muscu.series_echauffement). #}
+        {% if exo.echauffement %}
+        <details class="exo-echauffement">
+          <summary>Échauffement · {{ exo.echauffement|length }} série{{ 's' if exo.echauffement|length > 1 }}</summary>
+          <ol>
+            {% for e in exo.echauffement %}<li>{{ '%g'|format(e.poids) }} kg × {{ e.reps }}</li>{% endfor %}
+          </ol>
+          <small>Avant ta charge de travail. Non comptées dans le volume.</small>
+        </details>
+        {% endif %}
       </div>
 
       {# ── Variantes du jour ─────────────────────────────────────
