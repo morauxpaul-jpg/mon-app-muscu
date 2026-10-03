@@ -597,12 +597,21 @@ def index():
         logger.warning("diagnostic décharge FAILED: %s", e)
         decharge = None
     decharge_en_cours = semaine_allegee(prog, s_act)
+    # Ce qui a progressé ces dernières semaines : la fiche exercice le savait,
+    # personne ne le disait (core/progression.py).
+    from core.progression import faits_marquants
+    try:
+        progres = faits_marquants(hist, s_act)
+    except Exception as e:
+        logger.warning("faits marquants FAILED: %s", e)
+        progres = []
 
     return render_template(
         "accueil.html",
         active="accueil",
         decharge=decharge,
         decharge_en_cours=decharge_en_cours,
+        progres=progres,
         last_workout=last_workout,
         challenge=challenge,
         challenge_just_won=challenge_just_won,

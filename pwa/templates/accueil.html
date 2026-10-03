@@ -141,6 +141,16 @@
     </a>
   {% endif %}
 
+  {# Ce qui a progressé ces dernières semaines (core/progression.py). #}
+  {% if progres %}
+    <a href="/progres#zoom" class="card progres-carte">
+      <div class="card-label">Tes progrès</div>
+      {% for f in progres %}
+        <div class="progres-ligne"><span class="progres-fleche">↗</span>{{ f.texte }}</div>
+      {% endfor %}
+    </a>
+  {% endif %}
+
   {% if challenge %}
     <div class="card" style="margin-bottom:12px; border-color:{% if challenge.done %}var(--success){% else %}var(--accent){% endif %};">
       <div class="s-a3d4bc">

@@ -66,7 +66,7 @@
           <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#history"/></svg>Dernière fois : <span x-text="lastSummary"></span></div>
         </template>
         <template x-if="!lastSummary && !completed">
-          <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois</div>
+          <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois{% if exo.conseil_depart %}<span class="exo-conseil"> · {{ exo.conseil_depart }}</span>{% endif %}</div>
         </template>
         {# ── Suggestion de surcharge (double progression, cf. core.muscu.overload_suggestion) ── #}
         <template x-if="suggestion && !completed">

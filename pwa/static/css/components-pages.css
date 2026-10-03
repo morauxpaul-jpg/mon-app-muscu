@@ -687,3 +687,8 @@ html.has-ad-banner .topbar {
 .decharge-detail { color: var(--text-3); }
 .decharge-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .decharge-actions .btn { flex: 1 1 auto; }
+
+/* Faits marquants de progression (accueil, core/progression.py). */
+.progres-carte { display: block; margin-bottom: 12px; color: inherit; text-decoration: none; }
+.progres-ligne { font-size: 0.88rem; padding: 3px 0; color: var(--text-1); }
+.progres-fleche { color: #34c759; font-weight: 700; margin-right: 6px; }
