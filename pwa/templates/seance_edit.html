@@ -7,7 +7,6 @@
 {% endblock %}
 
 {% block content %}
-  <a href="/seance?date={{ date_iso }}" class="btn s-ad0098">← Changer de séance</a>
 
   {% if is_rattrapage %}
     <div class="s-2b6e37">
@@ -17,7 +16,7 @@
   {% endif %}
 
   <div class="seance-header">
-    <div class="seance-label">SÉANCE · SEMAINE {{ s_display }}</div>
+    <div class="seance-label"><a href="/seance?date={{ date_iso }}" class="seance-retour">← Changer</a> · SÉANCE · SEMAINE {{ s_display }}</div>
     <div class="seance-title">{{ seance_name }}</div>
   </div>
 
@@ -52,47 +51,12 @@
   <div class="seance-progress" id="seance-progress">
     <div class="seance-progress-top">
       <span class="seance-progress-label">EXERCICE <b id="prog-done">{{ exos_done|default(0) }}</b> / {{ exos_total|default(exos|length) }}</span>
-      <span class="seance-progress-vol label-icon" id="prog-vol"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>{{ vol_curr }} kg</span>
+      <span class="seance-progress-vol label-icon" id="prog-vol"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>{{ vol_curr }}{% if vol_prev > 0 %} / {{ vol_prev }}{% endif %} kg</span>
     </div>
     <div class="xp-bar-bg">
       <div class="xp-bar-fill" id="prog-bar" style="width: {{ ((exos_done|default(0)) / (exos_total|default(exos|length)) * 100) if exos else 0 }}%;"></div>
     </div>
   </div>
-  {% endif %}
-
-  <form class="s-c2c0d0" method="post" action="/seance/reset-session" x-data="{ c:false }">
-    <input type="hidden" name="date" value="{{ date_iso }}">
-    <input type="hidden" name="semaine" value="{{ s_act }}">
-    <input type="hidden" name="seance_name" value="{{ seance_name }}">
-    <input type="hidden" name="mode" value="{{ mode }}">
-    <input type="hidden" name="name" value="{{ seance_name }}">
-    <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cette séance</button>
-    <div class="inline-confirm" x-show="c" x-cloak>
-      <span class="confirm-label">Effacer les séries saisies ?</span>
-      <button type="button" class="btn" @click="c=false">Annuler</button>
-      <button type="submit" class="btn btn-danger">Confirmer</button>
-    </div>
-  </form>
-
-  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Récupération</h3>
-  <div class="recup-container">
-    {% for r in recup %}
-      <div class="recup-card">
-        <small>{{ r.muscle|upper }}</small><br>
-        <span class="status-dot" style="background:{{ r.color }};"></span>
-        <b style="color:{{ r.color }}; font-size:10px;">{{ r.label }}</b>
-      </div>
-    {% endfor %}
-  </div>
-
-  {% if vol_prev > 0 %}
-    <div class="vol-container">
-      <small class="label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Volume : <b>{{ vol_curr }} / {{ vol_prev }} kg</b></small>
-      <div class="xp-bar-bg">
-        <div class="xp-bar-fill{% if vol_overload %} vol-overload{% endif %}"
-             style="width: {{ (vol_ratio * 100)|round(0) }}%;"></div>
-      </div>
-    </div>
   {% endif %}
 
   <div class="alpine-fallback" style="display:none;">
@@ -155,6 +119,40 @@
   {% endif %}
 
   {% include "_seance_cardio.html" %}
+
+  {# Rangé en bas : ces deux blocs occupaient le haut de l'écran et
+     repoussaient le premier champ de saisie hors de l'écran (audit du
+     03/10, Q3). #}
+  <details class="seance-options">
+    <summary>Récupération et options de la séance</summary>
+    <div class="seance-options-corps">
+      <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Récupération</h3>
+  <div class="recup-container">
+    {% for r in recup %}
+      <div class="recup-card">
+        <small>{{ r.muscle|upper }}</small><br>
+        <span class="status-dot" style="background:{{ r.color }};"></span>
+        <b style="color:{{ r.color }}; font-size:10px;">{{ r.label }}</b>
+      </div>
+    {% endfor %}
+  </div>
+
+  <form class="s-c2c0d0" method="post" action="/seance/reset-session" x-data="{ c:false }">
+    <input type="hidden" name="date" value="{{ date_iso }}">
+    <input type="hidden" name="semaine" value="{{ s_act }}">
+    <input type="hidden" name="seance_name" value="{{ seance_name }}">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    <input type="hidden" name="name" value="{{ seance_name }}">
+    <button type="button" class="btn label-icon" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cette séance</button>
+    <div class="inline-confirm" x-show="c" x-cloak>
+      <span class="confirm-label">Effacer les séries saisies ?</span>
+      <button type="button" class="btn" @click="c=false">Annuler</button>
+      <button type="submit" class="btn btn-danger">Confirmer</button>
+    </div>
+  </form>
+
+    </div>
+  </details>
 
   {# ── Bilan de séance : note sur 5 + commentaire (skippable) ──────── #}
   <div id="finish-modal" class="exo-info-modal" style="display:none;">

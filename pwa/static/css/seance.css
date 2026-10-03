@@ -60,6 +60,17 @@
   color: var(--accent);
   margin-bottom: 2px;
 }
+/* Superset : les deux cartes se touchent et partagent un liseré, pour
+   qu'on voie d'un coup d'œil qu'elles s'enchaînent sans repos. */
+.exo-superset {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.exo-card--ss-debut, .exo-card--ss-fin { box-shadow: inset 3px 0 0 var(--accent); }
+.exo-card--ss-debut { margin-bottom: 2px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+.exo-card--ss-fin { margin-top: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; }
 .exo-variantes {
   padding: 10px 12px 12px;
   border-top: 0.5px solid var(--border-default);
@@ -176,3 +187,33 @@
   color: #fff;
   border-radius: var(--radius-md);
 }
+
+/* Écran de séance allégé (audit du 03/10, Q3) : le premier champ de saisie
+   doit tenir dans le premier écran d'un téléphone de 375 × 812. */
+.seance-retour { color: var(--accent); text-decoration: none; font-weight: 600; }
+.seance-retour:hover { text-decoration: underline; }
+details.exo-plus, details.seance-options { margin-top: 12px; border-top: 1px solid var(--border-default, rgba(255,255,255,0.08)); padding-top: 8px; }
+details.exo-plus > summary, details.seance-options > summary {
+  cursor: pointer; list-style: none; color: var(--text-2); font-size: 0.85rem;
+  min-height: 44px; display: flex; align-items: center; gap: 6px;
+}
+details.exo-plus > summary::-webkit-details-marker, details.seance-options > summary::-webkit-details-marker { display: none; }
+details.exo-plus > summary::before, details.seance-options > summary::before { content: "▸"; transition: transform .15s; }
+details[open].exo-plus > summary::before, details[open].seance-options > summary::before { transform: rotate(90deg); }
+.exo-plus-corps, .seance-options-corps { display: grid; gap: 10px; padding-top: 6px; }
+details.seance-options { margin: 18px 0 8px; }
+@media (prefers-reduced-motion: reduce) { details.exo-plus > summary::before, details.seance-options > summary::before { transition: none; } }
+.exo-repere { display: grid; gap: 4px; margin: 6px 0 2px; }
+.exo-repere:empty { display: none; }
+.exo-repere .exo-last-session { display: block; }
+.exo-repere .exo-last-session svg { vertical-align: -2px; margin-right: 6px; }
+
+/* Échauffement : replié sous le repère, une ligne quand il est fermé. */
+details.exo-echauffement { font-size: 12px; color: var(--text-2); }
+details.exo-echauffement summary { cursor: pointer; list-style: none; padding: 2px 0; }
+details.exo-echauffement summary::-webkit-details-marker { display: none; }
+details.exo-echauffement summary::before { content: "▸ "; color: var(--accent); }
+details.exo-echauffement[open] summary::before { content: "▾ "; }
+details.exo-echauffement ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; padding: 0; list-style: none; }
+details.exo-echauffement li { padding: 3px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); color: var(--text-1); font-variant-numeric: tabular-nums; }
+details.exo-echauffement small { color: var(--text-3); }

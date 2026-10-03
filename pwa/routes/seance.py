@@ -15,6 +15,7 @@ from core.data import (
 )
 from core.dates import (today_paris_str, logical_today_paris, DAYS_FR, MONTHS_FR)
 from core.limiter import limiter
+from core.rotation import planning_semaine, seance_prevue
 from core.muscu import BW_EXOS, MUSCLE_LIST, VARIANTS, auto_muscles
 from core.exercises_data import filter_exos_by_equipment, detect_isometric
 from core.body_map import get_body_polygons
@@ -105,7 +106,9 @@ def seance():
         seance_prog = prog.get("_seance_prog") or {}
         active_programmes = programmes
         prog_by_id = {p["id"]: p["name"] for p in active_programmes if isinstance(p, dict) and p.get("id")}
-        _planning = prog.get("_planning") or {}
+        # La semaine affichée, rotation comprise : le Full Body B prévu ce
+        # lundi passe devant le A.
+        _planning = planning_semaine(prog, target_date)
         _day_idx = {d: i for i, d in enumerate(DAYS_FR)}
         _s_day = {}
         for _d, _sn in _planning.items():
@@ -132,7 +135,6 @@ def seance():
         # (Choix produit : au-delà d'un jour, on n'incite plus à rattraper.)
         makeup_suggestions = []
         if date_iso == logical_today_str:
-            planning_map = prog.get("_planning", {})
             seance_names_set = set(prog_seances.keys())
             # Séances déjà faites sur une date donnée (par nom).
             done_by_date = {}
@@ -149,7 +151,7 @@ def seance():
             for offset in (1,):  # veille uniquement
                 d = logical_today - timedelta(days=offset)
                 d_name_fr = DAYS_FR[d.weekday()]
-                planned = planning_map.get(d_name_fr, "")
+                planned = seance_prevue(prog, d)
                 if not planned or planned not in seance_names_set:
                     continue
                 d_iso = d.strftime("%Y-%m-%d")
@@ -163,8 +165,7 @@ def seance():
                     d2_iso = d2.strftime("%Y-%m-%d")
                     # Un jour où cette même séance était déjà planifiée
                     # ne compte pas comme rattrapage.
-                    d2_name_fr = DAYS_FR[d2.weekday()]
-                    if planning_map.get(d2_name_fr) == planned:
+                    if seance_prevue(prog, d2) == planned:
                         continue
                     if planned in done_by_date.get(d2_iso, set()):
                         rattrape = True
@@ -205,7 +206,7 @@ def seance():
             done_name=done_name,
             seance_names=sorted(prog_seances.keys(), key=_sort_key),
             prog_seances=prog_seances,
-            planning=prog.get("_planning", {}),
+            planning=_planning,
             jours_map=prog.get("_jours", {}),
             prog_groups=groups,
             makeup_suggestions=makeup_suggestions,

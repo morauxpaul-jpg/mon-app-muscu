@@ -132,3 +132,45 @@ def test_les_standards_de_force_suivent_le_poids_de_corps(fake_db, nouveau):
     inconnu = strength.standard_for("Pecs", poids_kg=None, sexe="H")
     assert inconnu == strength.standard_for("Pecs", poids_kg=0, sexe="H"), \
         "sans poids, on doit retomber sur le seuil absolu, pas sur un ratio"
+
+
+# ── Refaire l'onboarding ne détruit rien (audit du 03/10, I6) ──────────
+
+
+def _deux_dossiers(fake):
+    fake.table("programs").insert({"user_id": USER_ID, "data": {
+        "Push": [{"name": "Développé couché", "sets": 3, "muscle": "Pecs"}],
+        "Maison A": [{"name": "Pompes", "sets": 3, "muscle": "Pecs"}],
+        "_programmes": [{"id": "p1", "name": "Salle"}, {"id": "p2", "name": "Maison"}],
+        "_seance_prog": {"Push": "p1", "Maison A": "p2"},
+        "_planning": {"Lundi": "Push", "Jeudi": "Maison A"},
+        "_badges": ["first_session"],
+    }}).execute()
+
+
+def test_refaire_lonboarding_garde_les_autres_programmes(fake_db, nouveau):
+    """« Refaire l'onboarding » puis choisir un programme remplaçait TOUT le
+    corps : séances et dossiers des autres programmes disparaissaient."""
+    _deux_dossiers(fake_db)
+    _inscription(nouveau, programme_id="fb_deb_3j")
+    data = fake_db.tables["programs"][0]["data"]
+    seances = [k for k in data if not k.startswith("_")]
+    assert "Full Body A" in seances and "Full Body B" in seances
+    # Rien n'est retiré : les deux anciens dossiers et leurs séances restent,
+    # le nouveau programme prend le planning.
+    noms = [p["name"] for p in data["_programmes"]]
+    assert noms == ["Salle", "Maison", "Full Body Débutant — Salle"]
+    assert "Push" in seances and "Maison A" in seances
+    assert data["_seance_prog"]["Push"] == "p1" and data["_seance_prog"]["Maison A"] == "p2"
+    assert data["_planning"]["Lundi"] == "Full Body A"
+    assert "Push" not in data["_planning"].values()
+    assert data["_badges"] == ["first_session"]
+    assert data["_origin"] == "fb_deb_3j"
+
+
+def test_premier_onboarding_cree_un_programme_nomme(fake_db, nouveau):
+    _inscription(nouveau, programme_id="fb_deb_3j")
+    data = fake_db.tables["programs"][0]["data"]
+    assert [p["name"] for p in data["_programmes"]] == ["Full Body Débutant — Salle"]
+    assert data["_planning"]["Lundi"] == "Full Body A"
+    assert data.get("_started_at")

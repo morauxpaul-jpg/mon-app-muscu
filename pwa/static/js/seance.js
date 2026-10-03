@@ -44,6 +44,8 @@
   // envoyer ce qui reste avant de clore la séance.
   var BLOCS = [];
   var DELAI_ENVOI = 8000;
+  // « Terminer » n'attend pas la file plus longtemps que ça.
+  var DELAI_FIN = 6000;
 
   function lireChamps(form) {
     var champs = {};
@@ -242,6 +244,8 @@
       isBwBase: data.is_bw_base || false,
       get showWeight() { return !this.isBwBase || this.variant === "Lesté"; },
       restSeconds: data.rest_seconds || 90,
+      supersetAvec: data.superset_avec || "",
+      supersetDe: data.superset_de || "",
       restPrescrit: !!data.rest_prescrit,
       targetReps: data.target_reps || "",
       rpeOptions: ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"],
@@ -399,8 +403,8 @@
       // ouverte, avec deux champs larges. Sur 375 px, les six colonnes du
       // tableau donnaient 67 px à Reps, 70 à Poids et 25 au sélecteur de RPE.
       //
-      // C'est de l'AFFICHAGE : `serializedSets()` envoie toujours toutes les
-      // séries, et « Enregistrer » reste ce qui écrit en base.
+      // Le repli est de l'AFFICHAGE : `serializedSets()` envoie toujours
+      // toutes les séries. Ce qui écrit, c'est « Série faite » (envoi partiel).
       faits: [],
       optionsDe: -1,
 
@@ -422,7 +426,38 @@
         }
         return -1;
       },
+      // Les reps que le champ affiche en gris : la suggestion, sinon le bas
+      // de la fourchette du programme (« 8-12 » → 8). 0 si rien à proposer.
+      _repsProposees: function () {
+        var s = this.suggestion;
+        if (s && Number(s.reps) > 0) return Number(s.reps);
+        var m = /\d+/.exec(String(this.targetReps || ""));
+        return m ? parseInt(m[0], 10) : 0;
+      },
+
       serieFaite: function (i) {
+        var s = this.sets[i];
+        // Le champ affichait l'objectif en gris ; toucher « Série faite »
+        // sans taper repliait la série avec « — » et n'enregistrait RIEN
+        // (audit du 03/10, I2). Chez Hevy ou Strong, la valeur grisée est
+        // celle qu'on valide : on fait de même. Sans valeur à proposer, on
+        // ne prétend pas que la série est faite.
+        if (s && !this._estRemplie(s)) {
+          var reps = this._repsProposees();
+          var sansPoids = this.showWeight && (s.poids === "" || s.poids == null);
+          var poidsPropose = this.suggestion && Number(this.suggestion.poids) > 0
+            ? Number(this.suggestion.poids) : 0;
+          // Une charge qu'on n'a ni tapée ni vue proposée ne s'invente pas :
+          // « 5 × 0 kg » au développé couché fausserait records et suggestion.
+          if (!(reps > 0) || (sansPoids && !poidsPropose)) {
+            this.etat = "vide";
+            toast(sansPoids ? "Indique tes répétitions et ta charge avant de valider."
+                            : "Indique tes répétitions avant de valider la série.", "error");
+            return;
+          }
+          s.reps = reps;
+          if (sansPoids) s.poids = poidsPropose;
+        }
         if (this.faits.indexOf(i) < 0) this.faits.push(i);
         this.optionsDe = -1;
         // Le repos démarrait sur la frappe d'un champ ; il démarre maintenant
@@ -468,13 +503,16 @@
 
       onSetFilled: function (i) {
         markSessionActive();
-        if (!CONFIG.autoRestTimer) return;
         var cur = this.sets[i];
         if (!cur) return;
         if (!(cur.reps !== "" && cur.reps != null && Number(cur.reps) > 0)) return;
         if (this._firedSets.indexOf(i) >= 0) return;
         this._firedSets.push(i);
-        this.startRestTimer();
+        // Superset : pas de repos entre les deux exercices. Après le premier,
+        // on passe au second ; après le second, repos, puis retour au premier.
+        if (this.supersetAvec) { allerAuPartenaire(this._carte(), 1); return; }
+        this.startRestTimer();          // ne fait rien si le chrono auto est coupé
+        if (this.supersetDe) allerAuPartenaire(this._carte(), -1);
       },
 
       // Le repos prescrit par le programme (180 s au squat) passe avant le
@@ -516,6 +554,7 @@
           ok: "Enregistré",
           attente: "Gardé sur l'appareil — envoi au retour du réseau",
           erreur: "Pas enregistré — touche « Enregistrer » pour réessayer",
+          vide: "Indique tes répétitions (et ta charge) avant de valider",
         }[this.etat] || "";
       },
 
@@ -594,7 +633,7 @@
         // « Enregistrer » ou dernière série faite : on referme la carte et on
         // ouvre la suivante — l'utilisateur n'a rien à chercher.
         var fini = mode === "complet" || (!this.isIso && this.indexCourant() === -1);
-        if (mode === "complet") this.startRestTimer();
+        if (mode === "complet" && !this.supersetAvec) this.startRestTimer();
         if (this.completed && fini) {
           this.open = false;
           openNextPending(card);
@@ -750,6 +789,24 @@
       },
     };
   };
+
+  // Superset : ouvre la carte voisine (sens 1 = suivante, -1 = précédente)
+  // si elle n'est pas terminée, et l'amène à l'écran.
+  function allerAuPartenaire(card, sens) {
+    if (!card) return;
+    var autre = sens > 0 ? card.nextElementSibling : card.previousElementSibling;
+    while (autre && !autre.classList.contains("exo-card")) {
+      autre = sens > 0 ? autre.nextElementSibling : autre.previousElementSibling;
+    }
+    if (!autre || autre.classList.contains("done")) return;
+    try {
+      var comp = window.Alpine && window.Alpine.$data(autre);
+      if (comp) comp.open = true;
+    } catch (e) {}
+    setTimeout(function () {
+      autre.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  }
 
   // Ouvre le premier exercice non terminé après celui qu'on vient de valider.
   function openNextPending(card) {
@@ -908,7 +965,12 @@
           }
           var Q = window.OfflineQueue;
           if (Q && Q.pending() > 0 && navigator.onLine) {
-            return Q.sync().then(function () { terminer(Q.pending() > 0); });
+            // On tente de vider la file, mais on n'attend pas plus de
+            // quelques secondes : ce qui reste part derrière le bilan, dans
+            // l'ordre, au retour du réseau (audit du 03/10, I3).
+            var delai = new Promise(function (r) { setTimeout(r, DELAI_FIN); });
+            return Promise.race([Q.sync(), delai])
+              .then(function () { terminer(Q.pending() > 0); });
           }
           terminer(!navigator.onLine || (Q && Q.pending() > 0));
         });

@@ -38,6 +38,7 @@ from routes.parrainage import bp as parrainage_bp
 from routes.push import bp as push_bp
 
 from core import db as core_db
+from core.admin_acces import est_admin
 
 # Logging structuré — remplace print() un peu partout dans le code.
 logging.basicConfig(
@@ -437,8 +438,6 @@ def _inject_user():
     premium = bool(uid) and bool(session.get("is_vip", False))
     premium_full = bool(uid) and bool(session.get("is_vip_full", False))
     trial = premium and not premium_full
-    email = (session.get("email") or "").strip().lower()
-    admin_emails = {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS", "") or "").split(",") if e.strip()}
     return {
         "current_user_email": session.get("email", ""),
         "is_authenticated": bool(uid),
@@ -447,7 +446,7 @@ def _inject_user():
         "is_vip_full": premium_full,
         "is_trial": trial,
         "trial_left": core_db.essai_restant(session.get("vip_until")) if trial else None,
-        "is_admin": bool(email) and email in admin_emails,
+        "is_admin": est_admin(session),
         "is_native": _is_native_app(),
         "hide_billing": _hide_native_billing(),
         "csrf_token": _get_or_create_csrf() if uid else "",

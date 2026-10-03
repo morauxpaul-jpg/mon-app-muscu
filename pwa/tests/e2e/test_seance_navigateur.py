@@ -221,3 +221,111 @@ def test_une_page_deja_vue_souvre_meme_si_le_reseau_ne_repond_pas(page, serveur)
     page.wait_for_selector(".serie-valider", timeout=15000)
     assert time.time() - debut < 8, "la copie gardée arrive après le délai, pas après l'abandon"
     page.context.unroute("**/seance?**")
+
+
+def test_terminer_ne_reste_pas_fige_derriere_la_file(page, serveur):
+    """Audit du 03/10, R1 : une série en file, le réseau ne répond toujours
+    pas, et l'on touche « Terminer ». Le rejeu de la file n'avait aucun
+    délai : le bouton restait sur « Enregistrement… » indéfiniment."""
+    page.context.route("**/seance/save-exo", lambda route: None)
+    _serie_faite(page, 5, 100)
+    page.locator("#exo-anchor-0 .exo-etat").filter(has_text="Gardé sur l'appareil").wait_for(timeout=12000)
+    debut = time.time()
+    _terminer(page)
+    page.wait_for_url("**/accueil**", timeout=25000)
+    assert time.time() - debut < 20, "« Terminer » a fini par rendre la main, mais trop tard"
+    # Rien n'est perdu : la série et le bilan attendent, dans l'ordre.
+    file = page.evaluate("JSON.parse(localStorage.getItem('muscu_offline_queue'))")
+    assert [i["url"].rsplit("/", 1)[-1] for i in file] == ["save-exo", "finish"]
+
+
+# ── La valeur grisée (audit du 03/10, R2) ────────────────────────
+
+
+def test_serie_faite_sans_taper_enregistre_la_valeur_proposee(page, serveur):
+    """Le champ Reps affiche l'objectif « 5 » en gris. Toucher « Série faite »
+    sans taper repliait la série avec « — » et n'écrivait rien."""
+    carte = page.locator("#exo-anchor-0")
+    assert carte.get_by_label("Répétitions série 1", exact=True).get_attribute("placeholder") == "5"
+    carte.get_by_label("Poids série 1", exact=True).fill("60")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: _series(serveur) == [(1, 5, 60.0)])
+
+
+def test_sans_charge_ni_reps_la_serie_nest_pas_pretendue_faite(page, serveur):
+    carte = page.locator("#exo-anchor-0")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    time.sleep(0.8)
+    assert _series(serveur) == []
+    assert "Indique tes répétitions" in carte.locator(".exo-etat").inner_text()
+    # La série 1 est toujours celle qu'on remplit.
+    assert page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).indexCourant()") == 0
+
+
+# ── Le premier écran (audit du 03/10, Q3) ────────────────────────
+
+
+def test_la_premiere_serie_tient_dans_le_premier_ecran(page, serveur):
+    """Le premier champ de reps était à 836 px sur un compte neuf (sous
+    l'écran de 812 px) et à 1 355 px avec un historique : il fallait défiler
+    avant de noter quoi que ce soit. Le champ ET « Série faite » doivent être
+    visibles au-dessus de la barre de navigation, sans défiler."""
+    page.evaluate("window.scrollTo(0, 0)")
+    pos = page.evaluate("""() => {
+      const s = document.querySelector('#exo-anchor-0 .serie-encours');
+      const nav = document.querySelector('.bottom-nav').getBoundingClientRect().top;
+      return {champ: s.querySelector('input').getBoundingClientRect().top,
+              bouton: s.querySelector('.serie-valider').getBoundingClientRect().bottom, nav};
+    }""")
+    assert pos["champ"] > 0 and pos["bouton"] <= pos["nav"], pos
+
+
+def test_case_alterner_enregistre_la_rotation(serveur, navigateur):
+    """Page Programme : cocher « Alterner » enregistre le cycle, le décocher
+    l'efface (core/rotation.py)."""
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');")
+    pg = ctx.new_page()
+    pg.goto(serveur + "/test-vierge?ab=1")
+    pg.goto(serveur + "/programme")
+    pg.select_option('#planning select[data-day="Mercredi"]', "Pull")
+    case = pg.locator(".rotation-choix input")
+    case.check()
+    pg.wait_for_timeout(1200)                     # sauvegarde différée (500 ms)
+
+    def blob():
+        with urllib.request.urlopen(serveur + "/test-programme") as r:
+            return json.loads(r.read())
+
+    assert blob()["_rotation"] == ["Push", "Pull"]
+    assert "Push → Pull" in pg.locator(".rotation-aide").inner_text()
+    case.uncheck()
+    pg.wait_for_timeout(1200)
+    assert "_rotation" not in blob()
+    ctx.close()
+
+
+def test_superset_enchaine_sans_repos_puis_repos_apres_le_second(serveur, navigateur):
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script(
+        "localStorage.setItem('tutoSeen','true');"
+        "localStorage.setItem('tutoSeanceSeen','true');")
+    pg = ctx.new_page()
+    pg.goto(serveur + "/test-vierge?ss=1")
+    pg.goto(serveur + "/seance?mode=prefaite&name=Push")
+    pg.wait_for_selector(".serie-valider")
+    pg.evaluate("window.__repos = 0; var s = RestTimer.start;"
+                "RestTimer.start = function () { window.__repos++; return s.apply(this, arguments); }; 0")
+    assert "enchaîne avec Développé militaire" in pg.locator("#exo-anchor-0").inner_text()
+
+    _serie_faite(pg, 5, 60)
+    second = "Alpine.$data(document.querySelector('#exo-anchor-1'))"
+    assert _attendre(lambda: pg.evaluate(second + ".open"), 5)
+    assert pg.evaluate("window.__repos") == 0               # pas de repos entre les deux
+
+    carte = pg.locator("#exo-anchor-1")
+    carte.get_by_label("Répétitions série 1", exact=True).fill("10")
+    carte.get_by_label("Poids série 1", exact=True).fill("30")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: pg.evaluate("window.__repos") == 1, 5)
+    ctx.close()

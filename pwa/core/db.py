@@ -42,12 +42,12 @@ from core.db_base import (
 
 # ── les séries enregistrées ─────────────────────────────────────
 from core.db_historique import (
-    append_exo_rows, delete_exo_rows, delete_session_rows, get_hist, list_history_shape,
+    ajouter_lignes, append_exo_rows, delete_exo_rows, delete_session_rows, get_hist, list_history_shape,
     rename_exercise_rows, rename_seance_rows, replace_exo_rows,
     save_hist, _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _nettoyer_ligne, _norm_date,
     _reporter_dans_le_cache,
-    _row_to_supabase
+    _row_to_supabase, _VERROUS, _verrou, _replace_exo_rows, _append_exo_rows
 )
 
 # ── le programme et son planning ────────────────────────────────
@@ -81,7 +81,7 @@ from core.db_push import (
     delete_push_subscription, get_inactive_user_ids, get_inactive_users, list_all_programs,
     list_newsletter_emails, list_push_subscriptions, list_push_subscriptions_for_users,
     mark_reactivation_sent, save_push_subscription, set_newsletter_optin,
-    users_trained_on, _last_activity_by_user, _row_to_subscription
+    users_trained_on, history_between_for_users, _last_activity_by_user, _row_to_subscription
 )
 
 # ── les conversations du coach ──────────────────────────────────
@@ -101,6 +101,6 @@ from core.db_admin import (
 
 # ── les bilans de séance ────────────────────────────────────────
 from core.db_bilans import (
-    get_session_note, list_session_notes, upsert_session_note,
+    get_session_note, list_session_notes, rename_session_notes, upsert_session_note,
     _mark_duration_unsupported, _session_duration_supported, _session_note_columns
 )

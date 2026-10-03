@@ -41,6 +41,7 @@ DEFAULT_SETTINGS = {
     "show_previous_weeks": 2,
     "notifications": False,
     "reminder_hour": 18,       # heure du rappel de séance (0 = aucun)
+    "recap_hebdo": True,       # récap de la semaine le dimanche (core/recap.py)
 }
 
 
@@ -372,6 +373,7 @@ def update_settings():
     from core.reminders import clean_hour
     s["reminder_hour"] = clean_hour(request.form.get("reminder_hour"),
                                     s.get("reminder_hour", 18))
+    s["recap_hebdo"] = request.form.get("recap_hebdo") == "on"
     # Le pré-remplissage des charges n'est PAS une option payante : c'est la
     # fonction la plus utilisée de la saisie. La couper aux comptes gratuits
     # dès qu'ils touchaient un réglage ne faisait pas payer, ça faisait partir
@@ -540,6 +542,10 @@ def _sanitize_program(raw: dict) -> dict:
     raw_planning = raw.get("_planning") if isinstance(raw.get("_planning"), dict) else {}
     out["_planning"] = {d: (raw_planning.get(d) if raw_planning.get(d) in names else "")
                         for d in _DAYS}
+    from core.rotation import rotation_nettoyee
+    rotation = rotation_nettoyee(raw.get("_rotation"), names)
+    if rotation:
+        out["_rotation"] = rotation
     for key in ("_name", "_origin", "_started_at"):
         val = raw.get(key)
         if isinstance(val, str) and val.strip():
@@ -666,3 +672,114 @@ def import_data():
     return redirect(url_for("gestion.gestion") + "?import=ok")
 
 
+
+
+# ── Import de l'historique Hevy / Strong ─────────────────────────
+# Pour tout le monde : c'est ce qui permet de venir sans repartir de zéro.
+# Même parcours que l'import Strava : déposer, voir ce qui entrerait,
+# valider. Rien n'est écrit avant la validation, rien n'est jamais effacé.
+
+MAX_IMPORT_MUSCU_OCTETS = 4 * 1024 * 1024   # sous MAX_CONTENT_LENGTH (5 Mo)
+MAX_IMPORT_MUSCU_SEANCES = 3000
+
+
+@bp.route("/gestion/import-muscu")
+def import_muscu_page():
+    return render_template("import_muscu.html", active="plus", etape="depot")
+
+
+@bp.route("/gestion/import-muscu", methods=["POST"])
+@limiter.limit("10 per minute")
+def import_muscu_apercu():
+    from core.import_muscu import compacter, lire_export, marquer_doublons
+
+    def depot(erreur):
+        return render_template("import_muscu.html", active="plus", etape="depot", erreur=erreur)
+
+    fichier = request.files.get("fichier")
+    if not fichier or not fichier.filename:
+        return depot("Choisis le fichier .csv exporté depuis Hevy ou Strong.")
+    brut = fichier.read(MAX_IMPORT_MUSCU_OCTETS + 1)
+    if len(brut) > MAX_IMPORT_MUSCU_OCTETS:
+        return depot("Fichier trop volumineux (plus de 4 Mo).")
+    try:
+        seances, rapport = lire_export(brut)
+    except Exception as e:
+        logger.warning("import muscu illisible : %s", type(e).__name__)
+        return depot("Fichier illisible. Envoie le .csv tel qu'exporté.")
+    if not seances and not rapport["lignes"]:
+        return depot("Ce fichier n'a pas la forme d'un export Hevy ou Strong : "
+                     "aucune colonne de date, d'exercice et de répétitions reconnue.")
+
+    try:
+        seances = marquer_doublons(seances, get_hist())
+    except Exception as e:
+        logger.error("import muscu : historique illisible (%s)", e)
+        return depot("Ton historique n'a pas pu être lu. Réessaie dans un instant.")
+    a_importer = [s for s in seances if not s["deja"]][:MAX_IMPORT_MUSCU_SEANCES]
+    renommes = sorted((src, nom) for src, nom in rapport["exercices"].items() if src != nom)
+    return render_template(
+        "import_muscu.html", active="plus", etape="apercu",
+        a_importer=a_importer, rapport=rapport, renommes=renommes[:60],
+        nb_deja=sum(1 for s in seances if s["deja"]),
+        nb_series=sum(len(e["series"]) for s in a_importer for e in s["exercices"]),
+        charge=json.dumps(compacter(a_importer), ensure_ascii=False, separators=(",", ":")),
+    )
+
+
+@bp.route("/gestion/import-muscu/confirmer", methods=["POST"])
+@limiter.limit("5 per minute")
+def import_muscu_confirmer():
+    from core.data import ajouter_lignes
+    from core.import_muscu import lignes_historique, marquer_doublons
+    try:
+        charge = json.loads(request.form.get("charge") or "[]")
+    except (TypeError, ValueError):
+        charge = []
+    lignes = lignes_historique(charge[:MAX_IMPORT_MUSCU_SEANCES] if isinstance(charge, list) else [],
+                               request.form.get("source") or "")
+    # Revérifie les doublons : un double clic ou un retour arrière ne doit
+    # pas écrire deux fois la même séance.
+    par_seance = {}
+    for l in lignes:
+        par_seance.setdefault((l["Date"], l["Séance"]), []).append(l)
+    try:
+        hist = get_hist()
+    except Exception:
+        hist = []
+    connues = {(s["date"], s["seance"]) for s in marquer_doublons(
+        [{"date": d, "seance": n} for d, n in par_seance], hist) if s["deja"]}
+
+    # Écrit par paquets de séances entières : un lot qui échoue ne laisse
+    # jamais une séance à moitié écrite, que le réimport croirait complète.
+    nb_seances = nb_ecrites = 0
+    paquet, n_paquet = [], 0
+    erreur = ""
+
+    def ecrire():
+        nonlocal nb_seances, nb_ecrites, paquet, n_paquet
+        if paquet:
+            nb_ecrites += ajouter_lignes([l for s in paquet for l in s])
+            nb_seances += len(paquet)
+        paquet, n_paquet = [], 0
+
+    try:
+        for cle, ls in par_seance.items():
+            if cle in connues:
+                continue
+            paquet.append(ls)
+            n_paquet += len(ls)
+            if n_paquet >= 400:
+                ecrire()
+        ecrire()
+    except Exception as e:
+        logger.error("import muscu : écriture interrompue (%s)", e)
+        erreur = ("L'import s'est interrompu. Relance-le avec le même fichier : "
+                  "les séances déjà entrées seront reconnues et ne seront pas doublées.")
+    try:
+        from core.analytics import track
+        track("import_muscu", {"source": request.form.get("source") or "", "seances": nb_seances})
+    except Exception:
+        pass
+    return render_template("import_muscu.html", active="plus", etape="fini",
+                           nb_seances=nb_seances, nb_ecrites=nb_ecrites, erreur=erreur)

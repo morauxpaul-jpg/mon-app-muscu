@@ -43,10 +43,14 @@ def upsert_session_note(user_id: str, date_str: str, seance: str,
         "user_id": user_id,
         "date": _norm_date(date_str),
         "seance": seance,
-        "rating": int(rating) if rating else None,
-        "comment": (comment or "")[:500] or None,
         "updated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
     }
+    # Seuls les champs fournis s'écrivent. Terminer une 2e fois en « Passer »
+    # (durée seule) remettait note et commentaire à vide (audit du 03/10, M1).
+    if rating:
+        payload["rating"] = int(rating)
+    if comment and comment.strip():
+        payload["comment"] = comment[:500]
     if duration_min and _session_duration_supported:
         payload["duration_min"] = int(duration_min)
     try:
@@ -126,3 +130,13 @@ def list_session_notes(user_id: str) -> list[dict]:
     return [{"date": str(r.get("date") or "")[:10], "seance": r.get("seance") or "",
              "rating": r.get("rating"), "comment": r.get("comment"),
              "duration_min": r.get("duration_min")} for r in rows]
+
+
+def rename_session_notes(user_id: str, old_name: str, new_name: str) -> int:
+    """Suit le renommage d'une séance : sans lui, ses bilans restaient sous
+    l'ancien nom, introuvables (audit du 03/10, M2)."""
+    if not old_name or old_name == new_name:
+        return 0
+    resp = (get_client().table("session_notes").update({"seance": new_name})
+            .eq("user_id", user_id).eq("seance", old_name).execute())
+    return len(resp.data or [])

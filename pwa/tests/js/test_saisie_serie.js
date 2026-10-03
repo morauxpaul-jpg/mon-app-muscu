@@ -98,6 +98,67 @@ module.exports = ({ test, assert }) => {
     assert.equal(env.calls.length, 0);
   });
 
+  // ── La valeur grisée est celle qu'on valide (audit du 03/10, I2) ──
+  // Le champ Reps affiche l'objectif en gris. Toucher « Série faite » sans
+  // taper repliait la série avec « — » et n'enregistrait rien.
+
+  test('sans rien à proposer, une série vide n’est pas repliée', async () => {
+    const { env, b } = blocBranche([S(), S()]);
+    b.serieFaite(0);
+    await env.settle();
+    assert.ok(!b.estFait(0), 'elle reste ouverte');
+    assert.equal(b.etat, 'vide');
+    assert.ok(b.etatTexte().indexOf('répétitions') >= 0);
+  });
+
+  test('reps proposées mais aucune charge : on demande la charge', async () => {
+    const env = createEnv({ scripts: ['seance.js'] });
+    const b = env.window.exoBlock(0, { base: 'Développé couché', exo_index: 0,
+      variant: 'Standard', target_reps: '5', sets: [S(), S()] });
+    b._majFaits();
+    b.serieFaite(0);
+    assert.ok(!b.estFait(0));
+    assert.equal(b.sets[0].reps, '', 'rien n’est inventé');
+  });
+
+  test('la suggestion affichée en gris est enregistrée', async () => {
+    const { env, b } = blocBranche([S(), S()]);
+    b.suggestion = { reps: 9, poids: 82.5 };
+    b.serieFaite(0);
+    await b._enCours;
+    assert.equal(env.calls.length, 1);
+    const envoye = JSON.parse(new URLSearchParams(env.calls[0].body).get('sets_json'));
+    assert.equal(envoye[0].reps, 9);
+    assert.equal(envoye[0].poids, 82.5);
+    assert.ok(b.estFait(0));
+  });
+
+  test('sans suggestion, le bas de la fourchette du programme', async () => {
+    const env = createEnv({ scripts: ['seance.js'] });
+    const b = env.window.exoBlock(0, { base: 'Squat', exo_index: 0, variant: 'Standard',
+      target_reps: '8-12', sets: [S('', 60), S()] });
+    b._majFaits();
+    b.serieFaite(0);
+    assert.equal(b.sets[0].reps, 8);
+    assert.equal(b.sets[0].poids, 60, 'un poids déjà saisi n’est pas remplacé');
+  });
+
+  test('une valeur tapée l’emporte sur la proposition', () => {
+    const b = bloc([S(6, 100), S()]);
+    b.suggestion = { reps: 9, poids: 82.5 };
+    b.serieFaite(0);
+    assert.equal(b.sets[0].reps, 6);
+    assert.equal(b.sets[0].poids, 100);
+  });
+
+  test('au poids du corps, la proposition n’ajoute pas de kilos', () => {
+    const b = bloc([S(), S()], { is_bw_base: true });
+    b.suggestion = { reps: 12, poids: 0 };
+    b.serieFaite(0);
+    assert.equal(b.sets[0].reps, 12);
+    assert.equal(b.sets[0].poids, '');
+  });
+
   test('hors ligne, la série part dans la file, une entrée par exercice', async () => {
     const { env, b } = blocBranche([S(5, 100), S(5, 100), S()], { online: false });
     b.serieFaite(0);
@@ -189,6 +250,7 @@ module.exports = ({ test, assert }) => {
 
   test('valider une série ouvre la suivante', () => {
     const b = bloc([S(8, 80), S(), S()]);
+    b.sets[1].reps = 8;
     b.serieFaite(1);
     // `faits` vient du bac à sable : son Array.prototype n'est pas celui
     // de Node, donc deepEqual le refuserait tel quel.

@@ -66,6 +66,10 @@ def replace_exo_rows(date_str, seance, exercice, new_rows):
     return db.replace_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
 
+def ajouter_lignes(rows):
+    return db.ajouter_lignes(_uid(), rows)
+
+
 def append_exo_rows(date_str, seance, exercice, new_rows):
     return db.append_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
@@ -181,6 +185,10 @@ def get_session_note(date_str, seance):
 
 def list_session_notes():
     return db.list_session_notes(_uid())
+
+
+def rename_session_notes(old_name, new_name):
+    return db.rename_session_notes(_uid(), old_name, new_name)
 
 
 def list_all_nutrition():

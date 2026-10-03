@@ -293,6 +293,10 @@
         <p class="s-fdee3b">
           Envoyé seulement si la séance du jour n'est pas encore faite.
         </p>
+        <label class="muscle-check s-2e0efa">
+          <input type="checkbox" name="recap_hebdo" {% if settings.recap_hebdo %}checked{% endif %}>
+          <span>Récap de ma semaine le dimanche à 19 h</span>
+        </label>
       </div>
       <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
@@ -355,6 +359,13 @@
     {% else %}
     <p class="s-08e11e">Réimporter un fichier : <a class="s-8b872f" href="/premium">avec PRO</a>.</p>
     {% endif %}
+  </div>
+
+  {# Venir d'une autre app sans repartir de zéro : pour tout le monde. #}
+  <div class="card">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Venir de Hevy ou Strong</h3>
+    <p class="s-434391">Importe ton historique de musculation (séances, séries, charges, RPE). Rien n'est effacé, rien n'est doublé.</p>
+    <a href="/gestion/import-muscu" class="btn label-icon s-b8db1d"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer un export CSV</a>
   </div>
 
   <div class="card s-040ce7">

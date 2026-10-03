@@ -104,6 +104,7 @@ def get_prog(user_id: str) -> dict:
 # conservée par défaut.
 PROG_BODY_KEYS = frozenset({
     "_planning",       # jour de semaine → nom de séance
+    "_rotation",       # ordre du cycle des séances (core/rotation.py)
     "_name",           # nom du programme
     "_origin",         # id catalogue d'origine
     "_programmes",     # dossiers de programmes

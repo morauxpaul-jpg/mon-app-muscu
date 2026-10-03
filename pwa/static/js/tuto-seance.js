@@ -39,7 +39,7 @@
     {
       target: '#exo-anchor-0 .serie-encours input[inputmode="numeric"]',
       title: "Les répétitions",
-      text: "Saisis le nombre de répétitions de la série. Exemple : 10.",
+      text: "Le chiffre en gris est ton objectif. Fait tel quel ? Touche « Série faite » directement. Sinon, tape ce que tu as vraiment fait.",
       onEnter: function (cb) { openFirstExo(cb); },
     },
     {

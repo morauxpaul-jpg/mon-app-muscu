@@ -106,15 +106,17 @@ def _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2):
     Push 2) garde son historique visible. Même repli que _last_session_sets."""
     f_h = [r for r in hist if _norm(r["Exercice"]) == _norm(exo_final) and _norm(r["Séance"]) == _norm(seance)]
     cross_session = False
-    if not any(r["Semaine"] < s_act and r["Poids"] > 0 for r in f_h):
+    # « Faite » = au moins une répétition. Filtrer sur la charge cachait tout
+    # l'historique des exercices au poids du corps (audit du 03/10, M3).
+    if not any(r["Semaine"] < s_act and r["Reps"] > 0 for r in f_h):
         alt = [r for r in hist if _norm(r["Exercice"]) == _norm(exo_final)]
-        if any(r["Semaine"] < s_act and r["Poids"] > 0 for r in alt):
+        if any(r["Semaine"] < s_act and r["Reps"] > 0 for r in alt):
             f_h = alt
             cross_session = True
 
     hist_weeks_all = sorted({r["Semaine"] for r in f_h if r["Semaine"] < s_act})
     hist_weeks = [w for w in hist_weeks_all
-                  if any(r["Semaine"] == w and r["Poids"] > 0 for r in f_h)]
+                  if any(r["Semaine"] == w and r["Reps"] > 0 for r in f_h)]
     # Les séances manquées ne concernent que le créneau courant : on les ignore
     # quand l'historique affiché provient d'autres séances.
     missed = set() if cross_session else {
@@ -132,7 +134,7 @@ def _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2):
         if w in missed and w not in weeks_to_show:
             out.append({"week": w, "missed": True, "rows": [], "cross_session": False})
         else:
-            rows = [r for r in f_h if r["Semaine"] == w and r["Poids"] > 0]
+            rows = [r for r in f_h if r["Semaine"] == w and r["Reps"] > 0]
             rows.sort(key=lambda r: int(r["Série"] or 0))
             out.append({"week": w, "missed": False, "rows": rows, "cross_session": cross_session})
     return out
@@ -195,8 +197,25 @@ def _recent_sessions_sets(hist, exo_final, seance, date_str, n=2):
         rows = [r for r in matches if r["Date"] == d]
         rows.sort(key=lambda r: int(r["Série"] or 0))
         out.append([{"reps": int(r["Reps"]), "poids": float(r["Poids"]),
-                     "rpe": parse_rpe(r.get("Remarque"))} for r in rows])
+                     "rpe": _rpe_de(r)} for r in rows])
     return out
+
+
+def _rpe_de(r):
+    """RPE d'une ligne d'historique : la colonne dédiée (migration v34), où la
+    saisie l'écrit, sinon l'ancien jeton « @RPE8 » des remarques.
+
+    La suggestion ne lisait que le jeton. Or depuis la v34 la saisie n'écrit
+    plus le RPE dans la remarque : tout RPE saisi était ignoré, et 3 × 8 à
+    RPE 10 donnait « vise 9 reps » au lieu de « consolide » (audit du 03/10,
+    I1)."""
+    rpe = r.get("RPE")
+    if rpe is None or rpe == "":
+        return parse_rpe(r.get("Remarque"))
+    try:
+        return float(rpe)
+    except (TypeError, ValueError):
+        return parse_rpe(r.get("Remarque"))
 
 
 def _last_session_sets(hist, exo_final, seance, date_str):

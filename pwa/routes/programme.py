@@ -17,6 +17,7 @@ from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
                        rename_seance_rows)
 from core.dates import DAYS_FR
 from core.limiter import limiter
+from core.rotation import rotation_de, rotation_nettoyee
 from core.muscu import MUSCLE_LIST, auto_muscles
 from core import catalog
 from core.programmes_dossiers import (ensure_programmes, fusionner_dans_le_programme_en_cours,
@@ -46,6 +47,10 @@ def _exo_entry(name, sets, muscle, src=None):
            "rest_seconds": max(30, min(300, rest))}
     if reps:
         out["reps"] = reps
+    # Superset : cet exercice s'enchaîne avec le suivant, sans repos entre
+    # les deux (le chrono part après le second).
+    if src.get("superset") is True:
+        out["superset"] = True
     return out
 
 
@@ -149,12 +154,14 @@ def programme():
     ui_state = {
         "name": _program_display_name(prog),
         "planning": dict(prog["_planning"]),
+        "rotation": rotation_de(prog),
         "seances": {
             sname: [
                 {"name": e.get("name", ""), "sets": int(e.get("sets") or 3),
                  "muscle": e.get("muscle") or "Autre",
                  "reps": e.get("reps") or "",
-                 "rest_seconds": int(e.get("rest_seconds") or 90)}
+                 "rest_seconds": int(e.get("rest_seconds") or 90),
+                 "superset": e.get("superset") is True}
                 for e in exos
             ]
             for sname, exos in seances
@@ -248,6 +255,13 @@ def save_state():
 
     if new_name:
         new_prog["_name"] = new_name
+
+    # Rotation : celle envoyée par l'éditeur (case « Alterner »), sinon
+    # l'existante — limitée aux séances qui existent encore.
+    raw_rotation = data["rotation"] if "rotation" in data else old.get("_rotation")
+    rotation = rotation_nettoyee(raw_rotation, valid_names)
+    if rotation:
+        new_prog["_rotation"] = rotation
 
     # _origin et _started_at appartiennent au corps du programme mais ne sont
     # pas envoyés par l'éditeur : on les reprend tels quels.
@@ -374,6 +388,10 @@ def _renommer_partout(prog, ancien, nouveau):
             if seance == ancien:
                 planning[jour] = nouveau
 
+    rotation = prog.get("_rotation")
+    if isinstance(rotation, list):
+        prog["_rotation"] = [nouveau if s == ancien else s for s in rotation]
+
     for calque in ("_extras", "_seance_order", "_libre_draft",
                    "_session_notes", "_substituts"):
         store = prog.get(calque)
@@ -419,6 +437,11 @@ def rename_seance():
         logger.error("rename_seance historique FAILED user=%s: %s",
                      getattr(g, "user_id", "?"), e)
         return jsonify({"ok": False, "error": "historique"}), 500
+    try:
+        from core.data import rename_session_notes
+        rename_session_notes(ancien, nouveau)
+    except Exception as e:  # table absente (v34) : l'historique est déjà suivi
+        logger.warning("rename_seance bilans FAILED: %s", e)
     return jsonify({"ok": True, "series": lignes})
 
 
@@ -515,6 +538,8 @@ def export_program():
         "seances": seances,
         "_planning": prog.get("_planning", {}),
     }
+    if rotation_de(prog):
+        payload["_rotation"] = rotation_de(prog)
     buf = io.BytesIO(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
     return send_file(
         buf,
@@ -578,8 +603,10 @@ def import_program():
     planning = new_prog.pop("_planning")
     nom = str(data.get("name") or "Programme importé")[:80]
     # Programme importé = plus aucune origine catalogue valide (pas d'_origin).
+    rotation = rotation_nettoyee(data.get("_rotation"), new_prog)
     save_prog_body(remplacer_programme_en_cours(old, new_prog, planning, nom,
-                                                today_paris_str()))
+                                                today_paris_str(),
+                                                {"_rotation": rotation} if rotation else None))
     return redirect(url_for("programme.programme") + "?program_changed=1")
 
 
@@ -628,7 +655,7 @@ def change_program():
         save_prog_body(fusionner_dans_le_programme_en_cours(old, seances))
     else:
         from core.dates import today_paris_str
-        extra = {k: built[k] for k in ("_origin", "_cardio") if k in built}
+        extra = {k: built[k] for k in ("_origin", "_cardio", "_rotation") if k in built}
         save_prog_body(remplacer_programme_en_cours(
             old, seances, built.get("_planning") or {}, src["title"],
             today_paris_str(), extra))

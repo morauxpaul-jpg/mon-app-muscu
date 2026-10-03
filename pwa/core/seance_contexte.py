@@ -16,7 +16,7 @@ pour que chaque corps de fonction reste comparable au caractère près.
 import logging
 
 from core.exercises_data import detect_isometric, get_exercise_info, variantes
-from core.muscu import BW_EXOS, auto_muscles, get_base_name
+from core.muscu import BW_EXOS, auto_muscles, est_a_la_barre, get_base_name, series_echauffement
 from core.seance_historique import (_all_used_variants, _best_record, _exo_completed,
                                     _exo_curr_rows, _extract_variant, _last_session_sets,
                                     _last_variant, _norm, _previous_weeks_data,
@@ -84,6 +84,14 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
                 "remarque": "",
             })
 
+    # Échauffement : vers la charge suggérée si elle monte, sinon la plus
+    # lourde de la dernière fois.
+    echauffement = []
+    if not is_bw and not is_iso and not completed:
+        travail = (suggestion or {}).get("poids") or max(
+            (s["poids"] for s in last_sets), default=0)
+        echauffement = series_echauffement(travail, barre=est_a_la_barre(base))
+
     # Résumé inline : "80kg × 8, 85kg × 6"
     if last_sets:
         last_summary = ", ".join(
@@ -127,6 +135,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         "sets": sets,
         "last_summary": last_summary,
         "suggestion": suggestion,
+        "echauffement": echauffement,
         "info": info,
         # De quoi échanger l'exercice en un geste, sans repasser par le
         # formulaire d'ajout. Vide si l'exercice n'est pas au catalogue.
@@ -168,6 +177,12 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefil
             prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
             show_overload_hint=show_overload_hint,
         ))
+    # Supersets : « enchaîné avec le suivant » se lit dans le programme ; on
+    # nomme le partenaire des deux côtés pour que chaque carte le dise.
+    for i, (e, _extra) in enumerate(all_exos):
+        if e.get("superset") is True and i + 1 < len(out):
+            out[i]["superset_avec"] = out[i + 1]["base"]
+            out[i + 1]["superset_de"] = out[i]["base"]
     return out
 
 

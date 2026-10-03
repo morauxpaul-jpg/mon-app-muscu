@@ -84,8 +84,14 @@ def cron_reminders():
     """
     if not _cron_authorized():
         return jsonify({"error": "unauthorized"}), 401
-    from core import reminders
+    from core import recap, reminders
     result = reminders.run_reminders()
+    # Le dimanche à 19 h, même passage : le récap de la semaine. Indépendant
+    # du rappel, un échec de l'un n'empêche pas l'autre.
+    try:
+        result["recap"] = recap.run_recap_hebdo()
+    except Exception as e:
+        logger.error("récap hebdo FAILED: %s", e)
     if not result.get("ok"):
         code = 503 if result.get("error") == "unconfigured" else 500
         return jsonify(result), code

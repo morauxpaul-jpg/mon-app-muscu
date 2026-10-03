@@ -7,6 +7,7 @@ qui entourent chaque fonction de ce module.
 """
 import datetime as _dt
 import logging
+import threading
 
 from core.db_base import (_cache_get, _cache_invalidate, _cache_set, _continuous_week_of,
                           _fetch_all, get_client, session_id_for)
@@ -216,7 +217,24 @@ def _norm_date(date_str: str) -> str:
     return _dt.date.fromisoformat(str(date_str)[:10]).isoformat()
 
 
+# Deux écritures croisées du même exercice (requête abandonnée à 8 s par le
+# téléphone, encore en cours, puis la série suivante) doublaient les séries
+# (audit du 03/10, I7, R9). Un verrou par exercice les met en file : suffit à
+# UN processus (railway.json) ; à plusieurs, il faudra un index unique.
+_VERROUS = [threading.Lock() for _ in range(64)]
+
+
+def _verrou(user_id, date_str, seance, exercice):
+    return _VERROUS[hash((user_id, date_str, seance, exercice)) % len(_VERROUS)]
+
+
 def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
+    date_str = _norm_date(date_str)
+    with _verrou(user_id, date_str, seance, exercice):
+        _replace_exo_rows(user_id, date_str, seance, exercice, new_rows)
+
+
+def _replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
     """Remplace les séries d'un exercice pour UNE séance (date + nom).
 
     Même ordre que `save_hist` : on INSÈRE les nouvelles lignes, puis on
@@ -224,7 +242,6 @@ def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, ne
     transaction : une coupure entre les deux effaçait les séries déjà
     enregistrées de l'exercice. Maintenant, un échec d'insertion laisse
     l'ancien état intact."""
-    date_str = _norm_date(date_str)
     client = get_client()
     old_ids = [r["id"] for r in (
         client.table("history").select("id")
@@ -258,6 +275,11 @@ def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
     Retourne le numéro de la première série ajoutée.
     """
     date_str = _norm_date(date_str)
+    with _verrou(user_id, date_str, seance, exercice):
+        return _append_exo_rows(user_id, date_str, seance, exercice, new_rows)
+
+
+def _append_exo_rows(user_id, date_str, seance, exercice, new_rows) -> int:
     client = get_client()
     existantes = (
         client.table("history").select("serie")
@@ -275,6 +297,21 @@ def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
         _insert_history(client, payload)
     _cache_invalidate(f"hist:{user_id}")
     return depart
+
+
+def ajouter_lignes(user_id: str, rows: list[dict]) -> int:
+    """Ajoute des lignes en lots de 500, sans rien effacer (import Hevy/Strong :
+    une requête par exercice en ferait 900 pour trois ans). Un lot qui échoue
+    lève, les précédents restent."""
+    client = get_client()
+    payload = [_row_to_supabase(user_id, {**r, "Date": _norm_date(r["Date"])})
+               for r in rows or []]
+    try:
+        for i in range(0, len(payload), 500):
+            _insert_history(client, payload[i:i + 500])
+    finally:
+        _cache_invalidate(f"hist:{user_id}")
+    return len(payload)
 
 
 def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,

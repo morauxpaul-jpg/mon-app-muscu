@@ -110,6 +110,46 @@ def remplacer_programme_en_cours(old, seances, planning, nom, started_at, extra=
     body["_started_at"] = started_at
     for k, v in (extra or {}).items():
         body[k] = v
+    _renommer_rotation(body, renomme)
+    return body
+
+
+def _renommer_rotation(body, renomme):
+    """La rotation suit les séances renommées pour éviter un doublon de nom
+    (« Push » déjà pris → « Push (2) »)."""
+    rot = body.get("_rotation")
+    if isinstance(rot, list):
+        body["_rotation"] = [renomme.get(s, s) for s in rot]
+
+
+def ajouter_et_planifier(old, seances, planning, nom, started_at, extra=None):
+    """Corps à passer à `save_prog_body` : ajoute `seances` dans un nouveau
+    dossier `nom` et lui donne le planning, SANS rien retirer.
+
+    Pour refaire l'onboarding : l'utilisateur répond à un questionnaire, il
+    n'a pas demandé qu'on efface ses séances. Les anciens dossiers restent,
+    simplement plus planifiés (audit du 03/10, I6)."""
+    old = copy.deepcopy(old or {})
+    progs, mapping = ensure_programmes(old)
+    body = {s: exos for s, exos in old.items() if not s.startswith("_")}
+    nouveau = {"id": gen_prog_id(), "name": (nom or "Mon programme")[:80]}
+    renomme = {}
+    for s, exos in (seances or {}).items():
+        n = _nom_libre(s, body)
+        body[n] = exos
+        renomme[s] = n
+    # Un compte neuf n'a qu'un dossier vide créé à la volée : inutile de le garder.
+    gardes = [p for p in progs if any(mapping.get(s) == p.get("id") for s in body)]
+    body["_programmes"] = gardes + [nouveau]
+    seance_prog = {s: pid for s, pid in mapping.items() if s in body}
+    seance_prog.update({n: nouveau["id"] for n in renomme.values()})
+    body["_seance_prog"] = seance_prog
+    body["_planning"] = {j: (renomme.get(s, s) if s else "") for j, s in (planning or {}).items()}
+    body["_name"] = nouveau["name"]
+    body["_started_at"] = started_at
+    for k, v in (extra or {}).items():
+        body[k] = v
+    _renommer_rotation(body, renomme)
     return body
 
 
@@ -134,7 +174,7 @@ def fusionner_dans_le_programme_en_cours(old, seances):
     # Plus d'origine unique après une fusion : c'est devenu un programme perso.
     if old.get("_name"):
         body["_name"] = old["_name"]
-    for k in ("_started_at", "_cardio"):
+    for k in ("_started_at", "_cardio", "_rotation"):
         if k in old:
             body[k] = old[k]
     return body

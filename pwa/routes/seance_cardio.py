@@ -129,4 +129,8 @@ def delete_cardio():
         clear_user_cache()
     except Exception as e:
         logger.error("delete-cardio FAILED: %s", e)
+        return render_template(
+            "error.html", code=503,
+            message="Le cardio n'a pas pu être retiré. Réessaie dans un instant.",
+        ), 503
     return _back_to_editor(f)

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Importer depuis Hevy ou Strong · Muscu Tracker{% endblock %}
+
+{% block content %}
+<main class="page">
+
+  <a href="/gestion" class="btn mini label-icon s-da12f2">
+    <svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour
+  </a>
+
+  <h1 class="page-title label-icon">
+    <svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#upload"/></svg>Importer depuis Hevy ou Strong
+  </h1>
+
+  {# ── Étape 1 : déposer le fichier ─────────────────────────── #}
+  {% if etape == "depot" %}
+    {% if erreur %}
+      <div class="card s-1b1970">
+        <p class="s-acee0e">{{ erreur }}</p>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="label-icon s-155f11">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#download"/></svg>RÉCUPÉRER TON EXPORT
+      </div>
+      <p class="aide">
+        Tes charges, tes séries et tes records viennent avec toi : la
+        suggestion de charge et « Dernière fois » reprennent là où tu en étais.
+      </p>
+      <ol class="etapes">
+        <li><b>Hevy</b> : Profil → Paramètres → <b>Exporter les données</b> → Exporter les séances.</li>
+        <li><b>Strong</b> : Paramètres → <b>Exporter les données</b>.</li>
+        <li>Dépose ici le fichier <b>.csv</b> obtenu.</li>
+      </ol>
+    </div>
+
+    <form method="post" action="/gestion/import-muscu" enctype="multipart/form-data" class="card">
+      <div class="label-icon s-155f11">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>DÉPOSER LE FICHIER
+      </div>
+      <label class="field-label" for="fichier">Export CSV</label>
+      <input type="file" id="fichier" name="fichier" accept=".csv,text/csv" class="field" required>
+      <p class="aide s-8a77e5">
+        Rien ne sera écrit : l'écran suivant te montre ce qui entrerait, et
+        c'est toi qui valides. Ton historique actuel n'est jamais effacé.
+      </p>
+      <button type="submit" class="btn primary label-icon s-d5b41c">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Lire le fichier
+      </button>
+    </form>
+
+  {# ── Étape 2 : ce qui entrerait ───────────────────────────── #}
+  {% elif etape == "apercu" %}
+    <div class="card">
+      <div class="apercu-chiffres">
+        <div>
+          <div class="apercu-nombre s-5a4529">{{ a_importer|length }}</div>
+          <div class="apercu-label">séances à importer</div>
+        </div>
+        <div>
+          <div class="apercu-nombre">{{ nb_series }}</div>
+          <div class="apercu-label">séries</div>
+        </div>
+        <div>
+          <div class="apercu-nombre">{{ nb_deja }}</div>
+          <div class="apercu-label">déjà chez toi</div>
+        </div>
+      </div>
+
+      <ul class="ecartes">
+        <li>Fichier {{ rapport.source }}, {{ rapport.lignes }} lignes lues.</li>
+        {% if rapport.echauffements %}
+          <li>{{ rapport.echauffements }} série{{ "s" if rapport.echauffements > 1 }} d'échauffement écartée{{ "s" if rapport.echauffements > 1 }} : elles fausseraient tes records.</li>
+        {% endif %}
+        {% if rapport.sans_reps %}
+          <li>{{ rapport.sans_reps }} ligne{{ "s" if rapport.sans_reps > 1 }} sans répétitions (cardio, chrono) ignorée{{ "s" if rapport.sans_reps > 1 }}.</li>
+        {% endif %}
+        {% if rapport.sans_date %}
+          <li>{{ rapport.sans_date }} ligne{{ "s" if rapport.sans_date > 1 }} sans date lisible.</li>
+        {% endif %}
+        {% if nb_deja %}
+          <li>{{ nb_deja }} séance{{ "s" if nb_deja > 1 }} déjà dans ton historique (même jour, même nom) : elles ne seront pas doublées.</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    {% if renommes %}
+      <div class="card">
+        <div class="label-icon s-155f11">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>NOMS REPRIS DU CATALOGUE
+        </div>
+        <p class="aide">Pour que tes fiches, illustrations et progressions les retrouvent.
+          Un exercice inconnu garde son nom d'origine.</p>
+        <ul class="liste-seances liste-renommes">
+          {% for src, nom in renommes %}
+            <li><span class="ls-date">{{ src }}</span><span class="ls-act">→ {{ nom }}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if a_importer %}
+      <div class="card">
+        <div class="label-icon s-155f11">
+          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#history"/></svg>CE QUI VA ENTRER
+        </div>
+        <ul class="liste-seances">
+          {% for s in a_importer[:200] %}
+            <li>
+              <span class="ls-date">{{ s.date }}</span>
+              <span class="ls-act">{{ s.seance }}</span>
+              <span class="ls-perf">{{ s.exercices|length }} exo{{ "s" if s.exercices|length > 1 }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+        {% if a_importer|length > 200 %}
+          <p class="aide">Les 200 premières sont affichées ; toutes seront importées.</p>
+        {% endif %}
+      </div>
+
+      <form method="post" action="/gestion/import-muscu/confirmer">
+        <input type="hidden" name="source" value="{{ rapport.source }}">
+        <input type="hidden" name="charge" value="{{ charge }}">
+        <button type="submit" class="btn primary label-icon s-9f1047" data-haptic="1">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Importer ces {{ a_importer|length }} séances
+        </button>
+      </form>
+      <a href="/gestion/import-muscu" class="btn s-ac0370">Annuler</a>
+    {% else %}
+      <div class="card">
+        <p class="s-85a05b">Rien de nouveau à importer — tout ce que contient
+        ce fichier est déjà dans ton historique.</p>
+      </div>
+      <a href="/gestion" class="btn s-d5b41c">Retour</a>
+    {% endif %}
+
+  {# ── Étape 3 : c'est fait ─────────────────────────────────── #}
+  {% elif etape == "fini" %}
+    <div class="card s-1f5861">
+      <div class="label-icon s-9525d9">
+        <svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>
+        {{ nb_seances }} séance{{ "s" if nb_seances > 1 }} importée{{ "s" if nb_seances > 1 }} ({{ nb_ecrites }} séries)
+      </div>
+      {% if erreur %}
+        <p class="aide s-8a77e5">{{ erreur }}</p>
+      {% endif %}
+    </div>
+    <a href="/progres" class="btn primary s-d5b41c">Voir mes progrès</a>
+    <a href="/gestion" class="btn s-ac0370">Retour</a>
+  {% endif %}
+</main>
+{% endblock %}

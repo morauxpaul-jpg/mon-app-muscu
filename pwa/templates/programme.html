@@ -31,6 +31,17 @@
         </template>
       </select>
     {% endfor %}
+    {# Rotation : sans elle, un A/B sur 3 jours faisait A-B-A chaque semaine
+       et B n'ouvrait jamais la semaine (core/rotation.py). #}
+    <div class="rotation-bloc" x-show="seanceOrder.length >= 2" x-cloak>
+      <label class="rotation-choix">
+        <input type="checkbox" :checked="rotation.length >= 2" @change="basculerRotation($event.target.checked)">
+        <span>Alterner les séances d'une semaine à l'autre</span>
+      </label>
+      <p class="rotation-aide" x-show="rotation.length >= 2">
+        Cycle : <b x-text="rotation.join(' → ')"></b>. Le planning fixe les jours d'entraînement ; chaque jour prend la séance suivante du cycle. L'accueil montre celle de la semaine.
+      </p>
+    </div>
   </div>
 
   {# ── Cardio planifié (généré par l'IA) ───────────────── #}
@@ -439,6 +450,7 @@
       isVip: {{ 'true' if is_vip else 'false' }},
       prog: {},
       planning: {},
+      rotation: [],
       cardio: [],
       programName: '',
       seanceOrder: [],
@@ -474,6 +486,7 @@
         var initial = JSON.parse(document.getElementById('prog-initial').textContent);
         this.prog = initial.seances || {};
         this.planning = initial.planning || {};
+        this.rotation = initial.rotation || [];
         this.cardio = initial.cardio || [];
         this.programName = initial.name || 'Mon programme';
         this.seanceOrder = initial.seance_order || [];
@@ -504,6 +517,21 @@
         window.addEventListener('pagehide', flush);
       },
 
+      // Le cycle = les séances planifiées, dans l'ordre des jours ; à défaut
+      // de deux séances planifiées, toutes les séances dans leur ordre.
+      basculerRotation(on) {
+        if (!on) { this.rotation = []; this.scheduleSave(); return; }
+        var jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        var cycle = [];
+        var self = this;
+        jours.forEach(function (j) {
+          var s = self.planning[j];
+          if (s && cycle.indexOf(s) < 0) cycle.push(s);
+        });
+        this.rotation = cycle.length >= 2 ? cycle : this.seanceOrder.slice();
+        this.scheduleSave();
+      },
+
       scheduleSave() {
         this.saveState = 'Modifié…';
         this._dirty = true;
@@ -524,6 +552,7 @@
             body: JSON.stringify({
               name: this.programName,
               planning: this.planning,
+              rotation: this.rotation,
               seances: this.prog,
               seance_order: this.seanceOrder,
               programmes: this.programmes,
@@ -659,6 +688,8 @@
         for (var d in this.planning) {
           if (this.planning[d] === name) this.planning[d] = '';
         }
+        this.rotation = this.rotation.filter(function (s) { return s !== name; });
+        if (this.rotation.length < 2) this.rotation = [];
         this.scheduleSave();
       },
       renommerExo(sname, exIdx, nouveau) {
@@ -730,6 +761,9 @@
           for (var d in self.planning) {
             if (self.planning[d] === oldName) self.planning[d] = newName;
           }
+          self.rotation = self.rotation.map(function (x) {
+            return x === oldName ? newName : x;
+          });
           self.seanceMsg = res.d.series
             ? "Séance renommée, et " + res.d.series + " série(s) d'historique "
               + "ont suivi."

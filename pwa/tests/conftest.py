@@ -318,6 +318,7 @@ def logged_in(client):
     with client.session_transaction() as s:
         s["user_id"] = USER_ID
         s["email"] = "test@example.com"
+        s["fournisseurs"] = ["google"]
         s["onboarded"] = True
         s["is_vip"] = True
         s["is_vip_full"] = True

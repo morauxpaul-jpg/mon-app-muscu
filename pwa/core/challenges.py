@@ -9,9 +9,18 @@ Principe :
   Poids, Reps, Semaine). Aucune donnée stockée pour évaluer (sauf le marquage
   « défi validé » côté prog, géré par l'appelant).
 
-`weekly_challenge(hist, today)` → dict prêt pour le template :
+`weekly_challenge(hist, today, prog)` → dict prêt pour le template :
   {id, title, emoji, desc, current, target, unit, pct, done}
+
+Les cibles sont RELATIVES à chacun (audit du 03/10) : « 3 séances » ne se
+réussissait pas avec un programme sur 2 jours, et « 10 000 kg » était hors
+d'atteinte pour un débutant et sans effort pour un confirmé. Le défi des
+séances vise donc les séances prévues de la semaine, celui du volume la
+moyenne des semaines actives récentes, +5 %. Sans référence (compte neuf,
+pas de planning), les anciennes cibles fixes servent de repli.
 """
+import math
+
 from core.dates import continuous_week, logical_today_paris
 from core.hist import is_cardio as _is_cardio, is_muscu_perf as _is_real_muscu, tonnage
 
@@ -58,31 +67,60 @@ def _cardio_sessions(rows):
             if _is_cardio(r) and int(r.get("Reps") or 0) > 0 and r.get("Date")}
 
 
-# ── Évaluateurs : (hist, week_idx) → (title, emoji, desc, current, target, unit)
-def _ch_sessions(hist, w):
+def _reference(hist, w, mesure, semaines=4):
+    """Moyenne de `mesure` sur les semaines ACTIVES parmi les `semaines`
+    précédentes (une semaine de vacances ne fait pas baisser la barre), ou 0."""
+    valeurs = [v for v in (mesure(_week_rows(hist, x)) for x in range(w - semaines, w)) if v > 0]
+    return sum(valeurs) / len(valeurs) if valeurs else 0
+
+
+def _arrondi_haut(x, pas):
+    return int(math.ceil(x / pas) * pas)
+
+
+def _fmt(n):
+    return f"{n:,}".replace(",", " ")
+
+
+# ── Évaluateurs : (hist, week_idx, ctx) → (title, emoji, desc, current, target, unit)
+# ctx : {"prevues": séances prévues cette semaine (planning + rotation)}.
+def _ch_sessions(hist, w, ctx=None):
     cur = len(_distinct_sessions(_week_rows(hist, w)))
+    n = int((ctx or {}).get("prevues") or 0) or 3
+    if (ctx or {}).get("prevues"):
+        return (f"Tes {n} séances de la semaine" if n > 1 else "Ta séance de la semaine", "💪",
+                "Fais toutes les séances de ton planning cette semaine.", cur, n, "séances")
     return ("3 séances cette semaine", "💪",
             "Enchaîne 3 séances avant dimanche soir.", cur, 3, "séances")
 
 
-def _ch_tonnage(hist, w):
+def _ch_tonnage(hist, w, ctx=None):
     if _au_poids_du_corps(hist, w):
-        return ("300 répétitions", "🏋️",
-                "Cumule 300 répétitions cette semaine, toutes séries confondues.",
-                _reps(_week_rows(hist, w)), 300, "reps")
+        ref = _reference(hist, w, _reps)
+        cible = _arrondi_haut(ref * 1.05, 10) if ref else 300
+        return (f"{_fmt(cible)} répétitions", "🏋️",
+                ("5 % de plus que ta semaine habituelle, toutes séries confondues."
+                 if ref else "Cumule 300 répétitions cette semaine, toutes séries confondues."),
+                _reps(_week_rows(hist, w)), cible, "reps")
     cur = _volume(_week_rows(hist, w))
+    ref = _reference(hist, w, _volume)
+    if ref:
+        cible = _arrondi_haut(ref * 1.05, 500)
+        return (f"Soulève {_fmt(cible)} kg", "🏋️",
+                f"5 % de plus que ta semaine habituelle ({_fmt(int(ref))} kg en moyenne).",
+                cur, cible, "kg")
     return ("Soulève 10 000 kg", "🏋️",
             "Cumule 10 000 kg de volume (poids × reps) cette semaine.",
             cur, 10000, "kg")
 
 
-def _ch_cardio(hist, w):
+def _ch_cardio(hist, w, ctx=None):
     cur = len(_cardio_sessions(_week_rows(hist, w)))
     return ("1 séance de cardio", "🏃",
             "Ajoute au moins une séance de cardio cette semaine.", cur, 1, "séance")
 
 
-def _ch_new_exo(hist, w):
+def _ch_new_exo(hist, w, ctx=None):
     """Tester un exercice non fait au cours des 4 semaines précédentes."""
     prev = {r.get("Exercice") for r in hist
             if _is_real_muscu(r) and (w - 4) <= (r.get("Semaine") or 0) < w}
@@ -92,7 +130,7 @@ def _ch_new_exo(hist, w):
             "Ajoute un exercice que tu n'as pas fait depuis un mois.", cur, 1, "exo")
 
 
-def _ch_beat_volume(hist, w):
+def _ch_beat_volume(hist, w, ctx=None):
     if _au_poids_du_corps(hist, w):
         last = _reps(_week_rows(hist, w - 1))
         cur = _reps(_week_rows(hist, w))
@@ -129,17 +167,19 @@ def current_week_index(today=None):
     return continuous_week(today or logical_today_paris())
 
 
-def weekly_challenge(hist, today=None):
+def weekly_challenge(hist, today=None, prog=None):
     """Défi de la semaine + progression de l'utilisateur (dict pour le template)."""
     w = current_week_index(today)
     cid, fn = CHALLENGES[w % len(CHALLENGES)]
-    title, emoji, desc, current, target, unit = fn(hist or [], w)
+    ctx = {}
+    if prog:
+        from core.rotation import planning_semaine
+        ctx["prevues"] = sum(1 for v in planning_semaine(
+            prog, today or logical_today_paris()).values() if v)
+    title, emoji, desc, current, target, unit = fn(hist or [], w, ctx)
     target = max(1, int(target))
     current = max(0, int(current))
     pct = min(100, int(round(current * 100 / target)))
-
-    def _fmt(n):
-        return f"{n:,}".replace(",", " ")
 
     return {
         "id": cid,

@@ -806,10 +806,15 @@ def test_paid_vip_unlocks_generator(fake_db, logged_in):
 # ── Nudge de relance (accueil) ───────────────────────────────────
 
 def test_reactivation_nudge_after_inactivity(fake_db, logged_in):
-    """Un user avec un historique mais inactif depuis >= 3 j voit le nudge."""
+    """Un user avec un historique mais inactif depuis >= 3 j voit le nudge.
+
+    Le bandeau attend au moins une séance PRÉVUE et ratée. Avec un planning
+    « Lundi » seul, ce test dépendait du jour où il tournait : il échouait
+    le lundi, le samedi et le dimanche (audit du 03/10, I4). Une séance
+    prévue chaque jour rend l'écart de 5 jours toujours significatif."""
     import datetime as _dt
-    from core.dates import logical_today_paris
-    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    from core.dates import logical_today_paris, DAYS_FR
+    _seed_prog(fake_db, planning={j: "Push" for j in DAYS_FR})
     old = logical_today_paris() - _dt.timedelta(days=5)
     _hist_row(fake_db, old, poids=80.0, reps=8)
     html = logged_in.get("/accueil").data.decode("utf-8")
@@ -1205,7 +1210,13 @@ def test_delete_weight(fake_db, logged_in):
 def test_progres_affiche_la_courbe_de_poids(fake_db, logged_in):
     _seed_prog(fake_db)
     _profile(fake_db)
-    for d, kg in (("2026-08-01", 82.0), ("2026-08-20", 80.5), ("2026-09-20", 79.0)):
+    # Dates relatives : la courbe ne montre que 90 jours. En dur, ce test
+    # serait devenu rouge fin novembre 2026 (audit du 03/10).
+    import datetime as _dt
+    from core.dates import today_paris
+    t = today_paris()
+    for ecart, kg in ((55, 82.0), (36, 80.5), (5, 79.0)):
+        d = (t - _dt.timedelta(days=ecart)).isoformat()
         logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": d, "poids_kg": str(kg)})
     r = logged_in.get("/progres")
     assert r.status_code == 200

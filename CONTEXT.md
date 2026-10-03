@@ -7,8 +7,8 @@ PWA Flask (Python) avec Supabase (PostgreSQL) en backend, déployée sur Railway
 - **Frontend** : Jinja2 templates + Alpine.js + CSS custom (refonte UI dark minimal style Strong/Hevy)
 - **Auth** : Supabase Google OAuth → bridge JWT → session Flask (cookie 30 jours)
 - **Data** : Supabase tables (history, programs, profiles, onboarding, nutrition, coach_messages, coach_conversations, session_notes, body_weight, push_subscriptions, events) via `service_role` key. **Toutes les lectures de listes sont paginées** (`_fetch_all`) : PostgREST plafonne silencieusement à 1000 lignes.
-- **PWA** : Service Worker (network-first sur les pages, stale-while-revalidate sur `/static`), manifest.json, séance du jour pré-chargée pour l'usage hors-ligne
-- **Serveur** : gunicorn `-k gthread --threads 8` (`railway.json`) — un appel IA lent ne gèle plus l'app pour tout le monde ; `ProxyFix` devant, sans quoi le rate-limit « 60/min par IP » comptait l'IP du proxy, donc tout le monde ensemble
+- **PWA** : Service Worker (pages : réseau d'abord, mais une copie gardée est servie si le réseau ne répond pas en 3,5 s ; stale-while-revalidate sur `/static`), manifest.json, séance du jour pré-chargée pour l'usage hors-ligne
+- **Serveur** : gunicorn, **un seul worker** `-k gthread --threads 16` (`railway.json`) — le cache mémoire n'est juste qu'avec un seul processus — un appel IA lent ne gèle plus l'app pour tout le monde ; `ProxyFix` devant, sans quoi le rate-limit « 60/min par IP » comptait l'IP du proxy, donc tout le monde ensemble
 - **IA** : Coach via API Anthropic (Claude Haiku 4.5), réponses diffusées en flux (SSE)
 - **Coquille native** : Capacitor (`android/`, `capacitor.config.json` à la racine) — webview sur l'URL de prod + plugin AdMob. Pubs (Free uniquement, app native uniquement) : `pwa/static/js/ads.js`, IDs via env `ADMOB_BANNER_ID`/`ADMOB_INTERSTITIAL_ID`. Docs : `docs/CAPACITOR.md` + `docs/PLAY_STORE.md`. Login Google natif **branché côté code** (2026-06-15) : `login.html` détecte Capacitor → `@capgo/capacitor-social-login` (idToken + nonce) → `supabase.auth.signInWithIdToken` → `/auth/session` (OAuth webview interdit, 403 disallowed_useragent). **Le client OAuth Android de Google Cloud doit déclarer le nom de package EXACT et l'empreinte SHA-1 de la clé de signature.** Piège vécu : le client avait été créé le 2026-06-15 avec `com.muscutracker.app`, et le package a été renommé `com.muscutracker.fit` le lendemain (commit 45b6be5). La connexion native a donc échoué pendant trois mois avec un message illisible — Google refuse sans jamais afficher le sélecteur de compte. Empreinte actuelle (clé de release) : `E4:C0:D5:D4:6A:78:3C:3D:CA:6C:6B:C1:E7:28:5B:DE:00:A4:DF:EA`, à relire par `keytool -printcert -jarfile app-release.apk` après tout changement de clé. Une publication via Play App Signing ajoute une SECONDE empreinte (celle de Google) à déclarer en plus. L'identifiant Android n'est copié nulle part dans le code : c'est le client **web** (`GOOGLE_WEB_CLIENT_ID`) que l'app envoie ; il doit aussi figurer dans « Authorized Client IDs » du fournisseur Google côté Supabase.
 
@@ -279,14 +279,19 @@ pwa/
 - Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Au plus 3 relances par arrêt, espacées d'au moins 4 jours (`push_subscriptions.last_reactivation_at` / `reactivation_count`, migration v34) ; une relance antérieure à la dernière séance appartient à un arrêt terminé et ne compte plus (audit du 30/09, I14).
 - Désactivable dans Gestion > Paramètres.
 
+### Récap de la semaine (core/recap.py)
+- Le dimanche à 19 h, le cron horaire des rappels (`/tasks/reminders`, `cron_reminders.py`) envoie un push : séances faites, volume, écart avec la semaine d'avant, prochaine séance prévue (rotation comprise). Hors de ce créneau, l'appel ne fait rien.
+- Seulement à qui s'est entraîné dans la semaine et a les notifications ; coupable dans Gestion (`_settings.recap_hebdo`, vrai par défaut). Lecture groupée : `history_between_for_users` par lots de 100 comptes.
+
 ### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
 - **Texte non sélectionnable** : `theme.css` pose `user-select:none` + `-webkit-touch-callout:none` sur `body` (supprime le menu « Rechercher sur le web » au clic long en webview Android). Réactivé sur `input/textarea/select/[contenteditable]/.selectable`. Déployé par Railway → corrige l'app native **sans rebuild**.
 - **Notif de fin de repos fiable** : le chrono (`seance_edit.html`) planifiait la notif via un `setTimeout` dans le service worker → tué en arrière-plan = notif parfois manquante. Ajout de `@capacitor/local-notifications` (plugin natif) : en app native, la notif est planifiée par l'**OS** (`LocalNotifications.schedule({at})`, fiable même app fermée) ; le SW reste le fallback web. Cancel sur fin/skip (SW + natif). **Nécessite rebuild AAB.** Permission via `requestPermissions()`.
 - **Compte à rebours vivant dans la barre de notification** (app native, 2026-09-24) : comme le minuteur de l'Horloge, les chiffres défilent même app fermée. `RestTimerNotification.java` pose une notification `setUsesChronometer` + `setChronometerCountDown` avec une **échéance absolue** ; c'est le SYSTÈME qui anime le compteur. Donc **aucun service en premier plan** : rien de notre code ne tourne pendant le repos, le compteur reste juste même si Android tue le processus, zéro batterie, et rien à justifier auprès de Play. Pont `window.MTTimer.start(échéance, exercice)` / `.stop()` (MainActivity), appelé par `rest-timer.js` à chaque départ de repos et reposé à la reprise (`_adopt`). **Impossible sur le web** : aucune API ne permet de faire défiler une notification — c'est la seule fonction qui justifie encore la coquille native.
 
 ### Défis hebdo (rétention, 2026-06-16)
-- `core/challenges.py` : un défi **tournant** choisi par l'index de semaine continu (`continuous_week`) → identique pour tous, change chaque lundi. Évalué **depuis l'historique normalisé** (clés Date/Séance/Exercice/Poids/Reps/Semaine), aucune donnée stockée pour l'évaluation. `weekly_challenge(hist, today)` → dict {id, title, emoji, desc, current/target(+_fmt), pct, done}.
-- Cycle actuel : 3 séances / 10 000 kg / nouvel exercice / 1 cardio / battre le volume de la semaine passée.
+- `core/challenges.py` : un défi **tournant** choisi par l'index de semaine continu (`continuous_week`) → identique pour tous, change chaque lundi. Évalué **depuis l'historique normalisé** (clés Date/Séance/Exercice/Poids/Reps/Semaine), aucune donnée stockée pour l'évaluation. `weekly_challenge(hist, today, prog)` → dict {id, title, emoji, desc, current/target(+_fmt), pct, done}.
+- Cycle actuel : séances / volume / nouvel exercice / 1 cardio / battre le volume de la semaine passée.
+- **Cibles relatives** : le défi des séances vise les séances prévues de la semaine (planning + rotation) ; le volume, la moyenne des semaines actives parmi les 4 précédentes + 5 % (arrondi 500 kg, ou 10 reps au poids du corps). Repli sur 3 séances / 10 000 kg / 300 reps sans planning ni historique.
 - **Accueil** (`routes/accueil.py`) : carte « Défi de la semaine » avec barre de progression. Validation consommée **uniquement sur vraie navigation** (pas prefetch) → incrémente `prog._challenges_won`, mémorise la semaine dans `prog._challenges_done`, émet l'event `challenge_completed`, affiche l'état « ✅ Défi validé ». Aucune migration.
 - Suite : relance push « plus qu'1 séance pour valider », puis classement entre amis (parrainage) + objectifs perso.
 
@@ -310,7 +315,7 @@ pwa/
 - La page PRO explique au lieu de rester muette, et le mur de fonctionnalité dit « Voir ce que PRO apporte » plutôt que « Passer en PRO ». L'abonnement suit le compte Google : rien à « restaurer ». Le web et la PWA gardent tout le parcours.
 
 ### Export / Import
-- **Gestion** : « Exporter tout » (historique + programme + profil) ou « Programme seul » — gated VIP
+- **Gestion** : « Exporter tout » (historique, programme, profil, pesées, bilans, nutrition, coach) — **gratuit** (RGPD) ; la réimportation et l'export du programme seul sont PRO
 - **Gestion** : « Importer » un fichier JSON (avec confirmation modale) — gated VIP
 - **Programme** : export/import du programme
 - Format JSON, fichier nommé `muscu-tracker-backup-YYYY-MM-DD.json`
@@ -325,10 +330,17 @@ pwa/
 ### Catalogue de programmes (20, dont 5 gratuits)
 - Plusieurs splits : Full Body, PPL, Upper/Lower, Bro Split, Home, etc.
 - Gating Free / PRO selon le programme (les programmes avancés sont VIP)
+- `build_program` garde **toutes** les séances du catalogue, quelle que soit la fréquence (on tronquait : un PPL sur 2 jours perdait Legs).
+
+### Rotation des séances (`prog._rotation`, core/rotation.py)
+- Liste des séances dans l'ordre du cycle. Les jours d'entraînement restent ceux de `_planning` (jour non vide) ; chaque jour prend la séance suivante du cycle, d'une semaine à l'autre : A/B sur Lun-Mer-Ven donne A B A, puis B A B.
+- Posée par le catalogue quand le nombre de jours n'est pas un multiple du nombre de séances ; réglable sur la page Programme (case « Alterner les séances d'une semaine à l'autre »). Suit les renommages et suppressions, voyage avec l'export/import.
+- Le rang d'un jour ne dépend que du calendrier (semaines depuis `_started_at`, le premier jour d'entraînement à partir de cette date ouvre le cycle), pas de l'historique : accueil, choix de séance, calendrier Progrès, rappel du soir et coach lisent tous `seance_prevue(prog, date)`. Ne jamais relire `_planning[jour]` directement pour savoir ce qui est prévu un jour donné.
+- Sans `_rotation` valide (moins de deux séances existantes), comportement inchangé.
 
 ### Admin
 - Routes : `/admin` (dashboard), `/admin/funnel` (conversion), `/admin/set-tier`, `/admin/user/<id>`, `/admin/reset-quota`
-- Accès filtré par `ADMIN_EMAILS` env (404 sinon)
+- Accès filtré par `ADMIN_EMAILS` env **et** connexion Google (404 sinon, `core/admin_acces.py`) : l'adresse vient du jeton Supabase, que d'autres méthodes de connexion peuvent produire. Le fournisseur est lu dans le jeton à `/auth/session` ; une session plus ancienne doit se reconnecter.
 
 ### Analytics produit / Funnel de conversion (2026-06-14)
 - **Auto-hébergé sur Supabase** (table `events`, migration `supabase_schema_v28_events.sql`) — pas de tiers (PostHog/Mixpanel), donc pas de bannière de consentement ; écriture côté serveur en `service_role`.
@@ -374,10 +386,10 @@ pwa/
 
 ### Migrations Supabase
 - Le code a **toujours un repli** quand une colonne manque (upsert sans la colonne, warning loggué) : rien ne signale à l'exécution qu'une migration a été oubliée. Vérifier l'état réel par un `select exists(…)` sur `information_schema` dans le SQL Editor.
-- Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`).
+- Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`), **v37** (vue `user_last_activity` réservée au serveur), **v38** (plus aucune règle ni droit côté navigateur : sans elle, un compte gratuit pouvait se passer `tier='vip'` depuis la console), **v39** (vue d'agrégats de la console admin). ⚠ v37-v39 conditionnent la sécurité : vérifier qu'elles sont appliquées (requêtes en fin de v38).
 
 ### Tests (pwa/tests)
-- `cd pwa && python -m pytest tests -q` — **≈ 870 tests** au 01/10/2026 (dont les tests navigateur de `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 100 tests), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
+- `cd pwa && python -m pytest tests -q` — **≈ 915 tests** au 03/10/2026 (dont 10 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 106 tests). **Aucune date écrite en dur** relative à « aujourd'hui » : un test daté devient rouge un jour donné (trois l'étaient, audit du 03/10), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
 - **Tests JavaScript** : `pwa/tests/js/` — lanceur maison sous Node nu (`node tests/js/run.js`), sans npm install ni jsdom ; `harness.js` fournit un DOM/localStorage/fetch minimal. Couvre la **file hors-ligne** (ordre d'envoi, reprise après échec, session expirée, double synchronisation, phase d'écoute). `tests/test_js.py` le branche sur pytest (ignoré si Node manque).
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
@@ -419,8 +431,21 @@ pwa/
 ### Découpage de la séance (routes/seance.py → core/seance_*.py)
 - `routes/seance.py` faisait **1 685 lignes**. Les deux tiers ne touchaient ni à Flask ni à la base : c'était du calcul rangé dans la couche HTTP, inexerçable sans monter une requête. **36 fonctions** (690 lignes) sont parties dans six modules `core/seance_*.py` ; il reste **930 lignes** de routes.
 - Les six modules sont **purs** : on leur passe l'historique et le programme, ils rendent des dictionnaires. Aucun n'importe `flask`, `core.data`, `core.db` ni `core.limiter` — un test le vérifie module par module.
-- `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Neuf autres imports entre blueprints subsistent** (mesurés), dont quatre vers `routes/cardio.py` — un module de calcul qui porte un chapeau de blueprint. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
+- `routes/accueil.py` importait `_display_week` depuis `routes/seance.py`. Il le prend maintenant dans `core/seance_semaine.py`. **Cinq autres imports entre blueprints subsistent** (mesurés le 03/10) ; le calcul cardio est sorti dans `core/cardio_activites.py`. `tests/test_couche_seance.py` fige la liste : elle ne peut plus grossir sans qu'un test tombe.
 - Les noms gardent leur préfixe `_` : le déplacement a été fait sans en renommer un seul, pour que chaque corps de fonction reste comparable au caractère près à l'original (vérifié : 55 fonctions sur 55 identiques).
+
+### Import Hevy / Strong (core/import_muscu.py, /gestion/import-muscu)
+- Pour tout le monde (c'est ce qui permet de venir sans repartir de zéro). Même parcours que Strava : déposer le CSV, aperçu (rien n'est écrit), confirmer. Rien n'est jamais effacé.
+- En-têtes comparés normalisés contre des alias ; séparateur `,` `;` ou tabulation ; dates ISO ou locales anglaises ; livres converties en kg (colonne `weight_lbs` ou `Weight Unit`). Échauffements (`set_type=warmup`, `Set Order=W`) et lignes sans reps (cardio, chrono) écartés et comptés.
+- Noms anglais → catalogue via `resoudre` (table `_ANGLAIS` complétée) ; le matériel entre parenthèses devient la variante sauf s'il est déjà supposé par l'exercice (« Lat Pulldown (Cable) » → « Tirage vertical »). Un exercice inconnu garde son nom d'origine.
+- Doublon = même jour + même nom de séance : réimporter le même fichier ne double rien. Écriture par paquets de séances entières (`ajouter_lignes`, lots de 500), donc jamais de séance à moitié écrite. Remarque « Import Hevy » / « Import Strong ».
+
+### Supersets (`superset: true` sur un exercice du programme)
+- « Enchaîner avec le suivant » : case dans l'éditeur de programme, conservée par `_exo_entry` (booléen strict). `_build_all_exo_contexts` nomme le partenaire des deux côtés (`superset_avec`, `superset_de`).
+- En séance : cartes reliées par un liseré ; après une série du premier exercice, pas de chrono, la carte du second s'ouvre ; après une série du second, chrono puis retour au premier (`allerAuPartenaire`, static/js/seance.js).
+
+### Échauffement (core.muscu.series_echauffement)
+- Rampe affichée, repliée, sur la carte d'exercice : barre vide (mouvements à la barre), 40/60/80 %, 90 % au-delà de 100 kg, arrondi 2,5 kg, vers la charge suggérée sinon la plus lourde de la dernière fois. Seuil 30 kg. Jamais enregistrée (volume, records et suggestion resteraient faussés).
 
 ### Import Strava (core/strava_import.py, /cardio/import)
 - **Par le fichier, pas par l'API.** Depuis juin 2026 l'API « Standard » de Strava exige un abonnement actif (11,99 $/mois) ; l'export de ses propres données reste gratuit. Bâtir sur l'API, c'était bâtir quelque chose qui s'éteint le jour où l'abonnement s'arrête — et il fallait manipuler un client_secret.
@@ -454,6 +479,7 @@ pwa/
 - Le mode isométrique (`isIso`, gainage) garde son propre chrono, intouché.
 
 ### Une série saisie ne se perd plus (audit du 30/09, C1 + I4 + I5 + I9 + I18 + I21 + M7)
+- **Valeur grisée (03/10)** : le champ Reps affiche l'objectif en gris (suggestion, sinon bas de la fourchette). « Série faite » sur un champ vide valide CETTE valeur, avec la charge suggérée, comme chez Hevy/Strong ; sans reps ni charge à proposer, la série reste ouverte avec un message. « Terminer » n'attend la file hors-ligne que 6 s (rejeu borné à 8 s) : le reste part derrière le bilan.
 - **Remplace le point « C'est de la mise en page » ci-dessus.** « Série faite » ENREGISTRE : `save-exo` avec `partiel=1`, qui n'écrit que les séries remplies (les autres ne deviennent pas des SKIP en cours d'exercice). Avant, elle cochait en vert sans rien écrire, et « Terminer » effaçait les brouillons : trois séries cochées, séance terminée, zéro ligne en base.
 - « Enregistrer » garde son sens (tout, vides en SKIP). « Terminer » envoie d'abord ce qui n'est pas encore reçu (`_rev` ≠ `_revServeur`), vide la file si le réseau est là, et n'efface les brouillons qu'ensuite ; en cas de refus, la modale le dit et rien n'est effacé.
 - Réseau faible : délai de 8 s (`AbortController`), puis mise en file. 5xx / 408 / 429 / pas de réponse = file ; 4xx = refus affiché, brouillon gardé.
@@ -495,7 +521,7 @@ pwa/
 - **`replace_program_body(old, body)`** + `PROG_BODY_KEYS` : l'autosave du programme envoie le corps (séances, planning, cardio…) et **conserve** toutes les autres clés personnelles (`_settings`, `_streak_record`, `_meal_plan`, `_challenges_won`…). Avant, une seule liste blanche recopiait 3 clés sur 11 : un autosave effaçait les réglages, le record de streak et les plats de la semaine. Toute clé personnelle reçue dans le corps est ignorée et loggée.
 
 ### Suggestion de surcharge (core/muscu.py → routes/seance.py)
-- `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE est lu depuis le token `@RPE8` de la remarque.
+- `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE vient de la colonne `rpe` (où la saisie l'écrit depuis la v34), repli sur l'ancien jeton `@RPE8` des remarques (`core/seance_historique._rpe_de`). Avant le 03/10, seul le jeton était lu : tout RPE saisi était ignoré.
 - Affichée sous « Dernière fois » (bouton Appliquer = pré-remplit la charge sur les séries vides ; reps cibles en placeholder). Réglage `_settings.show_overload_hint` (Gestion). Recalculée par `/seance/api/variant-history`.
 
 ### Base d'aliments (core/foods_data.py → nutrition.html)
@@ -518,7 +544,7 @@ pwa/
 - Font : système (sans-serif)
 
 ## Intégration continue
-- `.github/workflows/tests.yml` — à chaque push sur `main` et sur chaque PR : `pytest` (306) puis `node tests/js/run.js` (31), sur **Python 3.11** comme en production. Une étape refuse de démarrer si `runtime.txt` et le workflow ne sont plus d'accord sur la version.
+- `.github/workflows/tests.yml` — à chaque push sur `main` et sur chaque PR : `pytest` (dont les tests navigateur, Chromium installé par la CI) puis `node tests/js/run.js`, sur **Python 3.11** comme en production. Une étape refuse de démarrer si `runtime.txt` et le workflow ne sont plus d'accord sur la version.
 - Les dépendances sont installées depuis `requirements.txt` **tel quel** : une dépendance oubliée fait échouer la CI au lieu du serveur.
 - La suite JS a **sa propre étape** : `tests/test_js.py` s'ignore quand Node est absent, et un test ignoré passerait pour un succès.
 - ⚠ **C'est un signal, pas encore une barrière.** Railway déploie depuis `main` sans attendre. Pour bloquer un déploiement quand la CI échoue : Railway → service → Settings → Source → **Wait for CI**.
@@ -528,7 +554,7 @@ pwa/
 - **Pas de branches de feature**
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v123` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
+- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v127` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm

@@ -86,7 +86,9 @@
         <li><span class="ok">✓</span>Programme personnalisé</li>
         <li><span class="ok">✓</span>Cardio + chrono</li>
         <li><span class="ok">✓</span>Calendrier + progrès</li>
-        <li><span class="ok">✓</span>Badges</li>
+        <li><span class="ok">✓</span>Badges et défis</li>
+        <li><span class="ok">✓</span>1 debrief du coach par semaine</li>
+        <li><span class="ok">✓</span>Export complet de tes données</li>
         <li class="muted"><span class="ko">·</span>Coach IA réservé Premium</li>
       </ul>
       <button class="btn tier-cta s-e1549f" disabled>{% if is_vip_full %}Plan gratuit{% elif is_trial %}Après ton essai{% else %}Tu y es déjà{% endif %}</button>
@@ -105,10 +107,11 @@
       <ul class="tier-feats">
         <li><span class="ok">✓</span><strong>Tout du gratuit</strong></li>
         <li><span class="ok">✓</span>Coach IA : 15 msg/jour</li>
+        <li><span class="ok">✓</span>Debrief du coach après chaque séance</li>
         <li><span class="ok">✓</span>Suivi nutrition (calories &amp; macros)</li>
         <li><span class="ok">✓</span>Stats détaillées (body map, 1RM, zoom)</li>
-        <li><span class="ok">✓</span>Programmes avancés (PPL, Upper/Lower…)</li>
-        <li><span class="ok">✓</span>Multi-programmes &amp; profils · Réimport de sauvegarde</li>
+        <li><span class="ok">✓</span>15 programmes avancés (PPL 4 à 6 jours, force, spécialisations…)</li>
+        <li><span class="ok">✓</span>Plusieurs programmes en parallèle · Réimport de sauvegarde</li>
         <li><span class="ok">✓</span>Sans publicité dans l'app Android</li>
       </ul>
       {% if is_vip_full %}
@@ -163,8 +166,6 @@
         <li><span class="ok">✓</span><strong>Toutes les features Premium</strong></li>
         <li><span class="ok">✓</span>À vie, jamais de renouvellement</li>
         <li><span class="ok">✓</span>Toutes les futures features incluses</li>
-        <li><span class="ok">✓</span>Soutiens le créateur</li>
-        <li><span class="ok">✓</span>Badge VIP doré</li>
       </ul>
       {% if is_vip_full %}
         {% if current_plan in ('monthly', 'annual') %}

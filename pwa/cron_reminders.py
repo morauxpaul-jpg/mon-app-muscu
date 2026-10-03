@@ -39,6 +39,11 @@ def main() -> int:
 
     result = reminders.run_reminders()
     logger.info("Rappels terminés : %s", result)
+    try:
+        from core import recap
+        logger.info("Récap hebdo : %s", recap.run_recap_hebdo())
+    except Exception as e:
+        logger.error("Récap hebdo FAILED: %s", e)
     return 0 if result.get("ok") else 1
 
 

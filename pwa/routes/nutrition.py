@@ -382,6 +382,12 @@ def add_meal():
         insert_nutrition(row)
     except Exception as e:
         logger.error("add_meal FAILED: %s", e)
+        # L'échec était journalisé puis redirigé comme un succès : le repas
+        # « ajouté » n'apparaissait simplement pas (audit du 03/10, I13).
+        return render_template(
+            "error.html", code=503,
+            message="Le repas n'a pas pu être enregistré. Réessaie dans un instant.",
+        ), 503
     return redirect(url_for("nutrition.index", date=date_iso))
 
 

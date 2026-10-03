@@ -51,7 +51,7 @@ SYSTEM_PROMPT_TMPL = (
     "- [Accueil](/accueil) : dashboard, planning de la semaine, streak, stats\n"
     "- [Séance](/seance) : reprendre la séance du jour\n"
     "- [Progrès](/progres) : calendrier mensuel, volume hebdo, body map, hall of fame, zoom par exercice\n"
-    "- [Programme](/programme) : gérer ses séances, planning hebdo, profils d'entraînement\n"
+    "- [Programme](/programme) : gérer ses séances, ses programmes et le planning hebdo\n"
     "- [Plus](/plus) : hub → Programme, Gestion, Tutoriel\n"
     "- [Gestion](/gestion) : paramètres, export/import, notifications, reset\n\n"
     "## LIENS SPÉCIAUX (utilise-les quand pertinent)\n"
@@ -110,20 +110,31 @@ def _catalog_list_for_prompt():
 
 
 def _programme_detail(prog):
-    """Programme actuel avec jours assignés et exercices détaillés."""
+    """Programme actuel : jours, exercices, et la PRESCRIPTION (séries ×
+    reps, repos). Sans les reps cibles, le coach ne voyait qu'une liste de
+    noms (« Squat (5 séries) ») et ne pouvait rien dire d'un 5 × 5 (audit du
+    03/10, I9)."""
     if not prog:
         return "Aucun programme défini."
     seances = {k: v for k, v in prog.items() if not k.startswith("_")}
     if not seances:
         return "Aucun programme défini."
-    planning = prog.get("_planning") or {}
-    day_to_seance = {v: k for k, v in planning.items() if v}
+    from core.dates import logical_today_paris
+    from core.rotation import planning_semaine, rotation_de
+    # Cette semaine-ci : avec une rotation, les jours d'une séance changent
+    # d'une semaine à l'autre.
+    planning = planning_semaine(prog, logical_today_paris())
     seance_to_days = {}
     for day, sname in planning.items():
         if sname:
             seance_to_days.setdefault(sname, []).append(day)
     name = prog.get("_name") or "Programme personnalisé"
     lines = [f"Nom : {name}"]
+    rot = rotation_de(prog)
+    if rot:
+        lines.append("Rotation : " + " → ".join(rot)
+                     + " (les séances s'enchaînent dans cet ordre, d'une semaine à l'autre ;"
+                     " jours ci-dessous = cette semaine)")
     for sname, exos in seances.items():
         days = seance_to_days.get(sname, [])
         day_str = ", ".join(days) if days else "non planifiée"
@@ -131,16 +142,23 @@ def _programme_detail(prog):
         for e in (exos or [])[:8]:
             ename = e.get("name") or "?"
             sets = e.get("sets") or 3
-            exo_details.append(f"  - {ename} ({sets} séries)")
+            presc = f"{sets} × {e['reps']}" if e.get("reps") else f"{sets} séries"
+            if e.get("rest_seconds"):
+                presc += f", repos {int(e['rest_seconds'])} s"
+            exo_details.append(f"  - {ename} ({presc})")
         lines.append(f"\n{sname} ({day_str}) :")
         lines.extend(exo_details if exo_details else ["  (aucun exercice)"])
     return "\n".join(lines)
 
 
-def _dernieres_seances(hist):
-    """14 dernières séances avec exercices et séries, triées date desc."""
+def _dernieres_seances(hist, bilans=None):
+    """14 dernières séances, date décroissante : par exercice le nombre de
+    séries, la meilleure charge et le RPE moyen ; le cardio à part (minutes,
+    km — il arrivait comme « CARDIO:Course 1s @5kg » et gonflait le volume) ;
+    et le bilan noté par l'utilisateur quand il existe (audit du 03/10, I9)."""
     if not hist:
         return "Aucune séance enregistrée."
+    bilans = bilans or {}
     by_date_seance = {}
     for r in hist:
         d = r.get("Date") or ""
@@ -148,31 +166,54 @@ def _dernieres_seances(hist):
         exo = r.get("Exercice") or ""
         if not d or s == "" or exo == "SESSION":
             continue
-        key = (d, s)
-        entry = by_date_seance.setdefault(key, {"exos": {}, "vol": 0})
+        entry = by_date_seance.setdefault((d, s), {"exos": {}, "vol": 0, "cardio": []})
         try:
             reps = int(r.get("Reps") or 0)
             poids = float(r.get("Poids") or 0)
         except (TypeError, ValueError):
             reps, poids = 0, 0
-        if reps > 0:
-            exo_entry = entry["exos"].setdefault(exo, {"sets": 0, "best": 0})
-            exo_entry["sets"] += 1
-            if poids > exo_entry["best"]:
-                exo_entry["best"] = poids
-            entry["vol"] += int(reps * poids)
+        if reps <= 0:
+            continue
+        if exo.startswith("CARDIO:"):
+            km = f", {poids:g} km" if poids > 0 else ""
+            entry["cardio"].append(f"{exo.split(':', 1)[1]} {reps} min{km}")
+            continue
+        e = entry["exos"].setdefault(exo, {"sets": 0, "best": 0, "rpe": []})
+        e["sets"] += 1
+        e["best"] = max(e["best"], poids)
+        if r.get("RPE"):
+            e["rpe"].append(float(r["RPE"]))
+        entry["vol"] += int(reps * poids)
     if not by_date_seance:
         return "Aucune séance récente."
     items = sorted(by_date_seance.items(), key=lambda kv: kv[0][0], reverse=True)[:14]
     lines = []
     for (d, s), e in items:
-        exo_parts = []
-        for ename, edata in list(e["exos"].items())[:6]:
-            best = f" @{edata['best']:g}kg" if edata["best"] > 0 else ""
-            exo_parts.append(f"{ename} {edata['sets']}s{best}")
-        exo_str = ", ".join(exo_parts)
-        lines.append(f"- {d} · {s} (vol {e['vol']}kg) : {exo_str}")
+        parts = []
+        for ename, x in list(e["exos"].items())[:6]:
+            best = f" @{x['best']:g}kg" if x["best"] > 0 else ""
+            rpe = f" RPE {sum(x['rpe']) / len(x['rpe']):.1f}" if x["rpe"] else ""
+            parts.append(f"{ename} {x['sets']}s{best}{rpe}")
+        parts += [f"cardio {c}" for c in e["cardio"]]
+        ligne = f"- {d} · {s} (vol {e['vol']}kg) : {', '.join(parts)}"
+        b = bilans.get((d, s))
+        if b:
+            note = f"{b['rating']}/5" if b.get("rating") else ""
+            com = f" « {b['comment'][:120]} »" if b.get("comment") else ""
+            if note or com:
+                ligne += f" — bilan {note}{com}".rstrip()
+        lines.append(ligne)
     return "\n".join(lines)
+
+
+def _bilans_par_seance():
+    """{(date, séance): bilan} — best-effort : sans la table, pas de bilans."""
+    try:
+        from core.data import list_session_notes
+        return {(n["date"], n["seance"]): n for n in (list_session_notes() or [])}
+    except Exception as e:
+        logger.warning("coach bilans indisponibles: %s", e)
+        return {}
 
 
 def _check_and_bump_quota(profile):
@@ -509,7 +550,7 @@ def ask():
         objectif=objectif,
         equipement=equipement,
         programme_detail=_programme_detail(prog),
-        dernieres_seances=_dernieres_seances(hist),
+        dernieres_seances=_dernieres_seances(hist, _bilans_par_seance()),
         catalog_list=_catalog_list_for_prompt(),
     )
 
