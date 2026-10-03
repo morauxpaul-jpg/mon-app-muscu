@@ -281,23 +281,28 @@ def _build_prompt(params: dict) -> str:
 # ────────────────────────────────────────────────────────────────
 # Quota
 # ────────────────────────────────────────────────────────────────
-def _gen_used_week(user_id: str) -> int:
-    """Nb de générations réussies sur les 7 derniers jours (via la table events).
-    Best-effort : si la table n'existe pas encore (migration v28 non appliquée),
-    renvoie 0 — le backstop Flask-Limiter protège alors seul contre l'abus."""
+def _evenements_recents(user_id: str, event: str, jours: float) -> int:
+    """Nb d'événements `event` de ce compte sur les `jours` derniers jours
+    (table events). Best-effort : sans la table (migration v28), renvoie 0 —
+    le backstop Flask-Limiter protège alors seul contre l'abus."""
     import datetime as _dt
-    since = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=7)).isoformat()
+    since = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=jours)).isoformat()
     try:
         client = core_db.get_client()
         resp = (
             client.table("events").select("id", count="exact")
-            .eq("user_id", user_id).eq("event", "program_generated")
+            .eq("user_id", user_id).eq("event", event)
             .gte("created_at", since).execute()
         )
         return int(getattr(resp, "count", None) or 0)
     except Exception as e:
         logger.warning("generator quota lookup failed: %s", e)
         return 0
+
+
+def _gen_used_week(user_id: str) -> int:
+    """Générations réussies sur les 7 derniers jours."""
+    return _evenements_recents(user_id, "program_generated", 7)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -337,17 +342,15 @@ def generate():
         liberer("generateur", user_id)
 
 
-def _generer():
-    """Corps de la génération, une fois le quota réservé."""
-
-    f = request.get_json(silent=True) or {}
+def _lire_params(f: dict) -> dict:
+    """Paramètres du formulaire, bornés et nettoyés."""
     # Types de cardio demandés : on ne garde que les libellés reconnus.
     raw_ctypes = f.get("cardio_types") if isinstance(f.get("cardio_types"), list) else []
     cardio_types = [t for t in CARDIO_TYPES if t.lower() in {str(x).strip().lower() for x in raw_ctypes}]
     placement = str(f.get("cardio_placement") or "dedie").strip()
     if placement not in CARDIO_PLACEMENTS:
         placement = "dedie"
-    params = {
+    return {
         "objectif": str(f.get("objectif") or "").strip()[:40] or "Prise de masse",
         "niveau": str(f.get("niveau") or "").strip()[:30] or "Intermédiaire",
         "frequence": max(2, min(6, int(f.get("frequence") or 3) if str(f.get("frequence") or "").isdigit() else 3)),
@@ -360,44 +363,47 @@ def _generer():
         "cardio_freq": max(1, min(4, int(f.get("cardio_freq") or 2) if str(f.get("cardio_freq") or "").isdigit() else 2)),
     }
 
+
+def _appeler_ia(prompt: str, max_tokens: int = MAX_TOKENS):
+    """(texte, None) ou (None, réponse d'erreur Flask). Le détail d'une panne
+    (fournisseur, clé, crédit) reste dans les logs, comme pour le coach."""
+    indispo = ({"error": "La génération de programme est momentanément "
+                         "indisponible. Réessaie plus tard."}, 503)
     api_key = _env("ANTHROPIC_API_KEY")
     if not api_key:
-        # Voir routes/coach.py : le détail aux logs, la marche à suivre à
-        # l'utilisateur.
         logger.error("clé IA absente de l'environnement : générateur indisponible")
-        return jsonify({"error": "La génération de programme est "
-                                 "momentanément indisponible. Réessaie "
-                                 "plus tard."}), 503
+        return None, (jsonify(indispo[0]), indispo[1])
     try:
         import anthropic  # type: ignore
     except ImportError:
         logger.error("paquet anthropic absent : générateur indisponible")
-        return jsonify({"error": "La génération de programme est "
-                                 "momentanément indisponible. Réessaie "
-                                 "plus tard."}), 503
-
+        return None, (jsonify(indispo[0]), indispo[1])
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": _build_prompt(params)}],
+            model=MODEL, max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
         )
         parts = [getattr(b, "text", "") for b in (response.content or []) if getattr(b, "text", "")]
-        raw = "\n".join(parts).strip()
+        return "\n".join(parts).strip(), None
     except Exception as e:
-        err_type = type(e).__name__
         err_msg = str(e)[:300]
-        logger.error("/generator anthropic FAILED (%s): %s", err_type, err_msg)
-        # Le détail (fournisseur, clé, crédit) reste dans les logs, comme
-        # pour le coach : l'utilisateur lisait « Crédit Anthropic épuisé ».
+        logger.error("/generator anthropic FAILED (%s): %s", type(e).__name__, err_msg)
         lower = err_msg.lower()
         if "overloaded" in lower or "rate" in lower:
             msg = "Le générateur est très sollicité. Réessaie dans quelques secondes."
         else:
             msg = ("La génération de programme est momentanément indisponible. "
                    "Réessaie plus tard — ton quota n'a pas été entamé.")
-        return jsonify({"error": msg}), 502
+        return None, (jsonify({"error": msg}), 502)
+
+
+def _generer():
+    """Corps de la génération, une fois le quota réservé."""
+    params = _lire_params(request.get_json(silent=True) or {})
+    raw, erreur = _appeler_ia(_build_prompt(params))
+    if erreur:
+        return erreur
 
     try:
         program = parse_and_validate(raw)
@@ -416,6 +422,75 @@ def _generer():
         "program": program,
         "quota_remaining": max(0, WEEKLY_GEN_QUOTA - _gen_used_week(g.user_id)),
     })
+
+
+# ── Refaire une seule séance ────────────────────────────────────
+# Un exercice qui ne convient pas obligeait à tout régénérer — et à brûler
+# une des trois générations de la semaine (audit du 03/10). Une séance coûte
+# peu de jetons : quota à part, par jour.
+SEANCE_QUOTA_JOUR = 10
+MAX_TOKENS_SEANCE = 900
+
+
+def _prompt_seance(params: dict, program: dict, seance: str, consigne: str) -> str:
+    autres = "; ".join(f"{n} : " + ", ".join(e["name"] for e in exos)
+                       for n, exos in program["seances"].items() if n != seance) or "aucune"
+    actuelle = ", ".join(f"{e['name']} {e['sets']}×{e['reps']}" for e in program["seances"][seance])
+    return (
+        "Tu es un coach de musculation expert. Dans le programme ci-dessous, refais "
+        f"UNIQUEMENT la séance « {seance} », en gardant son rôle dans la semaine.\n\n"
+        f"- Objectif : {params['objectif']} · Niveau : {params['niveau']} · "
+        f"Lieu : {params['lieu']} · Durée : {params['duree']} min\n"
+        f"- Contraintes : {params['contraintes'] or 'aucune'}\n"
+        f"- Séance actuelle : {actuelle}\n"
+        f"- Autres séances (à ne pas dupliquer) : {autres}\n"
+        f"- Demande de l'utilisateur : {consigne or 'propose une alternative équivalente'}\n\n"
+        "Même format d'exercice que le programme : séries 3 à 5, fourchette de reps, "
+        "repos 60 à 180 s, champ \"muscle\" parmi : " + ", ".join(MUSCLE_LIST) + ". "
+        "Privilégie ces exercices connus : " + _known_exercises() + ".\n"
+        "RÉPONDS UNIQUEMENT avec un objet JSON : "
+        '{"exercices": [{"name": "…", "sets": 4, "reps": "8-12", "rest_seconds": 90, "muscle": "Pecs"}]}'
+    )
+
+
+@bp.route("/generator/seance", methods=["POST"])
+@limiter.limit("20 per hour")
+def regenerer_seance():
+    if not getattr(g, "is_vip_full", False):
+        return jsonify({"error": "Réservé aux membres PRO."}), 403
+    f = request.get_json(silent=True) or {}
+    try:
+        program = parse_and_validate(f.get("program"))
+    except ValueError:
+        return jsonify({"error": "Programme illisible. Régénère-le en entier."}), 400
+    seance = str(f.get("seance") or "")
+    if seance not in program["seances"]:
+        return jsonify({"error": "Séance introuvable."}), 400
+    params = _lire_params(f.get("params") if isinstance(f.get("params"), dict) else {})
+    consigne = str(f.get("consigne") or "").strip()[:200]
+
+    from core.quota import liberer, reserver
+    user_id = g.user_id
+    if not reserver("generateur-seance", user_id,
+                    lambda: _evenements_recents(user_id, "seance_regenerated", 1), SEANCE_QUOTA_JOUR):
+        return jsonify({"error": f"Limite atteinte ({SEANCE_QUOTA_JOUR} séances refaites par jour)."}), 429
+    try:
+        raw, erreur = _appeler_ia(_prompt_seance(params, program, seance, consigne), MAX_TOKENS_SEANCE)
+        if erreur:
+            return erreur
+        try:
+            texte = raw.strip()
+            if texte.startswith("```"):
+                texte = "\n".join(l for l in texte.split("\n") if not l.strip().startswith("```"))
+            exos = json.loads(texte).get("exercices")
+            nouvelle = parse_and_validate({"seances": {seance: exos}})["seances"][seance]
+        except (ValueError, AttributeError, TypeError):
+            logger.error("/generator/seance parse FAILED | raw=%s", (raw or "")[:200])
+            return jsonify({"error": "L'IA a renvoyé une séance illisible. Réessaie."}), 502
+        track("seance_regenerated", {"seance": seance, "exos": len(nouvelle)})
+        return jsonify({"ok": True, "seance": seance, "exercices": nouvelle})
+    finally:
+        liberer("generateur-seance", user_id)
 
 
 @bp.route("/generator/apply", methods=["POST"])

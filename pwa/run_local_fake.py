@@ -40,6 +40,7 @@ def test_login():
     session["user_id"] = USER_ID
     session["email"] = "test@example.com"
     session["is_vip"] = (request.args.get("vip") == "1")
+    session["is_vip_full"] = session["is_vip"]      # PRO payant (générateur, coach)
     session["is_vip_ts"] = time.time()
     if request.args.get("essai") == "1":
         # Essai PRO de 20 h (parrainage) : profil free + vip_until, statut

@@ -119,3 +119,62 @@ def test_generation_reussie_renvoie_le_programme_et_le_quota(fake_db, logged_in,
     d = r.get_json()
     assert d["ok"] and d["program"]["seances"]["A"][0]["name"] == "Squat"
     assert d["quota_remaining"] == gen.WEEKLY_GEN_QUOTA - 1
+
+
+def _ia_qui_repond(monkeypatch, texte, appels=None):
+    import sys
+    import types
+
+    class Client:
+        def __init__(self, **k):
+            def create(**kw):
+                if appels is not None:
+                    appels.append(kw)
+                return types.SimpleNamespace(content=[types.SimpleNamespace(text=texte)])
+            self.messages = types.SimpleNamespace(create=create)
+
+    monkeypatch.setitem(sys.modules, "anthropic", types.SimpleNamespace(Anthropic=Client))
+    monkeypatch.setattr("routes.generator._env", lambda *a, **k: "cle-de-test", raising=False)
+
+
+PROGRAMME = {"name": "P", "seances": {
+    "Haut": [{"name": "Développé couché", "sets": 4, "reps": "8-10", "muscle": "Pecs"}],
+    "Bas": [{"name": "Squat", "sets": 5, "reps": "5", "muscle": "Quadriceps"}]},
+    "planning": {"Lundi": "Haut", "Jeudi": "Bas"}}
+
+
+def test_refaire_une_seance_seulement(fake_db, logged_in, monkeypatch):
+    import json
+    from conftest import CSRF, USER_ID
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    appels = []
+    _ia_qui_repond(monkeypatch, "```json\n" + json.dumps({"exercices": [
+        {"name": "Pompes", "sets": 4, "reps": "12-15", "rest_seconds": 60, "muscle": "Pecs"}]}) + "\n```", appels)
+    r = logged_in.post("/generator/seance", headers={"X-CSRFToken": CSRF}, json={
+        "program": PROGRAMME, "seance": "Haut", "consigne": "sans machine",
+        "params": {"lieu": "Maison"}})
+    d = r.get_json()
+    assert r.status_code == 200 and d["ok"] and d["exercices"][0]["name"] == "Pompes"
+    prompt = appels[0]["messages"][0]["content"]
+    assert "« Haut »" in prompt and "sans machine" in prompt and "Bas : Squat" in prompt
+    assert appels[0]["max_tokens"] < 2600                    # une séance, pas un programme
+
+
+def test_refaire_seance_entrees_invalides(fake_db, logged_in, monkeypatch):
+    from conftest import CSRF, USER_ID
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    _ia_qui_repond(monkeypatch, "pas du json")
+    h = {"X-CSRFToken": CSRF}
+    assert logged_in.post("/generator/seance", headers=h, json={"program": PROGRAMME, "seance": "Jambes"}).status_code == 400
+    assert logged_in.post("/generator/seance", headers=h, json={"program": "x", "seance": "Haut"}).status_code == 400
+    assert logged_in.post("/generator/seance", headers=h, json={"program": PROGRAMME, "seance": "Haut"}).status_code == 502
+
+
+def test_refaire_seance_reserve_au_pro(fake_db, logged_in):
+    from conftest import CSRF, USER_ID
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free"}).execute()
+    with logged_in.session_transaction() as s:            # compte gratuit
+        s["is_vip"] = s["is_vip_full"] = False
+    r = logged_in.post("/generator/seance", headers={"X-CSRFToken": CSRF},
+                       json={"program": PROGRAMME, "seance": "Haut"})
+    assert r.status_code == 403, r.get_data(as_text=True)[:400]
