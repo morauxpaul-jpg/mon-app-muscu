@@ -195,8 +195,25 @@ def _recent_sessions_sets(hist, exo_final, seance, date_str, n=2):
         rows = [r for r in matches if r["Date"] == d]
         rows.sort(key=lambda r: int(r["Série"] or 0))
         out.append([{"reps": int(r["Reps"]), "poids": float(r["Poids"]),
-                     "rpe": parse_rpe(r.get("Remarque"))} for r in rows])
+                     "rpe": _rpe_de(r)} for r in rows])
     return out
+
+
+def _rpe_de(r):
+    """RPE d'une ligne d'historique : la colonne dédiée (migration v34), où la
+    saisie l'écrit, sinon l'ancien jeton « @RPE8 » des remarques.
+
+    La suggestion ne lisait que le jeton. Or depuis la v34 la saisie n'écrit
+    plus le RPE dans la remarque : tout RPE saisi était ignoré, et 3 × 8 à
+    RPE 10 donnait « vise 9 reps » au lieu de « consolide » (audit du 03/10,
+    I1)."""
+    rpe = r.get("RPE")
+    if rpe is None or rpe == "":
+        return parse_rpe(r.get("Remarque"))
+    try:
+        return float(rpe)
+    except (TypeError, ValueError):
+        return parse_rpe(r.get("Remarque"))
 
 
 def _last_session_sets(hist, exo_final, seance, date_str):
