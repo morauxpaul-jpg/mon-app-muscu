@@ -491,7 +491,16 @@ def landing():
 
 @app.route("/plus")
 def plus():
-    return render_template("plus.html", active="plus")
+    # Membre PRO : ce que l'abonnement lui a apporté ce mois-ci (core/bilan_pro.py).
+    bilan = None
+    if getattr(g, "is_vip_full", False):
+        try:
+            from core.bilan_pro import bilan_mois
+            from core.dates import logical_today_paris
+            bilan = bilan_mois(g.user_id, core_db.get_hist(g.user_id), logical_today_paris())
+        except Exception as e:
+            logger.warning("bilan PRO FAILED: %s", e)
+    return render_template("plus.html", active="plus", bilan=bilan)
 
 
 @app.route("/plaques")

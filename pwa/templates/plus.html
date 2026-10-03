@@ -10,7 +10,7 @@
       <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
       <div class="s-97445a">
         <div class="s-3d3074">Essai PRO{% if trial_left %} · {{ trial_left }}{% endif %}</div>
-        <div class="s-71a611">Passe en PRO pour le garder et débloquer le Coach IA.</div>
+        <div class="s-71a611">Coach IA et debrief compris pendant l'essai. Passe en PRO pour les garder.</div>
       </div>
       <span class="plus-promo-cta">Voir</span>
     </a>
@@ -23,6 +23,21 @@
       </div>
       <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
+    {# Ce que PRO a apporté sur 30 jours (core/bilan_pro.py). #}
+    {% if bilan and not bilan.vide %}
+    <div class="card bilan-pro">
+      <div class="card-label">Ce mois-ci avec PRO</div>
+      <div class="bilan-pro-grille">
+        {% for n, un, plusieurs in [(bilan.debriefs, 'debrief', 'debriefs'),
+                                    (bilan.coach, 'message au coach', 'messages au coach'),
+                                    (bilan.programmes, 'programme généré', 'programmes générés'),
+                                    (bilan.seances_refaites, 'séance refaite', 'séances refaites'),
+                                    (bilan.records, 'record battu', 'records battus')] if n %}
+        <div class="bilan-pro-case"><b>{{ n }}</b><span>{{ plusieurs if n > 1 else un }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   {% else %}
     <a href="/premium" class="card plus-link plus-promo s-fac33a">
       <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
@@ -64,9 +79,9 @@
   {# ── Premium (fonctions avancées, verrouillées en gratuit) ──── #}
   <div class="plus-section">Premium{% if not is_vip %} <span class="s-3c6a21">· inclus avec PRO</span>{% endif %}</div>
 
-  <a href="/coach" class="card plus-link plus-row{% if not is_vip_full %} plus-locked{% endif %}">
+  <a href="/coach" class="card plus-link plus-row{% if not is_vip_full and not is_trial %} plus-locked{% endif %}">
     <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
-    <div class="plus-row-txt"><h3>Coach IA{% if not is_vip_full %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Ton coach perso, alimenté par l'IA.</p></div>
+    <div class="plus-row-txt"><h3>Coach IA{% if not is_vip_full %} <span class="badge-pro">{{ 'ESSAI' if is_trial else 'PRO' }}</span>{% endif %}</h3><p>Ton coach perso, alimenté par l'IA.</p></div>
     <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip_full %}chevron-right{% else %}lock{% endif %}"/></svg>
   </a>
 
