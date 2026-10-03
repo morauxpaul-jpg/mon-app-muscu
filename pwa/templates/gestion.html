@@ -293,6 +293,10 @@
         <p class="s-fdee3b">
           Envoyé seulement si la séance du jour n'est pas encore faite.
         </p>
+        <label class="muscle-check s-2e0efa">
+          <input type="checkbox" name="recap_hebdo" {% if settings.recap_hebdo %}checked{% endif %}>
+          <span>Récap de ma semaine le dimanche à 19 h</span>
+        </label>
       </div>
       <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>

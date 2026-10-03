@@ -238,3 +238,24 @@ def mark_reactivation_sent(endpoint: str, count: int) -> None:
         )
     except Exception as e:
         logger.warning("mark_reactivation_sent FAILED (migration v34 ?): %s", e)
+
+
+def history_between_for_users(user_ids, debut: str, fin: str) -> list[dict]:
+    """Séries de ces comptes entre deux dates incluses (récap du dimanche),
+    par lots de 100 comptes : une requête par lot, pas par personne."""
+    client = get_client()
+    ids = sorted({u for u in user_ids or [] if u})
+    out: list = []
+    try:
+        for i in range(0, len(ids), 100):
+            lot = ids[i:i + 100]
+            out.extend(_fetch_all(lambda: (
+                client.table("history")
+                .select("user_id, date, seance, exercice, reps, poids")
+                .in_("user_id", lot).gte("date", _norm_date(debut))
+                .lte("date", _norm_date(fin)).order("id")
+            )))
+    except Exception as e:
+        logger.error("history_between_for_users FAILED: %s", e)
+        raise
+    return out

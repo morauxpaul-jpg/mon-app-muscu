@@ -279,6 +279,10 @@ pwa/
 - Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Au plus 3 relances par arrêt, espacées d'au moins 4 jours (`push_subscriptions.last_reactivation_at` / `reactivation_count`, migration v34) ; une relance antérieure à la dernière séance appartient à un arrêt terminé et ne compte plus (audit du 30/09, I14).
 - Désactivable dans Gestion > Paramètres.
 
+### Récap de la semaine (core/recap.py)
+- Le dimanche à 19 h, le cron horaire des rappels (`/tasks/reminders`, `cron_reminders.py`) envoie un push : séances faites, volume, écart avec la semaine d'avant, prochaine séance prévue (rotation comprise). Hors de ce créneau, l'appel ne fait rien.
+- Seulement à qui s'est entraîné dans la semaine et a les notifications ; coupable dans Gestion (`_settings.recap_hebdo`, vrai par défaut). Lecture groupée : `history_between_for_users` par lots de 100 comptes.
+
 ### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
 - **Texte non sélectionnable** : `theme.css` pose `user-select:none` + `-webkit-touch-callout:none` sur `body` (supprime le menu « Rechercher sur le web » au clic long en webview Android). Réactivé sur `input/textarea/select/[contenteditable]/.selectable`. Déployé par Railway → corrige l'app native **sans rebuild**.
 - **Notif de fin de repos fiable** : le chrono (`seance_edit.html`) planifiait la notif via un `setTimeout` dans le service worker → tué en arrière-plan = notif parfois manquante. Ajout de `@capacitor/local-notifications` (plugin natif) : en app native, la notif est planifiée par l'**OS** (`LocalNotifications.schedule({at})`, fiable même app fermée) ; le SW reste le fallback web. Cancel sur fin/skip (SW + natif). **Nécessite rebuild AAB.** Permission via `requestPermissions()`.
