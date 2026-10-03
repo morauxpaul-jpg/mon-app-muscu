@@ -386,33 +386,6 @@
 .exo-actions form { margin: 0; }
 .exo-actions button { width: 100%; white-space: nowrap; }
 
-.recup-container {
-  display: flex;
-  gap: var(--sp-md);
-  overflow-x: auto;
-  padding: var(--sp-md) 0;
-  margin-bottom: var(--sp-md);
-  scrollbar-width: none;
-}
-.recup-container::-webkit-scrollbar { display: none; }
-.recup-card {
-  min-width: 85px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: var(--sp-sm);
-  text-align: center;
-  flex-shrink: 0;
-}
-.status-dot {
-  height: 8px;
-  width: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 5px;
-  background: var(--text-3);
-}
-
 .vol-container {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);

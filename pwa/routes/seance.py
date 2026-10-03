@@ -30,7 +30,7 @@ from core.seance_semaine import (_date_label, _display_week, _find_done_session,
                                  _iso_week, _normalize_hist, _parse_date)
 from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows,
                                     _last_session_sets, _norm, _previous_weeks_data,
-                                    _recup_status, _suggestion_for, _cible_du_programme)
+                                    _suggestion_for, _cible_du_programme)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
                                  _update_extras, _update_libre_draft)
@@ -290,7 +290,6 @@ def seance():
             exos_done=exos_done,
             exos_total=exos_total,
             unites_cardio=UNITES_CARDIO,
-            recup=_recup_status(hist, s_act),
             vol_curr=int(vol_curr),
             vol_prev=int(vol_prev),
             vol_ratio=vol_ratio,
@@ -347,7 +346,6 @@ def seance():
             exos_done=exos_done,
             exos_total=exos_total,
             unites_cardio=UNITES_CARDIO,
-            recup=_recup_status(hist, s_act),
             vol_curr=0, vol_prev=0, vol_ratio=0, vol_overload=False,
             all_prog_exos=list(all_prog_exos.values()),
             custom_exercises=prog.get("_custom_exercises", []),

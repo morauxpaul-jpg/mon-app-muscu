@@ -140,31 +140,6 @@ def _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2):
     return out
 
 
-def _recup_status(hist, s_act):
-    """Statut de récupération par muscle pour la semaine active."""
-    muscles = ["Pecs", "Dos", "Épaules", "Biceps", "Triceps", "Abdos", "Quadriceps",
-               "Adducteurs", "Abducteurs", "Mollets"]
-    now = now_paris().replace(tzinfo=None)
-    out = []
-    for m in muscles:
-        trained = [r for r in hist if r["Semaine"] == s_act and m in (r.get("Muscle") or "")]
-        color, label = "#00FF7F", "PRÊT"
-        if trained:
-            dates = [r["Date"] for r in trained if r.get("Date")]
-            if dates:
-                last = max(dates)
-                try:
-                    diff = (now - datetime.strptime(last, "%Y-%m-%d")).days
-                    if diff < 1:
-                        color, label = "#FF453A", "REPAR."
-                    elif diff < 2:
-                        color, label = "#FFA500", "RECON."
-                except ValueError:
-                    pass
-        out.append({"muscle": m, "color": color, "label": label})
-    return out
-
-
 def _recent_sessions_sets(hist, exo_final, seance, date_str, n=2):
     """Séries des `n` dernières SÉANCES où cet exo a été réalisé, de la plus
     récente à la plus ancienne : liste de listes de dicts {reps, poids, rpe}.
