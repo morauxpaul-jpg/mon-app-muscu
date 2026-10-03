@@ -7,6 +7,7 @@ qui entourent chaque fonction de ce module.
 """
 import datetime as _dt
 import logging
+import threading
 
 from core.db_base import (_cache_get, _cache_invalidate, _cache_set, _continuous_week_of,
                           _fetch_all, get_client, session_id_for)
@@ -216,7 +217,27 @@ def _norm_date(date_str: str) -> str:
     return _dt.date.fromisoformat(str(date_str)[:10]).isoformat()
 
 
+# Deux écritures du même exercice qui se croisent lisaient chacune les
+# anciennes séries AVANT que l'autre n'insère les siennes : les deux
+# insertions restaient, séries en double (audit du 03/10, I7, reproduit R9).
+# Cas réel : une requête abandonnée par le téléphone à 8 s mais toujours en
+# cours côté serveur, puis la série suivante. Un verrou par exercice les met
+# en file. Il suffit tant qu'il n'y a qu'UN processus (railway.json, comme
+# le cache) ; à plusieurs instances, il faudra un index unique par série.
+_VERROUS = [threading.Lock() for _ in range(64)]
+
+
+def _verrou(user_id, date_str, seance, exercice):
+    return _VERROUS[hash((user_id, date_str, seance, exercice)) % len(_VERROUS)]
+
+
 def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
+    date_str = _norm_date(date_str)
+    with _verrou(user_id, date_str, seance, exercice):
+        _replace_exo_rows(user_id, date_str, seance, exercice, new_rows)
+
+
+def _replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):
     """Remplace les séries d'un exercice pour UNE séance (date + nom).
 
     Même ordre que `save_hist` : on INSÈRE les nouvelles lignes, puis on
@@ -224,7 +245,6 @@ def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, ne
     transaction : une coupure entre les deux effaçait les séries déjà
     enregistrées de l'exercice. Maintenant, un échec d'insertion laisse
     l'ancien état intact."""
-    date_str = _norm_date(date_str)
     client = get_client()
     old_ids = [r["id"] for r in (
         client.table("history").select("id")
@@ -258,6 +278,11 @@ def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
     Retourne le numéro de la première série ajoutée.
     """
     date_str = _norm_date(date_str)
+    with _verrou(user_id, date_str, seance, exercice):
+        return _append_exo_rows(user_id, date_str, seance, exercice, new_rows)
+
+
+def _append_exo_rows(user_id, date_str, seance, exercice, new_rows) -> int:
     client = get_client()
     existantes = (
         client.table("history").select("serie")
