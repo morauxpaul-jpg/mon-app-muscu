@@ -227,6 +227,8 @@ pwa/
 - **Prompt** : injecte la liste des exercices connus (`EXERCISES_INFO`) pour biaiser vers des exos illustrés + la liste des muscles canoniques.
 - **Events** : `program_generator_viewed`, `program_generated`, `program_adopted` (nourrissent aussi le funnel). **Entrée UI** : carte « Générateur IA » dans le hub Plus (section Premium, cadenas si free).
 
+- **Progression visible** pendant les 10-25 s d'attente (étape, temps écoulé, barre) — côté page, sans changement serveur.
+- **Refaire une séance** (`POST /generator/seance`) : régénère une seule séance de l'aperçu, avec une consigne facultative ; prompt court (900 jetons), quota à part (10/jour, événements `seance_regenerated`), réservé PRO. `_lire_params` et `_appeler_ia` sont partagés avec la génération complète.
 ### Parrainage (croissance, 2026-06-14)
 - **Boucle** : chaque user a un `profiles.referral_code` (stable, dérivé de l'user_id) → lien `/?ref=CODE`. Page **/parrainage** (hub Plus) : lien + copier + partager (Web Share) + compteur de filleuls/jours gagnés.
 - **Capture** : la landing pose un cookie `pending_ref` (survit au round-trip OAuth). À l'onboarding du filleul, `parrainage.apply_referral` crédite **une seule fois** : filleul **+1 j essai**, parrain **+3 j essai** (via `db.grant_vip_days` → `vip_until` cumulatif). L'essai = accès **restreint** (Nutrition + stats, cf. `is_vip_full`). Garde-fous : code valide, pas d'auto-parrainage, `referred_by` posé une seule fois. Le filleul passe en essai immédiatement (`session.pop('is_vip'/'is_vip_full')`) ; le parrain via la revalidation FREE (15 s). Récompenses ajustables : `REFERRER_VIP_DAYS` / `REFEREE_VIP_DAYS` dans `routes/parrainage.py`.
@@ -250,6 +252,13 @@ pwa/
 ### Upsell post-win (conversion, 2026-06-14)
 - **Paywall au bon moment** : un compte **free** qui atteint `UPSELL_AFTER_SESSIONS`=3 séances distinctes voit, **une seule fois**, une modale d'invitation PRO sur l'accueil (l'écran qui suit sa séance milestone → motivation haute). Distinct de la carte « Passe en PRO » discrète toujours présente en bas d'accueil.
 - Logique 100 % dans `routes/accueil.py` (pas de modif de `/seance/finish`) : flag durable `prog._upsell_seen` (méta programme, pas de migration). Event `upsell_shown` ({trigger:"post_workout", sessions}) — un `premium_viewed` qui suit = clic sur la modale (mesure de l'efficacité dans le funnel). Jamais affiché aux VIP.
+
+### Semaine allégée (core/decharge.py)
+- Proposée sur l'accueil quand, après ≥ 4 semaines d'affilée sans semaine déjà allégée, l'e1RM de la dernière semaine complète recule de ≥ 3 % sur plusieurs exercices et/ou le RPE moyen atteint 9 (deux signes, ou un recul sur ≥ 3 exercices).
+- `POST /accueil/decharge` : `appliquer` pose `_decharge_semaine` (séries ÷ 2, charges suggérées et pré-remplies −10 %, pour les séances de cette semaine seulement), `ignorer` pose `_decharge_ignoree`, `annuler` retire. Clés personnelles du blob. Le coach est prévenu.
+
+### Séries par muscle et par semaine (core/volume_muscle.py)
+- Page Progrès, pour tous : séries faites cette semaine par muscle (principal 1, secondaires ½, hors cardio/SESSION/SKIP), face au repère 10-20 (6-16 pour les petits muscles), avec la semaine passée. La carte du corps PRO garde la part relative.
 
 ### Progression
 - **Calendrier mensuel** : cases colorées (vert=fait, rouge=manqué, bleu=à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
@@ -487,6 +496,13 @@ pwa/
 - `replace_exo_rows` insère avant d'effacer (par id). « Skip » sur des séries réelles : confirmation en ligne côté client, 409 côté serveur sans `confirme=1`.
 - Le SW ne recharge plus la page à sa première installation, ni sur `/seance` lors d'une mise à jour.
 - Tests : `tests/test_series_sures.py` (serveur), `tests/js/test_saisie_serie.js` + `test_offline.js`, et **`tests/e2e/test_seance_navigateur.py`** — la séance jouée dans Chromium via `run_local_fake.py` (`/test-vierge`, `/test-historique`) : en ligne, mode avion, réseau qui ne répond pas, Skip. S'ignore sans Playwright ; la CI installe Chromium.
+
+### Quotas coach et générateur (core/quota.py)
+- Vérifier et réserver d'un seul geste, sous verrou par utilisateur (un processus : même condition que le cache). Coach : profil relu sous verrou avant d'incrémenter. Générateur : compte en base (événements) lu sous verrou + générations en cours ; la réservation tombe à la fin de l'appel, réussi ou non. À plusieurs instances, il faudra un incrément atomique côté base.
+
+### Compression HTTP (core/compression.py)
+- gzip niveau 6 sur les réponses texte de 200 et ≥ 1 ko (HTML, CSS, JS, JSON, SVG), y compris les fichiers statiques. Jamais sur les flux (SSE du coach) ni sur une réponse déjà encodée. ETag rendu faible, `Vary: Accept-Encoding`. Hook déclaré AVANT les autres `after_request` pour s'exécuter en dernier. `COMPRESSION_DISABLED=1` coupe tout.
+- Mesuré : /programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko, seance.js 43 → 12 ko.
 
 ### Coût d'un affichage de /accueil
 - Mesuré avec un an d'entraînement (1 872 séries) : **8 requêtes Supabase**, dont le **programme trois fois**. La page pouvait le sauvegarder **jusqu'à quatre fois** en un seul affichage (badges, record de streak, bandeau PRO, défi gagné), chacune relisant et réécrivant tout le blob sous verrou optimiste. Les quatre posent désormais un drapeau et **une seule écriture** les porte : 8 → 7 requêtes.

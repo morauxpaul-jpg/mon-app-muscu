@@ -646,3 +646,44 @@ html.has-ad-banner .topbar {
   cursor: pointer;
 }
 .prog-superset input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+/* Séries par muscle et par semaine (page Progrès). */
+.sm-liste { list-style: none; margin: 8px 0 0; padding: 0; }
+.sm-ligne {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  grid-template-areas: "nom barre chiffre" "nom avant avant";
+  column-gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-default);
+  font-size: 0.82rem;
+}
+.sm-ligne:last-child { border-bottom: 0; }
+.sm-nom { grid-area: nom; color: var(--text-1); }
+.sm-barre {
+  grid-area: barre;
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.sm-zone { position: absolute; top: 0; bottom: 0; left: var(--sm-min); width: calc(83.333% - var(--sm-min)); background: rgba(52, 199, 89, 0.18); }
+.sm-rempli { position: absolute; left: 0; top: 0; bottom: 0; width: var(--sm-val); border-radius: 4px; background: var(--text-3); }
+.sm-etat-zone .sm-rempli { background: #34c759; }
+.sm-etat-sous .sm-rempli { background: var(--accent); }
+.sm-etat-au-dela .sm-rempli { background: #ff9f0a; }
+.sm-chiffre { grid-area: chiffre; font-variant-numeric: tabular-nums; }
+.sm-chiffre small { color: var(--text-3); }
+.sm-avant { grid-area: avant; font-size: 0.7rem; color: var(--text-3); }
+.sm-aide { margin: 10px 0 0; font-size: 0.72rem; line-height: 1.5; color: var(--text-3); }
+
+/* Proposition de semaine allégée (accueil, core/decharge.py). */
+.decharge-carte { border-color: rgba(255, 159, 10, 0.45); margin-bottom: 12px; }
+.decharge-en-cours { border-color: rgba(52, 199, 89, 0.45); }
+.decharge-titre { font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; }
+.decharge-texte { margin: 0 0 6px; font-size: 0.82rem; line-height: 1.5; color: var(--text-2); }
+.decharge-detail { color: var(--text-3); }
+.decharge-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.decharge-actions .btn { flex: 1 1 auto; }

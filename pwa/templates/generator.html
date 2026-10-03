@@ -100,6 +100,13 @@
       <template x-if="!loading"><svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg></template>
       <span x-text="loading ? 'Génération en cours…' : 'Générer mon programme'"></span>
     </button>
+    {# Ce que fait l'IA pendant les 10 à 25 s d'attente : un bouton figé
+       laissait croire à une panne (audit du 03/10). #}
+    <div class="gen-progres" x-show="loading" x-cloak aria-live="polite">
+      <div class="gen-progres-etape" x-text="etapeTexte()"></div>
+      <div class="gen-progres-barre"><span :style="'width:' + Math.min(95, ecoule / 22 * 100) + '%'"></span></div>
+      <div class="gen-progres-temps" x-text="Math.round(ecoule) + ' s · d\'habitude 10 à 25 s'"></div>
+    </div>
     <div class="s-f4cfdb" x-show="error" x-text="error"></div>
     <div class="s-88b41d" x-show="quotaLeft <= 0">
       Limite hebdomadaire atteinte — reviens dans quelques jours.
@@ -123,6 +130,22 @@
           <span x-text="sname"></span>
           <span class="s-b6172f" x-text="'· ' + exos.length + ' exos'"></span>
         </h3>
+        {# Refaire UNE séance, sans brûler une génération de la semaine. #}
+        <div class="gen-refaire">
+          <button type="button" class="btn mini" x-show="refait.sname !== sname"
+                  @click="refait = { sname: sname, consigne: '', loading: false, error: '' }">Refaire cette séance</button>
+          <div x-show="refait.sname === sname" x-cloak class="gen-refaire-form">
+            <input type="text" class="field" maxlength="200" x-model="refait.consigne"
+                   placeholder="Ex : sans machine, plus court, moins d'épaules…"
+                   :aria-label="'Consigne pour refaire ' + sname">
+            <div class="gen-refaire-actions">
+              <button type="button" class="btn primary mini" :disabled="refait.loading"
+                      @click="refaireSeance(sname)" x-text="refait.loading ? 'L\'IA refait la séance…' : 'Refaire'"></button>
+              <button type="button" class="btn mini" :disabled="refait.loading" @click="refait.sname = null">Annuler</button>
+            </div>
+            <div class="s-f4cfdb" x-show="refait.error" x-text="refait.error"></div>
+          </div>
+        </div>
         <template x-for="(e, i) in exos" :key="i">
           <div class="gen-exo">
             <span class="gen-exo-name" x-text="e.name"></span>
@@ -186,6 +209,15 @@
 </div>
 
 <style>
+  /* Progression pendant la génération, et « refaire cette séance ». */
+  .gen-progres { margin-top: 12px; }
+  .gen-progres-etape { font-size: 0.85rem; color: var(--text-1); }
+  .gen-progres-barre { height: 6px; margin: 8px 0 4px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .gen-progres-barre span { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .5s linear; }
+  .gen-progres-temps { font-size: 0.72rem; color: var(--text-3); }
+  .gen-refaire { margin: 4px 0 8px; }
+  .gen-refaire-form .field { width: 100%; margin-bottom: 6px; }
+  .gen-refaire-actions { display: flex; gap: 6px; }
   [x-cloak] { display:none !important; }
   /* display:grid en CSS (pas en inline) : x-show d'Alpine efface le display
      inline en s'affichant, ce qui cassait le gap → champs collés/superposés. */
@@ -239,21 +271,59 @@
       loading: false,
       error: '',
       program: null,
+      ecoule: 0,
+      _chrono: null,
+      refait: { sname: null, consigne: '', loading: false, error: '' },
+      etapeTexte() {
+        if (this.ecoule < 4) return 'Lecture de ton profil et de tes contraintes…';
+        if (this.ecoule < 10) return 'Choix des exercices pour ton matériel…';
+        if (this.ecoule < 18) return 'Séries, répétitions et repos…';
+        return 'Dernières vérifications…';
+      },
+      _params() {
+        return {
+          objectif: this.form.objectif, niveau: this.form.niveau,
+          frequence: this.form.frequence, lieu: this.form.lieu,
+          duree: this.form.duree, contraintes: this.form.contraintes,
+          cardio: this.form.cardio,
+          cardio_types: this.form.cardio ? this.form.cardioTypes : [],
+          cardio_placement: this.form.cardioPlacement,
+          cardio_freq: this.form.cardioFreq,
+        };
+      },
+      async refaireSeance(sname) {
+        if (this.refait.loading) return;
+        this.refait.loading = true; this.refait.error = '';
+        try {
+          const resp = await fetch('/generator/seance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ program: this.program, seance: sname,
+                                   consigne: this.refait.consigne, params: this._params() }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.ok) {
+            this.refait.error = data.error || 'La séance n\'a pas pu être refaite. Réessaie.';
+          } else {
+            this.program.seances[sname] = data.exercices;
+            this.refait = { sname: null, consigne: '', loading: false, error: '' };
+            return;
+          }
+        } catch (e) {
+          this.refait.error = 'Erreur réseau. Réessaie.';
+        }
+        this.refait.loading = false;
+      },
       quotaLeft: {{ quota_remaining }},
       _armed: false,
       async generate() {
         if (this.loading || this.quotaLeft <= 0) return;
         this.loading = true; this.error = '';
+        this.ecoule = 0;
+        const debut = Date.now();
+        this._chrono = setInterval(() => { this.ecoule = (Date.now() - debut) / 1000; }, 500);
         try {
-          const payload = {
-            objectif: this.form.objectif, niveau: this.form.niveau,
-            frequence: this.form.frequence, lieu: this.form.lieu,
-            duree: this.form.duree, contraintes: this.form.contraintes,
-            cardio: this.form.cardio,
-            cardio_types: this.form.cardio ? this.form.cardioTypes : [],
-            cardio_placement: this.form.cardioPlacement,
-            cardio_freq: this.form.cardioFreq,
-          };
+          const payload = this._params();
           const resp = await fetch('/generator/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -270,6 +340,7 @@
         } catch (e) {
           this.error = 'Erreur réseau. Réessaie.';
         } finally {
+          clearInterval(this._chrono);
           this.loading = false;
         }
       },

@@ -140,6 +140,28 @@
   {% else %}
 
   {# ── Carte du corps (VIP) ─────────────────────────── #}
+  {# Séries par muscle cette semaine, face aux repères (core/volume_muscle.py). #}
+  {% if series_muscle %}
+  <div class="card" id="series-muscle">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#bar-chart"/></svg>Séries par muscle cette semaine</h3>
+    <ul class="sm-liste">
+      {% for l in series_muscle %}
+      <li class="sm-ligne sm-etat-{{ l.statut }}">
+        <span class="sm-nom">{{ l.muscle }}</span>
+        <span class="sm-barre" role="img" aria-label="{{ l.series|string|replace('.', ',') }} séries, repère {{ l.min }} à {{ l.max }}"
+              style="--sm-min: {{ l.pct_min / 1.2 }}%; --sm-val: {{ l.pct / 1.2 }}%;">
+          <span class="sm-zone"></span>
+          <span class="sm-rempli"></span>
+        </span>
+        <span class="sm-chiffre"><b>{{ l.series|string|replace('.', ',') }}</b><small> / {{ l.min }}-{{ l.max }}</small></span>
+        <span class="sm-avant">{% if l.precedente %}sem. passée {{ l.precedente|string|replace('.', ',') }}{% else %}—{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="sm-aide">Séries faites, muscle principal compté 1, muscles secondaires ½. La bande claire marque le repère courant pour progresser (10-20 séries par semaine, 6-16 pour un petit muscle) : un ordre de grandeur, pas une règle.</p>
+  </div>
+  {% endif %}
+
   {% if is_vip %}
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Carte musculaire</h3>

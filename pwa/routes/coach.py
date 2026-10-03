@@ -130,6 +130,11 @@ def _programme_detail(prog):
             seance_to_days.setdefault(sname, []).append(day)
     name = prog.get("_name") or "Programme personnalisé"
     lines = [f"Nom : {name}"]
+    from core.dates import continuous_week
+    from core.decharge import semaine_allegee
+    if semaine_allegee(prog, continuous_week(logical_today_paris())):
+        lines.append("Semaine allégée en cours (acceptée par l'utilisateur) : moitié des séries, "
+                     "charges −10 %, loin de l'échec. Ne pas l'inciter à charger cette semaine.")
     rot = rotation_de(prog)
     if rot:
         lines.append("Rotation : " + " → ".join(rot)
@@ -224,19 +229,28 @@ def _check_and_bump_quota(profile):
     API, l'appelant doit appeler _revert_quota(profile) pour ne pas faire
     payer un message qui n'a jamais abouti.
     """
-    today = today_paris_str()
-    q_date = str(profile.get("coach_quota_date") or "")
-    q_count = int(profile.get("coach_quota_count") or 0)
-    if q_date != today:
-        q_count = 0  # nouveau jour → reset
-    if q_count >= DAILY_QUOTA:
-        return False, q_count, DAILY_QUOTA
-    q_count += 1
-    try:
-        save_profile({"coach_quota_date": today, "coach_quota_count": q_count})
-    except Exception as e:
-        logger.error("coach save_profile quota FAILED: %s", e)
-    return True, q_count, DAILY_QUOTA
+    # Lecture ET écriture sous verrou, sur le profil relu : `profile` a été lu
+    # plus tôt, et deux messages envoyés ensemble écrivaient le même compteur
+    # (audit du 03/10, M8). save_profile invalide le cache : le suivant relit.
+    from core.quota import verrou
+    with verrou("coach", getattr(g, "user_id", "") or ""):
+        try:
+            profile = get_profile() or profile
+        except Exception:
+            pass
+        today = today_paris_str()
+        q_date = str(profile.get("coach_quota_date") or "")
+        q_count = int(profile.get("coach_quota_count") or 0)
+        if q_date != today:
+            q_count = 0  # nouveau jour → reset
+        if q_count >= DAILY_QUOTA:
+            return False, q_count, DAILY_QUOTA
+        q_count += 1
+        try:
+            save_profile({"coach_quota_date": today, "coach_quota_count": q_count})
+        except Exception as e:
+            logger.error("coach save_profile quota FAILED: %s", e)
+        return True, q_count, DAILY_QUOTA
 
 
 def _revert_quota():

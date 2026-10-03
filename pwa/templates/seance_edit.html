@@ -120,22 +120,13 @@
 
   {% include "_seance_cardio.html" %}
 
-  {# Rangé en bas : ces deux blocs occupaient le haut de l'écran et
-     repoussaient le premier champ de saisie hors de l'écran (audit du
-     03/10, Q3). #}
+  {# Rangé en bas : ce bloc occupait le haut de l'écran et repoussait le
+     premier champ de saisie hors de l'écran (audit du 03/10, Q3). Le statut
+     « Récupération » (PRÊT / REPAR. selon le seul nombre de jours) a été
+     retiré : il ne changeait rien à ce que l'on fait (audit, partie C). #}
   <details class="seance-options">
-    <summary>Récupération et options de la séance</summary>
+    <summary>Options de la séance</summary>
     <div class="seance-options-corps">
-      <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Récupération</h3>
-  <div class="recup-container">
-    {% for r in recup %}
-      <div class="recup-card">
-        <small>{{ r.muscle|upper }}</small><br>
-        <span class="status-dot" style="background:{{ r.color }};"></span>
-        <b style="color:{{ r.color }}; font-size:10px;">{{ r.label }}</b>
-      </div>
-    {% endfor %}
-  </div>
 
   <form class="s-c2c0d0" method="post" action="/seance/reset-session" x-data="{ c:false }">
     <input type="hidden" name="date" value="{{ date_iso }}">

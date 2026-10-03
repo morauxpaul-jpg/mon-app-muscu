@@ -30,7 +30,7 @@ from core.seance_semaine import (_date_label, _display_week, _find_done_session,
                                  _iso_week, _normalize_hist, _parse_date)
 from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows,
                                     _last_session_sets, _norm, _previous_weeks_data,
-                                    _recup_status, _suggestion_for, _cible_du_programme)
+                                    _suggestion_for, _cible_du_programme)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
                                  _update_extras, _update_libre_draft)
@@ -237,8 +237,10 @@ def seance():
         extras = prog.get("_extras", {}).get(extras_key, [])
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
+        from core.decharge import semaine_allegee
         exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, date_iso,
-                                           auto_prefill_weight, show_overload_hint)
+                                           auto_prefill_weight, show_overload_hint,
+                                           decharge=semaine_allegee(prog, s_act))
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).
@@ -288,7 +290,6 @@ def seance():
             exos_done=exos_done,
             exos_total=exos_total,
             unites_cardio=UNITES_CARDIO,
-            recup=_recup_status(hist, s_act),
             vol_curr=int(vol_curr),
             vol_prev=int(vol_prev),
             vol_ratio=vol_ratio,
@@ -345,7 +346,6 @@ def seance():
             exos_done=exos_done,
             exos_total=exos_total,
             unites_cardio=UNITES_CARDIO,
-            recup=_recup_status(hist, s_act),
             vol_curr=0, vol_prev=0, vol_ratio=0, vol_overload=False,
             all_prog_exos=list(all_prog_exos.values()),
             custom_exercises=prog.get("_custom_exercises", []),

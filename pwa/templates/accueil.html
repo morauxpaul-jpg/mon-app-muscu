@@ -36,6 +36,27 @@
     </div>
   {% endif %}
 
+  {# Semaine allégée (core/decharge.py) : proposée, ou rappelée en cours. #}
+  {% if decharge %}
+    <div class="card decharge-carte">
+      <div class="decharge-titre">Une semaine plus légère te ferait du bien</div>
+      <p class="decharge-texte">Après {{ decharge.semaines }} semaines d'affilée, {{ decharge.raisons|join(' et ') }}. Une semaine allégée laisse récupérer, et les charges repartent souvent à la hausse ensuite.</p>
+      <p class="decharge-texte decharge-detail">Cette semaine : moitié des séries, charges −10 %, loin de l'échec. Ton programme ne change pas.</p>
+      <form method="post" action="/accueil/decharge" class="decharge-actions">
+        <button type="submit" name="choix" value="appliquer" class="btn primary" data-haptic="1">Alléger cette semaine</button>
+        <button type="submit" name="choix" value="ignorer" class="btn">Pas maintenant</button>
+      </form>
+    </div>
+  {% elif decharge_en_cours %}
+    <div class="card decharge-carte decharge-en-cours">
+      <div class="decharge-titre">Semaine allégée en cours</div>
+      <p class="decharge-texte">Moitié des séries, charges −10 %. Le programme normal reprend lundi.</p>
+      <form method="post" action="/accueil/decharge" class="decharge-actions">
+        <button type="submit" name="choix" value="annuler" class="btn">Revenir au programme normal</button>
+      </form>
+    </div>
+  {% endif %}
+
   <div class="date-hero">
     <div class="day-name">{{ day_name }}</div>
     <div class="date-str">{{ date_str }}</div>

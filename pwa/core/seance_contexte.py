@@ -16,6 +16,7 @@ pour que chaque corps de fonction reste comparable au caractère près.
 import logging
 
 from core.exercises_data import detect_isometric, get_exercise_info, variantes
+from core.decharge import suggestion_allegee
 from core.muscu import BW_EXOS, auto_muscles, est_a_la_barre, get_base_name, series_echauffement
 from core.seance_historique import (_all_used_variants, _best_record, _exo_completed,
                                     _exo_curr_rows, _extract_variant, _last_session_sets,
@@ -26,10 +27,15 @@ logger = logging.getLogger(__name__)
 
 def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
                        prefill_weight=True, forced_variant=None, exo_index=0,
-                       show_overload_hint=True):
-    """Construit le dict passé au template pour un exercice."""
+                       show_overload_hint=True, decharge=False):
+    """Construit le dict passé au template pour un exercice.
+
+    `decharge` : semaine allégée acceptée (core/decharge.py) — moitié des
+    séries prévues, charges suggérées et pré-remplies à −10 %."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
+    if decharge:
+        p_sets = max(1, -(-p_sets // 2))
     muscle = exo_obj.get("muscle", "Autre")
     rest_seconds = int(exo_obj.get("rest_seconds", 90))
     # Le programme prescrit-il un repos ? Si oui, il passe avant le dernier
@@ -55,6 +61,9 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
     suggestion = None
     if show_overload_hint and not is_iso:
         suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw, target_reps)
+    poids_allege = None
+    if decharge and last_sets and not is_iso:
+        suggestion, poids_allege = suggestion_allegee(last_sets, is_bw)
 
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
     n_rows = max(p_sets, len(curr)) if curr else p_sets
@@ -76,7 +85,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
             # Cellule vide — pré-remplir poids uniquement (si activé)
             poids_val = None
             if prefill_weight and not completed and i <= len(last_sets):
-                poids_val = last_sets[i - 1]["poids"]
+                poids_val = poids_allege if poids_allege is not None else last_sets[i - 1]["poids"]
             sets.append({
                 "serie": i,
                 "reps": None,
@@ -151,7 +160,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
 
 
 def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefill_weight,
-                            show_overload_hint=True):
+                            show_overload_hint=True, decharge=False):
     """Construit les contextes pour tous les exercices d'une séance, en
     assignant des variantes distinctes quand le même base name apparaît
     plusieurs fois (ex : 'Développé incliné' en Haltères ET en Barre)."""
@@ -175,7 +184,7 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefil
         out.append(_build_exo_context(
             hist, e, seance_name, s_act, date_str, is_extra=is_extra,
             prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
-            show_overload_hint=show_overload_hint,
+            show_overload_hint=show_overload_hint, decharge=decharge,
         ))
     # Supersets : « enchaîné avec le suivant » se lit dans le programme ; on
     # nomme le partenaire des deux côtés pour que chaque carte le dise.

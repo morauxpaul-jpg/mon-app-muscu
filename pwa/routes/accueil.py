@@ -588,9 +588,21 @@ def index():
             logger.warning("accueil : sauvegarde du programme échouée (%s)",
                            type(e).__name__)
 
+    # Semaine allégée : proposée quand la fatigue s'accumule (core/decharge.py),
+    # ou rappelée si elle est en cours.
+    from core.decharge import a_proposer, semaine_allegee
+    try:
+        decharge = a_proposer(hist, prog, s_act)
+    except Exception as e:
+        logger.warning("diagnostic décharge FAILED: %s", e)
+        decharge = None
+    decharge_en_cours = semaine_allegee(prog, s_act)
+
     return render_template(
         "accueil.html",
         active="accueil",
+        decharge=decharge,
+        decharge_en_cours=decharge_en_cours,
         last_workout=last_workout,
         challenge=challenge,
         challenge_just_won=challenge_just_won,
@@ -629,3 +641,27 @@ def index():
         next_session=next_session,
         precache_urls=precache_urls,
     )
+
+
+@bp.route("/accueil/decharge", methods=["POST"])
+def decharge_choix():
+    """Réponse à la proposition de semaine allégée : `appliquer` (séries
+    ÷ 2, charges −10 % sur les séances de la semaine), `ignorer` (plus de
+    proposition cette semaine) ou `annuler` (revenir au programme normal)."""
+    from flask import redirect, url_for
+    from core.data import save_prog
+    choix = request.form.get("choix")
+    semaine = continuous_week(logical_today_paris())
+    prog = get_prog()
+    if choix == "appliquer":
+        prog["_decharge_semaine"] = semaine
+        track("decharge_appliquee", {"semaine": semaine})
+    elif choix == "ignorer":
+        prog["_decharge_ignoree"] = semaine
+        track("decharge_ignoree", {"semaine": semaine})
+    elif choix == "annuler":
+        prog.pop("_decharge_semaine", None)
+    else:
+        return redirect(url_for("accueil.index"))
+    save_prog(prog)
+    return redirect(url_for("accueil.index"))
