@@ -221,3 +221,42 @@ def test_une_page_deja_vue_souvre_meme_si_le_reseau_ne_repond_pas(page, serveur)
     page.wait_for_selector(".serie-valider", timeout=15000)
     assert time.time() - debut < 8, "la copie gardée arrive après le délai, pas après l'abandon"
     page.context.unroute("**/seance?**")
+
+
+def test_terminer_ne_reste_pas_fige_derriere_la_file(page, serveur):
+    """Audit du 03/10, R1 : une série en file, le réseau ne répond toujours
+    pas, et l'on touche « Terminer ». Le rejeu de la file n'avait aucun
+    délai : le bouton restait sur « Enregistrement… » indéfiniment."""
+    page.context.route("**/seance/save-exo", lambda route: None)
+    _serie_faite(page, 5, 100)
+    page.locator("#exo-anchor-0 .exo-etat").filter(has_text="Gardé sur l'appareil").wait_for(timeout=12000)
+    debut = time.time()
+    _terminer(page)
+    page.wait_for_url("**/accueil**", timeout=25000)
+    assert time.time() - debut < 20, "« Terminer » a fini par rendre la main, mais trop tard"
+    # Rien n'est perdu : la série et le bilan attendent, dans l'ordre.
+    file = page.evaluate("JSON.parse(localStorage.getItem('muscu_offline_queue'))")
+    assert [i["url"].rsplit("/", 1)[-1] for i in file] == ["save-exo", "finish"]
+
+
+# ── La valeur grisée (audit du 03/10, R2) ────────────────────────
+
+
+def test_serie_faite_sans_taper_enregistre_la_valeur_proposee(page, serveur):
+    """Le champ Reps affiche l'objectif « 5 » en gris. Toucher « Série faite »
+    sans taper repliait la série avec « — » et n'écrivait rien."""
+    carte = page.locator("#exo-anchor-0")
+    assert carte.get_by_label("Répétitions série 1", exact=True).get_attribute("placeholder") == "5"
+    carte.get_by_label("Poids série 1", exact=True).fill("60")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: _series(serveur) == [(1, 5, 60.0)])
+
+
+def test_sans_charge_ni_reps_la_serie_nest_pas_pretendue_faite(page, serveur):
+    carte = page.locator("#exo-anchor-0")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    time.sleep(0.8)
+    assert _series(serveur) == []
+    assert "Indique tes répétitions" in carte.locator(".exo-etat").inner_text()
+    # La série 1 est toujours celle qu'on remplit.
+    assert page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).indexCourant()") == 0

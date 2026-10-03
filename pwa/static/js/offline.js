@@ -123,6 +123,7 @@
   // plus récent. On s'arrête au premier échec pour ne pas désordonner la
   // suite (le reste repartira au prochain retour de réseau).
   var _syncing = false;
+  var DELAI_REJEU = 8000;
 
   function syncQueue() {
     if (_syncing) return Promise.resolve(0);
@@ -145,6 +146,12 @@
       var data = Object.assign({}, item.data);
       var jeton = csrfCourant();
       if (jeton) data._csrf = jeton;
+      // Délai : au sous-sol, le téléphone se croit en ligne et la requête ne
+      // revient jamais. Sans lui, le rejeu restait pendu — et « Terminer »,
+      // qui l'attend, restait figé sur « Enregistrement… » (audit du 03/10,
+      // I3). Abandonné, l'envoi reste en tête de file pour la prochaine fois.
+      var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var minuterie = ctrl ? setTimeout(function () { ctrl.abort(); }, DELAI_REJEU) : null;
       return fetch(item.url, {
         method: "POST",
         body: new URLSearchParams(data),
@@ -152,7 +159,9 @@
                    "X-CSRFToken": jeton },
         credentials: "same-origin",
         redirect: "follow",
+        signal: ctrl ? ctrl.signal : undefined,
       }).then(function (resp) {
+        if (minuterie) clearTimeout(minuterie);
         // Une redirection vers la landing ou le login = session expirée :
         // la donnée n'a PAS été enregistrée — on la garde dans la file.
         var landedOnAuth = false;

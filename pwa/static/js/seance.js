@@ -44,6 +44,8 @@
   // envoyer ce qui reste avant de clore la séance.
   var BLOCS = [];
   var DELAI_ENVOI = 8000;
+  // « Terminer » n'attend pas la file plus longtemps que ça.
+  var DELAI_FIN = 6000;
 
   function lireChamps(form) {
     var champs = {};
@@ -399,8 +401,8 @@
       // ouverte, avec deux champs larges. Sur 375 px, les six colonnes du
       // tableau donnaient 67 px à Reps, 70 à Poids et 25 au sélecteur de RPE.
       //
-      // C'est de l'AFFICHAGE : `serializedSets()` envoie toujours toutes les
-      // séries, et « Enregistrer » reste ce qui écrit en base.
+      // Le repli est de l'AFFICHAGE : `serializedSets()` envoie toujours
+      // toutes les séries. Ce qui écrit, c'est « Série faite » (envoi partiel).
       faits: [],
       optionsDe: -1,
 
@@ -422,7 +424,38 @@
         }
         return -1;
       },
+      // Les reps que le champ affiche en gris : la suggestion, sinon le bas
+      // de la fourchette du programme (« 8-12 » → 8). 0 si rien à proposer.
+      _repsProposees: function () {
+        var s = this.suggestion;
+        if (s && Number(s.reps) > 0) return Number(s.reps);
+        var m = /\d+/.exec(String(this.targetReps || ""));
+        return m ? parseInt(m[0], 10) : 0;
+      },
+
       serieFaite: function (i) {
+        var s = this.sets[i];
+        // Le champ affichait l'objectif en gris ; toucher « Série faite »
+        // sans taper repliait la série avec « — » et n'enregistrait RIEN
+        // (audit du 03/10, I2). Chez Hevy ou Strong, la valeur grisée est
+        // celle qu'on valide : on fait de même. Sans valeur à proposer, on
+        // ne prétend pas que la série est faite.
+        if (s && !this._estRemplie(s)) {
+          var reps = this._repsProposees();
+          var sansPoids = this.showWeight && (s.poids === "" || s.poids == null);
+          var poidsPropose = this.suggestion && Number(this.suggestion.poids) > 0
+            ? Number(this.suggestion.poids) : 0;
+          // Une charge qu'on n'a ni tapée ni vue proposée ne s'invente pas :
+          // « 5 × 0 kg » au développé couché fausserait records et suggestion.
+          if (!(reps > 0) || (sansPoids && !poidsPropose)) {
+            this.etat = "vide";
+            toast(sansPoids ? "Indique tes répétitions et ta charge avant de valider."
+                            : "Indique tes répétitions avant de valider la série.", "error");
+            return;
+          }
+          s.reps = reps;
+          if (sansPoids) s.poids = poidsPropose;
+        }
         if (this.faits.indexOf(i) < 0) this.faits.push(i);
         this.optionsDe = -1;
         // Le repos démarrait sur la frappe d'un champ ; il démarre maintenant
@@ -516,6 +549,7 @@
           ok: "Enregistré",
           attente: "Gardé sur l'appareil — envoi au retour du réseau",
           erreur: "Pas enregistré — touche « Enregistrer » pour réessayer",
+          vide: "Indique tes répétitions (et ta charge) avant de valider",
         }[this.etat] || "";
       },
 
@@ -908,7 +942,12 @@
           }
           var Q = window.OfflineQueue;
           if (Q && Q.pending() > 0 && navigator.onLine) {
-            return Q.sync().then(function () { terminer(Q.pending() > 0); });
+            // On tente de vider la file, mais on n'attend pas plus de
+            // quelques secondes : ce qui reste part derrière le bilan, dans
+            // l'ordre, au retour du réseau (audit du 03/10, I3).
+            var delai = new Promise(function (r) { setTimeout(r, DELAI_FIN); });
+            return Promise.race([Q.sync(), delai])
+              .then(function () { terminer(Q.pending() > 0); });
           }
           terminer(!navigator.onLine || (Q && Q.pending() > 0));
         });
