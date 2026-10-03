@@ -171,13 +171,18 @@ def submit():
         # Passer l'équipement pour adapter le programme (substitutions)
         equipment_arg = equipment_details if equipement != "salle" else None
         prog = catalog.build_program(programme_id, frequence, equipment=equipment_arg)
-        # _started_at = date d'aujourd'hui à l'onboarding initial. Évite que
-        # les jours d'entraînement de la semaine en cours antérieurs à
-        # l'inscription soient marqués comme manqués dans le calendrier.
-        prog.setdefault("_started_at", today_iso)
-        # Remplace le corps du programme ; les données personnelles (badges,
-        # record, exos perso…) d'un éventuel re-onboarding sont conservées.
-        merged = save_prog_body(prog)
+        # Ajouté dans un nouveau dossier et planifié ; rien n'est retiré.
+        # `save_prog_body(prog)` remplaçait tout le corps : un membre qui
+        # refaisait l'onboarding (Gestion) perdait ses dossiers et leurs
+        # séances (audit du 03/10, I6, reproduit R4).
+        # _started_at = aujourd'hui : les jours de la semaine antérieurs à
+        # l'inscription ne sont pas marqués manqués.
+        from core.programmes_dossiers import ajouter_et_planifier
+        seances = {k: v for k, v in prog.items() if not k.startswith("_")}
+        merged = save_prog_body(ajouter_et_planifier(
+            get_prog(), seances, prog.get("_planning") or {},
+            catalog.get_program(programme_id)["title"], today_iso,
+            {"_origin": prog.get("_origin")}))
         # L'équipement est une donnée personnelle : posé après la fusion.
         merged["_equipment_details"] = equipment_details
         merged["_equipement"] = equipement
