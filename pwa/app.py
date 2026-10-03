@@ -353,6 +353,17 @@ def _csp_report_policy() -> str:
     )
 
 
+# Déclaré AVANT les autres : Flask exécute les after_request dans l'ordre
+# inverse, et la compression doit passer en dernier, une fois la page
+# entièrement écrite (assets versionnés compris).
+@app.after_request
+def _compression(response):
+    if os.getenv("COMPRESSION_DISABLED", "").strip().lower() in ("1", "true", "yes", "on"):
+        return response
+    from core.compression import compresser
+    return compresser(request, response)
+
+
 @app.after_request
 def _security_headers(response):
     """Durcissement défensif. Anti-clickjacking, anti-MIME-sniffing, referrer,

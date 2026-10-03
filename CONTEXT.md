@@ -495,6 +495,10 @@ pwa/
 - Le SW ne recharge plus la page à sa première installation, ni sur `/seance` lors d'une mise à jour.
 - Tests : `tests/test_series_sures.py` (serveur), `tests/js/test_saisie_serie.js` + `test_offline.js`, et **`tests/e2e/test_seance_navigateur.py`** — la séance jouée dans Chromium via `run_local_fake.py` (`/test-vierge`, `/test-historique`) : en ligne, mode avion, réseau qui ne répond pas, Skip. S'ignore sans Playwright ; la CI installe Chromium.
 
+### Compression HTTP (core/compression.py)
+- gzip niveau 6 sur les réponses texte de 200 et ≥ 1 ko (HTML, CSS, JS, JSON, SVG), y compris les fichiers statiques. Jamais sur les flux (SSE du coach) ni sur une réponse déjà encodée. ETag rendu faible, `Vary: Accept-Encoding`. Hook déclaré AVANT les autres `after_request` pour s'exécuter en dernier. `COMPRESSION_DISABLED=1` coupe tout.
+- Mesuré : /programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko, seance.js 43 → 12 ko.
+
 ### Coût d'un affichage de /accueil
 - Mesuré avec un an d'entraînement (1 872 séries) : **8 requêtes Supabase**, dont le **programme trois fois**. La page pouvait le sauvegarder **jusqu'à quatre fois** en un seul affichage (badges, record de streak, bandeau PRO, défi gagné), chacune relisant et réécrivant tout le blob sous verrou optimiste. Les quatre posent désormais un drapeau et **une seule écriture** les porte : 8 → 7 requêtes.
 - `_compute_badges` ne persiste plus rien : elle calcule, la vue décide d'écrire. Une fonction de calcul qui sauvegarde était la raison pour laquelle l'une des quatre écritures passait inaperçue.
