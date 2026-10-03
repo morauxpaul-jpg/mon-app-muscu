@@ -551,7 +551,7 @@ def index():
     challenges_won = int(prog.get("_challenges_won", 0) or 0)
     try:
         from core.challenges import weekly_challenge
-        challenge = weekly_challenge(hist, today)
+        challenge = weekly_challenge(hist, today, prog)
         done_weeks = prog.get("_challenges_done", []) or []
         if challenge["done"] and is_navigation and challenge["week"] not in done_weeks:
             done_weeks.append(challenge["week"])
