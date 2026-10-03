@@ -708,9 +708,15 @@ def progres():
     vol_values = [vol_by_week[w] for w in vol_weeks_sorted]
     vol_max = max(vol_values) if vol_values else 1
 
+    # Séries par muscle de la semaine, face aux repères : pour tout le monde,
+    # c'est la mesure qui dit si l'entraînement suffit (core/volume_muscle.py).
+    from core.volume_muscle import tableau_semaine
+    series_muscle = tableau_semaine(hist, today_paris())
+
     return render_template(
         "progres.html",
         active="progres",
+        series_muscle=series_muscle,
         muscle_data=muscle_data,
         svg_ctx=svg_ctx,
         body_polygons=get_body_polygons(),
