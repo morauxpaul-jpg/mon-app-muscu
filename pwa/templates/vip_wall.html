@@ -19,9 +19,11 @@
   <h2 class="vip-wall-title">{{ feature }} <span class="badge-pro">PRO</span></h2>
   <p class="vip-wall-text">{{ message|default(taglines.get(feature, "Cette fonctionnalité fait partie de Muscu Tracker PRO.")) }}</p>
 
-  {# Vidéo promo motion design (autoplay muet) — sell visuel #}
+  {# Vidéo promo motion design (lecture au tap) — sell visuel #}
   <div class="vipw-video-wrap">
-    <video class="vipw-video" autoplay muted loop playsinline preload="metadata" poster="/static/promo-vip-motion-poster.jpg">
+    {# Lecture au tap (audit du 03/10, M13) : la lecture automatique téléchargeait
+       ~900 ko à chaque affichage du mur, sur le forfait de l'utilisateur. #}
+    <video class="vipw-video" controls muted loop playsinline preload="none" poster="/static/promo-vip-motion-poster.jpg" aria-label="Aperçu des fonctions PRO en vidéo">
       <source src="/static/promo-vip-motion.mp4" type="video/mp4">
     </video>
   </div>

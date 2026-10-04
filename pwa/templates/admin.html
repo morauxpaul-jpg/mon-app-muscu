@@ -6,6 +6,12 @@
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Admin</h1>
 
+  {% if admob == 'coupe' %}
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>Pubs AdMob coupées dans l'app native : définis ADMOB_BANNER_ID et ADMOB_INTERSTITIAL_ID (vrais identifiants) dans les variables Railway.</div>
+  {% elif admob == 'test' %}
+    <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Pubs AdMob en mode test : aucune recette publicitaire.</div>
+  {% endif %}
+
   <div class="card s-da12f2">
     <div class="s-767234">
       <span><strong class="s-38f301">{{ total_count }}</strong> utilisateur{% if total_count != 1 %}s{% endif %}</span>

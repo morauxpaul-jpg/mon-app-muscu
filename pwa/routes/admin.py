@@ -107,7 +107,13 @@ def index():
         total_count=len(users),
         current_email=session.get("email", ""),
         stats=stats,
+        admob=_etat_admob(),
     )
+
+
+def _etat_admob() -> str:
+    from core.admob import identifiants
+    return identifiants()["etat"]
 
 
 @bp.route("/admin/funnel")

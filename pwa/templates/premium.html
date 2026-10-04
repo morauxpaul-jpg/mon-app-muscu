@@ -13,11 +13,13 @@
   </div>
 
   {% if not is_vip_full %}
-  {# Vidéo promo motion design (autoplay muet en boucle) — la vidéo porte sa
+  {# Vidéo promo motion design (lecture au tap, muette en boucle) — la vidéo porte sa
      propre typographie (hook « Tu stagnes ? » → features → CTA), donc pas
      d'incrustation HTML par-dessus. #}
   <div class="promo-video-wrap">
-    <video class="promo-video" autoplay muted loop playsinline preload="metadata" poster="/static/promo-vip-motion-poster.jpg">
+    {# Lecture au tap (audit du 03/10, M13) : la lecture automatique téléchargeait
+       ~900 ko à chaque affichage du mur, sur le forfait de l'utilisateur. #}
+    <video class="promo-video" controls muted loop playsinline preload="none" poster="/static/promo-vip-motion-poster.jpg" aria-label="Aperçu des fonctions PRO en vidéo">
       <source src="/static/promo-vip-motion.mp4" type="video/mp4">
     </video>
   </div>

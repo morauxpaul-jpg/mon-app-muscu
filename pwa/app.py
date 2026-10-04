@@ -105,6 +105,10 @@ if not _flask_secret:
         "multi-worker ; à définir avant tout déploiement."
     )
 app.secret_key = _flask_secret or "dev-insecure-change-me"
+# Identifiants AdMob vérifiés une fois au démarrage (journal CRITIQUE si les
+# pubs sont coupées faute de vrais identifiants en production).
+from core.admob import verifier_au_demarrage as _verifier_admob  # noqa: E402
+_admob_ids = _verifier_admob(_IS_PROD)
 app.permanent_session_lifetime = timedelta(days=30)
 # Revalidation du tier VIP depuis la base (cf. before_request). TTL asymétrique :
 #   - un VIP confirmé est re-vérifié peu souvent (évite de marteler la DB) ;
@@ -461,11 +465,11 @@ def _inject_user():
         "is_native": _is_native_app(),
         "hide_billing": _hide_native_billing(),
         "csrf_token": _get_or_create_csrf() if uid else "",
-        # IDs AdMob (app native Capacitor, comptes Free uniquement). Défauts =
-        # IDs de TEST officiels Google — à remplacer par les vrais via l'env
-        # Railway une fois le compte AdMob créé. Côté web/PWA : sans effet.
-        "admob_banner_id": os.getenv("ADMOB_BANNER_ID", "ca-app-pub-3940256099942544/6300978111"),
-        "admob_interstitial_id": os.getenv("ADMOB_INTERSTITIAL_ID", "ca-app-pub-3940256099942544/1033173712"),
+        # IDs AdMob (app native Capacitor, comptes Free uniquement). En
+        # production, sans vrais identifiants les pubs sont COUPÉES (vides) au
+        # lieu d'afficher des pubs de test qui ne rapportent rien (core/admob.py).
+        "admob_banner_id": _admob_ids["banner"],
+        "admob_interstitial_id": _admob_ids["interstitial"],
     }
 
 
