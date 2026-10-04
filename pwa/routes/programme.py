@@ -354,9 +354,12 @@ def save_state():
 def save_planning():
     prog = get_prog()
     planning = _ensure_planning(prog)
+    seances = {k for k in prog if not k.startswith("_")}
     for day in DAYS_FR:
         val = request.form.get(f"plan_{day}", "")
-        planning[day] = "" if val == "__rest__" else val
+        # Un jour ne peut pointer que vers une séance qui existe : sinon
+        # l'accueil proposait une séance fantôme.
+        planning[day] = val if val in seances else ""
     save_prog(prog)
     return redirect(url_for("programme.programme") + "#planning")
 
@@ -501,6 +504,21 @@ def delete_seance():
     prog = get_prog()
     if name in prog and not name.startswith("_"):
         prog.pop(name)
+        # Rien ne doit plus désigner la séance supprimée : un jour du planning
+        # qui la gardait proposait une séance fantôme, une rotation l'aurait
+        # ramenée une semaine sur deux.
+        planning = prog.get("_planning")
+        if isinstance(planning, dict):
+            for jour, seance in planning.items():
+                if seance == name:
+                    planning[jour] = ""
+        if isinstance(prog.get("_rotation"), list):
+            prog["_rotation"] = rotation_nettoyee(prog["_rotation"],
+                                                  {k for k in prog if not k.startswith("_")})
+            if not prog["_rotation"]:
+                prog.pop("_rotation")
+        if isinstance(prog.get("_seance_prog"), dict):
+            prog["_seance_prog"].pop(name, None)
     save_prog(prog)
     return redirect(url_for("programme.programme"))
 
@@ -625,7 +643,8 @@ def import_program():
     # Planning : depuis le fichier si présent, sinon vide
     raw_planning = data.get("_planning") or {}
     new_prog["_planning"] = {
-        d: (raw_planning.get(d, "") if isinstance(raw_planning, dict) else "")
+        d: (raw_planning.get(d, "") if isinstance(raw_planning, dict)
+            and raw_planning.get(d, "") in new_prog else "")
         for d in DAYS_FR
     }
     # Nom du programme importé (ne casse rien : _name est libre)
