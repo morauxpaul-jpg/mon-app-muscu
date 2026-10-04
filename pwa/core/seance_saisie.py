@@ -12,7 +12,7 @@ pour que chaque corps de fonction reste comparable au caractère près.
 import logging
 
 from core.dates import logical_today_paris, now_paris
-from core.hist import is_muscu_perf, tonnage
+from core.hist import TYPE_ECHAUFFEMENT, is_muscu_perf, tonnage
 from core.muscu import get_base_name
 from core.seance_historique import _norm
 from core.seance_semaine import _parse_date
@@ -103,6 +103,9 @@ def _rows_from_sets(sets, *, semaine, seance, exo_final, muscle, date_str, is_bw
             "Muscle": muscle,
             "Date": date_str,
             "RPE": rpe if (rpe is None or 1 <= rpe <= 10) else None,
+            # Échauffement (core/hist.py) : gardé, mais hors records et volume.
+            **({"Type": TYPE_ECHAUFFEMENT}
+               if s.get("type") == TYPE_ECHAUFFEMENT and not passee else {}),
         })
     return rows
 

@@ -33,12 +33,26 @@ def clear_user_cache():
 
 
 # ── Historique ──────────────────────────────────────────────────────────
-def get_hist():
+def get_hist(echauffement=False):
     """L'historique, chaque série identifiée sous le nom ACTUEL de son
-    exercice (core/exercice_ids.py) : renommer garde le passé."""
+    exercice (core/exercice_ids.py) : renommer garde le passé. Sans les séries
+    d'échauffement, sauf `echauffement=True` (carte de séance, export)."""
     from core.exercice_ids import afficher_selon_programme
     uid = _uid()
-    return afficher_selon_programme(db.get_hist(uid), db.lire_prog(uid))
+    return afficher_selon_programme(db.get_hist(uid, echauffement), db.lire_prog(uid))
+
+
+def echauffements_disponibles() -> bool:
+    """La base sait-elle les garder à part (migration v43) ? Lu après une
+    lecture de l'historique : une colonne absente l'aura signalé."""
+    return bool(db._COLONNES.get("type_serie"))
+
+
+def echauffements_du_jour(date_str):
+    """Les séries d'échauffement d'une date (carte de séance)."""
+    from core.hist import est_echauffement
+    return [r for r in get_hist(echauffement=True)
+            if est_echauffement(r) and r.get("Date") == date_str]
 
 
 def save_hist(rows):

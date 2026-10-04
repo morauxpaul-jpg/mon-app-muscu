@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
                        prefill_weight=True, forced_variant=None, exo_index=0,
-                       show_overload_hint=True, decharge=False):
+                       show_overload_hint=True, decharge=False, echauffements=()):
     """Construit le dict passé au template pour un exercice.
 
     `decharge` : semaine allégée acceptée (core/decharge.py) — moitié des
@@ -52,7 +52,11 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
 
     curr = _exo_curr_rows(hist, date_str, seance, exo_final)
     curr.sort(key=lambda r: int(r["Série"] or 0))
-    completed = _exo_completed(curr)
+    completed = _exo_completed(curr)          # séries de TRAVAIL seulement
+    # Les échauffements du jour reviennent dans la carte (sinon ré-enregistrer
+    # l'exercice les effacerait), mais ne comptent pour rien d'autre.
+    echauff = _exo_curr_rows(list(echauffements), date_str, seance, exo_final)
+    curr_carte = sorted(curr + echauff, key=lambda r: int(r["Série"] or 0))
     record = _best_record(hist, exo_final, is_bw)
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
 
@@ -67,9 +71,9 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         suggestion, poids_allege = suggestion_allegee(last_sets, is_bw)
 
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
-    n_rows = max(p_sets, len(curr)) if curr else p_sets
+    n_rows = max(p_sets + len(echauff), len(curr_carte)) if curr_carte else p_sets
     sets = []
-    existing_by_idx = {int(r["Série"] or 0): r for r in curr}
+    existing_by_idx = {int(r["Série"] or 0): r for r in curr_carte}
     for i in range(1, n_rows + 1):
         r = existing_by_idx.get(i)
         if r:
@@ -81,6 +85,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
                 "reps": reps_val,
                 "poids": poids_val,
                 "remarque": r.get("Remarque") or "",
+                "type": r.get("Type") or "",
             })
         else:
             # Cellule vide — pré-remplir poids uniquement (si activé)
@@ -149,12 +154,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         "echauffement": echauffement,
         "conseil_depart": "" if (last_sets or completed or is_iso) else conseil_depart(base, is_bw),
         "info": info,
-        # De quoi échanger l'exercice en un geste, sans repasser par le
-        # formulaire d'ajout. Vide si l'exercice n'est pas au catalogue.
-        #
-        # Le préfixe `_` l'exclut du JSON passé à Alpine (voir `sans_prive`) :
-        # le panneau est rendu côté serveur, Alpine ne lit jamais cette
-        # liste, et l'embarquer ferait grossir chaque carte pour rien.
+        # Échanger l'exercice en un geste (vide hors catalogue). Le préfixe `_`
+        # l'exclut du JSON passé à Alpine (`sans_prive`) : rendu côté serveur.
         "_variantes": variantes(base),
         # Renseigné quand cette carte remplace déjà un exercice du programme,
         # pour pouvoir revenir en arrière.
@@ -163,7 +164,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
 
 
 def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefill_weight,
-                            show_overload_hint=True, decharge=False):
+                            show_overload_hint=True, decharge=False, echauffements=()):
     """Construit les contextes pour tous les exercices d'une séance, en
     assignant des variantes distinctes quand le même base name apparaît
     plusieurs fois (ex : 'Développé incliné' en Haltères ET en Barre)."""
@@ -188,6 +189,7 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefil
             hist, e, seance_name, s_act, date_str, is_extra=is_extra,
             prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
             show_overload_hint=show_overload_hint, decharge=decharge,
+            echauffements=echauffements,
         ))
     # Supersets : « enchaîné avec le suivant » se lit dans le programme ; on
     # nomme le partenaire des deux côtés pour que chaque carte le dise.

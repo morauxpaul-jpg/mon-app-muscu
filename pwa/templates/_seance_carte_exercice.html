@@ -216,7 +216,7 @@
                 {# Série en cours. #}
                 <div class="serie-encours" x-show="!estFait(i) && i === indexCourant()" x-cloak>
                   <div class="serie-encours-tete">
-                    <b>Série <span x-text="i + 1"></span></b>
+                    <b>Série <span x-text="i + 1"></span><span class="serie-type" x-show="s.type === 'echauffement'" x-cloak> · échauffement</span></b>
                     <span x-show="suggestion && suggestion.reps"
                           x-text="objectifTexte()"></span>
                     <span x-show="!(suggestion && suggestion.reps) && targetReps"
@@ -242,7 +242,7 @@
                     <button type="button" class="serie-puce" :class="(s.rpe || s.remarque) ? 'on' : ''"
                             @click="optionsDe = (optionsDe === i ? -1 : i)"
                             :aria-expanded="(optionsDe === i).toString()"
-                            x-text="s.rpe ? 'RPE ' + s.rpe : 'RPE, remarque'"></button>
+                            x-text="s.type === 'echauffement' ? 'Échauffement' : (s.rpe ? 'RPE ' + s.rpe : 'RPE, remarque')"></button>
                     <button type="button" class="serie-puce danger" @click="removeSet(i)"
                             x-show="sets.length > 1"
                             :aria-label="'Retirer la série ' + (i + 1)">Retirer</button>
@@ -257,6 +257,11 @@
                       </template>
                     </div>
                     {% endif %}
+                    {# Hors records, suggestions et volume de travail (core/hist.py). #}
+                    <button type="button" class="serie-puce serie-echauff" x-show="echauffOk"
+                            :class="s.type === 'echauffement' ? 'on' : ''"
+                            :aria-pressed="(s.type === 'echauffement').toString()"
+                            @click="basculerEchauffement(s)">Série d'échauffement</button>
                     <input type="text" class="serie-remarque" x-model="s.remarque"
                            placeholder="Remarque (facultatif)"
                            :aria-label="'Remarque série ' + (i + 1)">

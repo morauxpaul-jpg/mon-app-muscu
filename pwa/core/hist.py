@@ -11,6 +11,14 @@ testaient `Poids > 0`, qui est toujours faux pour des pompes ou du gainage.
 
 CARDIO_PREFIX = "CARDIO:"
 SESSION_MARKER = "SESSION"
+# Série d'échauffement (`history.type_serie`, v43) : enregistrée et visible dans
+# la séance, mais hors records, suggestions, séries par muscle et volume de
+# travail. `db.get_hist()` ne la renvoie que sur demande (echauffement=True).
+TYPE_ECHAUFFEMENT = "echauffement"
+
+
+def est_echauffement(row) -> bool:
+    return row.get("Type") == TYPE_ECHAUFFEMENT
 
 
 def is_cardio(row) -> bool:
