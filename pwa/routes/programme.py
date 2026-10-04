@@ -32,12 +32,35 @@ bp = Blueprint("programme", __name__)
 EXPORT_FORMAT = "muscutracker_program_v1"
 
 
+# Bornes de l'éditeur. Sans elles, une séance à 10 000 séries rendait la
+# page de séance inutilisable et gonflait le blob du programme (audit du
+# 03/10, M11). Mêmes bornes qu'à l'import (`routes/gestion.py`).
+MAX_SERIES = 20
+MAX_EXOS_PAR_SEANCE = 30
+MAX_SEANCES = 40
+NOM_EXO_MAX = 80
+NOM_SEANCE_MAX = 60
+
+
+def _series(valeur, defaut=3) -> int:
+    """Nombre de séries borné à [1, MAX_SERIES]."""
+    try:
+        n = int(float(valeur))
+    except (TypeError, ValueError):
+        return defaut
+    return max(1, min(MAX_SERIES, n))
+
+
 def _exo_entry(name, sets, muscle, src=None):
     """Entrée d'exercice normalisée. `reps` (fourchette cible, ex. « 8-12 ») et
     `rest_seconds` viennent du catalogue / du générateur / de l'éditeur ; ils
     sont conservés à chaque réécriture (sans eux, un programme n'est plus une
-    prescription mais une simple liste de noms)."""
+    prescription mais une simple liste de noms). Toutes les écritures passent
+    ici : c'est ici que les bornes s'appliquent."""
     src = src or {}
+    name = str(name or "").strip()[:NOM_EXO_MAX]
+    sets = _series(sets)
+    muscle = (str(muscle or "").strip() or "Autre")[:NOM_EXO_MAX]
     reps = str(src.get("reps") or "").strip()[:20]
     try:
         rest = int(src.get("rest_seconds") or 90)
@@ -190,6 +213,8 @@ def programme():
         catalog_programs=catalog.list_programs(is_vip=bool(getattr(g, "is_vip_full", False))),
         current_program_meta=current_program_meta,
         ui_state=ui_state,
+        bornes={"series": MAX_SERIES, "exos": MAX_EXOS_PAR_SEANCE, "seances": MAX_SEANCES},
+        nouveau=request.args.get("nouveau") == "1",
     )
 
 
@@ -223,12 +248,12 @@ def save_state():
             ordered_names.append(s)
 
     new_prog: dict = {}
-    for sname in ordered_names:
+    for sname in ordered_names[:MAX_SEANCES]:
         exos = raw_seances.get(sname, [])
-        if not isinstance(exos, list):
+        if not isinstance(exos, list) or len(sname) > NOM_SEANCE_MAX:
             continue
         cleaned = []
-        for e in exos:
+        for e in exos[:MAX_EXOS_PAR_SEANCE]:
             if not isinstance(e, dict):
                 continue
             ex_name = (e.get("name") or "").strip()
@@ -339,12 +364,14 @@ def save_planning():
 # ── Séances ──────────────────────────────────────────────────────
 @bp.route("/programme/seance/new", methods=["POST"])
 def new_seance():
-    name = (request.form.get("name") or "").strip()
+    name = (request.form.get("name") or "").strip()[:NOM_SEANCE_MAX]
     if not name:
         return redirect(url_for("programme.programme"))
     if name.startswith("_"):
         return redirect(url_for("programme.programme") + "?seance=reserve")
     prog = get_prog()
+    if sum(1 for k in prog if not k.startswith("_")) >= MAX_SEANCES:
+        return redirect(url_for("programme.programme") + "?seance=trop")
     if name in prog:
         # Avant, la création échouait EN SILENCE : le formulaire se fermait,
         # rien n'apparaissait, et on ne pouvait que conclure à un bug.
@@ -574,11 +601,14 @@ def import_program():
     # dossiers et les données personnelles restent.
     old = get_prog()
     new_prog: dict = {}
-    for sname, exos in raw_seances.items():
+    for sname, exos in list(raw_seances.items())[:MAX_SEANCES]:
         if not isinstance(sname, str) or sname.startswith("_") or not isinstance(exos, list):
             continue
+        sname = sname.strip()[:NOM_SEANCE_MAX]
+        if not sname:
+            continue
         cleaned = []
-        for e in exos:
+        for e in exos[:MAX_EXOS_PAR_SEANCE]:
             if not isinstance(e, dict):
                 continue
             ex_name = (e.get("name") or "").strip()
@@ -670,10 +700,7 @@ def add_exo():
     name = (f.get("name") or "").strip()
     if not name:
         return redirect(url_for("programme.programme") + f"#s-{seance}")
-    try:
-        sets = int(f.get("sets") or 3)
-    except ValueError:
-        sets = 3
+    sets = _series(f.get("sets") or 3)
     muscles = f.getlist("muscles")
     muscle = ",".join(muscles) if muscles else (auto_muscles(name) or "Autre")
     reps = (f.get("reps") or "").strip()[:20]
@@ -682,6 +709,8 @@ def add_exo():
     except ValueError:
         rest = 90
     prog = get_prog()
+    if seance in prog and len(prog[seance]) >= MAX_EXOS_PAR_SEANCE:
+        return redirect(url_for("programme.programme") + "?exo=trop" + f"#s-{seance}")
     if seance in prog:
         prog[seance].append(_exo_entry(name, sets, muscle,
                                        {"reps": reps, "rest_seconds": rest}))
@@ -701,10 +730,8 @@ def update_exo():
     if seance not in prog or not (0 <= idx < len(prog[seance])):
         return redirect(url_for("programme.programme"))
     ex = prog[seance][idx]
-    try:
-        ex["sets"] = int(f.get("sets") or ex.get("sets", 3))
-    except ValueError:
-        pass
+    if f.get("sets"):
+        ex["sets"] = _series(f.get("sets"), ex.get("sets", 3))
     muscles = f.getlist("muscles")
     if muscles:
         ex["muscle"] = ",".join(muscles)

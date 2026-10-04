@@ -87,7 +87,7 @@
           </div>
           <div class="prog-exo-fields">
             <label class="field-label s-96ad60">Séries</label>
-            <input type="number" min="1" max="15" x-model.number="ex.sets" class="field" @change="scheduleSave()"
+            <input type="number" min="1" :max="BORNES.series" x-model.number="ex.sets" class="field" @change="ex.sets = bornerSeries(ex.sets); scheduleSave()"
                    aria-label="Nombre de séries">
             <label class="prog-superset" x-show="exIdx < prog[sname].length - 1">
               <input type="checkbox" x-model="ex.superset" @change="scheduleSave()">
@@ -182,7 +182,7 @@
         progression, mais partagent la même fiche.
       </p>
       <label class="field-label">Séries</label>
-      <input type="number" x-model.number="newExo.sets" class="field" min="1" max="15"
+      <input type="number" x-model.number="newExo.sets" class="field" min="1" :max="BORNES.series"
              aria-label="Nombre de séries">
       <label class="field-label">Muscle(s) — vide = auto-détection</label>
       <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">

@@ -424,6 +424,11 @@ def set_notifications():
 @bp.route("/gestion/reset-soft", methods=["POST"])
 @limiter.limit("3 per minute")
 def reset_soft():
+    # Vider l'historique se confirme côté serveur, comme le reset total : un
+    # POST nu (formulaire rejoué, double tap) n'efface plus rien (audit du
+    # 03/10, M10).
+    if request.form.get("confirm") != "yes":
+        return redirect(url_for("gestion.gestion") + "?reset=confirm")
     prog = get_prog()
     hist = get_hist()
 

@@ -705,3 +705,7 @@ html.has-ad-banner .topbar {
 
 /* Accueil : protéines du jour sous la jauge de calories. */
 .cal-prot { font-size: 0.75rem; color: var(--text-3); margin-top: 6px; }
+
+/* Programme : accueil de « Créer mon propre programme » (onboarding). */
+.prog-bienvenue ol { margin: 8px 0 12px; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-2); }
+.prog-bienvenue-titre { font-weight: 600; color: var(--text-1); }
