@@ -85,10 +85,10 @@ def test_un_second_tap_rejoint_la_generation_en_cours(logged_in, ia_lente):
 def test_la_place_du_quota_est_rendue_quand_la_tache_finit(logged_in, ia_lente):
     feu, _ = ia_lente
     tid = logged_in.post("/generator/generate", json={}, headers={"X-CSRFToken": CSRF}).get_json()["tache"]
-    assert quota._EN_COURS.get(("generateur", USER_ID)) == 1      # réservée pendant le calcul
+    assert quota.en_cours("generateur", USER_ID) == 1      # réservée pendant le calcul
     feu.set()
     _attendre_fin(logged_in, tid)
-    assert quota._EN_COURS.get(("generateur", USER_ID)) == 0
+    assert quota.en_cours("generateur", USER_ID) == 0
 
 
 def test_la_tache_dun_autre_compte_est_introuvable(logged_in, ia_lente, monkeypatch):

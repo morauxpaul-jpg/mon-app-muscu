@@ -4,6 +4,6 @@
     "buildCommand": "pip install -r requirements.txt"
   },
   "deploy": {
-    "startCommand": "cd pwa && gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class gthread --threads 16 --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile - app:app"
+    "startCommand": "cd pwa && gunicorn --bind 0.0.0.0:$PORT --worker-class gthread --threads 16 --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile - app:app"
   }
 }

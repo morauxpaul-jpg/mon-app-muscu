@@ -1,4 +1,6 @@
 """Verrou optimiste sur programs.data, cache borné, purge des bilans."""
+import pytest
+
 import core.db as db
 from tests.conftest import USER_ID
 
@@ -131,18 +133,28 @@ def test_deux_requetes_du_meme_worker_ne_se_volent_pas_leur_base(fake_db):
     assert data["_settings"] == {"auto_rest_timer": False}
 
 
-def test_un_seul_process_donc_un_seul_cache():
-    """Audit du 30/09, I8 : le cache est par process. Avec plusieurs
-    workers, chacun servait sa version de l'historique jusqu'à 60 s après une
-    écriture faite ailleurs. Ce test tient la configuration qui rend le
-    cache juste : si on repasse à plusieurs workers, il faut un cache
-    partagé (Redis) d'abord."""
+@pytest.mark.parametrize("redis,demandes,attendus", [
+    ("", "4", 1),                          # sans Redis : un seul processus, quoi qu'on demande
+    ("pas-une-url", "4", 1),
+    ("redis://cache.railway.internal:6379", "", 1),
+    ("redis://cache.railway.internal:6379", "3", 3),
+])
+def test_plusieurs_processus_seulement_avec_redis(monkeypatch, redis, demandes, attendus):
+    """Audit du 30/09, I8 : avec plusieurs processus et un cache par processus,
+    chacun servait sa version de l'historique jusqu'à 60 s après une écriture
+    faite ailleurs. Le cache est maintenant cohérent via Redis
+    (`core/partage.py`) ; sans Redis, gunicorn.conf.py garde UN processus, et
+    une variable d'environnement seule ne peut pas changer ça."""
     import json
+    import runpy
     from pathlib import Path
-    conf = json.loads((Path(__file__).resolve().parents[2] / "railway.json").read_text(encoding="utf-8"))
-    cmd = conf["deploy"]["startCommand"]
-    assert "--workers 1 " in cmd, cmd
-    assert "WEB_CONCURRENCY" not in cmd, "une variable d'environnement ne doit pas pouvoir le changer"
+    racine = Path(__file__).resolve().parents[2]
+    cmd = json.loads((racine / "railway.json").read_text(encoding="utf-8"))["deploy"]["startCommand"]
+    assert "--workers" not in cmd, "la ligne de commande écraserait gunicorn.conf.py"
+    assert "WEB_CONCURRENCY" not in cmd
+    monkeypatch.setenv("REDIS_URL", redis)
+    monkeypatch.setenv("WEB_CONCURRENCY", demandes)
+    assert runpy.run_path(str(racine / "pwa" / "gunicorn.conf.py"))["workers"] == attendus
 
 
 def test_le_cache_supporte_des_threads_concurrents():

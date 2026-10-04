@@ -108,7 +108,13 @@ def index():
         current_email=session.get("email", ""),
         stats=stats,
         admob=_etat_admob(),
+        partage=_etat_partage(),
     )
+
+
+def _etat_partage() -> dict:
+    from core.partage import etat
+    return etat()
 
 
 def _etat_admob() -> str:

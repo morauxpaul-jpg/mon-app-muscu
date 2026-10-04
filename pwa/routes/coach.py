@@ -7,9 +7,10 @@ Accès réservé VIP (vip_wall pour les free). Quota : 15 messages/jour/user
 via profiles.coach_quota_date + profiles.coach_quota_count (reset
 automatique à chaque nouveau jour) — protège le coût API Anthropic.
 """
-import logging
-
 import json
+import logging
+import os
+import threading
 
 from flask import (
     Blueprint, Response, render_template, request, jsonify, redirect, url_for,
@@ -53,6 +54,21 @@ MODEL = "claude-haiku-4-5-20251001"
 # défaut le plus visible du coach. La réponse étant désormais affichée au fil
 # de l'eau, une réponse plus longue ne fait pas attendre davantage.
 MAX_TOKENS = 1400
+
+# Une réponse en flux tient un fil du serveur pendant toute sa durée (5 à 20 s).
+# Sans plafond, une rafale de questions pouvait occuper les 16 fils d'une
+# instance et faire attendre une simple page à tous les autres (audit du
+# 03/10, I11). Au-delà, la question reçoit « réessaie dans un instant » et son
+# quota est rendu. Par instance : chacune protège ses propres fils.
+def _flux_max() -> int:
+    try:
+        return max(1, int(os.getenv("COACH_FLUX_MAX") or 6))
+    except ValueError:
+        return 6
+
+
+_FLUX = threading.BoundedSemaphore(_flux_max())
+FLUX_PLEIN = "Le coach répond déjà à beaucoup de monde. Réessaie dans quelques secondes."
 
 SYSTEM_PROMPT_TMPL = (
     "Tu es le coach IA intégré à l'application Muscu Tracker PRO (PWA Flask). "
@@ -431,6 +447,17 @@ def _stream_reply(api_key, system_prompt, api_messages, message,
     user_id = g.user_id
 
     def generate():
+        if not _FLUX.acquire(blocking=False):
+            logger.warning("/coach/ask : %d flux déjà ouverts, question refusée", _flux_max())
+            _revert_quota_for(user_id)
+            yield _sse("error", {"error": FLUX_PLEIN})
+            return
+        try:
+            yield from _repondre()
+        finally:
+            _FLUX.release()
+
+    def _repondre():
         chunks = []
         try:
             client = anthropic.Anthropic(api_key=api_key)

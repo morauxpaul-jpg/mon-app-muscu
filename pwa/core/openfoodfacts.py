@@ -219,12 +219,12 @@ def lookup(code: str) -> dict | None:
 # Facts limite la recherche à 10 requêtes par minute et par IP — et toute
 # l'app partage l'IP du serveur. D'où : recherche lancée par un geste
 # explicite (pas à chaque frappe), cache de 12 h par requête normalisée, et
-# un plafond global sous leur limite.
+# un plafond global sous leur limite — global pour de bon : compté dans
+# `core/partage.py`, donc commun à toutes les instances quand Redis est là.
 SEARCH_URL = ("https://fr.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process"
               "&json=1&page_size={n}&sort_by=unique_scans_n&search_terms={q}&fields=code," + FIELDS)
 SEARCH_MAX_PAR_MINUTE = 8
 SEARCH_RESULTATS = 12
-_recherches: list = []          # horodatages des appels réseau récents
 
 
 def _query_propre(q) -> str:
@@ -233,13 +233,8 @@ def _query_propre(q) -> str:
 
 
 def _place_disponible() -> bool:
-    now = time.time()
-    with _cache_lock:
-        _recherches[:] = [t for t in _recherches if now - t < 60]
-        if len(_recherches) >= SEARCH_MAX_PAR_MINUTE:
-            return False
-        _recherches.append(now)
-        return True
+    from core import partage
+    return partage.fenetre("off:recherche", SEARCH_MAX_PAR_MINUTE, 60)
 
 
 def search(q) -> list | None:

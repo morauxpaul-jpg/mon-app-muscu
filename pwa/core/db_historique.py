@@ -7,10 +7,10 @@ qui entourent chaque fonction de ce module.
 """
 import datetime as _dt
 import logging
-import threading
 
-from core.db_base import (_cache_get, _cache_invalidate, _cache_set, _continuous_week_of,
-                          _fetch_all, get_client, session_id_for)
+from core import partage
+from core.db_base import (_cache_get, _cache_invalidate, _cache_modifier, _cache_set,
+                          _continuous_week_of, _fetch_all, get_client, session_id_for)
 from core.muscu import parse_rpe
 
 logger = logging.getLogger(__name__)
@@ -68,14 +68,14 @@ def _reporter_dans_le_cache(user_id, date_str, seance, exercice, payload):
     l'historique juste après chaque « Série faite » — 4 pages sur un an
     d'entraînement, pour des lignes qu'on venait soi-même d'écrire (audit du
     30/09, I15). Sans cache, rien à corriger : la prochaine lecture lira."""
-    key = f"hist:{user_id}"
-    cached = _cache_get(key)
-    if cached is None:
-        return
-    garde = [r for r in cached
-             if not (r.get("Date") == date_str and r.get("Séance") == seance
-                     and r.get("Exercice") == exercice)]
-    _cache_set(key, garde + [_nettoyer_ligne(p) for p in payload])
+    def corriger(cached):
+        garde = [r for r in cached
+                 if not (r.get("Date") == date_str and r.get("Séance") == seance
+                         and r.get("Exercice") == exercice)]
+        return garde + [_nettoyer_ligne(p) for p in payload]
+
+    # Invalide aussi la clé sur les autres instances : leur copie est périmée.
+    _cache_modifier(f"hist:{user_id}", corriger)
 
 
 def _delete_history_ids(client, ids: list) -> None:
@@ -235,13 +235,11 @@ def _norm_date(date_str: str) -> str:
 
 # Deux écritures croisées du même exercice (requête abandonnée à 8 s par le
 # téléphone, encore en cours, puis la série suivante) doublaient les séries
-# (audit du 03/10, I7, R9). Le verrou par exercice les met en file dans ce
-# processus ; l'index unique v41 (CLE_SERIE) garantit le reste en base.
-_VERROUS = [threading.Lock() for _ in range(64)]
-
-
+# (audit du 03/10, I7, R9). Le verrou par exercice les met en file, sur toutes
+# les instances quand Redis est là (`core/partage.py`) ; l'index unique v41
+# (CLE_SERIE) garantit le reste en base.
 def _verrou(user_id, date_str, seance, exercice):
-    return _VERROUS[hash((user_id, date_str, seance, exercice)) % len(_VERROUS)]
+    return partage.verrou("exo", user_id, date_str, seance, exercice)
 
 
 def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict]):

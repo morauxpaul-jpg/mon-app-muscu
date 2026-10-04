@@ -109,6 +109,10 @@ app.secret_key = _flask_secret or "dev-insecure-change-me"
 # pubs sont coupées faute de vrais identifiants en production).
 from core.admob import verifier_au_demarrage as _verifier_admob  # noqa: E402
 _admob_ids = _verifier_admob(_IS_PROD)
+# Stockage de l'état partagé (cache, verrous, tâches IA) : Redis ou mémoire.
+# Journal ERREUR si plusieurs processus tournent sans Redis (core/partage.py).
+from core.partage import verifier_au_demarrage as _verifier_partage  # noqa: E402
+_verifier_partage()
 app.permanent_session_lifetime = timedelta(days=30)
 # Revalidation du tier VIP depuis la base (cf. before_request). TTL asymétrique :
 #   - un VIP confirmé est re-vérifié peu souvent (évite de marteler la DB) ;
