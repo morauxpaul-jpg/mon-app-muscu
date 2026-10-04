@@ -301,6 +301,7 @@ def test_avec_redis_les_processus_demandes_sont_appliques(redis_commun):
 def test_la_console_admin_affiche_lalerte(fake_db, monkeypatch):
     from flask import render_template
     import app as appmod
+    partage.utiliser(None)                               # sans Redis, quel que soit PARTAGE_TEST
     alerte = partage.etat({"WEB_CONCURRENCY": "2"})
     with appmod.app.test_request_context("/admin"):
         html = render_template("admin.html", users=[], vip_count=0, total_count=0,
