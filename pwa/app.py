@@ -505,7 +505,8 @@ def plus():
         try:
             from core.bilan_pro import bilan_mois
             from core.dates import logical_today_paris
-            bilan = bilan_mois(g.user_id, core_db.get_hist(g.user_id), logical_today_paris())
+            from core.data import get_hist as _hist_affiche
+            bilan = bilan_mois(g.user_id, _hist_affiche(), logical_today_paris())
         except Exception as e:
             logger.warning("bilan PRO FAILED: %s", e)
     return render_template("plus.html", active="plus", bilan=bilan)

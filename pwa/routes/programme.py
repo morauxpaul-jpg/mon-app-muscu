@@ -14,7 +14,9 @@ from flask import (
 )
 
 from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
-                       rename_seance_rows, rename_exercise_rows, count_exercise_rows)
+                       rename_seance_rows, rename_exercise_rows, count_exercise_rows,
+                       marquer_series)
+from core.exercice_ids import valide as valide_exo_id
 from core.dates import DAYS_FR
 from core.limiter import limiter
 from core.rotation import rotation_de, rotation_nettoyee
@@ -74,6 +76,10 @@ def _exo_entry(name, sets, muscle, src=None):
     # les deux (le chrono part après le second).
     if src.get("superset") is True:
         out["superset"] = True
+    # Identifiant stable (core/exercice_ids.py) : il survit aux renommages.
+    # Absent ou illisible, save_prog en recalcule un.
+    if valide_exo_id(src.get("id")):
+        out["id"] = src["id"]
     return out
 
 
@@ -184,7 +190,10 @@ def programme():
                  "muscle": e.get("muscle") or "Autre",
                  "reps": e.get("reps") or "",
                  "rest_seconds": int(e.get("rest_seconds") or 90),
-                 "superset": e.get("superset") is True}
+                 "superset": e.get("superset") is True,
+                 # Sans lui, chaque sauvegarde de l'éditeur recalculait
+                 # l'identifiant depuis le nom : un renommage le perdait.
+                 "id": e.get("id") or ""}
                 for e in exos
             ]
             for sname, exos in seances
@@ -778,7 +787,10 @@ def historique_exo():
     doivent suivre) ou si l'on scinde un exercice en deux variantes (elles
     appartiennent à l'ancien nom). Il demande, au moment du renommage :
     sans `suivre`, cette route compte les séries de l'ancien nom ; avec,
-    elle les déplace (`core/db_renommage.py`, sans collision possible).
+    elle les rattache à l'identifiant de l'exercice (`id`, core/db_identite.py) :
+    elles suivent son nouveau nom sans être réécrites. Sans identifiant, ou
+    sur une base sans la migration v42, elle les renomme comme avant
+    (`core/db_renommage.py`, sans collision possible).
     Avant, l'historique restait toujours derrière et seul un outil caché
     dans Gestion pouvait le déplacer (audit du 03/10, I12)."""
     data = request.get_json(silent=True) or {}
@@ -788,7 +800,10 @@ def historique_exo():
         return jsonify({"ok": False, "error": "noms"}), 400
     try:
         if data.get("suivre") is True:
-            return jsonify({"ok": True, "deplacees": rename_exercise_rows([ancien], nouveau)})
+            suivent = marquer_series(ancien, str(data.get("id") or ""))
+            if suivent is None:
+                suivent = rename_exercise_rows([ancien], nouveau)
+            return jsonify({"ok": True, "deplacees": suivent})
         return jsonify({"ok": True, "series": count_exercise_rows(ancien)})
     except Exception as e:
         logger.error("historique_exo FAILED: %s", e)

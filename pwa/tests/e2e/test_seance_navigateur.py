@@ -425,8 +425,19 @@ def test_renommer_un_exercice_propose_demmener_ses_series(serveur, navigateur):
     champ.dispatch_event("change")
     pg.wait_for_selector(".renommage-choix:visible")
     pg.get_by_role("button", name="Oui, emmener mes séries").click()
-    assert _attendre(lambda: _series(serveur, "Développé couché barre") == [(1, 5, 100.0)])
-    assert _series(serveur) == []
+    pg.wait_for_selector("text=suivent désormais")
+    # La série garde le nom sous lequel elle a été faite et reçoit l'identifiant
+    # de l'exercice (core/exercice_ids.py) : elle n'est pas réécrite…
+    assert _attendre(lambda: [str(r.get("exercise_id") or "")[:2] for r in _historique(serveur)
+                              if r["reps"] > 0] == ["e_"])
+    assert _series(serveur) == [(1, 5, 100.0)]
+    # … et la séance l'affiche sous le nouveau nom (une fois l'éditeur sauvegardé).
+    assert _attendre(lambda: '"Développé couché barre"' in urllib.request.urlopen(
+        serveur + "/test-programme").read().decode("unicode_escape"))
+    pg.goto(serveur + "/seance?mode=prefaite&name=Push")
+    carte = pg.locator('[data-exo-base="Développé couché barre"]')
+    carte.wait_for(state="attached")
+    assert '"reps": 5' in carte.get_attribute("x-data")
     assert erreurs == []
     ctx.close()
 

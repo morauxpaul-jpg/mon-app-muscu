@@ -126,6 +126,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
 
     return {
         "base": base,
+        "exo_id": exo_obj.get("id") or "",
         "muscle": muscle,
         "p_sets": p_sets,
         "rest_seconds": rest_seconds,
