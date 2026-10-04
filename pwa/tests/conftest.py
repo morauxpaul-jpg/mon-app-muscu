@@ -329,6 +329,33 @@ def quota_neuf():
     yield
 
 
+@pytest.fixture(autouse=True)
+def partage_neuf():
+    """État partagé (`core/partage.py`) vierge à chaque test.
+
+    `PARTAGE_TEST` choisit le stockage de TOUTE la suite : vide = mémoire du
+    processus (défaut), `fakeredis` = un Redis simulé neuf par test, ou une URL
+    `redis://…` = un vrai serveur, vidé avant chaque test. La CI rejoue la
+    suite en `fakeredis` : cache, verrous, quotas et tâches IA y passent par
+    Redis comme en production à plusieurs instances.
+    """
+    import os
+    from core import partage
+    choix = os.getenv("PARTAGE_TEST", "")
+    if choix == "fakeredis":
+        import fakeredis
+        partage.utiliser(fakeredis.FakeRedis(decode_responses=True))
+    elif choix.startswith(("redis://", "rediss://")):
+        import redis
+        client = redis.Redis.from_url(choix, decode_responses=True)
+        client.flushdb()
+        partage.utiliser(client)
+    else:
+        partage.utiliser(None)
+    partage.reinitialiser()
+    yield
+
+
 @pytest.fixture()
 def fake_db():
     import core.db as core_db

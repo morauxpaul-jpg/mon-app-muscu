@@ -10,6 +10,7 @@ from conftest import CSRF, USER_ID
 from core import nutrition_cibles as nc
 from core import nutrition_aliments as na
 from core import openfoodfacts as off
+from core import partage
 from core.dates import DAYS_FR, today_paris
 
 PROFIL = {"poids_kg": 80.0, "taille_cm": 180.0, "age": 30, "sexe": "H",
@@ -311,10 +312,10 @@ def _produits(*noms):
 @pytest.fixture()
 def off_neuf():
     off._cache.clear()
-    off._recherches.clear()
+    partage.reinitialiser()
     yield
     off._cache.clear()
-    off._recherches.clear()
+    partage.reinitialiser()
 
 
 def test_la_recherche_renvoie_des_aliments_prets_a_ajouter(fake_db, logged_in, monkeypatch, off_neuf):

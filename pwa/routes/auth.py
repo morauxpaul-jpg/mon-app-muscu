@@ -139,6 +139,15 @@ def logout():
     return redirect("/")
 
 
+def _stockage_partage() -> str:
+    """'redis', 'redis-en-panne' ou 'memoire' — jamais l'URL (mot de passe)."""
+    try:
+        from core.partage import stockage
+        return stockage()
+    except Exception:
+        return "unknown"
+
+
 @bp.route("/auth/debug")
 def debug_env():
     """Diagnostic de config (présence/longueur des env vars, jamais les valeurs).
@@ -173,5 +182,6 @@ def debug_env():
         "SUPABASE_SERVICE_ROLE_KEY_len": len(svc),
         "FLASK_SECRET_KEY_present": bool(fsk),
         "RATE_LIMIT_BACKEND": rl_backend,
+        "ETAT_PARTAGE": _stockage_partage(),
         "REDIS_URL_present": bool(_env("REDIS_URL")),
     })

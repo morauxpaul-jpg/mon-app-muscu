@@ -6,7 +6,10 @@ avec une insertion ralentie, dans deux fils."""
 import threading
 import time
 
+import pytest
+
 import core.db_historique as dh
+from core import partage
 from conftest import USER_ID
 
 D = "2026-10-01"
@@ -43,6 +46,10 @@ def test_deux_ajouts_de_cardio_croises_gardent_des_numeros_distincts(fake_db, mo
     assert sorted(r["serie"] for r in fake_db.tables["history"]) == [1, 2]
 
 
-def test_deux_exercices_differents_ne_sattendent_pas(fake_db):
-    """Le verrou est par exercice : il ne sérialise pas toute la base."""
-    assert dh._verrou(USER_ID, D, "Push", "Squat") is dh._verrou(USER_ID, D, "Push", "Squat")
+def test_le_meme_exercice_attend_son_tour(fake_db):
+    """Le verrou porte sur (compte, date, séance, exercice) — partagé entre
+    instances quand Redis est là (tests/test_partage.py)."""
+    with dh._verrou(USER_ID, D, "Push", "Squat"):
+        with pytest.raises(TimeoutError):
+            with partage.verrou("exo", USER_ID, D, "Push", "Squat", attente=0.05):
+                pass

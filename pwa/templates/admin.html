@@ -11,6 +11,9 @@
   {% elif admob == 'test' %}
     <div class="card label-icon s-070e82"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Pubs AdMob en mode test : aucune recette publicitaire.</div>
   {% endif %}
+  {% if partage is defined and partage.alerte %}
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>{{ partage.alerte }}</div>
+  {% endif %}
 
   <div class="card s-da12f2">
     <div class="s-767234">

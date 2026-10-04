@@ -26,6 +26,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    # Un vrai Redis : la suite est rejouée dessus (état partagé entre
+    # instances, core/partage.py), comme en production à plusieurs processus.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
 
@@ -76,6 +89,16 @@ jobs:
       - name: Tests Python
         working-directory: pwa
         run: python -m pytest tests -q
+
+      # Même suite, cache, verrous, quotas et tâches IA rangés dans Redis :
+      # ce que voit l'app avec REDIS_URL et plusieurs instances. Les tests
+      # navigateur, qui lancent leur propre serveur, ne changent pas.
+      - name: Tests Python sur Redis
+        working-directory: pwa
+        env:
+          PARTAGE_TEST: redis://localhost:6379/0
+          REDIS_TEST_URL: redis://localhost:6379/1
+        run: python -m pytest tests -q --ignore=tests/e2e
 
       # tests/test_js.py lance déjà cette suite, mais il s'IGNORE si Node est
       # absent. Une étape dédiée garantit qu'un silence ne passe pas pour un

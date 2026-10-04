@@ -40,7 +40,7 @@ from core.db_base import (
     clear_user_cache, current_client, get_client, session_id_for, use_client, vider_cache,
     _CACHE_MAX, _PAGE, _PROFILE_TTL, _SESSION_NS, _TTL, _cache_get, _cache_invalidate,
     _cache_lock, _cache_set, _continuous_week_of, _data_cache, _env, _fetch_all,
-    _debuts, _invalidee_a, _lectures, _marquer_invalidee, _tout_invalide_a
+    _debuts, _lectures, _TOUT, _generations, _ranger, _cache_modifier
 )
 
 # ── les séries enregistrées ─────────────────────────────────────
@@ -49,7 +49,7 @@ from core.db_historique import (
     _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _nettoyer_ligne, _norm_date,
     _reporter_dans_le_cache, CLE_SERIE, _unicite, _index_absent, _series_distinctes, _append_une_fois,
-    _row_to_supabase, _VERROUS, _verrou, _replace_exo_rows, _append_exo_rows
+    _row_to_supabase, _verrou, _replace_exo_rows, _append_exo_rows
 )
 
 from core.db_historique_lots import ajouter_lignes, save_hist
