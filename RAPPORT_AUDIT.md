@@ -1,30 +1,30 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
-**Mise à jour** : 04/10/2026 · **Commit audité** : `d2362f9` (tête de `main` après les PR #6, #7 et #8, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10).
+**Mise à jour** : 04/10/2026 (soir) · **Commit audité** : `c4528b3` (tête de `main` après les PR #6 à #11, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10). Première mise à jour du 04/10 sur `d2362f9` : 6,5/10.
 **Historique** : 30/09/2026, `ac44673`, 4,9/10. Les versions précédentes de ce fichier restent dans l'historique git ; `RAPPORT_AUDIT_2.md` n'a pas été touché.
 
 ---
 
-## Note globale : **6,5 / 10** (03/10 : 5,6 · 30/09 : 4,9)
+## Note globale : **6,7 / 10** (04/10 matin : 6,5 · 03/10 : 5,6 · 30/09 : 4,9)
 
-> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. **Ce n'est pas encore 8.** Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or la nutrition n'a pas bougé (5), le modèle de données repose toujours sur des noms et sans unicité en base (5), la génération IA reste synchrone, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; douze sont à 7, six à 6, deux à 5.
+> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. Depuis, la nutrition — seul axe resté à 5 — est passée à des repas détaillés aliment par aliment, avec des cibles reliées au poids et aux jours d'entraînement (PR #10), et les petits trous visibles sont bouchés : « Créer mon propre programme » ouvre l'éditeur, l'éditeur est borné, vider l'historique se confirme (PR #11). **Ce n'est pas encore 8.** Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or le modèle de données repose toujours sur des noms et sans unicité en base (5), la génération IA reste synchrone, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; quatorze sont à 7, cinq à 6, un à 5.
 
 **Avertissement de méthode** : cette mise à jour est faite par le même agent qui a écrit les corrections. Le risque de complaisance est réel ; pour le contenir, chaque note qui monte s'appuie sur un test ou une mesure cités plus bas, et les constats non traités restent ouverts, même mineurs.
 
-| Bloc | 30/09 | 03/10 | 04/10 |
-|---|---:|---:|---:|
-| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | **6,4** |
-| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | **6,8** |
-| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | **6,4** |
-| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | **6,7** |
+| Bloc | 30/09 | 03/10 | 04/10 matin | 04/10 soir |
+|---|---:|---:|---:|---:|
+| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | 6,4 | **6,8** |
+| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | 6,8 | **6,8** |
+| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | 6,4 | **6,4** |
+| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | 6,7 | **6,7** |
 
-**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **10 corrigés**, 1 atténué, 3 ouverts · 16 mineurs : **6 corrigés**, 10 ouverts. **1 nouveau défaut** trouvé et corrigé pendant les corrections (cache, § A.4).
+**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **10 corrigés**, 1 atténué, 3 ouverts · 16 mineurs : **8 corrigés**, 8 ouverts. **1 nouveau défaut** trouvé et corrigé pendant les corrections (cache, § A.4).
 
 ---
 
 ## Sommaire
 
-A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410)
+A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410) (matin, puis soir après les PR #10 et #11)
   - A.1 Méthode · A.2 Notes par axe · A.3 Parcours par profil · A.4 Statut des constats · A.5 Ce qui manque pour 8 · A.6 Non vérifiable
 B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-0310--détail-conservé)
   - 0. Méthode · Parties 1 à 4 · 5. Suivi du 30/09 · 6. Écarts doc/code · 7. Non vérifiable · 8. Annexe
@@ -35,24 +35,24 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 
 ### A.1 Méthode
 
-- **Code** : lecture de `main` à `d2362f9` (54 modules `core/`, 20 blueprints, 37 gabarits) ; diff complet des PR #6, #7, #8 relu.
-- **Exécution** : `pytest` **988 passés** ; tests navigateur (Chromium, 375 × 812) **14 passés**, six passages complets d'affilée sans échec ; suite JS **106 passés** ; couverture de lignes Python **75 %** (03/10 : 71 %). Suite Python rejouée date figée sur chacun des 7 jours de la semaine : verte.
+- **Code** : lecture de `main` à `c4528b3` (56 modules `core/`, 20 blueprints, 37 gabarits) ; diff complet des PR #6 à #11 relu.
+- **Exécution** : `pytest` **1 036 passés** ; tests navigateur (Chromium, 375 × 812) **15 passés** (dont un repas détaillé ajouté puis corrigé) ; suite JS **111 passés** ; couverture de lignes Python **77 %** (matin : 75 % · 03/10 : 71 %). Suite Python rejouée date figée sur chacun des 7 jours de la semaine (matin) : verte.
 - **Reproductions** : chacune des reproductions corrigées du 03/10 (R1 à R12) est rejouée par un test du dépôt (par exemple `tests/test_rpe_suggestion.py` pour R11, `tests/e2e/test_seance_navigateur.py` pour R1 et R2, `tests/test_rotation.py` pour R3, `tests/test_ecritures_croisees.py` pour R9).
 - **Mesures** : premier champ de saisie à **519 px** du haut sur un compte neuf (03/10 : 836 px) ; poids réseau compressé — Programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko.
-- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables.
+- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables. Migration **v40** (`nutrition.grams`, `nutrition.food`, contrainte `nutrition_grams_check`) appliquée le 04/10 avec l'accord du propriétaire, colonnes et contrainte relues en base.
 - **Barème inchangé** : 10 = état de l'art · 8-9 = niveau Hevy/Strong, **prouvé** · 6-7 = correct, un concurrent fait mieux · 4-5 = utilisable mais faible · 1-3 = cassé ou absent.
 
 ### A.2 Notes par axe
 
 | # | Axe | 30/09 | 03/10 | 04/10 | En une phrase |
 |---|---|---:|---:|---:|---|
-| 1 | Onboarding | 5 | 5 | **6** | Plus de programme amputé, refaire l'onboarding ne détruit rien, charge de départ expliquée ; « Créer mon propre programme » promet toujours un éditeur qui n'arrive pas (renvoi à l'accueil). |
+| 1 | Onboarding | 5 | 5 | **7** | Plus de programme amputé, refaire l'onboarding ne détruit rien, charge de départ expliquée, « Créer mon propre programme » ouvre l'éditeur avec un mode d'emploi ; connexion Google seule, pas de première séance guidée. |
 | 2 | Saisie de séance | 4 | 5 | **7** | « Série faite » valide la valeur affichée, première série dans le premier écran, échauffement, supersets, aucun doublon ; pas de séries dégressives. |
-| 3 | Programme et planning | 6 | 5 | **7** | Rotation A/B réelle et réglable, supersets, semaine allégée ; pas de blocs ni de pourcentage d'e1RM, éditeur sans bornes de séries. |
+| 3 | Programme et planning | 6 | 5 | **7** | Rotation A/B réelle et réglable, supersets, semaine allégée, éditeur borné ; pas de blocs ni de pourcentage d'e1RM. |
 | 4 | Progression et statistiques | 5 | 6 | **7** | Séries par muscle et par semaine face aux repères, progression racontée, compteur juste ; graphiques moins riches que les concurrents. |
 | 5 | Coach IA | 6 | 6 | **7** | Voit RPE, prescription, bilans, cardio à part et semaine allégée ; quota atomique ; ouvert à l'essai. |
 | 6 | Générateur de programme IA | 5 | 5 | **6** | Progression visible, « Refaire cette séance » ; l'appel reste synchrone et tient un fil 10 à 25 s. |
-| 7 | Nutrition | 5 | 5 | **5** | Seul l'échec d'ajout est désormais signalé ; 269 aliments, repas stockés en quatre totaux. |
+| 7 | Nutrition | 5 | 5 | **7** | Repas aliment par aliment (quantité corrigeable, « reprendre la veille »), aliments habituels en tête, 429 aliments + produits du commerce par nom et code-barres, protéines en g/kg, plus de glucides les jours de séance. Manque face à MyFitnessPal / MacroFactor : recettes et aliments perso, tendance hebdo, cible adaptative. |
 | 8 | Cardio | 4 | 6 | **6** | Inchangé. |
 | 9 | Mode hors-ligne | 4 | 5 | **7** | « Terminer » borné à 6 s, rejeu borné à 8 s, semaine entière gardée avec pastille ; prouvé en mode avion (test navigateur). |
 | 10 | Notifications et relances | 5 | 6 | **7** | Récap du dimanche ajouté, rappels suivant la rotation ; tout dépend d'un cron externe, invérifiable d'ici. |
@@ -62,24 +62,26 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 | 14 | Modèle de données | 4 | 4 | **5** | Doublons empêchés par verrou, course du cache corrigée ; identité par nom, cardio dans des colonnes détournées, aucune unicité en base. |
 | 15 | Sécurité | 5 | 6 | **7** | Admin réservé à une connexion Google, v37-v39 vérifiées en base, quotas non contournables ; CSP sans `script-src` stricte. |
 | 16 | Robustesse et gestion d'erreurs | 4 | 6 | **7** | Échecs signalés, fin de séance bornée, quota rendu si l'IA échoue, cache cohérent après écriture. |
-| 17 | Tests | 6 | 6 | **7** | 988 + 14 navigateur + 106 JS, 75 % de couverture, indépendants du jour ; auth, admin et programme sous 50 %. |
+| 17 | Tests | 6 | 6 | **7** | 1 036 + 15 navigateur + 111 JS, 77 % de couverture, indépendants du jour ; auth et admin sous 50 %, programme à 64 %. |
 | 18 | Monétisation et paywall | 4 | 5 | **6** | Page PRO honnête, essai qui montre coach et debrief, bilan PRO du mois ; identifiants AdMob de test par défaut, remboursements Stripe non traités. |
 | 19 | Boucle de rétention | 4 | 6 | **7** | Défi relatif, récap du dimanche, progression racontée, semaine allégée ; aucune dimension sociale. |
 | 20 | Accessibilité | 6 | 7 | **7** | Inchangé. |
 
-Moyenne : **6,5** (130 / 20).
+Moyenne : **6,7** (133 / 20 = 6,65). Le matin du 04/10 : 6,5 (130 / 20) ; seuls l'onboarding (6 → 7) et la nutrition (5 → 7) ont bougé depuis.
+
+Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être testée qu'avec un service simulé (le réseau de l'environnement d'audit ne l'atteint pas), et son plafond global de 8 recherches par minute, imposé par leurs conditions, saturera avec quelques dizaines d'utilisateurs simultanés.
 
 ### A.3 Parcours par profil
 
 | # | Profil | 03/10 | 04/10 | Ce qui a changé · ce qui manque |
 |---|---|---:|---:|---|
-| 1 | Débutant complet, jour 1 | 5 | **7** | La valeur grisée s'enregistre, la série est à l'écran, la charge de départ est expliquée, le A/B alterne vraiment. Manque : une première séance guidée. |
+| 1 | Débutant complet, jour 1 | 5 | **7** | La valeur grisée s'enregistre, la série est à l'écran, la charge de départ est expliquée, le A/B alterne vraiment ; s'il veut son propre programme, il arrive dans l'éditeur avec un mode d'emploi. Manque : une première séance guidée. |
 | 2 | Débutant, semaine 3 | 5 | **7** | Compteur juste, défi à sa mesure, « Tes progrès » et récap du dimanche lui racontent sa progression. |
 | 3 | Intermédiaire venant de Hevy/Strong | 4 | **7** | Il importe son historique (CSV), retrouve supersets, échauffement et le geste « valider la valeur grisée ». Manque : séries dégressives. |
 | 4 | Avancé / « pro » | 3 | **6** | RPE pris en compte, semaine allégée, séries par muscle, échauffement. Manque : blocs, pourcentages d'e1RM dans la séance. |
 | 5 | Utilisateur FREE | 6 | **7** | Page PRO honnête ; séries par muscle et import gratuits. |
 | 6 | Utilisateur en ESSAI | 4 | **6** | L'essai ouvre enfin le coach (5 messages/jour) et le debrief. Manque : 24 h restent courtes pour juger. |
-| 7 | VIP payant | 5 | **7** | Coach qui lit ses RPE, « Refaire cette séance », bilan PRO du mois. Manque : une nutrition à la hauteur du prix. |
+| 7 | VIP payant | 5 | **7** | Coach qui lit ses RPE, « Refaire cette séance », bilan PRO du mois, nutrition détaillée reliée à ses séances. Manque : recettes et aliments perso. |
 | 8 | App native Android | 5 | **6** | Plus de pub avant la première série, reprise de séance juste après minuit. Reste : webview distante, achat qui peut sortir de l'app. |
 | 9 | Salle sans réseau (sous-sol) | 5 | **7** | « Terminer » ne bloque plus, la semaine entière est gardée et la pastille le dit (prouvé en mode avion). |
 
@@ -102,7 +104,7 @@ Moyenne : **6,5** (130 / 20).
 | I11 | Serveur mono-processus, IA synchrone | **Ouvert** | compression et quotas aident ; la génération tient toujours un fil |
 | I12 | Renommer un exercice coupe l'historique | **Ouvert** | message et outil de Gestion, pas de suivi automatique |
 | I13 | Échecs avalés (repas, cardio) | **Corrigé** | `tests/test_integrite_0310.py` |
-| I14 | Couverture faible auth/admin/programme | **Ouvert** | 47 % / 43 % / 49 % |
+| I14 | Couverture faible auth/admin/programme | **Ouvert** | 47 % / 43 % / 64 % (programme : 49 % le matin) |
 | M1 | Bilan écrasé par « Passer » | **Corrigé** | `tests/test_integrite_0310.py` |
 | M2 | Bilans orphelins au renommage | **Corrigé** | `rename_session_notes` |
 | M3 | Semaines vides au poids du corps | **Corrigé** | filtre `Reps > 0` |
@@ -112,8 +114,8 @@ Moyenne : **6,5** (130 / 20).
 | M7 | Webhook sans remboursement ni litige | **Ouvert** | `routes/billing.py` |
 | M8 | Quotas contournables en parallèle | **Corrigé** | `core/quota.py`, `tests/test_quota_atomique.py` |
 | M9 | Reprise de séance sur la date UTC | **Corrigé** | `templates/base.html` (journée logique locale) |
-| M10 | Reset « soft » sans confirmation serveur | **Ouvert** | `routes/gestion.py` |
-| M11 | Séries non bornées dans l'éditeur | **Ouvert** | `routes/programme.py` |
+| M10 | Reset « soft » sans confirmation serveur | **Corrigé** | `confirm=yes` exigé (`routes/gestion.py`), `tests/test_petits_trous.py` |
+| M11 | Séries non bornées dans l'éditeur | **Corrigé** | `MAX_SERIES` 20, 30 exercices, 40 séances, dans `_exo_entry` et chaque route ; éditeur aligné ; `tests/test_petits_trous.py` |
 | M12 | Image de 1,1 Mo non référencée | **Ouvert** | `static/promo-vip-poster.png` |
 | M13 | Vidéo en lecture automatique | **Ouvert** | `templates/vip_wall.html`, `templates/premium.html` |
 | M14 | Funnel VIP hors fenêtre | **Ouvert** | `core/db_admin.py` |
@@ -126,14 +128,15 @@ Moyenne : **6,5** (130 / 20).
 
 Par impact décroissant :
 
-1. **Nutrition** (seul axe resté à 5) : base d'aliments plus large avec recherche, repas détaillés par aliment, objectifs reliés aux jours d'entraînement.
-2. **Modèle de données** : index unique par série en base et écriture idempotente (migration), identifiant d'exercice stable plutôt que le nom, suivi automatique des renommages (I7, I12).
-3. **Génération IA en tâche de fond** et cache partagé, préalables à une deuxième instance (I11).
-4. **Petits trous visibles** : « Créer mon propre programme » doit ouvrir l'éditeur ; bornes dans l'éditeur (M11) ; confirmation serveur du reset (M10).
-5. **Revenus** : échec bruyant sans identifiants AdMob réels (M6), remboursements et litiges Stripe (M7), vidéo au tap (M13).
-6. **Tests** des chemins d'auth, d'admin et de programme (I14).
-7. **Rétention sociale** : binôme de régularité ou streak partagé.
-8. **Preuve d'usage** : le barème exige un niveau *prouvé* ; il faudra des chiffres réels (rétention J7/J30, conversion de l'essai) que le dépôt ne contient pas.
+Faits depuis le matin du 04/10 : la nutrition (ancien point 1, PR #10) et les petits trous visibles (ancien point 4, PR #11).
+
+1. **Modèle de données** (seul axe resté à 5) : index unique par série en base et écriture idempotente (migration), identifiant d'exercice stable plutôt que le nom, suivi automatique des renommages (I7, I12).
+2. **Génération IA en tâche de fond** et cache partagé, préalables à une deuxième instance (I11).
+3. **Revenus** : échec bruyant sans identifiants AdMob réels (M6), remboursements et litiges Stripe (M7), vidéo au tap (M13).
+4. **Tests** des chemins d'auth et d'admin (I14).
+5. **Nutrition, pour passer de 7 à 8** : recettes et aliments personnels, tendance de la semaine (moyennes, régularité), cible qui s'ajuste au poids réel.
+6. **Rétention sociale** : binôme de régularité ou streak partagé.
+7. **Preuve d'usage** : le barème exige un niveau *prouvé* ; il faudra des chiffres réels (rétention J7/J30, conversion de l'essai) que le dépôt ne contient pas.
 
 ### A.6 Non vérifiable depuis le dépôt (au 04/10)
 
@@ -141,6 +144,7 @@ Par impact décroissant :
 - **Railway** : une seule instance (condition des verrous et du cache), statut du dernier déploiement, option « Wait for CI ». Le connecteur Railway est à reconnecter, et le site n'est pas joignable depuis l'environnement d'audit.
 - **Variables** : `ADMOB_BANNER_ID`, `ADMOB_INTERSTITIAL_ID`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, événements Stripe abonnés au webhook.
 - **Usage réel** : rétention, conversion, satisfaction.
+- **Open Food Facts en production** : la recherche par nom n'a été exercée qu'avec un service simulé.
 
 ---
 
