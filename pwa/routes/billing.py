@@ -6,7 +6,7 @@ Flux :
   - GET  /billing/success  : retour après paiement → vérifie la session côté
     serveur et active le VIP immédiatement (filet, en plus du webhook).
   - POST /billing/webhook  : Stripe notifie les événements (paiement réussi,
-    abonnement annulé/expiré) → source de vérité pour le tier. Public + exempté
+    abonnement annulé/expiré, remboursement, litige) → source de vérité pour le tier. Public + exempté
     CSRF (sécurisé par la signature Stripe, pas par la session).
   - POST /billing/portal   : ouvre le portail client Stripe (gérer/annuler).
 
@@ -27,6 +27,7 @@ from core.stripe_client import (
     client as _stripe, to_plain as _to_plain, resoudre_client as _resolve_customer_id,
 )
 from core.analytics import track
+from core import stripe_remboursements as remb
 
 logger = logging.getLogger(__name__)
 
@@ -273,6 +274,16 @@ def webhook():
             status = obj.get("status")
             if status in ("canceled", "unpaid", "incomplete_expired"):
                 _downgrade_from_subscription(obj)
+        # L'argent repart (remboursement total, litige bancaire) : PRO aussi
+        # (core/stripe_remboursements.py, audit du 03/10, M7). À abonner dans
+        # le tableau de bord Stripe : charge.refunded, charge.dispute.created,
+        # charge.dispute.closed.
+        elif etype == "charge.refunded":
+            logger.info("billing remboursement: %s", remb.rembourse(stripe, obj))
+        elif etype == "charge.dispute.created":
+            logger.info("billing litige ouvert: %s", remb.litige_ouvert(stripe, obj))
+        elif etype == "charge.dispute.closed":
+            logger.info("billing litige clos: %s", remb.litige_clos(stripe, obj))
     except Exception as e:
         # 500 : Stripe rejoue l'événement (plusieurs jours, avec délai
         # croissant). Répondre 200 ici laissait un payeur gratuit — ou un
