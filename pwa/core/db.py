@@ -35,9 +35,10 @@ Config : deux variables d'env requises
 
 # ── connexion, cache, pagination ────────────────────────────────
 from core.db_base import (
-    clear_user_cache, current_client, get_client, session_id_for, use_client,
+    clear_user_cache, current_client, get_client, session_id_for, use_client, vider_cache,
     _CACHE_MAX, _PAGE, _PROFILE_TTL, _SESSION_NS, _TTL, _cache_get, _cache_invalidate,
-    _cache_lock, _cache_set, _continuous_week_of, _data_cache, _env, _fetch_all
+    _cache_lock, _cache_set, _continuous_week_of, _data_cache, _env, _fetch_all,
+    _debuts, _invalidee_a, _lectures, _marquer_invalidee, _tout_invalide_a
 )
 
 # ── les séries enregistrées ─────────────────────────────────────
