@@ -17,7 +17,8 @@ import logging
 
 from core.exercises_data import detect_isometric, get_exercise_info, variantes
 from core.decharge import suggestion_allegee
-from core.muscu import BW_EXOS, auto_muscles, est_a_la_barre, get_base_name, series_echauffement
+from core.muscu import (BW_EXOS, auto_muscles, conseil_depart, est_a_la_barre, get_base_name,
+                        series_echauffement)
 from core.seance_historique import (_all_used_variants, _best_record, _exo_completed,
                                     _exo_curr_rows, _extract_variant, _last_session_sets,
                                     _last_variant, _norm, _previous_weeks_data,
@@ -145,6 +146,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         "last_summary": last_summary,
         "suggestion": suggestion,
         "echauffement": echauffement,
+        "conseil_depart": "" if (last_sets or completed or is_iso) else conseil_depart(base, is_bw),
         "info": info,
         # De quoi échanger l'exercice en un geste, sans repasser par le
         # formulaire d'ajout. Vide si l'exercice n'est pas au catalogue.

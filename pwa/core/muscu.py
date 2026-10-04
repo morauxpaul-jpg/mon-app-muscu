@@ -360,3 +360,16 @@ def series_echauffement(poids_travail, barre: bool = False) -> list[dict]:
             continue
         out.append({"poids": p, "reps": reps})
     return out
+
+
+def conseil_depart(base: str, is_bw: bool) -> str:
+    """Première fois sur un exercice : comment choisir sa charge.
+
+    Le débutant n'avait aucune indication (audit du 03/10, profil 1). Pas de
+    chiffre tiré du poids de corps : une charge trop lourde le premier jour
+    blesse ou dégoûte. Une méthode, qui marche quel que soit le niveau."""
+    if is_bw:
+        return "garde 2 ou 3 reps en réserve."
+    if est_a_la_barre(base):
+        return "barre vide (20 kg), puis monte tant qu'il te reste 3-4 reps."
+    return "une charge que tu soulèverais encore 3-4 fois (RPE 6-7)."

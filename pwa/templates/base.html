@@ -105,7 +105,12 @@
     try {
       var s = JSON.parse(localStorage.getItem('active_session') || '{}');
       if (!s.active_session || !s.session_id) return;
-      var today = new Date().toISOString().slice(0, 10);
+      // Journée logique, comme le serveur : avant 4 h, c'est encore la veille.
+      // toISOString() donnait la date UTC, et la reprise ratait entre minuit
+      // et 2 h (audit du 03/10, profil 8).
+      var d = new Date(Date.now() - 4 * 3600 * 1000);
+      var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+        + '-' + String(d.getDate()).padStart(2, '0');
       if (s.session_date !== today) { localStorage.removeItem('active_session'); return; }
       window.location.replace('/seance?mode=' + (s.session_mode || 'prefaite')
         + '&name=' + encodeURIComponent(s.session_id)

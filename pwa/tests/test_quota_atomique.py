@@ -49,6 +49,7 @@ def test_quota_coach_relu_sous_verrou(fake_db, logged_in, monkeypatch):
     def envoie():
         with app.test_request_context():
             g.user_id = USER_ID
+            g.is_vip_full = True                      # quota PRO (15/jour)
             resultats.append(coach._check_and_bump_quota(dict(profil_perime))[0])
 
     fils = [threading.Thread(target=envoie) for _ in range(coach.DAILY_QUOTA + 5)]

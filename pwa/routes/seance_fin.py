@@ -103,7 +103,9 @@ FREE_DEBRIEFS_PER_WEEK = 1
 
 def _debrief_allowed(prog) -> tuple[bool, str]:
     """(autorisé, raison). La raison sert à l'UI : « PRO » ou « quota »."""
-    if getattr(g, "is_vip_full", False):
+    # L'essai compris : le debrief est, avec le coach, ce que l'essai doit
+    # montrer (audit du 03/10, profil 6). ~250 jetons par séance.
+    if getattr(g, "is_vip_full", False) or getattr(g, "is_vip", False):
         return True, "vip"
     from core.dates import continuous_week
     week = continuous_week(logical_today_paris())

@@ -329,3 +329,26 @@ def test_superset_enchaine_sans_repos_puis_repos_apres_le_second(serveur, naviga
     carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
     assert _attendre(lambda: pg.evaluate("window.__repos") == 1, 5)
     ctx.close()
+
+
+def test_semaine_gardee_hors_ligne(serveur, navigateur):
+    """L'accueil fait garder les séances de la semaine ; la pastille le dit ;
+    en mode avion, la séance de dans six jours s'ouvre."""
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR",
+                                 service_workers="allow")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');"
+                        "localStorage.setItem('tutoSeanceSeen','true');")
+    pg = ctx.new_page()
+    pg.goto(serveur + "/test-vierge")
+    pg.goto(serveur + "/accueil")
+    pg.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller", timeout=15000)
+    pg.reload()                                   # le SW contrôle la page : la mise en cache part
+    pg.wait_for_selector("#pack-horsligne:not([hidden])", timeout=45000)   # retente à 20 s
+
+    urls = json.loads(pg.locator("#precache-urls").text_content())
+    seances = sorted(u for u in urls if "mode=prefaite" in u)
+    assert len(seances) == 7                      # « Push » prévue tous les jours
+    ctx.set_offline(True)
+    pg.goto(serveur + seances[-1])                # la plus lointaine, dans six jours
+    pg.wait_for_selector(".serie-valider", timeout=15000)
+    ctx.close()

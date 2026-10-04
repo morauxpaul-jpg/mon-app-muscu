@@ -253,6 +253,19 @@ pwa/
 - **Paywall au bon moment** : un compte **free** qui atteint `UPSELL_AFTER_SESSIONS`=3 séances distinctes voit, **une seule fois**, une modale d'invitation PRO sur l'accueil (l'écran qui suit sa séance milestone → motivation haute). Distinct de la carte « Passe en PRO » discrète toujours présente en bas d'accueil.
 - Logique 100 % dans `routes/accueil.py` (pas de modif de `/seance/finish`) : flag durable `prog._upsell_seen` (méta programme, pas de migration). Event `upsell_shown` ({trigger:"post_workout", sessions}) — un `premium_viewed` qui suit = clic sur la modale (mesure de l'efficacité dans le funnel). Jamais affiché aux VIP.
 
+### Hors-ligne et Android (vague 4)
+- L'accueil fait garder les séances prévues des 7 jours qui viennent (rotation comprise), plus la page de choix d'aujourd'hui et demain : 10 pages au plus. offline.js ne relance qu'une fois par jour ou quand la liste change ; le service worker les demande une à une (limite de 60 req/min/IP, souvent partagée en salle), retente une fois à 20 s, et répond par MessageChannel ; la pastille « Séances de la semaine prêtes hors-ligne » ne s'affiche que si toutes sont gardées.
+- Android : drapeau `MTAds.setInSession(true)` dès l'ouverture de la page de séance (plus de pub plein écran avant la première série) ; reprise de séance au démarrage à froid comparée à la journée logique locale (bascule à 4 h), plus à la date UTC.
+- Cache serveur : une remise en cache plus vieille que la dernière invalidation de la clé est refusée (core/db_base.py) ; `vider_cache()` pour tout purger.
+
+### Essai PRO et bilan du mois
+- L'essai (`vip_until`, `g.is_vip` sans `is_vip_full`) ouvre le coach (5 messages/jour, `ESSAI_QUOTA`) et le debrief après chaque séance, en plus de la nutrition et des stats ; le générateur et les programmes avancés restent à l'abonnement.
+- Page Plus, membre PRO : « Ce mois-ci avec PRO » (core/bilan_pro.py) — debriefs, messages au coach, programmes générés, séances refaites (événements sur 30 jours) et records battus (historique).
+
+### Progression racontée et charge de départ
+- Accueil, carte « Tes progrès » (core/progression.py) : meilleur des 2 dernières semaines vs meilleur de 3 à 8 semaines avant, par exercice ; charge, ou reps au poids du corps ; gains nets seulement (≥ 2,5 kg / ≥ 2 reps), les 2 plus forts en relatif.
+- Séance, première fois sur un exercice (`conseil_depart`, core/muscu.py) : une méthode, pas un chiffre tiré du poids de corps — barre vide pour un mouvement à la barre, sinon RPE 6-7, réserve de reps au poids du corps. Tient sur la ligne « Première fois » (le premier champ doit rester dans le premier écran, test e2e).
+
 ### Semaine allégée (core/decharge.py)
 - Proposée sur l'accueil quand, après ≥ 4 semaines d'affilée sans semaine déjà allégée, l'e1RM de la dernière semaine complète recule de ≥ 3 % sur plusieurs exercices et/ou le RPE moyen atteint 9 (deux signes, ou un recul sur ≥ 3 exercices).
 - `POST /accueil/decharge` : `appliquer` pose `_decharge_semaine` (séries ÷ 2, charges suggérées et pré-remplies −10 %, pour les séances de cette semaine seulement), `ignorer` pose `_decharge_ignoree`, `annuler` retire. Clés personnelles du blob. Le coach est prévenu.

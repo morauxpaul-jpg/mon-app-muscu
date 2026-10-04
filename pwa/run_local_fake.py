@@ -65,7 +65,7 @@ def test_seed():
     c = core_db.current_client()
     c.tables.clear()
     c._id = 0
-    core_db._data_cache.clear()  # purge le cache (hist/prog d'une visite vide précédente)
+    core_db.vider_cache()  # purge le cache (hist/prog d'une visite vide précédente)
     core_db._prog_base.clear()
 
     today = dt.date(2026, 6, 12)
@@ -200,7 +200,7 @@ def test_vierge():
     c = core_db.current_client()
     c.tables.clear()
     c._id = 0
-    core_db._data_cache.clear()
+    core_db.vider_cache()
     core_db._prog_base.clear()
     c.table("profiles").insert({"id": USER_ID, "tier": "free", "prenom": "Alex"}).execute()
     c.table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-01-01"}).execute()

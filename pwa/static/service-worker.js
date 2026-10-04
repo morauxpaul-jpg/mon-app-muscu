@@ -102,7 +102,10 @@ self.addEventListener("message", (event) => {
   }
 
   if (data.type === "PRECACHE") {
-    event.waitUntil(precache(data.urls));
+    const port = event.ports && event.ports[0];
+    event.waitUntil(precache(data.urls).then((ok) => {
+      if (port) port.postMessage({ ok: ok, total: (data.urls || []).length });
+    }));
     return;
   }
 
@@ -170,19 +173,37 @@ self.addEventListener("notificationclick", (event) => {
 // qu'elle s'ouvre en ligne. Sans ça, ouvrir sa séance en salle au sous-sol
 // renvoyait à l'accueil : l'URL /seance?mode=…&name=…&date=… n'avait jamais
 // été visitée, donc jamais mise en cache.
+// Retourne le nombre de pages effectivement gardées : la page d'accueil
+// n'annonce « prêt hors-ligne » que si TOUTES le sont.
+// L'une après l'autre, pas en rafale : chaque page compte dans la limite de
+// requêtes par minute et par IP, souvent partagée en salle. Ce qui échoue
+// (limite atteinte, réseau qui flanche) est retenté une fois, 20 s après.
+async function garder(cache, u) {
+  try {
+    const resp = await fetch(u, { credentials: "same-origin" });
+    if (resp && resp.status === 200 && resp.type === "basic") {
+      await cache.put(u, resp.clone());
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
 async function precache(urls) {
   const cache = await caches.open(CACHE);
-  await Promise.all(
-    (urls || []).map((u) =>
-      fetch(u, { credentials: "same-origin" })
-        .then((resp) => {
-          if (resp && resp.status === 200 && resp.type === "basic") {
-            return cache.put(u, resp.clone());
-          }
-        })
-        .catch(() => {})
-    )
-  );
+  let ratees = [];
+  for (const u of urls || []) {
+    if (!(await garder(cache, u))) ratees.push(u);
+  }
+  if (ratees.length) {
+    await new Promise((ok) => setTimeout(ok, 20000));
+    const encore = [];
+    for (const u of ratees) {
+      if (!(await garder(cache, u))) encore.push(u);
+    }
+    ratees = encore;
+  }
+  return (urls || []).length - ratees.length;
 }
 
 // ── Fetch ────────────────────────────────────────────────────────

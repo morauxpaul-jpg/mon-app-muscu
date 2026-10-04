@@ -35,6 +35,19 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("coach", __name__)
 
 DAILY_QUOTA = 15  # quota VIP/jour — aligné sur la page Premium (« 15 msg/jour »)
+# L'essai (vip_until : parrainage, promo) ouvre maintenant le coach, avec un
+# quota réduit. Il ouvrait la nutrition et les stats — qui montrent leur
+# valeur au bout de plusieurs jours — et fermait le coach, la seule chose que
+# personne d'autre n'a (audit du 03/10, profil 6).
+ESSAI_QUOTA = 5
+
+
+def _coach_ouvert() -> bool:
+    return bool(getattr(g, "is_vip_full", False) or getattr(g, "is_vip", False))
+
+
+def _limite() -> int:
+    return DAILY_QUOTA if getattr(g, "is_vip_full", False) else ESSAI_QUOTA
 MODEL = "claude-haiku-4-5-20251001"
 # 500 tokens coupaient toute réponse un peu construite en plein milieu — le
 # défaut le plus visible du coach. La réponse étant désormais affichée au fil
@@ -243,14 +256,15 @@ def _check_and_bump_quota(profile):
         q_count = int(profile.get("coach_quota_count") or 0)
         if q_date != today:
             q_count = 0  # nouveau jour → reset
-        if q_count >= DAILY_QUOTA:
-            return False, q_count, DAILY_QUOTA
+        limite = _limite()
+        if q_count >= limite:
+            return False, q_count, limite
         q_count += 1
         try:
             save_profile({"coach_quota_date": today, "coach_quota_count": q_count})
         except Exception as e:
             logger.error("coach save_profile quota FAILED: %s", e)
-        return True, q_count, DAILY_QUOTA
+        return True, q_count, limite
 
 
 def _revert_quota():
@@ -272,7 +286,7 @@ def _quota_remaining(profile):
     q_count = int(profile.get("coach_quota_count") or 0)
     if q_date != today:
         q_count = 0
-    return max(0, DAILY_QUOTA - q_count)
+    return max(0, _limite() - q_count)
 
 
 def _title_from_message(msg: str) -> str:
@@ -285,7 +299,7 @@ def _title_from_message(msg: str) -> str:
 
 @bp.route("/coach")
 def index():
-    if not getattr(g, "is_vip_full", False):
+    if not _coach_ouvert():
         return paywall("Coach IA")
     try:
         profile = get_profile() or {}
@@ -319,7 +333,7 @@ def index():
         prenom=prenom or "l'athlète",
         suggestions=SUGGESTIONS,
         quota_remaining=remaining,
-        quota_limit=DAILY_QUOTA,
+        quota_limit=_limite(),
         messages=messages,
         conversations=conversations,
         active_conversation=active_conversation,
@@ -330,7 +344,7 @@ def index():
 @bp.route("/coach/clear", methods=["POST"])
 @limiter.limit("10 per minute")
 def clear():
-    if not getattr(g, "is_vip_full", False):
+    if not _coach_ouvert():
         return redirect(url_for("accueil.index"))
     try:
         clear_coach_messages()
@@ -342,7 +356,7 @@ def clear():
 @bp.route("/coach/conversation/delete", methods=["POST"])
 @limiter.limit("20 per minute")
 def delete_conversation():
-    if not getattr(g, "is_vip_full", False):
+    if not _coach_ouvert():
         return jsonify({"error": "réservé aux membres PRO"}), 403
     payload = request.get_json(silent=True) or {}
     conv_id = str(payload.get("conversation_id") or "").strip()
@@ -494,7 +508,7 @@ def _revert_quota_for(user_id):
 @bp.route("/coach/ask", methods=["POST"])
 @limiter.limit("30 per minute")
 def ask():
-    if not getattr(g, "is_vip_full", False):
+    if not _coach_ouvert():
         return jsonify({"error": "Coach IA réservé aux membres PRO."}), 403
     payload = request.get_json(silent=True) or {}
     message = (payload.get("message") or "").strip()

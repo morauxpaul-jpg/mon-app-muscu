@@ -336,11 +336,32 @@
     var urls;
     try { urls = JSON.parse(el.textContent || "[]"); } catch (e) { return; }
     if (!urls.length) return;
+    // Une fois par jour, ou quand la liste change (planning modifié) : la
+    // semaine entière, c'est jusqu'à quinze pages à rendre côté serveur.
+    var cle = new Date().toDateString() + "|" + urls.join(",");
+    var deja = null;
+    try { deja = localStorage.getItem("pack_horsligne"); } catch (e) {}
+    if (deja === cle) { afficherPackPret(); return; }
     navigator.serviceWorker.ready
       .then(function (reg) {
-        if (reg.active) reg.active.postMessage({ type: "PRECACHE", urls: urls });
+        if (!reg.active) return;
+        // Le service worker répond quand tout est gardé : on l'annonce.
+        var canal = new MessageChannel();
+        canal.port1.onmessage = function (ev) {
+          var r = ev.data || {};
+          if (r.ok && r.ok === r.total) {
+            try { localStorage.setItem("pack_horsligne", cle); } catch (e) {}
+            afficherPackPret();
+          }
+        };
+        reg.active.postMessage({ type: "PRECACHE", urls: urls }, [canal.port2]);
       })
       .catch(function () {});
+  }
+
+  function afficherPackPret() {
+    var p = document.getElementById("pack-horsligne");
+    if (p) p.hidden = false;
   }
 
   // ── Init ──────────────────────────────────────────────────

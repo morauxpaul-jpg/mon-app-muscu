@@ -115,21 +115,50 @@ _TTL = 60.0
 # admin) se propage vite à toutes les requêtes (cf. FREE_RECHECK_TTL app.py).
 _PROFILE_TTL = 15.0
 
+# Lecture lente et écriture qui se croisent : une requête lit la base (cache
+# vide), une autre écrit et invalide la clé, puis la première remet en cache
+# ce qu'elle avait lu — l'ANCIENNE valeur, servie jusqu'à 60 s. On retient
+# quand chaque clé a été invalidée, et quand ce fil a commencé sa lecture :
+# une remise en cache plus vieille que la dernière invalidation est refusée.
+_invalidee_a: dict = {}
+_tout_invalide_a = -1.0
+_lectures = threading.local()
+
+
+def _debuts() -> dict:
+    d = getattr(_lectures, "debuts", None)
+    if d is None:
+        d = _lectures.debuts = {}
+    return d
+
+
+def _marquer_invalidee(key: str):
+    _invalidee_a[key] = time.monotonic()
+    if len(_invalidee_a) > 4 * _CACHE_MAX:
+        limite = time.monotonic() - 10 * _TTL
+        for k in [k for k, t in _invalidee_a.items() if t < limite]:
+            _invalidee_a.pop(k, None)
+
 
 def _cache_get(key: str, ttl: float | None = None):
     with _cache_lock:
         entry = _data_cache.get(key)
-        if entry is None:
-            return None
-        if (time.time() - entry["ts"]) >= (ttl or _TTL):
+        if entry is not None and (time.time() - entry["ts"]) >= (ttl or _TTL):
             _data_cache.pop(key, None)
+            entry = None
+        if entry is None:
+            _debuts()[key] = time.monotonic()   # ce fil va lire la base
             return None
+        _debuts().pop(key, None)
         _data_cache.move_to_end(key)
         return entry["value"]
 
 
 def _cache_set(key: str, value):
     with _cache_lock:
+        debut = _debuts().pop(key, None)
+        if debut is not None and max(_invalidee_a.get(key, -1.0), _tout_invalide_a) >= debut:
+            return                              # lu avant la dernière écriture : périmé
         _data_cache[key] = {"value": value, "ts": time.time()}
         _data_cache.move_to_end(key)
         while len(_data_cache) > _CACHE_MAX:
@@ -139,6 +168,15 @@ def _cache_set(key: str, value):
 def _cache_invalidate(key: str):
     with _cache_lock:
         _data_cache.pop(key, None)
+        _marquer_invalidee(key)
+
+
+def vider_cache():
+    """Vide tout le cache, et refuse les lectures commencées avant."""
+    global _tout_invalide_a
+    with _cache_lock:
+        _data_cache.clear()
+        _tout_invalide_a = time.monotonic()
 
 
 def clear_user_cache(user_id: str):
@@ -147,6 +185,7 @@ def clear_user_cache(user_id: str):
     with _cache_lock:
         for prefix in ("hist", "prog", "profile", "onboarding"):
             _data_cache.pop(f"{prefix}:{user_id}", None)
+            _marquer_invalidee(f"{prefix}:{user_id}")
 
 
 def use_client(client) -> None:
