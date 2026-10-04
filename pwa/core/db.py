@@ -67,7 +67,8 @@ from core.db_profil import (
 # ── les repas ───────────────────────────────────────────────────
 from core.db_nutrition import (
     delete_nutrition, insert_nutrition, list_all_nutrition, list_nutrition, sum_nutrition_day,
-    sum_nutrition_range
+    sum_nutrition_range, insert_nutrition_rows, get_nutrition, update_nutrition,
+    list_nutrition_recents, COLONNES_V40, _colonne_absente, _sans_v40
 )
 
 # ── tier PRO, Stripe, parrainage ────────────────────────────────

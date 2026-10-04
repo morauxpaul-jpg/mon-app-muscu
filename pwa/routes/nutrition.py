@@ -1,10 +1,10 @@
 """Blueprint nutrition — profil métabolique + suivi calories/macros au quotidien.
 
-- BMR via Mifflin-St Jeor
-- TDEE = BMR × facteur d'activité
-- Objectif calorique ajusté selon objectif (Masse/Maintien/Sèche)
-- Macros recommandés en % selon objectif
-- Table Supabase `nutrition` : un repas par ligne (date, meal_type, macros, note)
+- Cibles (`core/nutrition_cibles.py`) : Mifflin-St Jeor × activité, ajustée
+  selon l'objectif ; protéines en g/kg ; plus de glucides les jours
+  d'entraînement, moins les jours de repos.
+- Table Supabase `nutrition` : une ligne par aliment (`core/nutrition_aliments.py`)
+  ou par repas saisi en bloc (saisie rapide, plats de la semaine).
 """
 import json
 import logging
@@ -13,24 +13,22 @@ from flask import Blueprint, render_template, request, redirect, url_for, g, jso
 
 from core.data import (
     get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition,
-    sum_nutrition_range, get_prog, save_prog, upsert_body_weight,
+    sum_nutrition_range, get_prog, save_prog, upsert_body_weight, get_hist,
+    insert_nutrition_rows, get_nutrition, update_nutrition, list_nutrition_recents,
 )
 from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
 from core.analytics import paywall
 from core.foods_data import FOODS
+from core.nutrition_cibles import (
+    compute_targets, custom_cal, cible_pour, cycle_actif, est_jour_entrainement, jours_seances,
+)
+from core.nutrition_aliments import lignes_panier, recalculer, recents as aliments_recents
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("nutrition", __name__)
 
-ACTIVITE_FACTOR = {
-    "sedentaire": 1.2,
-    "leger": 1.375,
-    "actif": 1.55,
-    "tres_actif": 1.725,
-    "athlete": 1.9,
-}
 ACTIVITE_LABELS = [
     ("sedentaire", "Sédentaire", "Peu ou pas d'exercice"),
     ("leger", "Légèrement actif", "1-3 séances / semaine"),
@@ -45,16 +43,6 @@ OBJECTIFS = [
     ("seche", "Sèche", "-300 à -500 kcal"),
 ]
 
-# % macros par objectif (protéines / glucides / lipides)
-MACRO_SPLIT = {
-    "masse": (30, 45, 25),
-    "maintien": (25, 50, 25),
-    "seche": (35, 40, 25),
-}
-
-# kcal par gramme
-KCAL_PER_G = {"protein": 4, "carbs": 4, "fat": 9}
-
 MEAL_TYPES = [
     ("petit_dej", "Petit-déj"),
     ("dejeuner", "Déjeuner"),
@@ -62,6 +50,7 @@ MEAL_TYPES = [
     ("collation", "Collation"),
 ]
 MEAL_TYPES_MAP = dict(MEAL_TYPES)
+RECENTS_JOURS = 60
 
 # Format du fichier « Mes plats de la semaine » (import JSON, comme le programme).
 MEAL_PLAN_FORMAT = "muscu-plats-v1"
@@ -116,70 +105,16 @@ def _parse_plats(data):
     return {"label": label, "plats": plats}
 
 
-def _bmr(poids_kg, taille_cm, age, sexe):
-    """Mifflin-St Jeor."""
-    base = 10 * poids_kg + 6.25 * taille_cm - 5 * age
-    return base + 5 if sexe == "H" else base - 161
+# Noms historiques : `routes/progres.py` recalcule la cible après une pesée.
+_compute_targets = compute_targets
+_custom_cal = custom_cal
 
 
-def _custom_cal(prog):
-    """Cible calorique manuelle de l'user (0 = auto). Stockée dans `prog`
-    (JSONB, sans migration Supabase) et non dans la table `profiles`."""
+def _date_demandee(raw) -> str:
     try:
-        return max(0, min(10000, int((prog.get("_nutrition") or {}).get("calories_custom") or 0)))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _compute_targets(profile, custom_cal=0):
-    """Retourne dict(bmr, tdee, calories_cible, macros_g={protein,carbs,fat}) ou None."""
-    try:
-        poids = float(profile.get("poids_kg") or 0)
-        taille = float(profile.get("taille_cm") or 0)
-        age = int(profile.get("age") or 0)
-    except (TypeError, ValueError):
-        return None
-    sexe = (profile.get("sexe") or "").strip().upper()
-    activite = (profile.get("activite") or "").strip()
-    objectif = (profile.get("objectif_nutrition") or "maintien").strip()
-
-    if poids <= 0 or taille <= 0 or age <= 0 or sexe not in ("H", "F") or activite not in ACTIVITE_FACTOR:
-        return None
-
-    bmr = _bmr(poids, taille, age, sexe)
-    tdee = bmr * ACTIVITE_FACTOR[activite]
-
-    if objectif == "masse":
-        cible = tdee + 400
-    elif objectif == "seche":
-        cible = tdee - 400
-    else:
-        cible = tdee
-    cible_auto = int(round(cible))
-
-    # Cible manuelle : si l'user a fixé sa propre cible calorique (ex. un plan de
-    # rééquilibrage à 2400), elle PRIME sur le calcul automatique. Les macros
-    # s'ajustent alors sur cette cible (même répartition selon l'objectif).
-    is_custom = custom_cal > 0
-    if is_custom:
-        cible = custom_cal
-
-    prot_pct, carbs_pct, fat_pct = MACRO_SPLIT.get(objectif, MACRO_SPLIT["maintien"])
-    macros_g = {
-        "protein": int(round(cible * (prot_pct / 100) / KCAL_PER_G["protein"])),
-        "carbs": int(round(cible * (carbs_pct / 100) / KCAL_PER_G["carbs"])),
-        "fat": int(round(cible * (fat_pct / 100) / KCAL_PER_G["fat"])),
-    }
-    return {
-        "bmr": int(round(bmr)),
-        "tdee": int(round(tdee)),
-        "calories_cible": int(round(cible)),
-        "calories_auto": cible_auto,
-        "is_custom": is_custom,
-        "macros_g": macros_g,
-        "macros_pct": {"protein": prot_pct, "carbs": carbs_pct, "fat": fat_pct},
-        "objectif": objectif,
-    }
+        return datetime.strptime(str(raw or ""), "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return today_paris_str()
 
 
 @bp.route("/nutrition")
@@ -194,9 +129,14 @@ def index():
         logger.error("nutrition get_profile FAILED: %s", e)
         profile = {}
     prog = get_prog()
-    targets = _compute_targets(profile, _custom_cal(prog))
-
-    date_iso = request.args.get("date") or today_paris_str()
+    date_iso = _date_demandee(request.args.get("date"))
+    selected_date = datetime.strptime(date_iso, "%Y-%m-%d").date()
+    try:
+        hist = get_hist()
+    except Exception as e:
+        logger.error("nutrition get_hist FAILED: %s", e)
+        hist = []
+    targets, jour = cible_pour(profile, prog, hist, selected_date)
 
     # Si la table nutrition n'existe pas encore (SQL non exécuté), on dégrade
     # gracieusement au lieu d'un 500 : l'utilisateur voit la page profil et un
@@ -217,37 +157,28 @@ def index():
         mt = m.get("meal_type") or "collation"
         meals_by_type.setdefault(mt, []).append(m)
 
-    # Progression donut : % calories consommées / cible
-    cal_cible = (targets or {}).get("calories_cible") or 0
+    # Progression donut : % calories consommées / cible DU JOUR
+    cal_cible = (jour or {}).get("calories") or 0
     cal_pct = int(min(100, round((totals["calories"] / cal_cible) * 100))) if cal_cible > 0 else 0
-
-    macros_g = (targets or {}).get("macros_g") or {"protein": 0, "carbs": 0, "fat": 0}
+    macros_g = (jour or {}).get("macros_g") or {"protein": 0, "carbs": 0, "fat": 0}
 
     def _pct(val, goal):
         return int(min(100, round((val / goal) * 100))) if goal > 0 else 0
 
-    macros_progress = {
-        "protein": {"val": totals["protein"], "goal": macros_g["protein"],
-                    "pct": _pct(totals["protein"], macros_g["protein"])},
-        "carbs":   {"val": totals["carbs"],   "goal": macros_g["carbs"],
-                    "pct": _pct(totals["carbs"], macros_g["carbs"])},
-        "fat":     {"val": totals["fat"],     "goal": macros_g["fat"],
-                    "pct": _pct(totals["fat"], macros_g["fat"])},
-    }
+    macros_progress = {k: {"val": totals[k], "goal": macros_g[k], "pct": _pct(totals[k], macros_g[k])}
+                       for k in ("protein", "carbs", "fat")}
 
-    # Semaine : lun→dim de la semaine contenant date_iso
-    try:
-        selected_date = datetime.strptime(date_iso, "%Y-%m-%d").date()
-    except ValueError:
-        selected_date = today_paris()
+    # Semaine : lun→dim de la semaine contenant date_iso, plus la veille du
+    # lundi (pour « Reprendre hier » le lundi).
     monday = selected_date - timedelta(days=selected_date.weekday())
     sunday = monday + timedelta(days=6)
     today_iso = today_paris_str()
     try:
-        week_totals = sum_nutrition_range(monday.isoformat(), sunday.isoformat())
+        week_totals = sum_nutrition_range((monday - timedelta(days=1)).isoformat(), sunday.isoformat())
     except Exception as e:
         logger.error("nutrition week_totals FAILED: %s", e)
         week_totals = {}
+    faits = jours_seances(hist)
     week_days = []
     for i in range(7):
         d = monday + timedelta(days=i)
@@ -261,14 +192,29 @@ def index():
             "is_selected": d_iso == date_iso,
             "is_today": d_iso == today_iso,
             "is_future": d_iso > today_iso,
+            "training": est_jour_entrainement(prog, faits, d),
         })
+    veille = (selected_date - timedelta(days=1)).isoformat()
+    veille_slots = (week_totals.get(veille) or {}).get("slots") or []
+
+    try:
+        recents = aliments_recents(list_nutrition_recents(
+            (selected_date - timedelta(days=RECENTS_JOURS)).isoformat()))
+    except Exception as e:
+        # Colonnes v40 absentes ou base indisponible : la recherche marche sans.
+        logger.warning("nutrition recents indisponibles: %s", e)
+        recents = []
 
     return render_template(
         "nutrition.html",
         active="plus",
         profile=profile,
         targets=targets,
+        jour=jour,
+        cycle_actif=cycle_actif(prog),
         date_iso=date_iso,
+        veille=veille,
+        veille_slots=veille_slots,
         totals=totals,
         meals_by_type=meals_by_type,
         meal_types=MEAL_TYPES,
@@ -282,6 +228,7 @@ def index():
         meal_plan=_get_meal_plan(prog),
         calories_custom=_custom_cal(prog),
         foods=FOODS,
+        recents=recents,
     )
 
 
@@ -323,6 +270,13 @@ def save_profile_route():
             nutri["calories_custom"] = custom_cal
         else:
             nutri.pop("calories_custom", None)
+        # Case « Adapter aux jours d'entraînement » : une case décochée
+        # n'est pas envoyée, d'où le champ témoin `cycle_form`.
+        if f.get("cycle_form"):
+            if f.get("cycle"):
+                nutri.pop("cycle", None)
+            else:
+                nutri["cycle"] = False
         save_prog(prog)
     except Exception as e:
         logger.error("nutrition save custom_cal FAILED: %s", e)
@@ -369,6 +323,27 @@ def add_meal():
         except (ValueError, TypeError):
             return 0
 
+    # Panier « Aliments » : une ligne par aliment, macros recalculées ici à
+    # partir des valeurs pour 100 g (le navigateur ne fixe plus les totaux).
+    if f.get("items"):
+        try:
+            items = json.loads(f.get("items"))
+        except (ValueError, TypeError):
+            items = None
+        rows = lignes_panier(items, date_iso, meal_type)
+        if not rows:
+            return render_template("error.html", code=400,
+                                   message="Aucun aliment valide dans ce repas."), 400
+        try:
+            insert_nutrition_rows(rows)
+        except Exception as e:
+            logger.error("add_meal items FAILED: %s", e)
+            return render_template(
+                "error.html", code=503,
+                message="Le repas n'a pas pu être enregistré. Réessaie dans un instant.",
+            ), 503
+        return redirect(url_for("nutrition.index", date=date_iso))
+
     row = {
         "date": date_iso,
         "meal_type": meal_type,
@@ -389,6 +364,76 @@ def add_meal():
             message="Le repas n'a pas pu être enregistré. Réessaie dans un instant.",
         ), 503
     return redirect(url_for("nutrition.index", date=date_iso))
+
+
+@bp.route("/nutrition/edit-meal", methods=["POST"])
+@limiter.limit("30 per minute")
+def edit_meal():
+    """Corrige la quantité d'un aliment déjà noté (macros recalculées)."""
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
+    f = request.form
+    date_iso = _date_demandee(f.get("date"))
+    try:
+        entry_id = int(f.get("id") or 0)
+        grams = float(str(f.get("grams") or "").replace(",", "."))
+    except (ValueError, TypeError):
+        entry_id, grams = 0, 0
+    row = get_nutrition(entry_id) if entry_id > 0 else None
+    champs = recalculer(row, grams) if row else None
+    if not champs:
+        return render_template("error.html", code=400,
+                               message="Quantité invalide pour cet aliment."), 400
+    try:
+        update_nutrition(entry_id, champs)
+    except Exception as e:
+        logger.error("edit_meal FAILED: %s", e)
+        return render_template("error.html", code=503,
+                               message="La quantité n'a pas pu être corrigée. Réessaie."), 503
+    return redirect(url_for("nutrition.index", date=date_iso))
+
+
+@bp.route("/nutrition/copier", methods=["POST"])
+@limiter.limit("20 per minute")
+def copier_repas():
+    """« Reprendre hier » : recopie un créneau (petit-déj, déjeuner…) d'un
+    jour sur un autre. Le petit-déj de la semaine est souvent le même."""
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
+    f = request.form
+    date_iso = _date_demandee(f.get("date"))
+    source = _date_demandee(f.get("source"))
+    meal_type = (f.get("meal_type") or "").strip()
+    if meal_type not in MEAL_TYPES_MAP or source == date_iso:
+        return redirect(url_for("nutrition.index", date=date_iso))
+    garder = ("calories", "protein", "carbs", "fat", "note", "grams", "food")
+    try:
+        rows = [{"date": date_iso, "meal_type": meal_type,
+                 **{k: r[k] for k in garder if r.get(k) is not None}}
+                for r in list_nutrition(source) if r.get("meal_type") == meal_type]
+        insert_nutrition_rows(rows)
+    except Exception as e:
+        logger.error("copier_repas FAILED: %s", e)
+        return render_template("error.html", code=503,
+                               message="Le repas n'a pas pu être recopié. Réessaie."), 503
+    return redirect(url_for("nutrition.index", date=date_iso))
+
+
+@bp.route("/nutrition/recherche")
+@limiter.limit("20 per minute")
+def recherche():
+    """Produits du commerce par leur nom (Open Food Facts), à la demande."""
+    from core.openfoodfacts import search
+
+    if _require_vip():
+        return jsonify({"ok": False, "error": "La recherche fait partie de PRO."}), 403
+    q = request.args.get("q") or ""
+    if len(q.strip()) < 3:
+        return jsonify({"ok": False, "error": "Tape au moins 3 lettres."}), 400
+    found = search(q)
+    if found is None:
+        return jsonify({"ok": False, "error": "Recherche indisponible pour l'instant. Réessaie dans une minute."}), 503
+    return jsonify({"ok": True, "foods": found})
 
 
 @bp.route("/nutrition/barcode/<code>")

@@ -302,7 +302,7 @@
     {% if cal_cible > 0 %}
       <a href="/nutrition" class="card calories-widget s-5eff84">
         <div class="s-fdfab4">
-          <div class="label-icon s-6c67ba"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>CALORIES DU JOUR</div>
+          <div class="label-icon s-6c67ba"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>CALORIES DU JOUR{% if nutri_type == 'entrainement' %} · SÉANCE{% elif nutri_type == 'repos' %} · REPOS{% endif %}</div>
           <div class="s-49a710">{{ cal_pct }}%</div>
         </div>
         <div class="s-3b14fd">
@@ -312,6 +312,7 @@
         <div class="xp-bar-bg s-49c5d1">
           <div class="xp-bar-fill" style="width: {{ cal_pct }}%;"></div>
         </div>
+        {% if prot_cible %}<div class="cal-prot">Protéines : {{ prot_today }} / {{ prot_cible }} g</div>{% endif %}
       </a>
     {% else %}
       <a href="/nutrition" class="card calories-widget s-6f481e">

@@ -464,13 +464,26 @@ def index():
     cardio_km = sum_cardio_km(cardio_rows)
 
     # Widget calories — objectif depuis profile, consommé depuis table nutrition
+    # La cible est celle du JOUR : plus haute un jour de séance, plus basse
+    # un jour de repos (core/nutrition_cibles.py), comme sur la page Nutrition.
     cal_cible = int(profile.get("calories_cible") or 0)
+    nutri_jour = None
+    if cal_cible > 0 and getattr(g, "is_vip", False):
+        try:
+            from core.nutrition_cibles import cible_pour
+            nutri_jour = cible_pour(profile, prog, hist, today_paris())[1]
+        except Exception as e:
+            logger.error("accueil cible nutrition FAILED: %s", e)
+        if nutri_jour:
+            cal_cible = nutri_jour["calories"]
     try:
         nutr = sum_nutrition_day(today_paris_str()) if cal_cible > 0 else None
     except Exception as e:
         nutr = None
     cal_today = int((nutr or {}).get("calories") or 0)
     cal_pct = int(min(100, round((cal_today / cal_cible) * 100))) if cal_cible > 0 else 0
+    prot_today = int((nutr or {}).get("protein") or 0)
+    prot_cible = int(((nutri_jour or {}).get("macros_g") or {}).get("protein") or 0)
 
     # Badges — recalculés à chaque visite, persistés dans prog._badges.
     # Les badges obtenus s'affichent toujours ; on ne les GRAVE que sur une
@@ -653,6 +666,9 @@ def index():
         cal_today=cal_today,
         cal_cible=cal_cible,
         cal_pct=cal_pct,
+        prot_today=prot_today,
+        prot_cible=prot_cible,
+        nutri_type=(nutri_jour or {}).get("jour", ""),
         badges=badges,
         badges_new=badges_new,
         next_session=next_session,

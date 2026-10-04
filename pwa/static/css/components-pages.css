@@ -702,3 +702,6 @@ html.has-ad-banner .topbar {
 
 /* Pastille « prêt hors-ligne » (accueil, offline.js). */
 .pack-horsligne { margin: 4px 0 12px; font-size: 0.75rem; color: #34c759; text-align: center; }
+
+/* Accueil : protéines du jour sous la jauge de calories. */
+.cal-prot { font-size: 0.75rem; color: var(--text-3); margin-top: 6px; }
