@@ -1,30 +1,30 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
-**Mise à jour** : 04/10/2026 (après les PR #16 et #17) · **Commit audité** : `158d1e0` (tête de `main` après les PR #6 à #17, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10). Mises à jour précédentes du 04/10 : 6,5 (`d2362f9`), 6,7 (`c4528b3`), puis 6,8 (`ee13985`).
+**Mise à jour** : 04/10/2026 (après la PR #19) · **Commit audité** : `67b346f` (tête de `main` après les PR #6 à #19, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10). Mises à jour précédentes du 04/10 : 6,5 (`d2362f9`), 6,7 (`c4528b3`), 6,8 (`ee13985`), puis 6,8 (`158d1e0`).
 **Historique** : 30/09/2026, `ac44673`, 4,9/10. Les versions précédentes de ce fichier restent dans l'historique git ; `RAPPORT_AUDIT_2.md` n'a pas été touché.
 
 ---
 
-## Note globale : **6,8 / 10** (04/10 : 6,5, 6,7, 6,8 · 03/10 : 5,6 · 30/09 : 4,9)
+## Note globale : **6,9 / 10** (137 / 20 = 6,85 · 04/10 : 6,5, 6,7, 6,8, 6,8 · 03/10 : 5,6 · 30/09 : 4,9)
 
-> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. Depuis, la nutrition — seul axe resté à 5 — est passée à des repas détaillés aliment par aliment, avec des cibles reliées au poids et aux jours d'entraînement (PR #10), et les petits trous visibles sont bouchés : « Créer mon propre programme » ouvre l'éditeur, l'éditeur est borné, vider l'historique se confirme (PR #11). Enfin, une série ne peut plus exister en double en base (index unique v41, écritures par clé) et renommer un exercice propose d'emmener son historique (PR #13) ; la génération IA ne tient plus de fil du serveur (PR #14). Les revenus ne fuient plus : un remboursement total ou un litige bancaire retire PRO (rendu si le litige est gagné), et la production n'affiche jamais de pub de test en silence (PR #16). Les chemins de connexion, d'admin et du programme sont testés à 84-91 %, ce qui a révélé et corrigé deux façons de laisser une séance fantôme dans le planning (PR #17). **La note reste 6,8, et ce n'est pas encore 8.** Ces deux vagues ferment des trous plus qu'elles n'ajoutent de valeur visible : seule la monétisation monte d'un point (136 / 20). Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or l'état du serveur (cache, verrous, tâches) ne vaut que pour une instance, l'identité d'un exercice reste son nom, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; seize sont à 7, quatre à 6.
+> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. Depuis, la nutrition — seul axe resté à 5 — est passée à des repas détaillés aliment par aliment, avec des cibles reliées au poids et aux jours d'entraînement (PR #10), et les petits trous visibles sont bouchés : « Créer mon propre programme » ouvre l'éditeur, l'éditeur est borné, vider l'historique se confirme (PR #11). Enfin, une série ne peut plus exister en double en base (index unique v41, écritures par clé) et renommer un exercice propose d'emmener son historique (PR #13) ; la génération IA ne tient plus de fil du serveur (PR #14). Les revenus ne fuient plus : un remboursement total ou un litige bancaire retire PRO (rendu si le litige est gagné), et la production n'affiche jamais de pub de test en silence (PR #16). Les chemins de connexion, d'admin et du programme sont testés à 84-91 %, ce qui a révélé et corrigé deux façons de laisser une séance fantôme dans le planning (PR #17). Enfin, le cache, les verrous, les quotas et les tâches IA ne vivent plus seulement dans la mémoire d'un processus : avec Redis, l'app peut tourner sur plusieurs instances sans servir de donnée périmée, et la CI rejoue toute la suite sur un vrai Redis (PR #19). **6,9 (6,85 arrondi), et ce n'est pas encore 8.** La PR #19 fait monter l'architecture d'un point, mais elle n'est pas encore active en production : tant qu'aucun Redis n'est ajouté sur Railway, l'app reste à un processus, comme avant. Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or l'identité d'un exercice reste son nom, le blob `programs.data` reste fourre-tout, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; dix-sept sont à 7, trois à 6.
 
 **Avertissement de méthode** : cette mise à jour est faite par le même agent qui a écrit les corrections. Le risque de complaisance est réel ; pour le contenir, chaque note qui monte s'appuie sur un test ou une mesure cités plus bas, et les constats non traités restent ouverts, même mineurs.
 
-| Bloc | 30/09 | 03/10 | 04/10 (6,5) | 04/10 (6,7) | après #13-#14 (6,8) | après #16-#17 (6,8) |
-|---|---:|---:|---:|---:|---:|---:|
-| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | 6,4 | 6,8 | 6,9 | **6,9** |
-| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | 6,8 | 6,8 | 6,8 | **6,8** |
-| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | 6,4 | 6,4 | 6,6 | **6,6** |
-| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | 6,7 | 6,7 | 6,7 | **7,0** |
+| Bloc | 30/09 | 03/10 | 04/10 (6,5) | 04/10 (6,7) | après #13-#14 (6,8) | après #16-#17 (6,8) | après #19 (6,9) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | 6,4 | 6,8 | 6,9 | 6,9 | **6,9** |
+| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | 6,8 | 6,8 | 6,8 | 6,8 | **6,8** |
+| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | 6,4 | 6,4 | 6,6 | 6,6 | **6,8** |
+| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | 6,7 | 6,7 | 6,7 | 7,0 | **7,0** |
 
-**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **13 corrigés**, 1 atténué, 0 ouvert · 16 mineurs : **12 corrigés**, 4 ouverts (dont 1 non retenu). **3 nouveaux défauts** trouvés et corrigés pendant les corrections (cache, séances fantômes dans le planning, § A.4).
+**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **14 corrigés** (I11 dans le code, à activer en production) · 16 mineurs : **12 corrigés**, 4 ouverts (dont 1 non retenu). **3 nouveaux défauts** trouvés et corrigés pendant les corrections (cache, séances fantômes dans le planning, § A.4).
 
 ---
 
 ## Sommaire
 
-A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410) (dernière révision après les PR #16 et #17)
+A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410) (dernière révision après la PR #19)
   - A.1 Méthode · A.2 Notes par axe · A.3 Parcours par profil · A.4 Statut des constats · A.5 Ce qui manque pour 8 · A.6 Non vérifiable
 B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-0310--détail-conservé)
   - 0. Méthode · Parties 1 à 4 · 5. Suivi du 30/09 · 6. Écarts doc/code · 7. Non vérifiable · 8. Annexe
@@ -35,11 +35,11 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 
 ### A.1 Méthode
 
-- **Code** : lecture de `main` après la PR #17 (61 modules `core/`, 19 blueprints, 37 gabarits) ; diff complet des PR #6 à #17 relu.
-- **Exécution** (sur `158d1e0`) : `pytest` **1 135 passés** ; tests navigateur (Chromium, 375 × 812) **18 passés** (dont repas détaillé, renommage qui emmène l'historique, génération suivie jusqu'au programme et reprise après rechargement) ; suite JS **111 passés** ; couverture de lignes Python **80 %** (03/10 : 71 %) — connexion 91 %, admin 89 %, programme 84 %, paiement 76 %. La fausse base des tests applique désormais l'index unique de production. Suite Python rejouée date figée sur chacun des 7 jours de la semaine (matin du 04/10) : verte.
+- **Code** : lecture de `main` après la PR #19 (62 modules `core/`, 19 blueprints, 37 gabarits) ; diff complet des PR #6 à #19 relu.
+- **Exécution** (sur `67b346f`) : `pytest` **1 169 passés** en mémoire, et la même suite rejouée avec cache, verrous, quotas et tâches IA dans Redis — simulé et vrai serveur local, 1 174 passés avec les tests dédiés au vrai Redis ; la CI la rejoue sur `redis:7-alpine` ; tests navigateur (Chromium, 375 × 812) **18 passés** (dont repas détaillé, renommage qui emmène l'historique, génération suivie jusqu'au programme et reprise après rechargement) ; suite JS **111 passés** ; couverture de lignes Python **80 %** (03/10 : 71 %) — connexion 91 %, admin 89 %, programme 84 %, paiement 76 %, état partagé 91 %. Gunicorn lancé localement : 2 processus avec `REDIS_URL` et `WEB_CONCURRENCY=2`, 1 seul sans Redis (alerte journalisée). La fausse base des tests applique désormais l'index unique de production. Suite Python rejouée date figée sur chacun des 7 jours de la semaine (matin du 04/10) : verte.
 - **Reproductions** : chacune des reproductions corrigées du 03/10 (R1 à R12) est rejouée par un test du dépôt (par exemple `tests/test_rpe_suggestion.py` pour R11, `tests/e2e/test_seance_navigateur.py` pour R1 et R2, `tests/test_rotation.py` pour R3, `tests/test_ecritures_croisees.py` pour R9).
 - **Mesures** : premier champ de saisie à **519 px** du haut sur un compte neuf (03/10 : 836 px) ; poids réseau compressé — Programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko.
-- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables. Migration **v40** (`nutrition.grams`, `nutrition.food`, contrainte `nutrition_grams_check`) appliquée le 04/10 avec l'accord du propriétaire, colonnes et contrainte relues en base. Migration **v41** (index unique `history_serie_unique`) appliquée le 04/10 avec son accord, après vérification en lecture seule : 1 136 lignes, 0 doublon ; index relu en base. Le site n'étant pas joignable d'ici, la fenêtre entre l'index et le déploiement de la PR #13 n'a pu être surveillée que par les journaux Supabase (aucun refus d'unicité relevé). Les PR #16 et #17 n'apportent aucune migration.
+- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables. Migration **v40** (`nutrition.grams`, `nutrition.food`, contrainte `nutrition_grams_check`) appliquée le 04/10 avec l'accord du propriétaire, colonnes et contrainte relues en base. Migration **v41** (index unique `history_serie_unique`) appliquée le 04/10 avec son accord, après vérification en lecture seule : 1 136 lignes, 0 doublon ; index relu en base. Le site n'étant pas joignable d'ici, la fenêtre entre l'index et le déploiement de la PR #13 n'a pu être surveillée que par les journaux Supabase (aucun refus d'unicité relevé). Les PR #16, #17 et #19 n'apportent aucune migration.
 - **Barème inchangé** : 10 = état de l'art · 8-9 = niveau Hevy/Strong, **prouvé** · 6-7 = correct, un concurrent fait mieux · 4-5 = utilisable mais faible · 1-3 = cassé ou absent.
 
 ### A.2 Notes par axe
@@ -57,17 +57,17 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 | 9 | Mode hors-ligne | 4 | 5 | **7** | « Terminer » borné à 6 s, rejeu borné à 8 s, semaine entière gardée avec pastille ; prouvé en mode avion (test navigateur). |
 | 10 | Notifications et relances | 5 | 6 | **7** | Récap du dimanche ajouté, rappels suivant la rotation ; tout dépend d'un cron externe, invérifiable d'ici. |
 | 11 | Design et cohérence UI | 5 | 5 | **6** | Écran de séance allégé, bloc « Récupération » retiré ; 57 `style=` en ligne, cohérence inégale entre pages. |
-| 12 | Performance ressentie | 5 | 6 | **7** | Compression gzip (pages 4 à 8 fois plus légères), vidéo PRO chargée seulement au tap (895 ko épargnés) ; le flux du coach tient un des 16 fils. |
-| 13 | Architecture du code | 6 | 6 | **6** | Nouveaux modules isolés, plafonds de taille tenus par tests ; blob fourre-tout, verrous et cache valables pour un seul processus. |
+| 12 | Performance ressentie | 5 | 6 | **7** | Compression gzip (pages 4 à 8 fois plus légères), vidéo PRO chargée seulement au tap (895 ko épargnés), flux du coach plafonnés à 6 par instance ; plusieurs processus possibles, mais pas encore activés (Redis à ajouter). |
+| 13 | Architecture du code | 6 | 6 | **7** | Modules isolés, plafonds de taille tenus par tests, état partagé entre instances (`core/partage.py`, Redis ou mémoire, repli si Redis tombe) ; blob `programs.data` fourre-tout. |
 | 14 | Modèle de données | 4 | 4 | **6** | Une série = une ligne (index unique en base), écritures idempotentes, renommages sans collision et suivis depuis l'éditeur, repas par aliment ; identité toujours par nom, cardio dans des colonnes détournées. |
 | 15 | Sécurité | 5 | 6 | **7** | Admin réservé à une connexion Google, v37-v39 vérifiées en base, quotas non contournables ; CSP sans `script-src` stricte. |
-| 16 | Robustesse et gestion d'erreurs | 4 | 6 | **7** | Échecs signalés, fin de séance bornée, quota rendu si l'IA échoue, cache cohérent après écriture. |
-| 17 | Tests | 6 | 6 | **7** | 1 135 + 18 navigateur + 111 JS, 80 % de couverture, connexion 91 %, admin 89 %, programme 84 % ; tout tourne sur une fausse base, aucun test contre un vrai Postgres, paiement à 76 %. |
+| 16 | Robustesse et gestion d'erreurs | 4 | 6 | **7** | Échecs signalés, fin de séance bornée, quota rendu si l'IA échoue, cache cohérent après écriture même entre instances, Redis en panne sans casse. |
+| 17 | Tests | 6 | 6 | **7** | 1 169 + 18 navigateur + 111 JS, 80 % de couverture, suite rejouée sur un vrai Redis en CI ; tout tourne sur une fausse base, aucun test contre un vrai Postgres, paiement à 76 %. |
 | 18 | Monétisation et paywall | 4 | 5 | **7** | Page PRO honnête, essai qui montre coach et debrief, remboursement et litige retirent PRO, pubs coupées (et signalées à l'admin) plutôt qu'en test silencieux ; achat Android qui peut sortir de l'app, conversion jamais mesurée. |
 | 19 | Boucle de rétention | 4 | 6 | **7** | Défi relatif, récap du dimanche, progression racontée, semaine allégée ; aucune dimension sociale. |
 | 20 | Accessibilité | 6 | 7 | **7** | Inchangé. |
 
-Moyenne : **6,8** (136 / 20). Étapes du 04/10 : 6,5 (130 / 20), puis 6,7 (133 / 20) avec l'onboarding (6 → 7) et la nutrition (5 → 7), puis 6,8 (135 / 20) avec le modèle de données (5 → 6) et le générateur (6 → 7), enfin 136 / 20 avec la monétisation (6 → 7). Les tests restent à 7 malgré I14 clos : 8 demanderait des tests contre une vraie base et plus de parcours navigateur.
+Moyenne : **6,8** (136 / 20). Étapes du 04/10 : 6,5 (130 / 20), puis 6,7 (133 / 20) avec l'onboarding (6 → 7) et la nutrition (5 → 7), puis 6,8 (135 / 20) avec le modèle de données (5 → 6) et le générateur (6 → 7), puis 136 / 20 avec la monétisation (6 → 7), enfin **137 / 20 = 6,85** avec l'architecture (6 → 7), arrondi à 6,9. Les tests restent à 7 malgré I14 clos : 8 demanderait des tests contre une vraie base et plus de parcours navigateur.
 
 Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être testée qu'avec un service simulé (le réseau de l'environnement d'audit ne l'atteint pas), et son plafond global de 8 recherches par minute, imposé par leurs conditions, saturera avec quelques dizaines d'utilisateurs simultanés.
 
@@ -101,7 +101,7 @@ Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être te
 | I8 | Compteur « Séances x/y » faux | **Corrigé** | `tests/test_compteur_seances.py` |
 | I9 | Contexte du coach pauvre | **Corrigé** | `tests/test_coach_contexte.py` |
 | I10 | Promesses fausses (PRO, onboarding) | **Corrigé** | `tests/test_promesses_pro.py` |
-| I11 | Serveur mono-processus, IA synchrone | **Atténué** | génération en tâche de fond (`core/taches_ia.py`, `tests/test_taches_ia.py`) ; reste un seul processus (cache, verrous, tâches en mémoire) et le flux du coach tient un fil |
+| I11 | Serveur mono-processus, IA synchrone | **Corrigé dans le code** | génération en tâche de fond (PR #14) ; cache, verrous, quotas et tâches IA dans `core/partage.py` (Redis si `REDIS_URL`), flux du coach plafonnés, `gunicorn.conf.py` (PR #19) ; `tests/test_partage.py` (deux instances sur un même Redis). Reste à ajouter Redis sur Railway (§ A.6) |
 | I12 | Renommer un exercice coupe l'historique | **Corrigé** | l'éditeur demande « Est-ce le même exercice ? » et déplace l'historique sur oui (`POST /programme/exo/historique`, test navigateur) ; identité toujours par nom |
 | I13 | Échecs avalés (repas, cardio) | **Corrigé** | `tests/test_integrite_0310.py` |
 | I14 | Couverture faible auth/admin/programme | **Corrigé** | 91 % / 89 % / 84 % (03/10 : 47 % / 43 % / 49 %) ; `tests/test_auth_admin_chemins.py`, `tests/test_programme_chemins.py` |
@@ -132,19 +132,18 @@ Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être te
 
 Par impact décroissant :
 
-Faits le 04/10 : la nutrition (PR #10), les petits trous visibles (PR #11), l'unicité des séries et le suivi des renommages (PR #13), la génération IA en tâche de fond (PR #14), les revenus (PR #16 : M6, M7, M12, M13), les tests de connexion, d'admin et du programme (PR #17 : I14).
+Faits le 04/10 : la nutrition (PR #10), les petits trous visibles (PR #11), l'unicité des séries et le suivi des renommages (PR #13), la génération IA en tâche de fond (PR #14), les revenus (PR #16 : M6, M7, M12, M13), les tests de connexion, d'admin et du programme (PR #17 : I14), l'état partagé entre instances (PR #19 : I11).
 
-1. **Plusieurs instances** : cache, verrous et tâches IA dans un stockage partagé (Redis ou base) ; flux du coach sans fil bloqué (I11).
-2. **Fin du modèle de données** : identifiant d'exercice stable plutôt que le nom, cardio dans ses propres colonnes.
-3. **Nutrition, pour passer de 7 à 8** : recettes et aliments personnels, tendance de la semaine, cible qui s'ajuste au poids réel.
-4. **Rétention sociale** : binôme de régularité ou streak partagé.
-5. **Preuve d'usage** : le barème exige un niveau *prouvé* ; il faudra des chiffres réels (rétention J7/J30, conversion de l'essai) que le dépôt ne contient pas.
-6. **Mineurs restants, rapides** : funnel VIP compté hors fenêtre (M14), tonnage admin gonflé par le cardio (M15), commentaires périmés (M16). M5 (CSP stricte) reste écarté tant qu'Alpine.js impose `unsafe-eval`.
+1. **Fin du modèle de données** : identifiant d'exercice stable plutôt que le nom, cardio dans ses propres colonnes.
+2. **Nutrition, pour passer de 7 à 8** : recettes et aliments personnels, tendance de la semaine, cible qui s'ajuste au poids réel.
+3. **Rétention sociale** : binôme de régularité ou streak partagé.
+4. **Preuve d'usage** : le barème exige un niveau *prouvé* ; il faudra des chiffres réels (rétention J7/J30, conversion de l'essai) que le dépôt ne contient pas.
+5. **Mineurs restants, rapides** : funnel VIP compté hors fenêtre (M14), tonnage admin gonflé par le cardio (M15), commentaires périmés (M16). M5 (CSP stricte) reste écarté tant qu'Alpine.js impose `unsafe-eval`.
 
 ### A.6 Non vérifiable depuis le dépôt (au 04/10)
 
 - **Cron horaire** (`/tasks/reminders` ou `cron_reminders.py`) : rappels, récap du dimanche et purge des événements en dépendent.
-- **Railway** : une seule instance (condition des verrous et du cache), statut du dernier déploiement, option « Wait for CI ». Le connecteur Railway est à reconnecter, et le site n'est pas joignable depuis l'environnement d'audit.
+- **Railway** : aucun Redis n'est encore ajouté au projet à notre connaissance. Tant que `REDIS_URL` n'est pas défini, la production reste à un processus (`gunicorn.conf.py`) et **le nombre de répliques doit rester à 1** — l'app ne peut pas le voir. Statut du dernier déploiement, option « Wait for CI ». Le connecteur Railway est à reconnecter, et le site n'est pas joignable depuis l'environnement d'audit.
 - **Variables** : `ADMOB_BANNER_ID`, `ADMOB_INTERSTITIAL_ID` (sans identifiants réels, les pubs sont désormais coupées en production : `/admin` le signale), `CRON_SECRET`, `ANTHROPIC_API_KEY`.
 - **Stripe** : le webhook doit être abonné à `charge.refunded`, `charge.dispute.created` et `charge.dispute.closed`, sinon le code de la PR #16 ne reçoit rien. Invérifiable d'ici.
 - **Usage réel** : rétention, conversion, satisfaction.
