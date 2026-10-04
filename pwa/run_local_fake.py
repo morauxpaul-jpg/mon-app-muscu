@@ -21,6 +21,28 @@ from conftest import FakeSupabase, USER_ID  # noqa: E402
 import core.db as core_db  # noqa: E402
 core_db.use_client(FakeSupabase())
 
+import os  # noqa: E402
+
+if os.environ.get("FAUX_IA") == "lent":
+    # IA simulée (tests navigateur du générateur) : répond un programme valide
+    # au bout de 3 s, assez pour que la page passe par le suivi de tâche.
+    import json as _json
+    import time as _time
+    _PROG = _json.dumps({"name": "Programme de test", "seances": {"Haut du corps": [
+        {"name": "Développé couché", "sets": 4, "reps": "6-8", "rest_seconds": 150, "muscle": "Pecs"}]},
+        "planning": {"Lundi": "Haut du corps"}})
+
+    class _FauxClient:
+        def __init__(self, **k):
+            self.messages = types.SimpleNamespace(create=self._create)
+
+        def _create(self, **k):
+            _time.sleep(3)
+            return types.SimpleNamespace(content=[types.SimpleNamespace(text=_PROG)])
+
+    sys.modules["anthropic"] = types.SimpleNamespace(Anthropic=_FauxClient)
+    os.environ.setdefault("ANTHROPIC_API_KEY", "cle-factice")
+
 import app as appmod  # noqa: E402
 from flask import session, redirect, request  # noqa: E402
 from core.limiter import limiter  # noqa: E402
