@@ -17,6 +17,7 @@ from flask import g, has_app_context
 
 from core import db_base
 from core.db_base import _cache_get, _cache_invalidate, _cache_set, _fetch_all, get_client
+from core.exercice_ids import assurer_ids
 
 logger = logging.getLogger(__name__)
 
@@ -76,15 +77,33 @@ def _read_prog_row(user_id: str):
     return (row.get("data") or {}), row.get("version")
 
 
-def get_prog(user_id: str) -> dict:
+def _prog_en_cache(user_id: str) -> dict:
     key = f"prog:{user_id}"
     cached = _cache_get(key)
     if cached is None:
         data, version = _read_prog_row(user_id)
         cached = {"data": data, "version": version}
         _cache_set(key, cached)
+    # Identifiants d'exercice dès la lecture, sans écrire : ils sont
+    # déterministes, et la prochaine sauvegarde les grave (core/exercice_ids.py).
+    # La base de fusion les porte aussi : ils ne comptent pas comme une modification.
+    assurer_ids(cached["data"])
+    return cached
+
+
+def get_prog(user_id: str) -> dict:
+    cached = _prog_en_cache(user_id)
     _remember_base(user_id, cached["data"], cached["version"])
     return _copy(cached["data"])
+
+
+def lire_prog(user_id: str) -> dict:
+    """Le programme pour une simple lecture (noms des exercices) : il ne devient
+    PAS la base de fusion de save_prog. Lu au milieu d'une route qui modifie le
+    programme, get_prog aurait remplacé cette base par une version plus récente,
+    et la sauvegarde aurait écrasé une écriture concurrente sans fusion.
+    Rend l'objet du cache : à ne pas modifier."""
+    return _prog_en_cache(user_id)["data"]
 
 
 # ────────────────────────────────────────────────────────────
@@ -185,6 +204,7 @@ def save_prog(user_id: str, prog_dict: dict):
     (défi validé, badge, note…) est écrasée sans erreur. Ici l'update est
     conditionné à la version lue ; en cas de conflit on relit et on ne
     réapplique que nos propres modifications (cf. _merge_prog)."""
+    assurer_ids(prog_dict)
     base = _bases().get(user_id)
     if base is None or base["version"] is None:
         # Pas de lecture préalable dans ce process (ou colonne version absente)

@@ -18,6 +18,7 @@ from core.limiter import limiter
 from core.rotation import planning_semaine, seance_prevue
 from core.muscu import BW_EXOS, MUSCLE_LIST, VARIANTS, auto_muscles
 from core.exercises_data import filter_exos_by_equipment, detect_isometric
+from core.exercice_ids import pour_serie
 from core.body_map import get_body_polygons
 from core.hist import is_logged as _is_real_perf
 
@@ -406,6 +407,11 @@ def save_exo():
     new_rows = _rows_from_sets(sets, semaine=semaine, seance=seance,
                                exo_final=exo_final, muscle=muscle,
                                date_str=date_str, is_bw=is_bw)
+    # Identifiant stable de l'exercice (core/exercice_ids.py) : la série reste
+    # rattachée à l'exercice même s'il est renommé plus tard.
+    exo_id = pour_serie(f.get("exo_id"), variant)
+    for r in new_rows:
+        r["ExoId"] = exo_id
 
     wants_json = "application/json" in (request.headers.get("Accept") or "")
     try:
@@ -414,7 +420,7 @@ def save_exo():
         # Pas de clear_user_cache() : replace_exo_rows corrige l'historique en
         # cache avec ce qu'il vient d'écrire. Le vider forçait à relire tout
         # l'historique (et le programme) juste en dessous (audit I15).
-        replace_exo_rows(date_str, seance, exo_final, new_rows)
+        replace_exo_rows(date_str, seance, exo_final, new_rows, exo_id)
     except Exception as e:
         logger.error("save-exo FAILED seance=%s exo=%s: %s", seance, exo_final, e)
         if wants_json:
@@ -472,9 +478,9 @@ def skip_exo():
         "Semaine": semaine, "Séance": seance, "Exercice": exo_final,
         "Série": 1, "Reps": 0, "Poids": 0.0,
         "Remarque": "SKIP", "Muscle": f.get("muscle", "Autre"),
-        "Date": date_str,
+        "Date": date_str, "ExoId": pour_serie(f.get("exo_id"), variant),
     }]
-    replace_exo_rows(date_str, seance, exo_final, new_rows)
+    replace_exo_rows(date_str, seance, exo_final, new_rows, new_rows[0]["ExoId"])
     clear_user_cache()
     if wants_json:
         return jsonify({"ok": True, "completed": True, "skipped": True})
@@ -489,7 +495,7 @@ def reset_exo():
     variant = f["variant"]
     exo_base = f["exo_base"]
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
-    delete_exo_rows(_form_date(f), seance, exo_final)
+    delete_exo_rows(_form_date(f), seance, exo_final, exo_id=pour_serie(f.get("exo_id"), variant))
     clear_user_cache()
     return _back_to_editor(f)
 

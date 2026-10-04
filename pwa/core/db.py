@@ -8,6 +8,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_historique   les séries enregistrées — la source de vérité de l'app
     db_historique_lots  réécriture complète et ajout massif (sauvegarde, import)
     db_renommage    renommer une séance ou un exercice dans tout l'historique
+    db_identite     rattacher les séries anciennes à l'identifiant de leur exercice (v42)
     db_programme    le programme, son planning et ses calques (blob JSON)
     db_profil       profil, onboarding, poids de corps
     db_nutrition    les repas et les sommes de macros
@@ -49,10 +50,11 @@ from core.db_historique import (
     _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _nettoyer_ligne, _norm_date,
     _reporter_dans_le_cache, CLE_SERIE, _unicite, _index_absent, _series_distinctes, _append_une_fois,
-    _row_to_supabase, _verrou, _replace_exo_rows, _append_exo_rows
+    _row_to_supabase, _verrou, _COLONNES, _ids_cibles, _replace_exo_rows, _append_exo_rows
 )
 
 from core.db_historique_lots import ajouter_lignes, save_hist
+from core.db_identite import marquer_series, _variante
 from core.db_renommage import (
     count_exercise_rows, list_history_shape, rename_exercise_rows, rename_seance_rows,
     _collision, _deplacer_ligne_a_ligne, _renommer
@@ -60,9 +62,9 @@ from core.db_renommage import (
 
 # ── le programme et son planning ────────────────────────────────
 from core.db_programme import (
-    PROG_BODY_KEYS, get_prog, list_all_program_blobs, replace_program_body, save_prog,
+    PROG_BODY_KEYS, get_prog, lire_prog, list_all_program_blobs, replace_program_body, save_prog,
     _SAVE_PROG_RETRIES,
-    _bases, _copy, _merge_prog, _prog_base, _read_prog_row, _remember_base, _upsert_prog
+    _bases, _copy, _merge_prog, _prog_base, _prog_en_cache, _read_prog_row, _remember_base, _upsert_prog
 )
 
 # ── profil, onboarding, poids de corps ──────────────────────────

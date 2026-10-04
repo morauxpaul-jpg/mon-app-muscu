@@ -274,21 +274,38 @@ function programmeApp() {
         body: JSON.stringify({ ancien: ancien, nouveau: nouveau })
       }).then(function (r) { return r.json(); }).then(function (d) {
         if (d && d.ok && d.series > 0) {
-          self.renommage = { ancien: ancien, nouveau: nouveau, series: d.series, etat: '' };
+          self.renommage = { ancien: ancien, nouveau: nouveau, series: d.series, etat: '',
+                             id: exo.id || '', exo: exo };
         }
       }).catch(function () {});
     },
 
+    // L'identifiant de l'exercice (core/exercice_ids.py) décide : « oui »
+    // le garde — ses séries le suivent sous le nouveau nom, et les autres
+    // exemplaires du même exercice prennent ce nom ; « non » en fait un
+    // nouvel exercice (le serveur lui calcule un identifiant neuf).
     suivreRenommage(oui) {
       var rn = this.renommage;
       if (!rn) return;
-      if (!oui) { this.renommage = null; return; }
+      if (!oui) {
+        if (rn.exo) { delete rn.exo.id; this.scheduleSave(); }
+        this.renommage = null;
+        return;
+      }
       var self = this;
+      if (rn.id) {
+        Object.keys(this.prog).forEach(function (s) {
+          (self.prog[s] || []).forEach(function (e) {
+            if (e && e.id === rn.id && e.name !== rn.nouveau) e.name = rn.nouveau;
+          });
+        });
+        this.scheduleSave();
+      }
       rn.etat = 'encours';
       fetch('/programme/exo/historique', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ancien: rn.ancien, nouveau: rn.nouveau, suivre: true })
+        body: JSON.stringify({ ancien: rn.ancien, nouveau: rn.nouveau, suivre: true, id: rn.id })
       }).then(function (r) { return r.json(); }).then(function (d) {
         if (!d || !d.ok) throw new Error('echec');
         self.renommage = null;

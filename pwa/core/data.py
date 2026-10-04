@@ -34,7 +34,11 @@ def clear_user_cache():
 
 # ── Historique ──────────────────────────────────────────────────────────
 def get_hist():
-    return db.get_hist(_uid())
+    """L'historique, chaque série identifiée sous le nom ACTUEL de son
+    exercice (core/exercice_ids.py) : renommer garde le passé."""
+    from core.exercice_ids import afficher_selon_programme
+    uid = _uid()
+    return afficher_selon_programme(db.get_hist(uid), db.lire_prog(uid))
 
 
 def save_hist(rows):
@@ -62,8 +66,8 @@ def save_prog_body(body):
 
 # ── Opérations ciblées ──────────────────────────────────────────────────
 # Le ciblage de semaine se fait par date (plage lun→dim), plus par n° ISO.
-def replace_exo_rows(date_str, seance, exercice, new_rows):
-    return db.replace_exo_rows(_uid(), date_str, seance, exercice, new_rows)
+def replace_exo_rows(date_str, seance, exercice, new_rows, exo_id=None):
+    return db.replace_exo_rows(_uid(), date_str, seance, exercice, new_rows, exo_id)
 
 
 def ajouter_lignes(rows):
@@ -74,8 +78,8 @@ def append_exo_rows(date_str, seance, exercice, new_rows):
     return db.append_exo_rows(_uid(), date_str, seance, exercice, new_rows)
 
 
-def delete_exo_rows(date_str, seance, exercice, serie=None):
-    return db.delete_exo_rows(_uid(), date_str, seance, exercice, serie)
+def delete_exo_rows(date_str, seance, exercice, serie=None, exo_id=None):
+    return db.delete_exo_rows(_uid(), date_str, seance, exercice, serie, exo_id)
 
 
 def delete_session_rows(date_str, seance):
@@ -226,6 +230,10 @@ def rename_exercise_rows(old_names, new_name, muscle=None):
 
 def count_exercise_rows(name):
     return db.count_exercise_rows(_uid(), name)
+
+
+def marquer_series(ancien, exo_id):
+    return db.marquer_series(_uid(), ancien, exo_id)
 
 
 # ── Suppression de compte (exigence stores) ─────────────────────────────

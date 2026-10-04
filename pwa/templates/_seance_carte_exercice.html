@@ -283,6 +283,7 @@
             <input type="hidden" name="semaine" value="{{ s_act }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
             <input type="hidden" name="exo_base" value="{{ exo.base }}">
+            <input type="hidden" name="exo_id" value="{{ exo.exo_id }}">
             <input type="hidden" name="muscle" value="{{ exo.muscle }}">
             <input type="hidden" name="is_bw" :value="showWeight ? '0' : '1'">
             <input type="hidden" name="variant" :value="variant">
@@ -300,6 +301,7 @@
             <input type="hidden" name="semaine" value="{{ s_act }}">
             <input type="hidden" name="seance_name" value="{{ seance_name }}">
             <input type="hidden" name="exo_base" value="{{ exo.base }}">
+            <input type="hidden" name="exo_id" value="{{ exo.exo_id }}">
             <input type="hidden" name="muscle" value="{{ exo.muscle }}">
             <input type="hidden" name="variant" :value="variant">
             <button type="submit" class="btn label-icon" :class="skipArme ? 'btn-danger' : ''"><svg class="icon icon-sm"><use href="/static/img/icons.svg#skip-forward"/></svg><span x-text="skipArme ? 'Effacer ?' : 'Skip'">Skip</span></button>
@@ -365,6 +367,7 @@
           <input type="hidden" name="semaine" value="{{ s_act }}">
           <input type="hidden" name="seance_name" value="{{ seance_name }}">
           <input type="hidden" name="exo_base" value="{{ exo.base }}">
+            <input type="hidden" name="exo_id" value="{{ exo.exo_id }}">
           <input type="hidden" name="variant" :value="variant">
           <button type="button" class="btn label-icon s-9f1047" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
           <div class="inline-confirm" x-show="c" x-cloak>
