@@ -176,8 +176,12 @@
     if (!box) {
       box = document.createElement("div");
       box.className = "exo-pr";
-      var head = card.querySelector(".exo-head > div");
-      (head || card).appendChild(box);
+      // Pleine largeur, sous le titre. `.exo-head > div` visait le PREMIER
+      // bloc de l'en-tête : la colonne des flèches, qui s'élargissait et
+      // écrasait le titre dans une bande étroite (retour du 04/10).
+      var repere = card.querySelector(".exo-repere");
+      if (repere) repere.insertBefore(box, repere.firstChild);
+      else card.appendChild(box);
     }
     box.innerHTML =
       '<svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#trophy"/></svg>' +
@@ -327,14 +331,29 @@
 
       init: function () {
         BLOCS.push(this);
+        // Ce que le serveur a déjà : les séries remplies À L'OUVERTURE sont en
+        // base, elles s'ouvrent repliées.
+        this._majFaits();
         try {
           var saved = localStorage.getItem(draftKey);
           if (saved) {
             var d = JSON.parse(saved);
             if (d.sets && d.sets.length) this.sets = d.sets;
             if (d.variant) this.variant = d.variant;
+            // Le brouillon dit lesquelles avaient été VALIDÉES. Une série
+            // seulement tapée revient dans son champ, à valider : la replier
+            // avec une coche verte faisait croire qu'elle était enregistrée
+            // (retour du 04/10 : « ça efface tout »).
+            var n = this.sets.length, self0 = this;
+            this.faits = Array.isArray(d.faits)
+              ? d.faits.filter(function (i) { return i >= 0 && i < n && self0._estRemplie(self0.sets[i]); })
+              : this.faits.filter(function (i) { return i < n; });
             // Un brouillon est, par définition, ce que le serveur n'a pas.
             this._rev = 1;
+            if (this._aDesSeries()) {
+              markSessionActive();
+              toast("Saisie non enregistrée reprise : vérifie-la et valide tes séries.");
+            }
           }
         } catch (e) {}
         var self = this;
@@ -348,8 +367,13 @@
           this._fetchVariantHistory(this.variant);
         }
         if (this.isIso) this.isoRemaining = this.targetSeconds;
-        // Après le brouillon : une série déjà remplie s'ouvre repliée.
-        this._majFaits();
+      },
+
+      // Premier chiffre tapé : la séance est « en cours ». Quitter l'app
+      // avant d'avoir validé une série ne proposait pas de la reprendre
+      // (retour du 04/10). Le repos, lui, attend « Série faite ».
+      aSaisi: function () {
+        markSessionActive();
       },
 
       _fetchVariantHistory: function (newVariant) {
@@ -390,19 +414,21 @@
       _saveDraft: function () {
         try {
           localStorage.setItem(draftKey,
-            JSON.stringify({ sets: this.sets, variant: this.variant }));
+            JSON.stringify({ sets: this.sets, variant: this.variant, faits: this.faits }));
         } catch (e) {}
       },
 
       addSet: function () {
         this.sets.push({ reps: "", poids: "", remarque: "", rpe: "" });
-        this._majFaits();
       },
       removeSet: function (i) {
-        if (this.sets.length > 1) this.sets.splice(i, 1);
-        // Les index glissent après un retrait : on les recalcule plutôt que
-        // de les décaler à la main, sinon une série faite se rouvre toute seule.
-        this._majFaits();
+        if (this.sets.length <= 1) return;
+        this.sets.splice(i, 1);
+        // Les index glissent après un retrait. Recalculer depuis les reps
+        // repliait aussi une série seulement tapée, comme si elle était faite.
+        this.faits = this.faits.filter(function (x) { return x !== i; })
+          .map(function (x) { return x > i ? x - 1 : x; });
+        this._saveDraft();
       },
 
       // ── Saisie série par série ───────────────────────────────────
@@ -467,6 +493,7 @@
         }
         if (this.faits.indexOf(i) < 0) this.faits.push(i);
         this.optionsDe = -1;
+        this._saveDraft();
         // Le repos démarrait sur la frappe d'un champ ; il démarre maintenant
         // sur un geste voulu. `onSetFilled` ne se déclenche qu'une fois par
         // série, donc les deux chemins ne se marchent pas dessus.
@@ -478,6 +505,7 @@
       rouvrir: function (i) {
         this.faits = this.faits.filter(function (x) { return x !== i; });
         this.optionsDe = -1;
+        this.toutFait = false;
       },
       // Le poids s'écrit avec une virgule partout où c'est du TEXTE. Dans un
       // champ nombre, le navigateur s'en charge ; dans une phrase, non.
@@ -531,12 +559,18 @@
                parseInt(localStorage.getItem("restTimerDefault"), 10) ||
                this.restSeconds || 90;
       },
+      // Le nom part avec le chrono : la notification le lisait dans la page
+      // et retombait toujours sur le PREMIER exercice (retour du 04/10).
+      _nomPourChrono: function () {
+        return this.variant && this.variant !== "Standard"
+          ? data.base + " (" + this.variant + ")" : data.base;
+      },
       startRestTimer: function () {
         if (!CONFIG.autoRestTimer) return;
-        if (window.RestTimer) window.RestTimer.start(this._dureeRepos());
+        if (window.RestTimer) window.RestTimer.start(this._dureeRepos(), this._nomPourChrono());
       },
       manualRestTimer: function () {
-        if (window.RestTimer) window.RestTimer.start(this._dureeRepos());
+        if (window.RestTimer) window.RestTimer.start(this._dureeRepos(), this._nomPourChrono());
       },
 
       // ── Enregistrement ──
@@ -637,14 +671,24 @@
         if (card) card.classList.toggle("done", this.completed);
         refreshProgress(d.volume);
         if (d.pr) showPr(card, d.pr);
-        // « Enregistrer » ou dernière série faite : on referme la carte et on
-        // ouvre la suivante — l'utilisateur n'a rien à chercher.
-        var fini = mode === "complet" || (!this.isIso && this.indexCourant() === -1);
+        // « Enregistrer » : on referme la carte et on ouvre la suivante.
+        // Dernière série prévue faite : la carte RESTE ouverte, avec « Exercice
+        // suivant » à côté de « Ajouter une série » — la refermer d'office
+        // empêchait d'ajouter une série de plus (retour du 04/10).
         if (mode === "complet" && !this.supersetAvec) this.startRestTimer();
-        if (this.completed && fini) {
+        if (this.completed && mode === "complet") {
           this.open = false;
           openNextPending(card);
+        } else if (this.completed && !this.isIso && this.indexCourant() === -1) {
+          this.toutFait = true;
         }
+      },
+
+      toutFait: false,
+      exerciceSuivant: function () {
+        this.toutFait = false;
+        this.open = false;
+        openNextPending(this._carte());
       },
 
       save: function (ev) {
@@ -810,9 +854,7 @@
       var comp = window.Alpine && window.Alpine.$data(autre);
       if (comp) comp.open = true;
     } catch (e) {}
-    setTimeout(function () {
-      autre.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
+    defilerVers(autre);
   }
 
   // Ouvre le premier exercice non terminé après celui qu'on vient de valider.
@@ -827,9 +869,18 @@
       var comp = window.Alpine && window.Alpine.$data(next);
       if (comp) comp.open = true;
     } catch (e) {}
+    defilerVers(next);
+  }
+
+  // Le défilement partait à 120 ms, pendant que la carte précédente se
+  // repliait (200 ms) : la page remontait ensuite de toute sa hauteur et on
+  // atterrissait PLUS BAS que l'exercice suivant (retour du 04/10). On attend
+  // la fin du repli, et on laisse un peu d'air au-dessus du titre.
+  function defilerVers(cible) {
     setTimeout(function () {
-      next.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
+      var haut = cible.getBoundingClientRect().top + window.pageYOffset - 12;
+      window.scrollTo({ top: Math.max(0, haut), behavior: "smooth" });
+    }, 260);
   }
 
   // ── Réordonnancement ─────────────────────────────────────────────

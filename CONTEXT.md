@@ -527,6 +527,13 @@ pwa/
 
 ### Une série saisie ne se perd plus (audit du 30/09, C1 + I4 + I5 + I9 + I18 + I21 + M7)
 - **Valeur grisée (03/10)** : le champ Reps affiche l'objectif en gris (suggestion, sinon bas de la fourchette). « Série faite » sur un champ vide valide CETTE valeur, avec la charge suggérée, comme chez Hevy/Strong ; sans reps ni charge à proposer, la série reste ouverte avec un message. « Terminer » n'attend la file hors-ligne que 6 s (rejeu borné à 8 s) : le reste part derrière le bilan.
+- **Retours du 04/10 (vague 13)** :
+  - **Brouillon.** Il garde les séries VALIDÉES (`faits`). Une saisie seulement tapée revient dans son champ, à valider, au lieu d'une coche verte trompeuse. Le premier chiffre tapé marque la séance « en cours » (`aSaisi`), donc relancer l'app la rouvre.
+  - **Repos.** Il part UNIQUEMENT à « Série faite » : plus de `@change` sur les champs. La notification reçoit le nom de l'exercice (`RestTimer.start(s, nom)`, gardé dans `_state.nom`) au lieu du premier de la page.
+  - **Fin d'exercice.** Après la dernière série prévue, la carte reste ouverte avec « Exercice suivant » ; seul « Enregistrer » la referme.
+  - **Défilement.** On défile vers l'exercice suivant après le repli de la carte (260 ms), sans dépasser sa cible.
+  - **Affichage.** Le bandeau de record va dans `.exo-repere`, sur toute la largeur. Il allait dans la colonne des flèches, ce qui écrasait le titre. L'équipement est en tête de carte (`.exo-equipement`).
+  - **Batterie.** Plus de `backdrop-filter` sur les cartes ni sur les barres fixes (en-tête, navigation, chrono) : fonds presque opaques à la place.
 - **Remplace le point « C'est de la mise en page » ci-dessus.** « Série faite » ENREGISTRE : `save-exo` avec `partiel=1`, qui n'écrit que les séries remplies (les autres ne deviennent pas des SKIP en cours d'exercice). Avant, elle cochait en vert sans rien écrire, et « Terminer » effaçait les brouillons : trois séries cochées, séance terminée, zéro ligne en base.
 - « Enregistrer » garde son sens (tout, vides en SKIP). « Terminer » envoie d'abord ce qui n'est pas encore reçu (`_rev` ≠ `_revServeur`), vide la file si le réseau est là, et n'efface les brouillons qu'ensuite ; en cas de refus, la modale le dit et rien n'est effacé.
 - Réseau faible : délai de 8 s (`AbortController`), puis mise en file. 5xx / 408 / 429 / pas de réponse = file ; 4xx = refus affiché, brouillon gardé.

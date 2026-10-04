@@ -150,6 +150,15 @@
 
       <div class="exo-body" x-show="open" x-transition.duration.200ms>
 
+        {# L'équipement en tête : replié sous les séries, on ne le voyait pas
+           avant de commencer (retour du 04/10). Une ligne, pas un bloc. #}
+        <label class="exo-equipement">
+          <span>Équipement</span>
+          <select x-model="variant" aria-label="Équipement pour {{ exo.base }}">
+            {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
+          </select>
+        </label>
+
         {# ── Chrono isométrique (gainage, planche, wall sit...) ── #}
         <template x-if="isIso">
           <div class="iso-chrono">
@@ -219,13 +228,13 @@
                       <span class="serie-etiq">Reps</span>
                       <input type="number" inputmode="numeric" min="0" x-model.number="s.reps"
                              :placeholder="suggestion && suggestion.reps ? String(suggestion.reps) : (targetReps || '0')"
-                             :aria-label="'Répétitions série ' + (i + 1)" @change="onSetFilled(i)">
+                             :aria-label="'Répétitions série ' + (i + 1)" @input.once="aSaisi()">
                     </label>
                     <label class="serie-champ" x-show="showWeight">
                       <span class="serie-etiq">Poids</span>
                       <input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids"
                              placeholder="kg" :aria-label="'Poids série ' + (i + 1)"
-                             @change="onSetFilled(i)">
+                             @input.once="aSaisi()">
                     </label>
                   </div>
 
@@ -272,6 +281,10 @@
                role="status" aria-live="polite" x-text="etatTexte()"></p>
 
             <button type="button" class="btn label-icon s-e0d5fc" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
+            {# Dernière série prévue faite : la carte reste ouverte (on peut en
+               ajouter une) et ce bouton mène à la suite (retour du 04/10). #}
+            <button type="button" class="btn primary label-icon exo-suivant" x-show="toutFait" x-cloak
+                    @click="exerciceSuivant()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Exercice suivant</button>
           </div>
         </template>
 
@@ -313,7 +326,7 @@
            record, l'équipement et deux tableaux de semaines précédentes
            (audit du 03/10, Q3). « Dernière fois » reste visible en tête. #}
         <details class="exo-plus">
-          <summary>Historique, équipement et options</summary>
+          <summary>Historique et options</summary>
           <div class="exo-plus-corps">
         <template x-if="record">
           <div class="record-line label-icon">
@@ -328,11 +341,6 @@
             </template>
           </div>
         </template>
-
-        <label class="field-label">Équipement</label>
-        <select class="field" x-model="variant">
-          {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
-        </select>
 
         <template x-for="pw in prevWeeks" :key="pw.week">
           <div>

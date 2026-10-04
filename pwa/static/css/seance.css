@@ -203,7 +203,7 @@ details[open].exo-plus > summary::before, details[open].seance-options > summary
 .exo-plus-corps, .seance-options-corps { display: grid; gap: 10px; padding-top: 6px; }
 details.seance-options { margin: 18px 0 8px; }
 @media (prefers-reduced-motion: reduce) { details.exo-plus > summary::before, details.seance-options > summary::before { transition: none; } }
-.exo-repere { display: grid; gap: 4px; margin: 6px 0 2px; }
+.exo-repere { display: grid; gap: 4px; margin: 6px 0 2px; padding: 0 var(--sp-lg, 16px); }
 .exo-repere:empty { display: none; }
 .exo-repere .exo-last-session { display: block; }
 .exo-repere .exo-last-session svg { vertical-align: -2px; margin-right: 6px; }
@@ -220,3 +220,7 @@ details.exo-echauffement small { color: var(--text-3); }
 
 /* Première fois sur un exercice : comment choisir sa charge. */
 .exo-conseil { color: var(--text-2); }
+/* Équipement en tête de carte (retour du 04/10) : une ligne compacte. */
+.exo-equipement { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; font-size: 0.85rem; color: var(--text-3); }
+.exo-equipement select { flex: 1; min-width: 0; padding: 8px 10px; border-radius: var(--radius-pill, 999px); background: var(--bg-surface, rgba(255,255,255,0.04)); color: var(--text-1); border: 1px solid var(--border-default, rgba(255,255,255,0.08)); font-size: 0.9rem; }
+.exo-suivant { width: 100%; margin-top: 8px; justify-content: center; }

@@ -187,21 +187,24 @@
     return (window.MTTimer && typeof window.MTTimer.start === "function")
       ? window.MTTimer : null;
   }
-  function _nativeTimerShow(endAt) {
+  function _nativeTimerShow(endAt, nom) {
     var t = _nativeTimer();
     if (!t) return;
-    try { t.start(endAt, _currentExerciseName()); } catch (e) {}
+    try { t.start(endAt, nom || _currentExerciseName()); } catch (e) {}
   }
   function _nativeTimerHide() {
     var t = _nativeTimer();
     if (!t) return;
     try { t.stop(); } catch (e) {}
   }
-  /** Nom de l'exercice en cours, pour la 2e ligne de la notification. */
+  /** Repli quand l'appelant ne donne pas de nom : le premier exercice pas
+   *  encore terminé. `.exo-card.open` n'existait pas (l'ouverture est un état
+   *  Alpine, pas une classe) : la notification affichait toujours le PREMIER
+   *  exercice de la séance (retour du 04/10). */
   function _currentExerciseName() {
     try {
-      var el = document.querySelector(".exo-card.open .exo-title, .exo-card .exo-title");
-      return el ? el.textContent.replace(/\s+/g, " ").trim().slice(0, 60) : "";
+      var el = document.querySelector(".exo-card:not(.done)[data-exo-base]");
+      return el ? el.getAttribute("data-exo-base").slice(0, 60) : "";
     } catch (e) { return ""; }
   }
 
@@ -247,9 +250,9 @@
       if (Notification.permission === "default") Notification.requestPermission();
     } catch (e) {}
   }
-  function _scheduleNotif(seconds) {
+  function _scheduleNotif(seconds, nom) {
     cancelNotifications();
-    _nativeTimerShow(Date.now() + seconds * 1000);
+    _nativeTimerShow(Date.now() + seconds * 1000, nom);
     var ln = _capLN();
     if (ln) {
       try {
@@ -491,9 +494,10 @@
   }
 
   // ── API publique ────────────────────────────────────────────────
-  function start(seconds) {
+  function start(seconds, nom) {
     var total = parseInt(seconds, 10) || _defaultDuration();
-    _state = { end: Date.now() + total * 1000, total: total, url: _sessionUrl() };
+    nom = String(nom || _currentExerciseName() || "").slice(0, 60);
+    _state = { end: Date.now() + total * 1000, total: total, url: _sessionUrl(), nom: nom };
     _finished = false;
     _save();
     _show();
@@ -502,14 +506,14 @@
     unlockAudio();          // le lancement vient d'un geste : on débloque l'audio
     _keepScreenOn();
     _ensureNotifPermission();
-    _scheduleNotif(total);
+    _scheduleNotif(total, nom);
   }
 
   function setDuration(sec) {
     sec = parseInt(sec, 10);
     if (!(sec > 0)) return;
     try { localStorage.setItem(DEFAULT_KEY, String(sec)); } catch (e) {}
-    start(sec);
+    start(sec, _state && _state.nom);   // changer la durée garde l'exercice
   }
 
   function skip() {
@@ -553,7 +557,7 @@
       // La notification système survit à la navigation et même à la mort du
       // processus — mais pas à un balayage de l'utilisateur. On la repose :
       // notifier deux fois le même identifiant remplace, ça ne duplique pas.
-      _nativeTimerShow(stored.end);
+      _nativeTimerShow(stored.end, stored.nom);
       // Le verrou d'écran est libéré d'office dès que l'onglet passe en
       // arrière-plan : on le reprend puisque le repos court toujours.
       _keepScreenOn();

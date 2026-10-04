@@ -33,6 +33,9 @@ body {
 .next-session-card,
 .prog-section,
 .podium-item {
+  /* Pas de backdrop-filter sur les cartes : sur un fond sombre presque uni,
+     le flou ne se voit pas, mais le GPU le recalcule à chaque défilement et à
+     chaque seconde du chrono (retour du 04/10 : batterie vidée vite). */
   background:
     linear-gradient(
       160deg,
@@ -40,8 +43,6 @@ body {
       rgba(255,255,255,0.02) 40%,
       rgba(255,255,255,0.05) 100%
     );
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius-glass);
   box-shadow:
@@ -57,8 +58,6 @@ body {
       rgba(255,255,255,0.02) 40%,
       rgba(255,255,255,0.05) 100%
     );
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
   border: 1px solid rgba(255,255,255,0.08);
   border-left: 3px solid var(--accent);
   border-radius: 0 var(--radius-glass) var(--radius-glass) 0;
@@ -71,9 +70,9 @@ body {
    3. TOPBAR — ultra-subtil
    ═══════════════════════════════════════════ */
 .topbar {
-  background: rgba(10,10,15,0.50);
-  backdrop-filter: blur(32px) saturate(150%);
-  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  /* Fond presque opaque plutôt qu'un flou : une barre fixe floutée se
+     recompose sur tout ce qui défile dessous. */
+  background: rgba(12,12,18,0.94);
   border-bottom: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 1px 12px rgba(0,0,0,0.15);
 }
@@ -82,9 +81,7 @@ body {
    4. BOTTOM NAV — barre flottante
    ═══════════════════════════════════════════ */
 .bottom-nav {
-  background: rgba(10,10,15,0.55);
-  backdrop-filter: blur(32px) saturate(150%);
-  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  background: rgba(12,12,18,0.95);
   border-top: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 -1px 12px rgba(0,0,0,0.15);
 }
@@ -430,9 +427,10 @@ input[type="url"], textarea, select {
 }
 
 .rest-timer-bar {
-  background: rgba(10,10,15,0.65) !important;
-  backdrop-filter: blur(32px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(150%) !important;
+  /* Redessinée chaque seconde : floutée, elle recomposait l'écran entier. */
+  background: rgba(12,12,18,0.96) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-top: 1px solid rgba(255,255,255,0.06) !important;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.15) !important;
 }
@@ -528,6 +526,5 @@ h1, h2, h3 {
 .bottom-nav,
 .topbar,
 .rest-timer-bar {
-  will-change: backdrop-filter;
   transform: translateZ(0);
 }

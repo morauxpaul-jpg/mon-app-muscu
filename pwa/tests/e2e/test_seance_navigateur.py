@@ -280,6 +280,73 @@ def test_la_premiere_serie_tient_dans_le_premier_ecran(page, serveur):
     assert pos["champ"] > 0 and pos["bouton"] <= pos["nav"], pos
 
 
+# ── Retours du 04/10 (séance réelle sur Android) ─────────────────
+
+CARTE0 = "Alpine.$data(document.querySelector('#exo-anchor-0'))"
+
+
+def test_une_saisie_non_validee_est_reprise_a_la_relance(page, serveur):
+    """Deux reps tapées, pas encore validées, puis on quitte l'app : la relance
+    ne proposait pas de reprendre, et la saisie revenait cochée en vert comme
+    si elle était enregistrée. Elle revient dans son champ, à valider."""
+    page.locator("#exo-anchor-0").get_by_label("Répétitions série 1", exact=True).fill("2")
+    page.wait_for_timeout(300)
+    ctx = page.context
+    page.close()
+    pg = ctx.new_page()                                   # relance : nouvel onglet
+    pg.goto(serveur + "/")
+    pg.wait_for_url("**/seance?**", timeout=5000)
+    pg.wait_for_selector(".serie-valider")
+    assert pg.evaluate(CARTE0 + ".sets[0].reps") == 2
+    assert pg.evaluate(CARTE0 + ".faits") == []            # pas prétendue faite
+    assert pg.locator("#exo-anchor-0 .serie-encours").first.is_visible()
+
+
+def test_le_repos_part_a_serie_faite_avec_le_bon_exercice(page, serveur):
+    """Le repos partait en quittant un champ, et la notification affichait
+    toujours le premier exercice de la séance."""
+    page.evaluate("""() => { window.__repos = [];
+        RestTimer.start = function (s, nom) { window.__repos.push(nom); }; }""")
+    carte = page.locator("#exo-anchor-0")
+    carte.get_by_label("Répétitions série 1", exact=True).fill("6")
+    carte.get_by_label("Poids série 1", exact=True).fill("60")
+    carte.get_by_label("Répétitions série 1", exact=True).blur()
+    page.wait_for_timeout(300)
+    assert page.evaluate("window.__repos") == []
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: page.evaluate("window.__repos") == [EXO], 5)
+
+
+def test_apres_la_derniere_serie_la_carte_reste_ouverte(page, serveur):
+    """Refermer la carte après la 3e série empêchait d'en ajouter une. Elle
+    reste ouverte, « Exercice suivant » mène à la suite, et le bandeau de
+    record ne tasse plus le titre dans une colonne étroite."""
+    for k in range(3):
+        _serie_faite(page, 8, 40 + 10 * k)
+        assert _attendre(lambda: len(_series(serveur)) == k + 1)
+    carte = page.locator("#exo-anchor-0")
+    assert page.evaluate(CARTE0 + ".open") is True
+    carte.locator(".exo-pr").wait_for()
+    largeurs = page.evaluate("""() => ({
+        titre: document.querySelector('#exo-anchor-0 .exo-title').getBoundingClientRect().width,
+        fleches: document.querySelector('#exo-anchor-0 .exo-reorder').getBoundingClientRect().width})""")
+    assert largeurs["fleches"] < 60 and largeurs["titre"] > 150, largeurs
+    carte.locator(".exo-suivant").click()
+    second = "Alpine.$data(document.querySelector('#exo-anchor-1'))"
+    assert _attendre(lambda: page.evaluate(second + ".open"), 5)
+    # Le défilement s'arrête SUR l'exercice suivant, pas plus bas.
+    assert _attendre(lambda: 0 <= page.evaluate(
+        "document.querySelector('#exo-anchor-1').getBoundingClientRect().top") <= 60, 5)
+
+
+def test_lequipement_est_en_tete_de_carte(page, serveur):
+    sel = page.locator("#exo-anchor-0 .exo-equipement select")
+    assert sel.is_visible()
+    haut_equipement = sel.bounding_box()["y"]
+    haut_serie = page.locator("#exo-anchor-0 .serie-encours").first.bounding_box()["y"]
+    assert haut_equipement < haut_serie
+
+
 def test_case_alterner_enregistre_la_rotation(serveur, navigateur):
     """Page Programme : cocher « Alterner » enregistre le cycle, le décocher
     l'efface (core/rotation.py)."""
