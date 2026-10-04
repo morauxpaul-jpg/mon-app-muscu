@@ -1,30 +1,30 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
-**Mise à jour** : 04/10/2026 (soir) · **Commit audité** : `c4528b3` (tête de `main` après les PR #6 à #11, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10). Première mise à jour du 04/10 sur `d2362f9` : 6,5/10.
+**Mise à jour** : 04/10/2026 (après les PR #13 et #14) · **Commit audité** : `ee13985` (tête de `main` après les PR #6 à #14, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10). Mises à jour précédentes du 04/10 : 6,5 (`d2362f9`), puis 6,7 (`c4528b3`).
 **Historique** : 30/09/2026, `ac44673`, 4,9/10. Les versions précédentes de ce fichier restent dans l'historique git ; `RAPPORT_AUDIT_2.md` n'a pas été touché.
 
 ---
 
-## Note globale : **6,7 / 10** (04/10 matin : 6,5 · 03/10 : 5,6 · 30/09 : 4,9)
+## Note globale : **6,8 / 10** (04/10 : 6,5 puis 6,7 · 03/10 : 5,6 · 30/09 : 4,9)
 
-> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. Depuis, la nutrition — seul axe resté à 5 — est passée à des repas détaillés aliment par aliment, avec des cibles reliées au poids et aux jours d'entraînement (PR #10), et les petits trous visibles sont bouchés : « Créer mon propre programme » ouvre l'éditeur, l'éditeur est borné, vider l'historique se confirme (PR #11). **Ce n'est pas encore 8.** Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or le modèle de données repose toujours sur des noms et sans unicité en base (5), la génération IA reste synchrone, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; quatorze sont à 7, cinq à 6, un à 5.
+> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. Depuis, la nutrition — seul axe resté à 5 — est passée à des repas détaillés aliment par aliment, avec des cibles reliées au poids et aux jours d'entraînement (PR #10), et les petits trous visibles sont bouchés : « Créer mon propre programme » ouvre l'éditeur, l'éditeur est borné, vider l'historique se confirme (PR #11). Enfin, une série ne peut plus exister en double en base (index unique v41, écritures par clé) et renommer un exercice propose d'emmener son historique (PR #13) ; la génération IA ne tient plus de fil du serveur (PR #14). **Ce n'est pas encore 8.** Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or les revenus gardent des trous (identifiants AdMob de test par défaut, remboursements Stripe non traités), les chemins d'authentification et d'admin restent peu testés, l'état du serveur (cache, verrous, tâches) ne vaut que pour une instance, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; quinze sont à 7, cinq à 6, plus aucun à 5.
 
 **Avertissement de méthode** : cette mise à jour est faite par le même agent qui a écrit les corrections. Le risque de complaisance est réel ; pour le contenir, chaque note qui monte s'appuie sur un test ou une mesure cités plus bas, et les constats non traités restent ouverts, même mineurs.
 
-| Bloc | 30/09 | 03/10 | 04/10 matin | 04/10 soir |
-|---|---:|---:|---:|---:|
-| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | 6,4 | **6,8** |
-| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | 6,8 | **6,8** |
-| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | 6,4 | **6,4** |
-| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | 6,7 | **6,7** |
+| Bloc | 30/09 | 03/10 | 04/10 (6,5) | 04/10 (6,7) | 04/10 (6,8) |
+|---|---:|---:|---:|---:|---:|
+| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | 6,4 | 6,8 | **6,9** |
+| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | 6,8 | 6,8 | **6,8** |
+| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | 6,4 | 6,4 | **6,6** |
+| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | 6,7 | 6,7 | **6,7** |
 
-**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **10 corrigés**, 1 atténué, 3 ouverts · 16 mineurs : **8 corrigés**, 8 ouverts. **1 nouveau défaut** trouvé et corrigé pendant les corrections (cache, § A.4).
+**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **12 corrigés**, 1 atténué, 1 ouvert · 16 mineurs : **8 corrigés**, 8 ouverts. **1 nouveau défaut** trouvé et corrigé pendant les corrections (cache, § A.4).
 
 ---
 
 ## Sommaire
 
-A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410) (matin, puis soir après les PR #10 et #11)
+A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410) (dernière révision après les PR #13 et #14)
   - A.1 Méthode · A.2 Notes par axe · A.3 Parcours par profil · A.4 Statut des constats · A.5 Ce qui manque pour 8 · A.6 Non vérifiable
 B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-0310--détail-conservé)
   - 0. Méthode · Parties 1 à 4 · 5. Suivi du 30/09 · 6. Écarts doc/code · 7. Non vérifiable · 8. Annexe
@@ -35,11 +35,11 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 
 ### A.1 Méthode
 
-- **Code** : lecture de `main` à `c4528b3` (56 modules `core/`, 20 blueprints, 37 gabarits) ; diff complet des PR #6 à #11 relu.
-- **Exécution** : `pytest` **1 036 passés** ; tests navigateur (Chromium, 375 × 812) **15 passés** (dont un repas détaillé ajouté puis corrigé) ; suite JS **111 passés** ; couverture de lignes Python **77 %** (matin : 75 % · 03/10 : 71 %). Suite Python rejouée date figée sur chacun des 7 jours de la semaine (matin) : verte.
+- **Code** : lecture de `main` après la PR #14 (59 modules `core/`, 20 blueprints, 37 gabarits) ; diff complet des PR #6 à #14 relu.
+- **Exécution** : `pytest` **1 057 passés** ; tests navigateur (Chromium, 375 × 812) **18 passés** (dont repas détaillé, renommage qui emmène l'historique, génération suivie jusqu'au programme et reprise après rechargement) ; suite JS **111 passés** ; couverture de lignes Python **78 %** (03/10 : 71 %). La fausse base des tests applique désormais l'index unique de production. Suite Python rejouée date figée sur chacun des 7 jours de la semaine (matin du 04/10) : verte.
 - **Reproductions** : chacune des reproductions corrigées du 03/10 (R1 à R12) est rejouée par un test du dépôt (par exemple `tests/test_rpe_suggestion.py` pour R11, `tests/e2e/test_seance_navigateur.py` pour R1 et R2, `tests/test_rotation.py` pour R3, `tests/test_ecritures_croisees.py` pour R9).
 - **Mesures** : premier champ de saisie à **519 px** du haut sur un compte neuf (03/10 : 836 px) ; poids réseau compressé — Programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko.
-- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables. Migration **v40** (`nutrition.grams`, `nutrition.food`, contrainte `nutrition_grams_check`) appliquée le 04/10 avec l'accord du propriétaire, colonnes et contrainte relues en base.
+- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables. Migration **v40** (`nutrition.grams`, `nutrition.food`, contrainte `nutrition_grams_check`) appliquée le 04/10 avec l'accord du propriétaire, colonnes et contrainte relues en base. Migration **v41** (index unique `history_serie_unique`) appliquée le 04/10 avec son accord, après vérification en lecture seule : 1 136 lignes, 0 doublon ; index relu en base. Le site n'étant pas joignable d'ici, la fenêtre entre l'index et le déploiement de la PR #13 n'a pu être surveillée que par les journaux Supabase (aucun refus d'unicité relevé).
 - **Barème inchangé** : 10 = état de l'art · 8-9 = niveau Hevy/Strong, **prouvé** · 6-7 = correct, un concurrent fait mieux · 4-5 = utilisable mais faible · 1-3 = cassé ou absent.
 
 ### A.2 Notes par axe
@@ -51,7 +51,7 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 | 3 | Programme et planning | 6 | 5 | **7** | Rotation A/B réelle et réglable, supersets, semaine allégée, éditeur borné ; pas de blocs ni de pourcentage d'e1RM. |
 | 4 | Progression et statistiques | 5 | 6 | **7** | Séries par muscle et par semaine face aux repères, progression racontée, compteur juste ; graphiques moins riches que les concurrents. |
 | 5 | Coach IA | 6 | 6 | **7** | Voit RPE, prescription, bilans, cardio à part et semaine allégée ; quota atomique ; ouvert à l'essai. |
-| 6 | Générateur de programme IA | 5 | 5 | **6** | Progression visible, « Refaire cette séance » ; l'appel reste synchrone et tient un fil 10 à 25 s. |
+| 6 | Générateur de programme IA | 5 | 5 | **7** | Tâche de fond : la requête rend la main en 2 s, la page suit la tâche, reprend après un rechargement, un second tap rejoint la génération en cours ; « Refaire cette séance ». Tâches en mémoire d'une seule instance. |
 | 7 | Nutrition | 5 | 5 | **7** | Repas aliment par aliment (quantité corrigeable, « reprendre la veille »), aliments habituels en tête, 429 aliments + produits du commerce par nom et code-barres, protéines en g/kg, plus de glucides les jours de séance. Manque face à MyFitnessPal / MacroFactor : recettes et aliments perso, tendance hebdo, cible adaptative. |
 | 8 | Cardio | 4 | 6 | **6** | Inchangé. |
 | 9 | Mode hors-ligne | 4 | 5 | **7** | « Terminer » borné à 6 s, rejeu borné à 8 s, semaine entière gardée avec pastille ; prouvé en mode avion (test navigateur). |
@@ -59,15 +59,15 @@ B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-
 | 11 | Design et cohérence UI | 5 | 5 | **6** | Écran de séance allégé, bloc « Récupération » retiré ; 57 `style=` en ligne, cohérence inégale entre pages. |
 | 12 | Performance ressentie | 5 | 6 | **7** | Compression gzip (pages 4 à 8 fois plus légères) ; génération IA et flux du coach tiennent chacun un des 16 fils. |
 | 13 | Architecture du code | 6 | 6 | **6** | Nouveaux modules isolés, plafonds de taille tenus par tests ; blob fourre-tout, verrous et cache valables pour un seul processus. |
-| 14 | Modèle de données | 4 | 4 | **5** | Doublons empêchés par verrou, course du cache corrigée ; identité par nom, cardio dans des colonnes détournées, aucune unicité en base. |
+| 14 | Modèle de données | 4 | 4 | **6** | Une série = une ligne (index unique en base), écritures idempotentes, renommages sans collision et suivis depuis l'éditeur, repas par aliment ; identité toujours par nom, cardio dans des colonnes détournées. |
 | 15 | Sécurité | 5 | 6 | **7** | Admin réservé à une connexion Google, v37-v39 vérifiées en base, quotas non contournables ; CSP sans `script-src` stricte. |
 | 16 | Robustesse et gestion d'erreurs | 4 | 6 | **7** | Échecs signalés, fin de séance bornée, quota rendu si l'IA échoue, cache cohérent après écriture. |
-| 17 | Tests | 6 | 6 | **7** | 1 036 + 15 navigateur + 111 JS, 77 % de couverture, indépendants du jour ; auth et admin sous 50 %, programme à 64 %. |
+| 17 | Tests | 6 | 6 | **7** | 1 057 + 18 navigateur + 111 JS, 78 % de couverture, fausse base qui applique l'index de production ; auth et admin sous 50 %, programme à 64 %. |
 | 18 | Monétisation et paywall | 4 | 5 | **6** | Page PRO honnête, essai qui montre coach et debrief, bilan PRO du mois ; identifiants AdMob de test par défaut, remboursements Stripe non traités. |
 | 19 | Boucle de rétention | 4 | 6 | **7** | Défi relatif, récap du dimanche, progression racontée, semaine allégée ; aucune dimension sociale. |
 | 20 | Accessibilité | 6 | 7 | **7** | Inchangé. |
 
-Moyenne : **6,7** (133 / 20 = 6,65). Le matin du 04/10 : 6,5 (130 / 20) ; seuls l'onboarding (6 → 7) et la nutrition (5 → 7) ont bougé depuis.
+Moyenne : **6,8** (135 / 20 = 6,75). Étapes du 04/10 : 6,5 (130 / 20), puis 6,7 (133 / 20) avec l'onboarding (6 → 7) et la nutrition (5 → 7), puis 6,8 avec le modèle de données (5 → 6) et le générateur (6 → 7).
 
 Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être testée qu'avec un service simulé (le réseau de l'environnement d'audit ne l'atteint pas), et son plafond global de 8 recherches par minute, imposé par leurs conditions, saturera avec quelques dizaines d'utilisateurs simultanés.
 
@@ -81,7 +81,7 @@ Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être te
 | 4 | Avancé / « pro » | 3 | **6** | RPE pris en compte, semaine allégée, séries par muscle, échauffement. Manque : blocs, pourcentages d'e1RM dans la séance. |
 | 5 | Utilisateur FREE | 6 | **7** | Page PRO honnête ; séries par muscle et import gratuits. |
 | 6 | Utilisateur en ESSAI | 4 | **6** | L'essai ouvre enfin le coach (5 messages/jour) et le debrief. Manque : 24 h restent courtes pour juger. |
-| 7 | VIP payant | 5 | **7** | Coach qui lit ses RPE, « Refaire cette séance », bilan PRO du mois, nutrition détaillée reliée à ses séances. Manque : recettes et aliments perso. |
+| 7 | VIP payant | 5 | **7** | Coach qui lit ses RPE, générateur qui ne bloque plus et se reprend, « Refaire cette séance », bilan PRO du mois, nutrition détaillée reliée à ses séances. Manque : recettes et aliments perso. |
 | 8 | App native Android | 5 | **6** | Plus de pub avant la première série, reprise de séance juste après minuit. Reste : webview distante, achat qui peut sortir de l'app. |
 | 9 | Salle sans réseau (sous-sol) | 5 | **7** | « Terminer » ne bloque plus, la semaine entière est gardée et la pastille le dit (prouvé en mode avion). |
 
@@ -97,12 +97,12 @@ Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être te
 | I4 | Test dépendant du jour | **Corrigé** | suite verte date figée sur 7 jours |
 | I5 | Catalogue tronqué, A-B-A figé | **Corrigé** | `core/rotation.py`, `tests/test_rotation.py` |
 | I6 | Onboarding qui efface les dossiers | **Corrigé** | `ajouter_et_planifier`, `tests/test_onboarding.py` |
-| I7 | Doublons sur écritures croisées | **Atténué** | verrou par exercice (`core/db_historique.py`), `tests/test_ecritures_croisees.py` ; pas d'index unique en base, valable pour un seul processus |
+| I7 | Doublons sur écritures croisées | **Corrigé** | index unique v41 en base (appliqué, relu), écritures par clé (`CLE_SERIE`), `tests/test_unicite_series.py`, `tests/test_ecritures_croisees.py` |
 | I8 | Compteur « Séances x/y » faux | **Corrigé** | `tests/test_compteur_seances.py` |
 | I9 | Contexte du coach pauvre | **Corrigé** | `tests/test_coach_contexte.py` |
 | I10 | Promesses fausses (PRO, onboarding) | **Corrigé** | `tests/test_promesses_pro.py` |
-| I11 | Serveur mono-processus, IA synchrone | **Ouvert** | compression et quotas aident ; la génération tient toujours un fil |
-| I12 | Renommer un exercice coupe l'historique | **Ouvert** | message et outil de Gestion, pas de suivi automatique |
+| I11 | Serveur mono-processus, IA synchrone | **Atténué** | génération en tâche de fond (`core/taches_ia.py`, `tests/test_taches_ia.py`) ; reste un seul processus (cache, verrous, tâches en mémoire) et le flux du coach tient un fil |
+| I12 | Renommer un exercice coupe l'historique | **Corrigé** | l'éditeur demande « Est-ce le même exercice ? » et déplace l'historique sur oui (`POST /programme/exo/historique`, test navigateur) ; identité toujours par nom |
 | I13 | Échecs avalés (repas, cardio) | **Corrigé** | `tests/test_integrite_0310.py` |
 | I14 | Couverture faible auth/admin/programme | **Ouvert** | 47 % / 43 % / 64 % (programme : 49 % le matin) |
 | M1 | Bilan écrasé par « Passer » | **Corrigé** | `tests/test_integrite_0310.py` |
@@ -128,13 +128,13 @@ Réserve sur la nutrition : la recherche Open Food Facts par nom n'a pu être te
 
 Par impact décroissant :
 
-Faits depuis le matin du 04/10 : la nutrition (ancien point 1, PR #10) et les petits trous visibles (ancien point 4, PR #11).
+Faits le 04/10 : la nutrition (PR #10), les petits trous visibles (PR #11), l'unicité des séries et le suivi des renommages (PR #13), la génération IA en tâche de fond (PR #14).
 
-1. **Modèle de données** (seul axe resté à 5) : index unique par série en base et écriture idempotente (migration), identifiant d'exercice stable plutôt que le nom, suivi automatique des renommages (I7, I12).
-2. **Génération IA en tâche de fond** et cache partagé, préalables à une deuxième instance (I11).
-3. **Revenus** : échec bruyant sans identifiants AdMob réels (M6), remboursements et litiges Stripe (M7), vidéo au tap (M13).
-4. **Tests** des chemins d'auth et d'admin (I14).
-5. **Nutrition, pour passer de 7 à 8** : recettes et aliments personnels, tendance de la semaine (moyennes, régularité), cible qui s'ajuste au poids réel.
+1. **Revenus** : échec bruyant sans identifiants AdMob réels (M6), remboursements et litiges Stripe (M7), vidéo au tap (M13).
+2. **Tests** des chemins d'auth et d'admin (I14).
+3. **Plusieurs instances** : cache, verrous et tâches IA dans un stockage partagé (Redis ou base) ; flux du coach sans fil bloqué (I11).
+4. **Fin du modèle de données** : identifiant d'exercice stable plutôt que le nom, cardio dans ses propres colonnes.
+5. **Nutrition, pour passer de 7 à 8** : recettes et aliments personnels, tendance de la semaine, cible qui s'ajuste au poids réel.
 6. **Rétention sociale** : binôme de régularité ou streak partagé.
 7. **Preuve d'usage** : le barème exige un niveau *prouvé* ; il faudra des chiffres réels (rétention J7/J30, conversion de l'essai) que le dépôt ne contient pas.
 
