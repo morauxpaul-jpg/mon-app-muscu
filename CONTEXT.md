@@ -534,6 +534,11 @@ pwa/
   - **Défilement.** On défile vers l'exercice suivant après le repli de la carte (260 ms), sans dépasser sa cible.
   - **Affichage.** Le bandeau de record va dans `.exo-repere`, sur toute la largeur. Il allait dans la colonne des flèches, ce qui écrasait le titre. L'équipement est en tête de carte (`.exo-equipement`).
   - **Batterie.** Plus de `backdrop-filter` sur les cartes ni sur les barres fixes (en-tête, navigation, chrono) : fonds presque opaques à la place.
+- **Séries d'échauffement (vague 14, migration v43)** : la case « Série d'échauffement » se trouve dans le panneau « RPE, remarque » ; elle n'apparaît que si la colonne `history.type_serie` existe (`echauffements_disponibles()`).
+  - La série est enregistrée avec `type_serie = 'echauffement'`. `db.get_hist()` l'EXCLUT par défaut : records, suggestions, séries par muscle, volume, récap, coach l'ignorent d'office. Seules la carte de séance (`echauffements_du_jour`) et l'export la demandent (`echauffement=True`).
+  - Le volume d'échauffement s'affiche à part (« +200 échauff. »).
+  - Une série d'échauffement ne prend jamais la valeur grisée, et la marquer ajoute une case pour garder toutes les séries de travail prévues.
+  - Sans la v43, un échauffement n'est jamais écrit comme une série de travail : il est écarté.
 - **Remplace le point « C'est de la mise en page » ci-dessus.** « Série faite » ENREGISTRE : `save-exo` avec `partiel=1`, qui n'écrit que les séries remplies (les autres ne deviennent pas des SKIP en cours d'exercice). Avant, elle cochait en vert sans rien écrire, et « Terminer » effaçait les brouillons : trois séries cochées, séance terminée, zéro ligne en base.
 - « Enregistrer » garde son sens (tout, vides en SKIP). « Terminer » envoie d'abord ce qui n'est pas encore reçu (`_rev` ≠ `_revServeur`), vide la file si le réseau est là, et n'efface les brouillons qu'ensuite ; en cas de refus, la modale le dit et rien n'est effacé.
 - Réseau faible : délai de 8 s (`AbortController`), puis mise en file. 5xx / 408 / 429 / pas de réponse = file ; 4xx = refus affiché, brouillon gardé.

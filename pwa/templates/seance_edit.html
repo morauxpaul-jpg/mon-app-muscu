@@ -51,7 +51,7 @@
   <div class="seance-progress" id="seance-progress">
     <div class="seance-progress-top">
       <span class="seance-progress-label">EXERCICE <b id="prog-done">{{ exos_done|default(0) }}</b> / {{ exos_total|default(exos|length) }}</span>
-      <span class="seance-progress-vol label-icon" id="prog-vol"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>{{ vol_curr }}{% if vol_prev > 0 %} / {{ vol_prev }}{% endif %} kg</span>
+      <span class="seance-progress-vol label-icon" id="prog-vol"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#zap"/></svg>{{ vol_curr }}{% if vol_prev > 0 %} / {{ vol_prev }}{% endif %} kg{% if vol_echauff %}<small class="vol-echauff"> · +{{ vol_echauff }} échauff.</small>{% endif %}</span>
     </div>
     <div class="xp-bar-bg">
       <div class="xp-bar-fill" id="prog-bar" style="width: {{ ((exos_done|default(0)) / (exos_total|default(exos|length)) * 100) if exos else 0 }}%;"></div>
@@ -181,6 +181,7 @@
     "mode": mode, "seance": seance_name, "date": date_iso,
     "semaine": s_act, "weekOffset": week_offset,
     "autoRestTimer": auto_rest_timer, "showRpe": show_rpe,
+    "echauffements": echauffements_ok|default(false),
     "exosTotal": exos_total|default(exos|length),
     "cardioUnits": unites_cardio
   }|tojson }}</script>

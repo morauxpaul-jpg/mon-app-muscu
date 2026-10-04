@@ -566,7 +566,7 @@ def export_data():
     d'exporter… vers un mur de paiement (audit du 30/09, I12). La
     RÉimportation reste une fonction PRO."""
     prog = get_prog()
-    hist = get_hist()
+    hist = get_hist(echauffement=True)      # la portabilité porte tout
     profile = get_profile() or {}
     onboarding = get_onboarding() or {}
     try:

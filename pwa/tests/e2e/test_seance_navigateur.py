@@ -347,6 +347,21 @@ def test_lequipement_est_en_tete_de_carte(page, serveur):
     assert haut_equipement < haut_serie
 
 
+def test_une_serie_dechauffement_part_a_part(page, serveur):
+    """Panneau « RPE, remarque » : la case la marque ; elle s'enregistre avec
+    son type et le volume d'échauffement s'affiche à part."""
+    carte = page.locator("#exo-anchor-0")
+    carte.locator(".serie-encours").nth(0).locator(".serie-puce").first.click()
+    carte.locator(".serie-echauff").first.click()
+    carte.get_by_label("Répétitions série 1", exact=True).fill("10")
+    carte.get_by_label("Poids série 1", exact=True).fill("20")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: [(r["serie"], r.get("type_serie")) for r in _historique(serveur)]
+                     == [(1, "echauffement")])
+    assert "+200 échauff." in page.locator("#prog-vol").inner_text()
+    assert carte.locator(".serie-faite").first.inner_text().strip().split("\n")[-1].startswith("Échauff.")
+
+
 def test_case_alterner_enregistre_la_rotation(serveur, navigateur):
     """Page Programme : cocher « Alterner » enregistre le cycle, le décocher
     l'efface (core/rotation.py)."""

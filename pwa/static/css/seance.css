@@ -224,3 +224,7 @@ details.exo-echauffement small { color: var(--text-3); }
 .exo-equipement { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; font-size: 0.85rem; color: var(--text-3); }
 .exo-equipement select { flex: 1; min-width: 0; padding: 8px 10px; border-radius: var(--radius-pill, 999px); background: var(--bg-surface, rgba(255,255,255,0.04)); color: var(--text-1); border: 1px solid var(--border-default, rgba(255,255,255,0.08)); font-size: 0.9rem; }
 .exo-suivant { width: 100%; margin-top: 8px; justify-content: center; }
+/* Séries d'échauffement (v43) : discrètes, hors volume de travail. */
+.serie-type { font-weight: 400; color: var(--text-3); font-size: 0.85em; }
+.serie-echauff { margin: 4px 0 8px; }
+.vol-echauff { color: var(--text-3); font-weight: 400; font-size: 0.8em; }

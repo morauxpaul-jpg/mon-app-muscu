@@ -58,16 +58,37 @@ module.exports = ({ test, assert }) => {
 
   // ── Ce qui part en base ne change pas ─────────────────────────
 
-  test('les séries envoyées gardent exactement leurs quatre champs', () => {
+  test('les séries envoyées gardent exactement leurs cinq champs', () => {
+    // `type` : « echauffement » ou vide (séries d'échauffement, v43).
     const b = bloc([S(8, 82.5, '8', 'facile'), S()]);
     b.serieFaite(0);
     const envoye = JSON.parse(b.serializedSets());
     assert.deepEqual(Object.keys(envoye[0]).sort(),
-                     ['poids', 'remarque', 'reps', 'rpe']);
+                     ['poids', 'remarque', 'reps', 'rpe', 'type']);
+    assert.equal(envoye[0].type, '');
     assert.equal(envoye[0].reps, 8);
     assert.equal(envoye[0].poids, 82.5);
     assert.equal(envoye[0].rpe, '8');
     assert.equal(envoye[0].remarque, 'facile');
+  });
+
+  test("une série d'échauffement part marquée, et ne prend pas la valeur grisée", () => {
+    const b = bloc([S(), S()]);
+    b.basculerEchauffement(b.sets[0]);
+    b.serieFaite(0);                                   // rien tapé : refusée
+    assert.equal(b.estFait(0), false);
+    b.sets[0].reps = 8; b.sets[0].poids = 20;
+    b.serieFaite(0);
+    assert.equal(JSON.parse(b.serializedSets())[0].type, 'echauffement');
+    assert.match(b.resumeSerie(b.sets[0]), /^Échauff\./);
+  });
+
+  test("marquer un échauffement garde toutes les séries de travail prévues", () => {
+    const b = bloc([S(), S(), S()], { p_sets: 3 });
+    b.basculerEchauffement(b.sets[0]);
+    assert.equal(b.sets.length, 4);
+    b.basculerEchauffement(b.sets[0]);                  // décoché : rien ne s'ajoute
+    assert.equal(b.sets.length, 4);
   });
 
   test("marquer une série faite n'ajoute rien à ce qui est envoyé", () => {

@@ -11,6 +11,7 @@ import logging
 from core import partage
 from core.db_base import (_cache_get, _cache_invalidate, _cache_modifier, _cache_set,
                           _continuous_week_of, _fetch_all, get_client, session_id_for)
+from core.hist import TYPE_ECHAUFFEMENT
 from core.muscu import parse_rpe
 
 logger = logging.getLogger(__name__)
@@ -19,19 +20,17 @@ logger = logging.getLogger(__name__)
 # Historique des séries
 # ────────────────────────────────────────────────────────────
 
-def get_hist(user_id: str) -> list[dict]:
-    """Retourne l'historique de l'user sous forme de liste de dicts
-    (clés Semaine/Séance/Exercice/...), même forme que l'ancien backend."""
+def get_hist(user_id: str, echauffement: bool = False) -> list[dict]:
+    """L'historique de l'user (clés Semaine/Séance/Exercice/...). Sans les
+    séries d'échauffement, sauf `echauffement=True` (carte de séance, export) :
+    tout le reste — records, suggestions, volume — les ignore ainsi d'office."""
     key = f"hist:{user_id}"
     cached = _cache_get(key)
-    if cached is not None:
-        return [dict(r) for r in cached]
-
-    client = get_client()
-    rows = _lire_history(client, user_id)
-    cleaned = [_nettoyer_ligne(r) for r in rows]
-    _cache_set(key, cleaned)
-    return [dict(r) for r in cleaned]
+    if cached is None:
+        cached = [_nettoyer_ligne(r) for r in _lire_history(get_client(), user_id)]
+        _cache_set(key, cached)
+    return [dict(r) for r in cached
+            if echauffement or r.get("Type") != TYPE_ECHAUFFEMENT]
 
 
 def _nettoyer_ligne(r: dict) -> dict:
@@ -60,6 +59,7 @@ def _nettoyer_ligne(r: dict) -> dict:
         "Date": date_str,
         "RPE": float(rpe) if rpe is not None else None,
         **({"ExoId": r["exercise_id"]} if r.get("exercise_id") else {}),
+        **({"Type": TYPE_ECHAUFFEMENT} if r.get("type_serie") == TYPE_ECHAUFFEMENT else {}),
     }
 
 
@@ -100,25 +100,24 @@ def _delete_history_ids(client, ids: list) -> None:
 _HIST_EXT_COLS = ("session_id", "rpe")
 _hist_ext_supported = True  # migration v34 appliquée le 2026-09-23
 
-# Les seules colonnes que `get_hist` regarde. `select("*")` ramenait aussi
-# `user_id`, `session_id` et `created_at` — une centaine d'octets par ligne
-# que personne ne lit, soit presque autant que le contenu utile. Sur un an
-# d'entraînement (~1 900 lignes) c'est la moitié du transfert pour rien.
-# `id` n'y est pas : PostgREST sait trier sur une colonne non demandée.
+# Les seules colonnes que `get_hist` regarde (`select("*")` doublait le
+# transfert). `id` n'y est pas : PostgREST sait trier sur une colonne non lue.
 _HIST_COLS_LUES = "date,semaine,seance,exercice,serie,reps,poids,remarque,muscle"
 
-# `exercise_id` (v42, core/exercice_ids.py) ; base en retard : lu et écrit sans lui.
-_COLONNES = {"exercise_id": True}   # dict partagé : la façade en réexporte le même objet
+# Colonnes facultatives : `exercise_id` (v42, core/exercice_ids.py) et
+# `type_serie` (v43, séries d'échauffement). Base en retard : lu et écrit sans.
+_COLONNES = {"exercise_id": True, "type_serie": True}   # dict partagé (façade)
+
+
+def _colonne_refusee(msg: str):
+    """La colonne facultative qu'une erreur PostgREST désigne, ou None."""
+    return next((c for c, ok in _COLONNES.items() if ok and c in msg), None)
 
 
 def _lire_history(client, user_id: str) -> list[dict]:
-    """Les lignes d'historique d'un user, colonnes utiles seulement.
-
-    `rpe` n'existe qu'après la migration v34. Une base en retard ferait
-    échouer la requête au lieu d'ignorer la colonne comme le faisait
-    `select("*")` : on retombe alors sur la liste courte, une fois pour
-    toutes, exactement comme `_insert_history` le fait à l'écriture.
-    """
+    """Les lignes d'historique d'un user, colonnes utiles seulement. Une
+    colonne facultative absente (base en retard) fait échouer la requête : on
+    la retire, une fois pour toutes, comme `_insert_history` à l'écriture."""
     global _hist_ext_supported
 
     def lire(colonnes):
@@ -128,14 +127,15 @@ def _lire_history(client, user_id: str) -> list[dict]:
 
     while True:
         cols = _HIST_COLS_LUES + (",rpe" if _hist_ext_supported else "") \
-            + (",exercise_id" if _COLONNES["exercise_id"] else "")
+            + "".join("," + c for c, ok in _COLONNES.items() if ok)
         try:
             return lire(cols)
         except Exception as e:
             msg = str(e).lower()
-            if _COLONNES["exercise_id"] and "exercise_id" in msg:
-                logger.warning("history: colonne exercise_id absente (v42) — lecture sans elle")
-                _COLONNES["exercise_id"] = False
+            refusee = _colonne_refusee(msg)
+            if refusee:
+                logger.warning("history: colonne %s absente — lecture sans elle", refusee)
+                _COLONNES[refusee] = False
             elif _hist_ext_supported and "rpe" in msg:
                 logger.warning("history: colonne rpe absente (%s) — lecture sans elle", e)
                 _hist_ext_supported = False
@@ -184,8 +184,11 @@ def _insert_history(client, payload: list[dict], par_cle: bool = False, ignorer:
     global _hist_ext_supported, _unicite
     if par_cle and not _unicite:
         return None
-    if not _COLONNES["exercise_id"]:
-        payload = [{k: v for k, v in p.items() if k != "exercise_id"} for p in payload]
+    absentes = {c for c, ok in _COLONNES.items() if not ok}
+    if "type_serie" in absentes:    # sans la v43, l'échauffement compterait comme du travail
+        payload = [p for p in payload if p.get("type_serie") != TYPE_ECHAUFFEMENT]
+    if absentes:
+        payload = [{k: v for k, v in p.items() if k not in absentes} for p in payload]
 
     def _ecrire(rows):
         t = client.table("history")
@@ -203,9 +206,10 @@ def _insert_history(client, payload: list[dict], par_cle: bool = False, ignorer:
             _unicite = False
             return None
         msg = str(e).lower()
-        if _COLONNES["exercise_id"] and "exercise_id" in msg:
-            logger.warning("history: colonne exercise_id absente (v42) — écriture sans elle")
-            _COLONNES["exercise_id"] = False
+        refusee = _colonne_refusee(msg)
+        if refusee:
+            logger.warning("history: colonne %s absente — écriture sans elle", refusee)
+            _COLONNES[refusee] = False
             return _insert_history(client, payload, par_cle, ignorer)
         if not _hist_ext_supported or not any(c in msg for c in _HIST_EXT_COLS):
             raise
@@ -235,6 +239,7 @@ def _row_to_supabase(user_id: str, r: dict) -> dict:
         "session_id": session_id_for(user_id, str(date_val or ""), seance) if date_val else None,
         "rpe": float(rpe) if rpe is not None else None,
         "exercise_id": r.get("ExoId") or None,
+        "type_serie": TYPE_ECHAUFFEMENT if r.get("Type") == TYPE_ECHAUFFEMENT else None,
     }
 
 # ────────────────────────────────────────────────────────────
@@ -289,11 +294,9 @@ def _replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, n
                       exo_id: str | None = None):
     """Remplace les séries d'un exercice pour UNE séance (date + nom).
 
-    Même ordre que `save_hist` : on INSÈRE les nouvelles lignes, puis on
-    supprime les anciennes par id. Avant, c'était DELETE puis INSERT, sans
-    transaction : une coupure entre les deux effaçait les séries déjà
-    enregistrées de l'exercice. Maintenant, un échec d'insertion laisse
-    l'ancien état intact."""
+    On INSÈRE les nouvelles lignes, puis on supprime les anciennes par id :
+    DELETE puis INSERT, sans transaction, perdait tout sur une coupure entre
+    les deux. Un échec d'insertion laisse l'ancien état intact."""
     client = get_client()
     old_ids = _ids_cibles(client, user_id, date_str, seance, exercice, exo_id)
     payload = _series_distinctes(
@@ -316,16 +319,9 @@ def _replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, n
 
 def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
                     new_rows: list[dict]) -> int:
-    """Ajoute des séries à un exercice SANS effacer les précédentes.
-
-    `replace_exo_rows` convient quand on réécrit une saisie qu'on est en
-    train de modifier. Pour une séance qu'on vient de faire, non : deux
-    footings le même jour sont deux séances, et remplacer efface la
-    première. Le numéro de série continue la suite existante, pour que les
-    deux se distinguent à la lecture.
-
-    Retourne le numéro de la première série ajoutée.
-    """
+    """Ajoute des séries SANS effacer les précédentes : deux footings le même
+    jour sont deux séances, `replace_exo_rows` effaçait la première. Le numéro
+    de série continue la suite. Retourne le numéro de la première ajoutée."""
     date_str = _norm_date(date_str)
     with _verrou(user_id, date_str, seance, exercice):
         return _append_exo_rows(user_id, date_str, seance, exercice, new_rows)

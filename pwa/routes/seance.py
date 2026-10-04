@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 from core.data import (
     get_hist, get_prog, clear_user_cache,
-    replace_exo_rows, delete_exo_rows, delete_session_rows,
+    replace_exo_rows, delete_exo_rows, delete_session_rows, echauffements_du_jour,
+    echauffements_disponibles,
 )
 from core.dates import (today_paris_str, logical_today_paris, DAYS_FR, MONTHS_FR)
 from core.limiter import limiter
@@ -20,7 +21,7 @@ from core.muscu import BW_EXOS, MUSCLE_LIST, VARIANTS, auto_muscles
 from core.exercises_data import filter_exos_by_equipment, detect_isometric
 from core.exercice_ids import pour_serie
 from core.body_map import get_body_polygons
-from core.hist import is_logged as _is_real_perf
+from core.hist import est_echauffement, is_logged as _is_real_perf
 
 # Le calcul de la séance vit dans core/ : ce fichier n'est plus que la couche
 # HTTP — les routes, le formulaire, le rendu. Les six modules ci-dessous ne
@@ -239,9 +240,11 @@ def seance():
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
         from core.decharge import semaine_allegee
+        echauff = echauffements_du_jour(date_iso)
         exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, date_iso,
                                            auto_prefill_weight, show_overload_hint,
-                                           decharge=semaine_allegee(prog, s_act))
+                                           decharge=semaine_allegee(prog, s_act),
+                                           echauffements=echauff)
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).
@@ -265,6 +268,8 @@ def seance():
         vol_prev = sum(r["Poids"] * r["Reps"] for r in hist
                        if r["Séance"] == name and r["Semaine"] == s_act - 1)
         vol_ratio = min((vol_curr / vol_prev) if vol_prev > 0 else 0, 1.2)
+        # Soulevé à l'échauffement : affiché à part, hors volume de travail.
+        vol_echauff = sum(r["Poids"] * r["Reps"] for r in echauff if r["Séance"] == name)
 
         # Progression : exercices complétés / total
         exos_done = sum(1 for e in exos_ctx if e["completed"])
@@ -292,6 +297,7 @@ def seance():
             exos_total=exos_total,
             unites_cardio=UNITES_CARDIO,
             vol_curr=int(vol_curr),
+            vol_echauff=int(vol_echauff),
             vol_prev=int(vol_prev),
             vol_ratio=vol_ratio,
             vol_overload=(vol_curr >= vol_prev and vol_prev > 0),
@@ -301,7 +307,7 @@ def seance():
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
-            show_rpe=show_rpe,
+            show_rpe=show_rpe, echauffements_ok=echauffements_disponibles(),
             cardio_done=_build_cardio_done(hist, name, date_iso),
             session_note=_load_session_note(prog, date_iso, name),
             body_polygons=get_body_polygons(),
@@ -313,7 +319,8 @@ def seance():
         libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
         all_exos = [(e, False) for e in libre_exos]
         exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, date_iso,
-                                           auto_prefill_weight, show_overload_hint)
+                                           auto_prefill_weight, show_overload_hint,
+                                           echauffements=echauffements_du_jour(date_iso))
 
         # Reconstruit depuis l'historique : le brouillon libre est effacé au
         # finish, donc une séance libre passée n'a plus que son historique.
@@ -354,7 +361,7 @@ def seance():
             muscle_list=MUSCLE_LIST,
             variants=VARIANTS,
             auto_rest_timer=auto_rest_timer,
-            show_rpe=show_rpe,
+            show_rpe=show_rpe, echauffements_ok=echauffements_disponibles(),
             cardio_done=_build_cardio_done(hist, libre_name, date_iso),
             session_note=_load_session_note(prog, date_iso, libre_name),
             body_polygons=get_body_polygons(),
@@ -416,7 +423,8 @@ def save_exo():
     wants_json = "application/json" in (request.headers.get("Accept") or "")
     try:
         hist_before = get_hist() if wants_json else []
-        pr = _pr_check(hist_before, new_rows, exo_final, is_bw) if wants_json else None
+        travail = [r for r in new_rows if not est_echauffement(r)]
+        pr = _pr_check(hist_before, travail, exo_final, is_bw) if wants_json else None
         # Pas de clear_user_cache() : replace_exo_rows corrige l'historique en
         # cache avec ce qu'il vient d'écrire. Le vider forçait à relire tout
         # l'historique (et le programme) juste en dessous (audit I15).
@@ -443,12 +451,14 @@ def save_exo():
         "completed": completed,
         "pr": pr,
         "volume": totals["volume"],
+        "volume_echauffement": int(sum(r["Poids"] * r["Reps"] for r in echauffements_du_jour(date_str)
+                                       if r["Séance"] == seance)),
         "sets_done": totals["sets"],
         "record": _best_record(hist, exo_final, is_bw),
         "suggestion": _suggestion_for(hist, exo_final, seance, date_str, is_bw,
                                       _cible_du_programme(get_prog(), seance, exo_base)),
         "last_summary": ", ".join(
-            "%gkg × %d" % (r["Poids"], r["Reps"]) for r in new_rows if r["Reps"] > 0
+            "%gkg × %d" % (r["Poids"], r["Reps"]) for r in travail if r["Reps"] > 0
         ),
     })
 

@@ -50,7 +50,7 @@ from core.db_historique import (
     _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _nettoyer_ligne, _norm_date,
     _reporter_dans_le_cache, CLE_SERIE, _unicite, _index_absent, _series_distinctes, _append_une_fois,
-    _row_to_supabase, _verrou, _COLONNES, _ids_cibles, _replace_exo_rows, _append_exo_rows
+    _row_to_supabase, _verrou, _COLONNES, _ids_cibles, _colonne_refusee, _replace_exo_rows, _append_exo_rows
 )
 
 from core.db_historique_lots import ajouter_lignes, save_hist

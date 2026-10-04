@@ -197,7 +197,7 @@
   }
 
   // ── Progression de la séance (barre du haut) ─────────────────────
-  function refreshProgress(volume) {
+  function refreshProgress(volume, volEchauff) {
     var done = document.querySelectorAll(".exo-card.done").length;
     var total = CONFIG.exosTotal || document.querySelectorAll(".exo-card").length || 1;
     var doneEl = document.getElementById("prog-done");
@@ -208,7 +208,8 @@
     if (volEl && volume != null) {
       volEl.innerHTML =
         '<svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#zap"/></svg>' +
-        fmt(volume) + " kg";
+        fmt(volume) + " kg" +
+        (volEchauff > 0 ? '<small class="vol-echauff"> · +' + fmt(volEchauff) + " échauff.</small>" : "");
     }
     var finish = document.getElementById("finish-open");
     if (finish && done >= total && total > 0) finish.classList.add("btn-ready");
@@ -261,6 +262,16 @@
       targetReps: data.target_reps || "",
       rpeOptions: ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"],
       completed: !!data.completed,
+      // Case « échauffement » proposée seulement si la base sait la garder à
+      // part (migration v43) : sinon la série compterait comme du travail.
+      echauffOk: !!CONFIG.echauffements,
+      basculerEchauffement: function (s) {
+        s.type = s.type === "echauffement" ? "" : "echauffement";
+        // Un échauffement ne prend pas la place d'une série de travail : le
+        // programme en prévoit `p_sets`, on les garde toutes.
+        var travail = this.sets.filter(function (x) { return x.type !== "echauffement"; }).length;
+        if (s.type === "echauffement" && travail < (Number(data.p_sets) || 0)) this.addSet();
+      },
 
       sets: (data.sets || []).map(function (s) {
         // Le RPE a sa propre colonne depuis la v34 ; on lit encore l'ancien
@@ -277,6 +288,7 @@
           poids: s.poids != null && s.poids !== "" ? s.poids : "",
           remarque: rawRem,
           rpe: rpe,
+          type: s.type || "",
         };
       }),
 
@@ -287,6 +299,7 @@
             poids: s.poids,
             remarque: (s.remarque || "").trim(),
             rpe: s.rpe || "",
+            type: s.type || "",
           };
         }));
       },
@@ -419,7 +432,7 @@
       },
 
       addSet: function () {
-        this.sets.push({ reps: "", poids: "", remarque: "", rpe: "" });
+        this.sets.push({ reps: "", poids: "", remarque: "", rpe: "", type: "" });
       },
       removeSet: function (i) {
         if (this.sets.length <= 1) return;
@@ -475,6 +488,13 @@
         // (audit du 03/10, I2). Chez Hevy ou Strong, la valeur grisée est
         // celle qu'on valide : on fait de même. Sans valeur à proposer, on
         // ne prétend pas que la série est faite.
+        if (s && !this._estRemplie(s) && s.type === "echauffement") {
+          // La valeur grisée est celle d'une série de TRAVAIL : la proposer
+          // pour un échauffement inventerait une charge qu'on n'a pas faite.
+          this.etat = "vide";
+          toast("Indique les répétitions et la charge de ton échauffement.", "error");
+          return;
+        }
         if (s && !this._estRemplie(s)) {
           var reps = this._repsProposees();
           var sansPoids = this.showWeight && (s.poids === "" || s.poids == null);
@@ -528,6 +548,7 @@
           // donc le navigateur ne la met pas à notre place.
           bouts.push(this._kg(s.poids) + " kg");
         }
+        if (s.type === "echauffement") bouts.unshift("Échauff.");
         if (s.rpe) bouts.push("RPE " + s.rpe);
         if (s.remarque) bouts.push(s.remarque);
         return bouts.length ? bouts.join(" · ") : "—";
@@ -669,7 +690,7 @@
         this.suggestionApplied = false;
         this.lastSummary = d.last_summary || this.lastSummary;
         if (card) card.classList.toggle("done", this.completed);
-        refreshProgress(d.volume);
+        refreshProgress(d.volume, d.volume_echauffement);
         if (d.pr) showPr(card, d.pr);
         // « Enregistrer » : on referme la carte et on ouvre la suivante.
         // Dernière série prévue faite : la carte RESTE ouverte, avec « Exercice
