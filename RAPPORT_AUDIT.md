@@ -1,11 +1,154 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
-**Date** : 03/10/2026 · **Commit audité** : `6126f95` (tête de `main` et de la branche de travail, CI verte le 30/09 à 23 h 55 UTC) · **Auditeur** : externe, lecture seule du dépôt.
-**Audit précédent** : 30/09/2026, commit `ac44673`, note globale **4,9/10** (38 constats). Ce fichier remplace le rapport du 21/09 ; les deux versions précédentes restent dans l'historique git. `RAPPORT_AUDIT_2.md` n'a pas été touché.
+**Mise à jour** : 04/10/2026 · **Commit audité** : `d2362f9` (tête de `main` après les PR #6, #7 et #8, CI verte) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10).
+**Historique** : 30/09/2026, `ac44673`, 4,9/10. Les versions précédentes de ce fichier restent dans l'historique git ; `RAPPORT_AUDIT_2.md` n'a pas été touché.
 
 ---
 
-## Note globale : **5,6 / 10** (le 30/09 : 4,9)
+## Note globale : **6,5 / 10** (03/10 : 5,6 · 30/09 : 4,9)
+
+> Les trois défauts qui faisaient de l'app un carnet « qui note juste mais raisonne faux » sont corrigés et prouvés par des tests : le RPE saisi pilote la suggestion, « Série faite » valide la valeur affichée en un tap, et la fin de séance ne se bloque plus au sous-sol. Les programmes ne sont plus amputés (rotation A/B réelle), refaire l'onboarding ne détruit plus rien, et l'app a rattrapé l'essentiel de ce qui manquait face à Hevy/Strong : import de leur historique, supersets, échauffement, séries par muscle et par semaine, semaine allégée proposée. **Ce n'est pas encore 8.** Le barème réserve 8 au niveau Hevy/Strong *prouvé* ; or la nutrition n'a pas bougé (5), le modèle de données repose toujours sur des noms et sans unicité en base (5), la génération IA reste synchrone, et rien dans le dépôt ne prouve l'usage réel (rétention, conversion). Aucun axe n'atteint 8 ; douze sont à 7, six à 6, deux à 5.
+
+**Avertissement de méthode** : cette mise à jour est faite par le même agent qui a écrit les corrections. Le risque de complaisance est réel ; pour le contenir, chaque note qui monte s'appuie sur un test ou une mesure cités plus bas, et les constats non traités restent ouverts, même mineurs.
+
+| Bloc | 30/09 | 03/10 | 04/10 |
+|---|---:|---:|---:|
+| Produit (onboarding, saisie, programme, progression, coach, générateur, nutrition, cardio) | 5,0 | 5,4 | **6,4** |
+| Plateforme (hors-ligne, notifications, design, performance) | 4,8 | 5,5 | **6,8** |
+| Technique (architecture, données, sécurité, robustesse, tests) | 5,0 | 5,6 | **6,4** |
+| Business (monétisation, rétention, accessibilité) | 4,7 | 6,0 | **6,7** |
+
+**Constats du 03/10** : 2 critiques conditionnels **clos** · 14 importants : **10 corrigés**, 1 atténué, 3 ouverts · 16 mineurs : **6 corrigés**, 10 ouverts. **1 nouveau défaut** trouvé et corrigé pendant les corrections (cache, § A.4).
+
+---
+
+## Sommaire
+
+A. [Mise à jour du 04/10](#a-mise-à-jour-du-0410)
+  - A.1 Méthode · A.2 Notes par axe · A.3 Parcours par profil · A.4 Statut des constats · A.5 Ce qui manque pour 8 · A.6 Non vérifiable
+B. [Audit du 03/10 — détail conservé (état avant corrections)](#b-audit-du-0310--détail-conservé)
+  - 0. Méthode · Parties 1 à 4 · 5. Suivi du 30/09 · 6. Écarts doc/code · 7. Non vérifiable · 8. Annexe
+
+---
+
+## A. Mise à jour du 04/10
+
+### A.1 Méthode
+
+- **Code** : lecture de `main` à `d2362f9` (54 modules `core/`, 20 blueprints, 37 gabarits) ; diff complet des PR #6, #7, #8 relu.
+- **Exécution** : `pytest` **988 passés** ; tests navigateur (Chromium, 375 × 812) **14 passés**, six passages complets d'affilée sans échec ; suite JS **106 passés** ; couverture de lignes Python **75 %** (03/10 : 71 %). Suite Python rejouée date figée sur chacun des 7 jours de la semaine : verte.
+- **Reproductions** : chacune des reproductions corrigées du 03/10 (R1 à R12) est rejouée par un test du dépôt (par exemple `tests/test_rpe_suggestion.py` pour R11, `tests/e2e/test_seance_navigateur.py` pour R1 et R2, `tests/test_rotation.py` pour R3, `tests/test_ecritures_croisees.py` pour R9).
+- **Mesures** : premier champ de saisie à **519 px** du haut sur un compte neuf (03/10 : 836 px) ; poids réseau compressé — Programme 216 → 28 ko, séance 126 → 20 ko, accueil 28 → 8 ko.
+- **Base de production** : migrations v37, v38, v39 vérifiées le 03/10 par le connecteur Supabase (lecture seule) : aucune règle RLS côté client, aucun droit `anon`/`authenticated`, vues en `security_invoker`, RLS actif sur les 11 tables.
+- **Barème inchangé** : 10 = état de l'art · 8-9 = niveau Hevy/Strong, **prouvé** · 6-7 = correct, un concurrent fait mieux · 4-5 = utilisable mais faible · 1-3 = cassé ou absent.
+
+### A.2 Notes par axe
+
+| # | Axe | 30/09 | 03/10 | 04/10 | En une phrase |
+|---|---|---:|---:|---:|---|
+| 1 | Onboarding | 5 | 5 | **6** | Plus de programme amputé, refaire l'onboarding ne détruit rien, charge de départ expliquée ; « Créer mon propre programme » promet toujours un éditeur qui n'arrive pas (renvoi à l'accueil). |
+| 2 | Saisie de séance | 4 | 5 | **7** | « Série faite » valide la valeur affichée, première série dans le premier écran, échauffement, supersets, aucun doublon ; pas de séries dégressives. |
+| 3 | Programme et planning | 6 | 5 | **7** | Rotation A/B réelle et réglable, supersets, semaine allégée ; pas de blocs ni de pourcentage d'e1RM, éditeur sans bornes de séries. |
+| 4 | Progression et statistiques | 5 | 6 | **7** | Séries par muscle et par semaine face aux repères, progression racontée, compteur juste ; graphiques moins riches que les concurrents. |
+| 5 | Coach IA | 6 | 6 | **7** | Voit RPE, prescription, bilans, cardio à part et semaine allégée ; quota atomique ; ouvert à l'essai. |
+| 6 | Générateur de programme IA | 5 | 5 | **6** | Progression visible, « Refaire cette séance » ; l'appel reste synchrone et tient un fil 10 à 25 s. |
+| 7 | Nutrition | 5 | 5 | **5** | Seul l'échec d'ajout est désormais signalé ; 269 aliments, repas stockés en quatre totaux. |
+| 8 | Cardio | 4 | 6 | **6** | Inchangé. |
+| 9 | Mode hors-ligne | 4 | 5 | **7** | « Terminer » borné à 6 s, rejeu borné à 8 s, semaine entière gardée avec pastille ; prouvé en mode avion (test navigateur). |
+| 10 | Notifications et relances | 5 | 6 | **7** | Récap du dimanche ajouté, rappels suivant la rotation ; tout dépend d'un cron externe, invérifiable d'ici. |
+| 11 | Design et cohérence UI | 5 | 5 | **6** | Écran de séance allégé, bloc « Récupération » retiré ; 57 `style=` en ligne, cohérence inégale entre pages. |
+| 12 | Performance ressentie | 5 | 6 | **7** | Compression gzip (pages 4 à 8 fois plus légères) ; génération IA et flux du coach tiennent chacun un des 16 fils. |
+| 13 | Architecture du code | 6 | 6 | **6** | Nouveaux modules isolés, plafonds de taille tenus par tests ; blob fourre-tout, verrous et cache valables pour un seul processus. |
+| 14 | Modèle de données | 4 | 4 | **5** | Doublons empêchés par verrou, course du cache corrigée ; identité par nom, cardio dans des colonnes détournées, aucune unicité en base. |
+| 15 | Sécurité | 5 | 6 | **7** | Admin réservé à une connexion Google, v37-v39 vérifiées en base, quotas non contournables ; CSP sans `script-src` stricte. |
+| 16 | Robustesse et gestion d'erreurs | 4 | 6 | **7** | Échecs signalés, fin de séance bornée, quota rendu si l'IA échoue, cache cohérent après écriture. |
+| 17 | Tests | 6 | 6 | **7** | 988 + 14 navigateur + 106 JS, 75 % de couverture, indépendants du jour ; auth, admin et programme sous 50 %. |
+| 18 | Monétisation et paywall | 4 | 5 | **6** | Page PRO honnête, essai qui montre coach et debrief, bilan PRO du mois ; identifiants AdMob de test par défaut, remboursements Stripe non traités. |
+| 19 | Boucle de rétention | 4 | 6 | **7** | Défi relatif, récap du dimanche, progression racontée, semaine allégée ; aucune dimension sociale. |
+| 20 | Accessibilité | 6 | 7 | **7** | Inchangé. |
+
+Moyenne : **6,5** (130 / 20).
+
+### A.3 Parcours par profil
+
+| # | Profil | 03/10 | 04/10 | Ce qui a changé · ce qui manque |
+|---|---|---:|---:|---|
+| 1 | Débutant complet, jour 1 | 5 | **7** | La valeur grisée s'enregistre, la série est à l'écran, la charge de départ est expliquée, le A/B alterne vraiment. Manque : une première séance guidée. |
+| 2 | Débutant, semaine 3 | 5 | **7** | Compteur juste, défi à sa mesure, « Tes progrès » et récap du dimanche lui racontent sa progression. |
+| 3 | Intermédiaire venant de Hevy/Strong | 4 | **7** | Il importe son historique (CSV), retrouve supersets, échauffement et le geste « valider la valeur grisée ». Manque : séries dégressives. |
+| 4 | Avancé / « pro » | 3 | **6** | RPE pris en compte, semaine allégée, séries par muscle, échauffement. Manque : blocs, pourcentages d'e1RM dans la séance. |
+| 5 | Utilisateur FREE | 6 | **7** | Page PRO honnête ; séries par muscle et import gratuits. |
+| 6 | Utilisateur en ESSAI | 4 | **6** | L'essai ouvre enfin le coach (5 messages/jour) et le debrief. Manque : 24 h restent courtes pour juger. |
+| 7 | VIP payant | 5 | **7** | Coach qui lit ses RPE, « Refaire cette séance », bilan PRO du mois. Manque : une nutrition à la hauteur du prix. |
+| 8 | App native Android | 5 | **6** | Plus de pub avant la première série, reprise de séance juste après minuit. Reste : webview distante, achat qui peut sortir de l'app. |
+| 9 | Salle sans réseau (sous-sol) | 5 | **7** | « Terminer » ne bloque plus, la semaine entière est gardée et la pastille le dit (prouvé en mode avion). |
+
+### A.4 Statut des constats du 03/10
+
+| # | Constat (résumé) | Statut au 04/10 | Preuve |
+|---|---|---|---|
+| CC1 | Escalade de tier si v38 absente | **Clos** | v38 appliquée, vérifiée en base (§ A.1) |
+| CC2 | Admin sur un e-mail non vérifié | **Corrigé** | `core/admin_acces.py` (connexion Google exigée), `tests/test_acces_admin.py` |
+| I1 | RPE ignoré par la suggestion | **Corrigé** | `core/seance_historique.py` (`_rpe_de`), `tests/test_rpe_suggestion.py` |
+| I2 | « Série faite » sur champ vide | **Corrigé** | `static/js/seance.js` (`serieFaite`), tests JS et navigateur |
+| I3 | « Terminer » figé derrière la file | **Corrigé** | délais 8 s / 6 s, test navigateur réseau coupé |
+| I4 | Test dépendant du jour | **Corrigé** | suite verte date figée sur 7 jours |
+| I5 | Catalogue tronqué, A-B-A figé | **Corrigé** | `core/rotation.py`, `tests/test_rotation.py` |
+| I6 | Onboarding qui efface les dossiers | **Corrigé** | `ajouter_et_planifier`, `tests/test_onboarding.py` |
+| I7 | Doublons sur écritures croisées | **Atténué** | verrou par exercice (`core/db_historique.py`), `tests/test_ecritures_croisees.py` ; pas d'index unique en base, valable pour un seul processus |
+| I8 | Compteur « Séances x/y » faux | **Corrigé** | `tests/test_compteur_seances.py` |
+| I9 | Contexte du coach pauvre | **Corrigé** | `tests/test_coach_contexte.py` |
+| I10 | Promesses fausses (PRO, onboarding) | **Corrigé** | `tests/test_promesses_pro.py` |
+| I11 | Serveur mono-processus, IA synchrone | **Ouvert** | compression et quotas aident ; la génération tient toujours un fil |
+| I12 | Renommer un exercice coupe l'historique | **Ouvert** | message et outil de Gestion, pas de suivi automatique |
+| I13 | Échecs avalés (repas, cardio) | **Corrigé** | `tests/test_integrite_0310.py` |
+| I14 | Couverture faible auth/admin/programme | **Ouvert** | 47 % / 43 % / 49 % |
+| M1 | Bilan écrasé par « Passer » | **Corrigé** | `tests/test_integrite_0310.py` |
+| M2 | Bilans orphelins au renommage | **Corrigé** | `rename_session_notes` |
+| M3 | Semaines vides au poids du corps | **Corrigé** | filtre `Reps > 0` |
+| M4 | Défi unique 10 000 kg | **Corrigé** | cibles relatives, `tests/test_challenges.py` |
+| M5 | CSP sans `script-src` | **Ouvert (non retenu)** | Alpine.js impose `unsafe-eval` ; durcir exigerait sa version CSP |
+| M6 | Identifiants AdMob de test par défaut | **Ouvert** | `app.py` |
+| M7 | Webhook sans remboursement ni litige | **Ouvert** | `routes/billing.py` |
+| M8 | Quotas contournables en parallèle | **Corrigé** | `core/quota.py`, `tests/test_quota_atomique.py` |
+| M9 | Reprise de séance sur la date UTC | **Corrigé** | `templates/base.html` (journée logique locale) |
+| M10 | Reset « soft » sans confirmation serveur | **Ouvert** | `routes/gestion.py` |
+| M11 | Séries non bornées dans l'éditeur | **Ouvert** | `routes/programme.py` |
+| M12 | Image de 1,1 Mo non référencée | **Ouvert** | `static/promo-vip-poster.png` |
+| M13 | Vidéo en lecture automatique | **Ouvert** | `templates/vip_wall.html`, `templates/premium.html` |
+| M14 | Funnel VIP hors fenêtre | **Ouvert** | `core/db_admin.py` |
+| M15 | Tonnage admin avec le cardio | **Ouvert** | v39 |
+| M16 | Commentaires périmés | **Ouvert** | `core/catalog.py`, `routes/gestion.py` |
+
+**Nouveau, trouvé et corrigé** : **F1 — course du cache serveur.** Une lecture lente pouvait remettre en cache une valeur périmée juste après une écriture, servie jusqu'à 60 s (`core/db_base.py`). Révélé par les tests navigateur ; corrigé et testé (`tests/test_cache_course.py`). Pendant les corrections, une erreur 500 sur génération réussie a aussi été introduite puis corrigée avant toute mise en ligne (`3d0e678`, test ajouté).
+
+### A.5 Ce qui manque pour atteindre 8
+
+Par impact décroissant :
+
+1. **Nutrition** (seul axe resté à 5) : base d'aliments plus large avec recherche, repas détaillés par aliment, objectifs reliés aux jours d'entraînement.
+2. **Modèle de données** : index unique par série en base et écriture idempotente (migration), identifiant d'exercice stable plutôt que le nom, suivi automatique des renommages (I7, I12).
+3. **Génération IA en tâche de fond** et cache partagé, préalables à une deuxième instance (I11).
+4. **Petits trous visibles** : « Créer mon propre programme » doit ouvrir l'éditeur ; bornes dans l'éditeur (M11) ; confirmation serveur du reset (M10).
+5. **Revenus** : échec bruyant sans identifiants AdMob réels (M6), remboursements et litiges Stripe (M7), vidéo au tap (M13).
+6. **Tests** des chemins d'auth, d'admin et de programme (I14).
+7. **Rétention sociale** : binôme de régularité ou streak partagé.
+8. **Preuve d'usage** : le barème exige un niveau *prouvé* ; il faudra des chiffres réels (rétention J7/J30, conversion de l'essai) que le dépôt ne contient pas.
+
+### A.6 Non vérifiable depuis le dépôt (au 04/10)
+
+- **Cron horaire** (`/tasks/reminders` ou `cron_reminders.py`) : rappels, récap du dimanche et purge des événements en dépendent.
+- **Railway** : une seule instance (condition des verrous et du cache), statut du dernier déploiement, option « Wait for CI ». Le connecteur Railway est à reconnecter, et le site n'est pas joignable depuis l'environnement d'audit.
+- **Variables** : `ADMOB_BANNER_ID`, `ADMOB_INTERSTITIAL_ID`, `CRON_SECRET`, `ANTHROPIC_API_KEY`, événements Stripe abonnés au webhook.
+- **Usage réel** : rétention, conversion, satisfaction.
+
+---
+
+## B. Audit du 03/10 — détail conservé
+
+*État du commit `6126f95`, avant les corrections. Les statuts à jour sont au § A.4 ; les notes ci-dessous sont celles du 03/10.*
+
+### Note du 03/10 : **5,6 / 10** (le 30/09 : 4,9)
 
 > Le défaut central du 30/09 est réparé et prouvé dans un navigateur : une série validée est en base, « Terminer » ne perd plus rien, et 28 des 38 constats sont corrigés dans le code. Aucun défaut critique reproductible ne subsiste. Ce qui reste, c'est un carnet **qui note juste mais qui raisonne faux** : le RPE que l'utilisateur saisit n'arrive jamais à la suggestion de charge (reproduit : 3 × 8 à RPE 10 → « vise 9 reps »), le champ de reps affiche l'objectif en gris mais « Série faite » sur ce champ n'enregistre rien, le compteur « Séances » de l'accueil affiche 2/2 à un débutant qui en a fait 3, le catalogue ampute un PPL de sa séance Jambes si l'on choisit 2 jours, et refaire l'onboarding efface les autres programmes d'un membre PRO. En salle sans réseau fiable, une série en attente suffit à bloquer « Terminer » sur « Enregistrement… » (reproduit, 30 s et plus). Et la CI est verte… quatre jours sur sept : un test dépend du jour de la semaine et échoue le samedi, le dimanche et le lundi.
 
@@ -18,23 +161,7 @@
 
 **Constats** : 0 critique reproduit · 2 critiques **conditionnels** (dépendent de la configuration Supabase, invérifiable d'ici) · 14 importants · 16 mineurs. **12 reproductions** et 3 mesures en annexe.
 
----
-
-## Sommaire
-
-0. [Méthode](#0-méthode)
-1. [Partie 1 — Notes par axe](#partie-1--notes-par-axe)
-2. [Partie 2 — Parcours par profil](#partie-2--parcours-par-profil)
-3. [Partie 3 — Audit technique](#partie-3--audit-technique)
-4. [Partie 4 — Améliorations et idées](#partie-4--améliorations-et-idées)
-5. [Suivi des constats du 30/09](#5-suivi-des-constats-du-3009)
-6. [Écarts entre la doc et le code](#6-écarts-entre-la-doc-et-le-code)
-7. [Non vérifiable depuis le dépôt](#7-non-vérifiable-depuis-le-dépôt)
-8. [Annexe — reproductions et mesures](#8-annexe--reproductions-et-mesures)
-
----
-
-## 0. Méthode
+### 0. Méthode
 
 - **Périmètre** : `pwa/` (19 blueprints dont `seance_fin` et `seance_cardio` sortis le 01/10, 41 modules `core/`, 37 gabarits, 20 scripts JS, 14 feuilles CSS, 17 migrations SQL v23→v39), `android/`, `capacitor.config.json`, `railway.json`, `.github/`, `CONTEXT.md`. Chemins relatifs à `pwa/` sauf mention.
 - **Lecture** : `app.py`, toutes les routes, toute la couche données, les modules de calcul de séance, les gabarits et scripts de la séance, de l'accueil, de l'onboarding, de la page PRO, le service worker, la file hors-ligne, `MainApplication.java`, le manifeste Android, les migrations v37-v39.
@@ -47,7 +174,7 @@
 
 ---
 
-## Partie 1 — Notes par axe
+### Partie 1 — Notes par axe
 
 | # | Axe | 30/09 | 03/10 | En une phrase |
 |---|---|---:|---:|---|
@@ -74,7 +201,7 @@
 
 Moyenne : **5,55**, arrondie à 5,6.
 
-### Détail et preuves
+#### Détail et preuves
 
 **1. Onboarding — 5/10**
 - **Pour** : poids et taille partent enfin au serveur (`templates/onboarding.html:411-412`) et créent la première pesée (`routes/onboarding.py:136-158`) ; recommandation pondérée fréquence/équipement/niveau/objectif (`core/catalog.py:964-1047`) ; RPE et split expliqués.
@@ -165,7 +292,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 
 ---
 
-## Partie 2 — Parcours par profil
+### Partie 2 — Parcours par profil
 
 | # | Profil | Note | En une phrase |
 |---|---|---:|---|
@@ -179,7 +306,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 | 8 | App native Android | **5** | Pubs mieux placées, GPS débloqué ; même site dans une webview. |
 | 9 | Salle sans réseau (sous-sol) | **5** | Mode avion : ça marche. Réseau faible : « Terminer » se fige. |
 
-### 1. Débutant complet, jour 1 — 5/10
+#### 1. Débutant complet, jour 1 — 5/10
 **Parcours** : landing → Google → onboarding en 4 étapes (poids et taille exigés, enfin utilisés) → programme recommandé (Full Body Débutant) → accueil et tutoriel → carte « Prochaine séance · Commencer » qui ouvre directement la séance (`templates/accueil.html`, lien `mode=prefaite`) → écran de séance.
 **RPE et split ?** Expliqués : chaque niveau et chaque programme a sa bulle, le RPE est replié derrière « RPE, remarque » avec une explication juste dans le tutoriel (`static/js/tuto-seance.js:59`).
 **Frictions les plus coûteuses** :
@@ -188,45 +315,45 @@ Moyenne : **5,55**, arrondie à 5,6.
 3. Aucune aide pour la première charge (le poids n'est pas pré-rempli au premier essai) et un planning A-B-A qu'on lui a présenté comme « alterné » (`core/catalog.py:57`).
 **Ce qui lui manque** : valeur pré-remplie réelle, une première séance guidée, une indication de charge de départ.
 
-### 2. Débutant, semaine 3 — 5/10
+#### 2. Débutant, semaine 3 — 5/10
 **Ce qu'il vit** : à sa 3ᵉ séance, la modale PRO (`routes/accueil.py:496-507`) ; un debrief gratuit par semaine ; la suggestion « vise N+1 reps » respecte désormais la fourchette du programme.
 **Ce qui le fait décrocher** :
 1. Il fait lundi, mercredi, vendredi ; l'accueil dit « Séances 2/2 » (R5). L'effort du vendredi n'est pas compté.
 2. Défi « Soulève 10 000 kg » quand sa semaine pèse 1 440 kg (R5) : il le rate toutes les semaines où il tombe.
 3. Rien ne lui raconte sa progression (« +10 kg au squat en 3 semaines ») : elle existe dans la fiche exercice, personne ne la lui pousse.
 
-### 3. Intermédiaire (2 ans, vient de Hevy/Strong) — 4/10
+#### 3. Intermédiaire (2 ans, vient de Hevy/Strong) — 4/10
 **Ce qu'il perd** :
 1. Son historique : aucun import CSV Hevy/Strong (seul l'export Strava est lu, `routes/cardio.py`) ; records et « dernière fois » repartent de zéro.
 2. Le geste appris : chez eux, la valeur grisée est validée d'un tap ; ici elle n'est qu'un placeholder et la série validée vide disparaît (R2).
 3. Supersets, séries d'échauffement, dégressives : absents ; en gratuit, 1 programme et 5 programmes du catalogue sur 20.
 **Ce qu'il gagne** : coach IA qui lit son carnet, debrief, nutrition, interface française, compte à rebours natif.
 
-### 4. Avancé / « pro » — 3/10
+#### 4. Avancé / « pro » — 3/10
 **L'app tient-elle la route ?** Comme carnet, à peine ; comme outil de pilotage, non.
 1. **Son RPE ne sert à rien** : il saisit 3 × 8 à 100 kg à RPE 10 ; la suggestion suivante dit « Même charge, vise 9 reps » au lieu de « Consolide » (R11). Le RPE est écrit dans la colonne `rpe` (`core/seance_saisie.py:105`, `core/db_historique.py:203`) mais la suggestion le cherche dans le texte de la remarque (`core/seance_historique.py:198`).
 2. Aucune périodisation : ni blocs, ni décharge, ni pourcentage d'e1RM dans la séance ; planning hebdomadaire figé ; StrongLifts annoncé « alternance A/B » (`core/catalog.py:573`) mais planifié A-B-A chaque semaine.
 3. Pas de séries d'échauffement (elles comptent dans volume et records) ; pas de séries par muscle et par semaine ; le coach ne voit ni ses RPE ni ses reps cibles (R7).
 
-### 5. Utilisateur FREE — 6/10
+#### 5. Utilisateur FREE — 6/10
 **Jusqu'où il va** : séances illimitées, 5 programmes (dont PPL 3 j et Upper/Lower 4 j), fiche exercice, calendrier, courbe de poids, cardio + GPS + import Strava, badges, défis, un debrief par semaine, rappels, **export complet gratuit** (`routes/gestion.py:550-596`).
 **Murs** : Coach IA, générateur, nutrition, carte du corps / hall of fame / table RM, multi-programmes, réimport. Ils tombent au bon moment (après la 3ᵉ séance, cadenas visibles dans « Plus »).
 **Ratés** : la page PRO lui vend comme PRO deux programmes qu'il a déjà (`templates/premium.html:110`) ; le mur charge une vidéo de 895 ko.
 
-### 6. Utilisateur en ESSAI restreint (vip_until) — 4/10
+#### 6. Utilisateur en ESSAI restreint (vip_until) — 4/10
 **Parcours** : lien d'invitation → 1 jour d'essai (`routes/parrainage.py:23`) → badge **ESSAI** (`templates/base.html:123`) → « Plus » : « Essai PRO · encore X h — Passe en PRO pour le garder » (`templates/plus.html:8-13`) → Coach : mur PRO → page PRO : encadré d'essai et **boutons d'achat** (`templates/premium.html:37-46`, `:131-142`).
 **Cohérent ou frustrant ?** Cohérent désormais. Mais l'essai ouvre la nutrition et les statistiques — deux fonctions qui montrent leur valeur au bout de plusieurs jours — pendant 24 h, et ferme le coach et le debrief illimité, les deux seules choses que personne d'autre n'a. Le parrain, lui, reçoit 3 jours du même essai restreint.
 
-### 7. Utilisateur VIP payant (4,99 €/mois) — 5/10
+#### 7. Utilisateur VIP payant (4,99 €/mois) — 5/10
 **Ce qu'il a** : coach 15 messages/jour, générateur 3/semaine, debrief après chaque séance, nutrition + scan, statistiques, 20 programmes, multi-programmes, pas de pub dans l'app native.
 **En a-t-il pour son argent ?** Il paie le prix de Hevy Pro ou Strong Pro (ordre de grandeur, § 7) pour un carnet moins rapide à remplir mais avec un coach et un debrief qu'ils n'ont pas.
 **Réabonnement au mois 3** : le debrief et le coach sont les seules raisons récurrentes ; contre elles, un coach qui ignore ses RPE, une suggestion qui ignore ses RPE, un « refaire l'onboarding » qui efface ses dossiers (R4), et aucun écran « ce que PRO t'a apporté ce mois-ci ».
 
-### 8. Utilisateur de l'app native Android — 5/10
+#### 8. Utilisateur de l'app native Android — 5/10
 **Écarts avec le web** : même site dans une webview (`capacitor.config.json:4-6`) ; compte à rebours natif du repos ; publicités pour les gratuits, mais plus de pub « App Open » pendant une séance (`MainApplication.java`, `inSession()`) — sauf entre l'ouverture de la séance et la première série, car le drapeau n'est posé qu'à la première série (`static/js/seance.js:98-114`) ; GPS désormais permis ; achat masqué si `HIDE_NATIVE_BILLING` est posé (`app.py:396-410`), et alors aucun moyen d'acheter dans l'app ; identifiants AdMob de test si l'environnement ne les fournit pas (`app.py:457-458`).
 **Frictions** : démarrage dépendant du réseau (webview distante) ; reprise de séance au démarrage à froid fondée sur la date UTC (`templates/base.html:108`), donc ratée entre minuit et 2 h ; achat qui peut basculer dans le navigateur (`templates/premium.html:67-72`).
 
-### 9. Utilisateur en salle sans réseau (sous-sol) — 5/10
+#### 9. Utilisateur en salle sans réseau (sous-sol) — 5/10
 **Étape par étape** :
 1. À la maison : l'accueil fait garder la séance planifiée d'aujourd'hui et de demain (`routes/accueil.py:403-414`). Une séance non planifiée n'est pas gardée.
 2. Mode avion : bandeau orange, page servie par le cache, « Série faite » met en file, « Terminer » met le bilan derrière les séries (`static/js/seance.js:917-931`) ; au retour du réseau, tout part dans l'ordre (prouvé, `tests/e2e/test_seance_navigateur.py:172-190`).
@@ -234,15 +361,15 @@ Moyenne : **5,55**, arrondie à 5,6.
 4. « Terminer » avec une série en file : `OfflineQueue.sync()` attend un `fetch` sans délai (`static/js/offline.js:148-155`) ; le bouton reste sur « Enregistrement… » **indéfiniment** (R1). L'utilisateur finit par fermer l'app : ses séries sont en file (pas perdues), son bilan et sa durée ne partent pas, et la séance n'est jamais close.
 5. Le chrono de repos fonctionne parfaitement hors ligne.
 
-### Verdict
+#### Verdict
 - **Meilleure du marché pour** : le pratiquant francophone débutant ou intermédiaire, sur Android, qui veut un coach IA branché sur son vrai carnet et un debrief après chaque séance, pour 4,99 € — combinaison absente de Hevy et Strong à ma connaissance (§ 7), avec le compte à rebours natif en prime. À condition de taper ses reps à chaque série.
 - **Clairement la pire pour** : le pratiquant avancé qui pilote au RPE (powerlifting, 5 × 5, blocs) : la fonction qui devrait le servir — la suggestion — ignore précisément la donnée qu'il saisit, et rien ne permet de périodiser.
 
 ---
 
-## Partie 3 — Audit technique
+### Partie 3 — Audit technique
 
-### Critique — conditionnels (configuration hors dépôt)
+#### Critique — conditionnels (configuration hors dépôt)
 
 **CC1 — Escalade de tier si la migration v38 n'est pas appliquée.** Déduit.
 - **Preuve** : la v38 elle-même décrit la faille : « depuis la console, un compte gratuit pouvait faire `update profiles set tier = 'vip'` » (`supabase_schema_v38_tables_fermees_au_client.sql:4-9`). La clé anon est publique (page de connexion) et le navigateur garde une session Supabase.
@@ -254,7 +381,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 - **Impact** : prise de la console : passer des comptes VIP, lire les e-mails newsletter, pousser une notification à tous.
 - **Correctif** : n'accepter en admin qu'un jeton `provider == "google"` et `email_verified` ; mieux, une liste d'`user_id` plutôt que d'e-mails.
 
-### Importants (14)
+#### Importants (14)
 
 | # | Constat (preuves) | Statut | Ce que ressent l'utilisateur | Correctif |
 |---|---|---|---|---|
@@ -273,7 +400,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 | I13 | **Échecs encore avalés** : ajout de repas (`routes/nutrition.py:381-385`), retrait de cardio (`routes/seance_cardio.py:286-291`). | Déduit | Repas « ajouté » qui n'apparaît pas. | Message d'erreur et code 503. |
 | I14 | **Couverture faible là où se jouent l'argent et les droits** : auth 34 %, admin 43 %, programme 48 %. | Mesuré | — | Tests des chemins CC2, I6, I12. |
 
-### Mineurs (16)
+#### Mineurs (16)
 
 | # | Constat (preuves) | Impact | Correctif |
 |---|---|---|---|
@@ -294,7 +421,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 | M15 | Tonnage admin incluant le cardio (minutes × km) (`supabase_schema_v39_admin_stats.sql:19`). | Chiffre gonflé. | Exclure `exercice like 'CARDIO:%'`. |
 | M16 | Commentaires périmés : « Les reps ne sont PAS stockées » (`core/catalog.py:7-8`), « sans rien effacer » (`routes/gestion.py:222`). | Induit en erreur le prochain lecteur. | Corriger. |
 
-### Synthèse par domaine demandé
+#### Synthèse par domaine demandé
 - **Sécurité** : CC1, CC2, M5, M6. Webhook signé, service_role uniquement serveur, CSRF partout, secret cron en en-tête et comparaison à temps constant (`routes/push.py:25-38`) : corrects.
 - **Intégrité des données** : I2, I3, I6, I7, M1, M2, I12. Croissance non bornée : `events` purgée à 13 mois **seulement si** le cron de relance tourne (`routes/push.py:111`) ; cache du service worker sans éviction entre deux déploiements.
 - **Performance** : Q1 (requêtes), Q2 (poids), I11. Aucune compression HTTP côté app.
@@ -302,9 +429,9 @@ Moyenne : **5,55**, arrondie à 5,6.
 
 ---
 
-## Partie 4 — Améliorations et idées
+### Partie 4 — Améliorations et idées
 
-### A. Les 10 améliorations à impact maximal (triées par impact / effort)
+#### A. Les 10 améliorations à impact maximal (triées par impact / effort)
 
 | # | Problème | Correctif | Fichiers | Effort | Impact attendu · profil |
 |---|---|---|---|---|---|
@@ -319,7 +446,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 | 9 | Programmes amputés (I5) | Rotation réelle des séances sur les jours (A-B-A / B-A-B) | `core/catalog.py`, `routes/accueil.py`, `routes/seance.py` | M | Débutants (3 programmes gratuits sur 5 sont A/B) |
 | 10 | Écritures non idempotentes (I7) | Index unique par série + upsert | migration v40, `core/db_historique.py` | M | Intégrité de toutes les statistiques |
 
-### B. 15 idées de fonctionnalités
+#### B. 15 idées de fonctionnalités
 « Inédit » = absent de Hevy, Strong et Fitbod **à ma connaissance** (non vérifiable d'ici, § 7).
 
 | # | Idée | À qui | Pourquoi ça retient ou convertit | Complexité | Risque | Inédit |
@@ -340,18 +467,18 @@ Moyenne : **5,55**, arrondie à 5,6.
 | 14 | Défi relatif (+5 % de ton volume habituel) | Tous | Atteignable pour chacun | S | Faible | Non |
 | 15 | Créneaux libres de l'agenda → rappel au bon moment | Actifs | Rappel pertinent | M | Permission agenda | Non |
 
-### C. Les 3 choses à supprimer
+#### C. Les 3 choses à supprimer
 1. **Les verbes en double sur chaque carte** — « Enregistrer », « Recommencer cet exercice », « Réinitialiser les poids » (`templates/_seance_carte_exercice.html`), maintenant que « Série faite » écrit. Deux façons d'enregistrer, c'est deux modèles mentaux et l'écran le plus chargé de l'app.
 2. **Le bloc « Récupération » en tête de séance** (`templates/seance_edit.html:78-79`, `core/seance_historique.py:141-163`) : un statut PRÊT / REPAR. calculé sur le seul nombre de jours, qui repousse le premier champ hors écran (Q3) sans rien changer à ce que l'utilisateur fait.
 3. **Le « reset soft » et l'archive héritée** (`routes/gestion.py:422-464`, clés `_archive`, `_legacy_volume`, réinjectées dans les statistiques par `routes/progres.py:116-133`) : un mécanisme de l'époque Streamlit qui efface l'historique pour en garder un résumé dans le blob — dette et risque de perte, pour un besoin que l'export gratuit couvre.
 
-### D. Une seule action pour les 30 prochains jours
+#### D. Une seule action pour les 30 prochains jours
 **Faire de « Série faite » un tap qui enregistre la bonne valeur, une seule fois, quel que soit le réseau** : valeurs pré-remplies réelles (I2), écriture idempotente par série (I7), fin de séance jamais bloquée (I3), et la suggestion qui lit enfin le RPE (I1, une ligne).
 **Pourquoi** : c'est le seul geste que l'utilisateur répète vingt fois par séance, et tout le reste — suggestion, records, streak, défis, coach, debrief, donc la conversion — se nourrit de ce qu'il produit. Le 30/09, ce geste perdait des séances ; aujourd'hui il ne perd plus rien de ce qui est tapé, mais il demande plus d'effort que chez Hevy et il ment encore dans deux cas (placeholder, réseau faible). C'est aussi ce qui décide si l'intermédiaire venu de Hevy reste après sa première séance. Avant cela, dix minutes pour CC1 et CC2.
 
 ---
 
-## 5. Suivi des constats du 30/09
+### 5. Suivi des constats du 30/09
 
 **28 corrigés · 10 partiels · 0 laissés en l'état.**
 
@@ -398,7 +525,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 
 ---
 
-## 6. Écarts entre la doc et le code
+### 6. Écarts entre la doc et le code
 
 | La doc affirme | Le code dit |
 |---|---|
@@ -421,7 +548,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 
 ---
 
-## 7. Non vérifiable depuis le dépôt
+### 7. Non vérifiable depuis le dépôt
 
 1. **Migrations v37, v38, v39 réellement appliquées — à vérifier en premier (CC1).** Dans l'éditeur SQL de Supabase :
    ```sql
@@ -442,7 +569,7 @@ Moyenne : **5,55**, arrondie à 5,6.
 
 ---
 
-## 8. Annexe — reproductions et mesures
+### 8. Annexe — reproductions et mesures
 
 **Environnement** : copie du dépôt hors dépôt, Python 3.11, `requirements.txt` + `requirements-dev.txt`, fausse base `tests/conftest.py`, serveur `run_local_fake.py`, Chromium headless (Playwright 1.60, alias vers le binaire installé) en 375 × 812, locale fr-FR. Date réelle : samedi 03/10/2026.
 
