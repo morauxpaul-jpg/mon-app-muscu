@@ -245,3 +245,16 @@ def test_le_cron_ne_lit_que_les_programmes_des_abonnes(fake_db, monkeypatch):
     monkeypatch.setattr(conftest.FakeQuery, "execute", espion)
     assert [t["user_id"] for t in reminders.targets_for_hour(18)] == [USER_ID]
     assert lus == [USER_ID]
+
+
+def test_precache_toute_la_semaine(fake_db, logged_in):
+    """La séance de dans cinq jours est gardée aussi : on ouvre l'app lundi,
+    on s'entraîne samedi au sous-sol (audit du 03/10, idée 12)."""
+    import json
+    import re
+    dans5 = TODAY + dt.timedelta(days=5)
+    _seed(fake_db, planning={DAYS_FR[dans5.weekday()]: "Pull"})
+    html = logged_in.get("/accueil").get_data(as_text=True)
+    urls = json.loads(re.search(r'id="precache-urls">(.*?)</script>', html, re.S).group(1))
+    assert f"/seance?mode=prefaite&name=Pull&date={dans5.isoformat()}" in urls
+    assert 'id="pack-horsligne"' in html

@@ -699,3 +699,6 @@ html.has-ad-banner .topbar {
 .bilan-pro-case { text-align: center; padding: 8px 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
 .bilan-pro-case b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
 .bilan-pro-case span { font-size: 0.7rem; color: var(--text-3); }
+
+/* Pastille « prêt hors-ligne » (accueil, offline.js). */
+.pack-horsligne { margin: 4px 0 12px; font-size: 0.75rem; color: #34c759; text-align: center; }

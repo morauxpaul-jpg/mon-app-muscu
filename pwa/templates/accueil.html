@@ -352,6 +352,9 @@
   {% endif %}
 
   {# URLs que le service worker garde pour le hors-ligne (cf. offline.js). #}
+  {# Pastille affichée par offline.js quand toutes les séances de la semaine
+     sont gardées par le service worker. #}
+  <div id="pack-horsligne" class="pack-horsligne" hidden>✓ Séances de la semaine prêtes hors-ligne</div>
   <script type="application/json" id="precache-urls">{{ precache_urls|default([])|tojson }}</script>
 
   <script>

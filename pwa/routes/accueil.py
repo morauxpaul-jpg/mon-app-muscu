@@ -405,13 +405,21 @@ def index():
     # planifiées d'aujourd'hui et de demain pendant qu'il y a du réseau.
     from urllib.parse import quote as _q
     precache_urls = []
-    for off in (0, 1):
+    # Toute la semaine qui vient, plus seulement aujourd'hui et demain : la
+    # séance du jeudi s'ouvre au sous-sol même si l'on n'a pas ouvert l'app
+    # mercredi (audit du 03/10, idée 12). offline.js ne relance la mise en
+    # cache qu'une fois par jour ou quand la liste change.
+    for off in range(7):
         d = today + timedelta(days=off)
         sname = seance_prevue(prog, d)
         if not sname:
             continue
         d_iso = d.strftime("%Y-%m-%d")
-        precache_urls.append(f"/seance?date={d_iso}")
+        # La page de choix seulement pour aujourd'hui et demain : chaque URL
+        # compte dans la limite de 60 requêtes par minute et par IP, souvent
+        # partagée en salle (Wi-Fi, opérateur). Dix pages au plus.
+        if off < 2:
+            precache_urls.append(f"/seance?date={d_iso}")
         precache_urls.append(
             f"/seance?mode=prefaite&name={_q(sname)}&date={d_iso}")
     # La page de choix du jour sert de point d'entrée même sans planning.

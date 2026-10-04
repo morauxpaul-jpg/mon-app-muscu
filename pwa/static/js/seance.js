@@ -24,6 +24,13 @@
   "use strict";
 
   var CONFIG = readJson("seance-config") || {};
+  // App Android : pas de pub plein écran dès que la séance est OUVERTE. Le
+  // drapeau n'était posé qu'à la première série, et une pub pouvait tomber
+  // entre l'ouverture et cette série (audit du 03/10, profil 8). Le natif
+  // l'oublie de lui-même au-delà de quelques heures (SESSION_MAX_MS).
+  try {
+    if (window.MTAds && window.MTAds.setInSession) window.MTAds.setInSession(true);
+  } catch (e) {}
   var DRAFT_PREFIX = "draft_" + CONFIG.seance + "_" + CONFIG.date + "_";
   var SESSION_KEY = "active_session";
   var START_KEY = "seance_start_" + CONFIG.seance + "_" + CONFIG.date;
