@@ -39,7 +39,7 @@ def _port_libre():
 @pytest.fixture(scope="module")
 def serveur():
     port = _port_libre()
-    env = dict(os.environ, PORT=str(port), FLASK_SECRET_KEY="e2e", PYTHONUTF8="1")
+    env = dict(os.environ, PORT=str(port), FLASK_SECRET_KEY="e2e", PYTHONUTF8="1", FAUX_IA="lent")
     proc = subprocess.Popen([sys.executable, "run_local_fake.py"], cwd=PWA, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
@@ -428,4 +428,37 @@ def test_renommer_un_exercice_propose_demmener_ses_series(serveur, navigateur):
     assert _attendre(lambda: _series(serveur, "Développé couché barre") == [(1, 5, 100.0)])
     assert _series(serveur) == []
     assert erreurs == []
+    ctx.close()
+
+
+# ── Générateur : l'IA travaille en tâche de fond ─────────────────
+
+def test_generateur_suit_la_tache_jusquau_programme(serveur, navigateur):
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');")
+    pg = ctx.new_page()
+    erreurs, requetes = [], []
+    pg.on("pageerror", lambda e: erreurs.append(str(e)))
+    pg.on("request", lambda r: requetes.append(r.url))
+    pg.goto(serveur + "/test-vierge")
+    pg.goto(serveur + "/test-login?vip=1&to=/generator")
+    pg.get_by_role("button", name="Générer mon programme").click()
+    pg.wait_for_selector(".gen-progres:visible")
+    pg.wait_for_selector("text=Programme de test", timeout=20000)
+    assert any("/generator/tache/" in u for u in requetes), "la page n'a pas suivi la tâche"
+    assert erreurs == []
+    ctx.close()
+
+
+def test_generateur_reprend_apres_un_rechargement(serveur, navigateur):
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');")
+    pg = ctx.new_page()
+    pg.goto(serveur + "/test-vierge")
+    pg.goto(serveur + "/test-login?vip=1&to=/generator")
+    pg.get_by_role("button", name="Générer mon programme").click()
+    pg.wait_for_function("() => !!sessionStorage.getItem('gen_tache')", timeout=5000)
+    pg.reload()
+    pg.wait_for_selector("text=Programme de test", timeout=20000)
+    assert pg.evaluate("() => sessionStorage.getItem('gen_tache')") is None
     ctx.close()

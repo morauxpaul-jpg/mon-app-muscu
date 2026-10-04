@@ -106,6 +106,7 @@
       <div class="gen-progres-etape" x-text="etapeTexte()"></div>
       <div class="gen-progres-barre"><span :style="'width:' + Math.min(95, ecoule / 22 * 100) + '%'"></span></div>
       <div class="gen-progres-temps" x-text="Math.round(ecoule) + ' s · d\'habitude 10 à 25 s'"></div>
+      <div class="gen-progres-temps">Tu peux changer de page : la génération continue et t'attend ici à ton retour.</div>
     </div>
     <div class="s-f4cfdb" x-show="error" x-text="error"></div>
     <div class="s-88b41d" x-show="quotaLeft <= 0">
@@ -291,17 +292,37 @@
           cardio_freq: this.form.cardioFreq,
         };
       },
+      // La génération tourne en tâche de fond côté serveur : 202 = « encore
+      // en cours », on réinterroge jusqu'au résultat (core/taches_ia.py).
+      async _suivre(resp, onTache) {
+        let data = await resp.json().catch(() => ({}));
+        let status = resp.status;
+        const limite = Date.now() + 160000;
+        while (status === 202 && data.tache && Date.now() < limite) {
+          if (onTache) onTache(data.tache);
+          await new Promise(r => setTimeout(r, 1500));
+          try {
+            const r2 = await fetch('/generator/tache/' + encodeURIComponent(data.tache),
+                                   { headers: { Accept: 'application/json' } });
+            status = r2.status;
+            data = await r2.json().catch(() => ({}));
+          } catch (e) { /* coupure réseau passagère : on réessaie au tour suivant */ }
+        }
+        if (status === 202) return { ok: false, data: { error: 'La génération prend trop de temps. Réessaie.' } };
+        return { ok: status >= 200 && status < 300, data: data };
+      },
       async refaireSeance(sname) {
         if (this.refait.loading) return;
         this.refait.loading = true; this.refait.error = '';
         try {
-          const resp = await fetch('/generator/seance', {
+          const resp0 = await fetch('/generator/seance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ program: this.program, seance: sname,
                                    consigne: this.refait.consigne, params: this._params() }),
           });
-          const data = await resp.json().catch(() => ({}));
+          const res = await this._suivre(resp0);
+          const resp = { ok: res.ok }, data = res.data;
           if (!resp.ok || !data.ok) {
             this.refait.error = data.error || 'La séance n\'a pas pu être refaite. Réessaie.';
           } else {
@@ -316,6 +337,29 @@
       },
       quotaLeft: {{ quota_remaining }},
       _armed: false,
+      // Page rechargée (ou rouverte) pendant une génération : on reprend le
+      // suivi au lieu de perdre le programme en cours de fabrication.
+      async init() {
+        let t = null;
+        try { t = sessionStorage.getItem('gen_tache'); } catch (e) {}
+        if (!t || this.loading) return;
+        this.loading = true; this.error = ''; this.ecoule = 0;
+        const debut = Date.now();
+        this._chrono = setInterval(() => { this.ecoule = (Date.now() - debut) / 1000; }, 500);
+        try {
+          const r = await fetch('/generator/tache/' + encodeURIComponent(t), { headers: { Accept: 'application/json' } });
+          const res = await this._suivre(r);
+          if (res.ok && res.data.ok) {
+            this.program = res.data.program;
+            if (typeof res.data.quota_remaining === 'number') this.quotaLeft = res.data.quota_remaining;
+          } else if (r.status !== 404) {
+            this.error = res.data.error || 'La génération a échoué. Réessaie.';
+          }
+        } catch (e) { /* hors ligne : rien à reprendre */ }
+        try { sessionStorage.removeItem('gen_tache'); } catch (e) {}
+        clearInterval(this._chrono);
+        this.loading = false;
+      },
       async generate() {
         if (this.loading || this.quotaLeft <= 0) return;
         this.loading = true; this.error = '';
@@ -324,12 +368,14 @@
         this._chrono = setInterval(() => { this.ecoule = (Date.now() - debut) / 1000; }, 500);
         try {
           const payload = this._params();
-          const resp = await fetch('/generator/generate', {
+          const resp0 = await fetch('/generator/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
-          const data = await resp.json().catch(() => ({}));
+          const res = await this._suivre(resp0, (t) => { try { sessionStorage.setItem('gen_tache', t); } catch (e) {} });
+          try { sessionStorage.removeItem('gen_tache'); } catch (e) {}
+          const resp = { ok: res.ok }, data = res.data;
           if (!resp.ok || !data.ok) {
             this.error = data.error || 'La génération a échoué. Réessaie.';
           } else {

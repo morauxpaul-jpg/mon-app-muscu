@@ -3,9 +3,12 @@
 Flow :
   GET  /generator           : formulaire (objectif, niveau, fréquence, matériel,
                               contraintes, durée). VIP only (paywall sinon).
-  POST /generator/generate  : construit un prompt structuré, appelle Claude, lui
-                              demande un JSON STRICT de programme, le parse et le
-                              valide, puis le renvoie pour prévisualisation.
+  POST /generator/generate  : construit un prompt structuré et lance l'appel à
+                              Claude EN TÂCHE DE FOND (core/taches_ia.py) ; répond
+                              le programme si l'IA finit en 2 s, sinon 202 + un
+                              identifiant de tâche.
+  GET  /generator/tache/<id>: état de la tâche — 202 tant qu'elle tourne, puis le
+                              programme parsé et validé (ou l'erreur).
   POST /generator/apply     : re-valide le programme reçu et l'enregistre via
                               save_prog (même chemin sûr que l'import).
 
@@ -15,7 +18,7 @@ Le parseur `parse_and_validate` est une fonction PURE (sans I/O) → testable.
 import json
 import logging
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g
+from flask import Blueprint, current_app, render_template, request, jsonify, redirect, url_for, g
 
 from core.data import get_prog, save_prog_body
 from core.programmes_dossiers import remplacer_programme_en_cours
@@ -26,6 +29,7 @@ from core.limiter import limiter
 from core.analytics import track, paywall
 from core.exercises_data import EXERCISES_INFO
 from core.muscu import MUSCLE_LIST
+from core import taches_ia
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,7 @@ bp = Blueprint("generator", __name__)
 
 MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 2600
+TIMEOUT_IA = 90  # s : au-delà, l'appel est abandonné (la tâche rend une erreur)
 WEEKLY_GEN_QUOTA = 3  # générations / semaine glissante (7 j) / VIP — protège le coût API
 
 _MUSCLES_SET = {m.lower() for m in MUSCLE_LIST}
@@ -328,18 +333,46 @@ def generate():
     if not getattr(g, "is_vip_full", False):
         return jsonify({"error": "Réservé aux membres PRO."}), 403
 
+    user_id = g.user_id
+    # Un deuxième tap pendant qu'une génération tourne la rejoint, au lieu
+    # d'en lancer une seconde (et de brûler une place du quota).
+    deja = taches_ia.en_cours(user_id, "programme")
+    if deja:
+        corps, code = taches_ia.reponse(deja, user_id)
+        return jsonify(corps), code
+
     # Vérifier ET réserver d'un seul geste : compté après l'appel, le quota
     # laissait passer des générations lancées en parallèle (audit du 03/10, M8).
+    # La place est rendue par la tâche elle-même, quand elle se termine.
     from core.quota import liberer, reserver
-    user_id = g.user_id
     if not reserver("generateur", user_id, lambda: _gen_used_week(user_id), WEEKLY_GEN_QUOTA):
         return jsonify({
             "error": f"Limite hebdomadaire atteinte ({WEEKLY_GEN_QUOTA}/semaine). Reviens dans quelques jours.",
         }), 429
+    params = _lire_params(request.get_json(silent=True) or {})
     try:
-        return _generer()
-    finally:
+        tid = taches_ia.lancer(user_id, "programme", _travail_generation(user_id, params),
+                               current_app._get_current_object())
+    except Exception:
         liberer("generateur", user_id)
+        raise
+    corps, code = taches_ia.reponse(tid, user_id)
+    return jsonify(corps), code
+
+
+@bp.route("/generator/tache/<tid>")
+@limiter.limit("120 per minute")
+def tache(tid):
+    """Où en est la génération ? 202 tant qu'elle tourne (la page réinterroge),
+    puis le résultat définitif. Une tâche d'un autre compte est introuvable."""
+    if not getattr(g, "is_vip_full", False):
+        return jsonify({"error": "Réservé aux membres PRO."}), 403
+    etat = taches_ia.lire(str(tid)[:64], g.user_id)
+    if etat is None:
+        return jsonify({"error": "Génération introuvable (le serveur a peut-être redémarré). "
+                                 "Relance-la : ton quota n'a pas été entamé."}), 404
+    corps, code = etat
+    return jsonify(corps), code
 
 
 def _lire_params(f: dict) -> dict:
@@ -365,21 +398,22 @@ def _lire_params(f: dict) -> dict:
 
 
 def _appeler_ia(prompt: str, max_tokens: int = MAX_TOKENS):
-    """(texte, None) ou (None, réponse d'erreur Flask). Le détail d'une panne
-    (fournisseur, clé, crédit) reste dans les logs, comme pour le coach."""
+    """(texte, None) ou (None, (corps d'erreur, code HTTP)). Tourne hors requête
+    (tâche de fond) : ni `request`, ni `g`, ni `jsonify` ici. Le détail d'une
+    panne (fournisseur, clé, crédit) reste dans les logs, comme pour le coach."""
     indispo = ({"error": "La génération de programme est momentanément "
                          "indisponible. Réessaie plus tard."}, 503)
     api_key = _env("ANTHROPIC_API_KEY")
     if not api_key:
         logger.error("clé IA absente de l'environnement : générateur indisponible")
-        return None, (jsonify(indispo[0]), indispo[1])
+        return None, indispo
     try:
         import anthropic  # type: ignore
     except ImportError:
         logger.error("paquet anthropic absent : générateur indisponible")
-        return None, (jsonify(indispo[0]), indispo[1])
+        return None, indispo
     try:
-        client = anthropic.Anthropic(api_key=api_key)
+        client = anthropic.Anthropic(api_key=api_key, timeout=TIMEOUT_IA)
         response = client.messages.create(
             model=MODEL, max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
@@ -395,33 +429,34 @@ def _appeler_ia(prompt: str, max_tokens: int = MAX_TOKENS):
         else:
             msg = ("La génération de programme est momentanément indisponible. "
                    "Réessaie plus tard — ton quota n'a pas été entamé.")
-        return None, (jsonify({"error": msg}), 502)
+        return None, ({"error": msg}, 502)
 
 
-def _generer():
-    """Corps de la génération, une fois le quota réservé."""
-    params = _lire_params(request.get_json(silent=True) or {})
-    raw, erreur = _appeler_ia(_build_prompt(params))
-    if erreur:
-        return erreur
-
-    try:
-        program = parse_and_validate(raw)
-    except ValueError as e:
-        logger.error("/generator parse FAILED: %s | raw=%s", e, raw[:200])
-        return jsonify({"error": "L'IA a renvoyé un programme illisible. Réessaie."}), 502
-
-    track("program_generated", {
-        "objectif": params["objectif"], "niveau": params["niveau"],
-        "frequence": params["frequence"], "seances": len(program["seances"]),
-        "cardio": len(program.get("cardio") or []),
-    })
-    # L'événement vient d'être écrit (synchrone) : le compte l'inclut.
-    return jsonify({
-        "ok": True,
-        "program": program,
-        "quota_remaining": max(0, WEEKLY_GEN_QUOTA - _gen_used_week(g.user_id)),
-    })
+def _travail_generation(user_id: str, params: dict):
+    """La génération elle-même, exécutée en tâche de fond. Rend (corps, code)
+    et rend toujours la place réservée dans le quota en finissant."""
+    def travail():
+        from core.quota import liberer
+        try:
+            raw, erreur = _appeler_ia(_build_prompt(params))
+            if erreur:
+                return erreur
+            try:
+                program = parse_and_validate(raw)
+            except ValueError as e:
+                logger.error("/generator parse FAILED: %s | raw=%s", e, raw[:200])
+                return {"error": "L'IA a renvoyé un programme illisible. Réessaie."}, 502
+            track("program_generated", {
+                "objectif": params["objectif"], "niveau": params["niveau"],
+                "frequence": params["frequence"], "seances": len(program["seances"]),
+                "cardio": len(program.get("cardio") or []),
+            }, user_id=user_id, tier="vip")
+            # L'événement vient d'être écrit (synchrone) : le compte l'inclut.
+            return {"ok": True, "program": program,
+                    "quota_remaining": max(0, WEEKLY_GEN_QUOTA - _gen_used_week(user_id))}, 200
+        finally:
+            liberer("generateur", user_id)
+    return travail
 
 
 # ── Refaire une seule séance ────────────────────────────────────
@@ -474,23 +509,34 @@ def regenerer_seance():
     if not reserver("generateur-seance", user_id,
                     lambda: _evenements_recents(user_id, "seance_regenerated", 1), SEANCE_QUOTA_JOUR):
         return jsonify({"error": f"Limite atteinte ({SEANCE_QUOTA_JOUR} séances refaites par jour)."}), 429
-    try:
-        raw, erreur = _appeler_ia(_prompt_seance(params, program, seance, consigne), MAX_TOKENS_SEANCE)
-        if erreur:
-            return erreur
+
+    def travail():
         try:
-            texte = raw.strip()
-            if texte.startswith("```"):
-                texte = "\n".join(l for l in texte.split("\n") if not l.strip().startswith("```"))
-            exos = json.loads(texte).get("exercices")
-            nouvelle = parse_and_validate({"seances": {seance: exos}})["seances"][seance]
-        except (ValueError, AttributeError, TypeError):
-            logger.error("/generator/seance parse FAILED | raw=%s", (raw or "")[:200])
-            return jsonify({"error": "L'IA a renvoyé une séance illisible. Réessaie."}), 502
-        track("seance_regenerated", {"seance": seance, "exos": len(nouvelle)})
-        return jsonify({"ok": True, "seance": seance, "exercices": nouvelle})
-    finally:
+            raw, erreur = _appeler_ia(_prompt_seance(params, program, seance, consigne), MAX_TOKENS_SEANCE)
+            if erreur:
+                return erreur
+            try:
+                texte = raw.strip()
+                if texte.startswith("```"):
+                    texte = "\n".join(l for l in texte.split("\n") if not l.strip().startswith("```"))
+                exos = json.loads(texte).get("exercices")
+                nouvelle = parse_and_validate({"seances": {seance: exos}})["seances"][seance]
+            except (ValueError, AttributeError, TypeError):
+                logger.error("/generator/seance parse FAILED | raw=%s", (raw or "")[:200])
+                return {"error": "L'IA a renvoyé une séance illisible. Réessaie."}, 502
+            track("seance_regenerated", {"seance": seance, "exos": len(nouvelle)},
+                  user_id=user_id, tier="vip")
+            return {"ok": True, "seance": seance, "exercices": nouvelle}, 200
+        finally:
+            liberer("generateur-seance", user_id)
+
+    try:
+        tid = taches_ia.lancer(user_id, "seance", travail, current_app._get_current_object())
+    except Exception:
         liberer("generateur-seance", user_id)
+        raise
+    corps, code = taches_ia.reponse(tid, user_id)
+    return jsonify(corps), code
 
 
 @bp.route("/generator/apply", methods=["POST"])

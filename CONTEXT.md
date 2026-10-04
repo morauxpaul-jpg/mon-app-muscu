@@ -87,7 +87,7 @@ pwa/
 │   ├── coach.py                   # Chat IA (Claude Haiku 4.5) en flux SSE, réservé VIP, quota 15 msg/jour, mémoire entre conversations
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
-│   ├── generator.py               # Générateur de programme IA (VIP) — Claude → JSON validé → save_prog
+│   ├── generator.py               # Générateur de programme IA (VIP) — tâche de fond → JSON validé → save_prog
 │   ├── push.py                    # Abonnement push (clé VAPID, subscribe/unsubscribe), /tasks/reactivation
 │   ├── share.py                   # POST /share/track — compteur de partages de progression (analytics)
 │   ├── parrainage.py              # Lien d'invitation + récompense VIP (parrain/filleul) + apply_referral
@@ -228,6 +228,7 @@ pwa/
 
 ### Générateur de programme IA (VIP, 2026-06-14)
 - **Route** `routes/generator.py` : `GET /generator` (form, VIP-gated via `paywall`), `POST /generator/generate` (prompt structuré → Claude Haiku 4.5, `max_tokens=2600` → **JSON strict** → `parse_and_validate`), `POST /generator/apply` (re-validation + `save_prog`, même chemin sûr que l'import ; reps NON persistées, cf. semaine continue).
+- **Tâche de fond** (`core/taches_ia.py`, vague 8 du 04/10) : `POST /generator/generate` et `POST /generator/seance` lancent l'appel IA dans un groupe de 3 fils dédié et attendent au plus 2 s (`ATTENTE_REQUETE`) : une erreur immédiate (clé absente, quota) ou une IA rapide répond directement ; sinon **202** `{statut: "encours", tache}`, et la page interroge `GET /generator/tache/<id>` toutes les 1,5 s. Un second tap rejoint la tâche en cours. La place de quota est rendue par la tâche à sa fin. Mémoire du processus (une instance) : après un redémarrage, 404 « relance-la », quota intact. Tâche > 150 s = 504. La page garde l'id dans `sessionStorage` (`gen_tache`) et reprend le suivi après un rechargement. Appel Anthropic borné à 90 s (`TIMEOUT_IA`). `run_local_fake.py` avec `FAUX_IA=lent` simule une IA de 3 s (tests navigateur).
 - **`parse_and_validate(raw)`** = fonction **pure** (testée, `tests/test_generator.py`) : tolère les blocs ``` ```json ```, normalise les muscles (vers `MUSCLES` canoniques, défaut « Autre »), clamp sets 1–8, ≤6 séances / ≤12 exos, planning FR filtré + fallback cyclique.
 - **Anti-coût** : quota 3/semaine glissante (7 j) / VIP via la table `events` (compte les `program_generated` des 7 derniers jours, `_gen_used_week`) + backstop Flask-Limiter `10/h` sur generate, `20/h` sur apply.
 - **Prompt** : injecte la liste des exercices connus (`EXERCISES_INFO`) pour biaiser vers des exos illustrés + la liste des muscles canoniques.
