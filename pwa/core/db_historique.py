@@ -78,38 +78,6 @@ def _reporter_dans_le_cache(user_id, date_str, seance, exercice, payload):
     _cache_set(key, garde + [_nettoyer_ligne(p) for p in payload])
 
 
-def save_hist(user_id: str, rows: list[dict]):
-    """Réécrit tout l'historique de l'user (import de sauvegarde, reset).
-
-    Ordre volontairement inversé par rapport à un clear+insert : on INSÈRE
-    d'abord les nouvelles lignes, puis on SUPPRIME les anciennes par id. À
-    aucun moment l'historique n'est vide ; si l'insertion échoue, on efface ce
-    qu'on vient d'ajouter et l'ancien historique est intact."""
-    client = get_client()
-
-    old_ids = [r["id"] for r in _fetch_all(lambda: (
-        client.table("history").select("id").eq("user_id", user_id).order("id")
-    )) if r.get("id") is not None]
-
-    inserted_ids: list = []
-    try:
-        if rows:
-            payload = [_row_to_supabase(user_id, r) for r in rows]
-            for i in range(0, len(payload), 500):
-                resp = _insert_history(client, payload[i:i + 500])
-                inserted_ids.extend(x["id"] for x in (resp.data or []) if x.get("id") is not None)
-    except Exception as e:
-        logger.error("save_hist insert FAILED user=%s: %s", user_id, e)
-        try:
-            _delete_history_ids(client, inserted_ids)
-        except Exception as e2:
-            logger.error("save_hist cleanup FAILED user=%s: %s", user_id, e2)
-        raise
-
-    _delete_history_ids(client, old_ids)
-    _cache_invalidate(f"hist:{user_id}")
-
-
 def _delete_history_ids(client, ids: list) -> None:
     """Supprime des lignes history par id, par paquets (longueur d'URL)."""
     for i in range(0, len(ids), 200):
@@ -165,21 +133,69 @@ def _lire_history(client, user_id: str) -> list[dict]:
         return lire(_HIST_COLS_LUES)
 
 
-def _insert_history(client, payload: list[dict]):
-    global _hist_ext_supported
+# Une série = une clé (migration v41, index unique). Écrire PAR CLÉ rend une
+# écriture rejouée inoffensive : la requête que le téléphone a abandonnée à
+# 8 s et renvoyée réécrit les mêmes lignes au lieu de les doubler (audit du
+# 03/10, I7). Le verrou par exercice ne protégeait qu'un seul processus ;
+# l'index protège la base, quel que soit le nombre d'instances.
+CLE_SERIE = "user_id,date,seance,exercice,serie"
+_unicite = True     # passe à False si l'index v41 manque (erreur 42P10)
+
+
+def _index_absent(err) -> bool:
+    msg = str(err)
+    return "42P10" in msg or "no unique or exclusion constraint" in msg
+
+
+def _series_distinctes(payload: list[dict]) -> list[dict]:
+    """Deux lignes d'un même envoi sur la même clé (fichier importé qui
+    numérote deux fois la série 1) : la seconde prend le numéro suivant libre.
+    Sans ça, l'index les fusionnerait et une série disparaîtrait."""
+    vus, plus_haut = set(), {}
+    for p in payload:
+        g = (p["user_id"], p["date"], p["seance"], p["exercice"])
+        plus_haut[g] = max(plus_haut.get(g, 0), int(p["serie"]))
+    out = []
+    for p in payload:
+        g = (p["user_id"], p["date"], p["seance"], p["exercice"])
+        if (*g, p["serie"]) in vus:
+            plus_haut[g] += 1
+            p = {**p, "serie": plus_haut[g]}
+        vus.add((*g, p["serie"]))
+        out.append(p)
+    return out
+
+
+def _insert_history(client, payload: list[dict], par_cle: bool = False, ignorer: bool = False):
+    """Insère (par défaut) ou écrit par clé de série (`par_cle`, upsert ;
+    `ignorer` = laisser intactes les séries déjà présentes). Retourne la
+    réponse, ou None si l'écriture par clé est impossible (index v41 absent) :
+    l'appelant reprend alors l'ancien chemin."""
+    global _hist_ext_supported, _unicite
+    if par_cle and not _unicite:
+        return None
+
+    def _ecrire(rows):
+        t = client.table("history")
+        if par_cle:
+            return t.upsert(rows, on_conflict=CLE_SERIE, ignore_duplicates=ignorer).execute()
+        return t.insert(rows).execute()
+
     if not _hist_ext_supported:
         payload = [{k: v for k, v in p.items() if k not in _HIST_EXT_COLS} for p in payload]
-        return client.table("history").insert(payload).execute()
     try:
-        return client.table("history").insert(payload).execute()
+        return _ecrire(payload)
     except Exception as e:
+        if par_cle and _index_absent(e):
+            logger.warning("history: index unique v41 absent (%s) — écriture sans clé", e)
+            _unicite = False
+            return None
         msg = str(e).lower()
-        if not any(c in msg for c in _HIST_EXT_COLS):
+        if not _hist_ext_supported or not any(c in msg for c in _HIST_EXT_COLS):
             raise
         logger.warning("history: colonnes v34 absentes (%s) — insert sans session_id/rpe", e)
         _hist_ext_supported = False
-        stripped = [{k: v for k, v in p.items() if k not in _HIST_EXT_COLS} for p in payload]
-        return client.table("history").insert(stripped).execute()
+        return _ecrire([{k: v for k, v in p.items() if k not in _HIST_EXT_COLS} for p in payload])
 
 
 def _row_to_supabase(user_id: str, r: dict) -> dict:
@@ -219,8 +235,8 @@ def _norm_date(date_str: str) -> str:
 
 # Deux écritures croisées du même exercice (requête abandonnée à 8 s par le
 # téléphone, encore en cours, puis la série suivante) doublaient les séries
-# (audit du 03/10, I7, R9). Un verrou par exercice les met en file : suffit à
-# UN processus (railway.json) ; à plusieurs, il faudra un index unique.
+# (audit du 03/10, I7, R9). Le verrou par exercice les met en file dans ce
+# processus ; l'index unique v41 (CLE_SERIE) garantit le reste en base.
 _VERROUS = [threading.Lock() for _ in range(64)]
 
 
@@ -251,11 +267,18 @@ def _replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, n
         .eq("exercice", exercice)
         .execute()
     ).data or [] if r.get("id") is not None]
-    payload = [_row_to_supabase(user_id, {**r, "Date": date_str}) for r in (new_rows or [])]
+    payload = _series_distinctes(
+        [_row_to_supabase(user_id, {**r, "Date": date_str}) for r in (new_rows or [])])
     try:
-        if payload:
-            _insert_history(client, payload)
-        _delete_history_ids(client, old_ids)
+        resp = _insert_history(client, payload, par_cle=True) if payload else None
+        if payload and resp is None:
+            resp = _insert_history(client, payload)
+            gardes = set()
+        else:
+            # Écriture par clé : les séries qui gardent leur numéro sont mises
+            # à jour sur place ; seules celles qui n'existent plus partent.
+            gardes = {x["id"] for x in ((resp.data if resp else None) or []) if x.get("id") is not None}
+        _delete_history_ids(client, [i for i in old_ids if i not in gardes])
     except Exception:
         _cache_invalidate(f"hist:{user_id}")
         raise
@@ -279,7 +302,18 @@ def append_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
         return _append_exo_rows(user_id, date_str, seance, exercice, new_rows)
 
 
-def _append_exo_rows(user_id, date_str, seance, exercice, new_rows) -> int:
+def _append_exo_rows(user_id, date_str, seance, exercice, new_rows, essai=0) -> int:
+    try:
+        return _append_une_fois(user_id, date_str, seance, exercice, new_rows)
+    except Exception as e:
+        # Une autre instance a pris le même numéro de série entre la lecture
+        # et l'écriture : l'index refuse, on relit et on recommence une fois.
+        if essai or not ("23505" in str(e) or "duplicate key" in str(e).lower()):
+            raise
+        return _append_exo_rows(user_id, date_str, seance, exercice, new_rows, essai=1)
+
+
+def _append_une_fois(user_id, date_str, seance, exercice, new_rows) -> int:
     client = get_client()
     existantes = (
         client.table("history").select("serie")
@@ -297,21 +331,6 @@ def _append_exo_rows(user_id, date_str, seance, exercice, new_rows) -> int:
         _insert_history(client, payload)
     _cache_invalidate(f"hist:{user_id}")
     return depart
-
-
-def ajouter_lignes(user_id: str, rows: list[dict]) -> int:
-    """Ajoute des lignes en lots de 500, sans rien effacer (import Hevy/Strong :
-    une requête par exercice en ferait 900 pour trois ans). Un lot qui échoue
-    lève, les précédents restent."""
-    client = get_client()
-    payload = [_row_to_supabase(user_id, {**r, "Date": _norm_date(r["Date"])})
-               for r in rows or []]
-    try:
-        for i in range(0, len(payload), 500):
-            _insert_history(client, payload[i:i + 500])
-    finally:
-        _cache_invalidate(f"hist:{user_id}")
-    return len(payload)
 
 
 def delete_exo_rows(user_id: str, date_str: str, seance: str, exercice: str,
@@ -345,56 +364,3 @@ def delete_session_rows(user_id: str, date_str: str, seance: str):
         .execute()
     )
     _cache_invalidate(f"hist:{user_id}")
-
-
-def rename_seance_rows(user_id: str, old_name: str, new_name: str) -> int:
-    """Renomme une séance dans tout l'historique. Retourne les lignes touchées.
-
-    L'historique est indexé sur le NOM de la séance : renommer le programme
-    sans renommer l'historique couperait la séance de son passé — volume,
-    records et progression repartiraient de zéro, sans erreur nulle part.
-    """
-    if not old_name or old_name == new_name:
-        return 0
-    client = get_client()
-    resp = (
-        client.table("history").update({"seance": new_name})
-        .eq("user_id", user_id)
-        .eq("seance", old_name)
-        .execute()
-    )
-    _cache_invalidate(f"hist:{user_id}")
-    return len(resp.data or [])
-
-
-def rename_exercise_rows(user_id: str, old_names: list[str], new_name: str,
-                         muscle: str | None = None) -> int:
-    """Renomme un exercice dans tout l'historique par UPDATE ciblé (plus de
-    réécriture complète de la table). Retourne le nombre de lignes touchées."""
-    client = get_client()
-    payload = {"exercice": new_name}
-    if muscle:
-        payload["muscle"] = muscle
-    count = 0
-    for old in old_names:
-        if not old or old == new_name:
-            continue
-        resp = (
-            client.table("history").update(payload)
-            .eq("user_id", user_id)
-            .eq("exercice", old)
-            .execute()
-        )
-        count += len(resp.data or [])
-    _cache_invalidate(f"hist:{user_id}")
-    return count
-
-
-def list_history_shape() -> list[dict]:
-    """(user_id, date) de TOUTES les lignes d'historique — lecture seule.
-
-    Sert à mesurer ce que coûte `get_hist` (`core/blob_stats.py`). Deux
-    colonnes seulement : ni exercice, ni charge, ni remarque. De quoi compter
-    et dater, rien de plus.
-    """
-    return _fetch_all(lambda: get_client().table("history").select("user_id,date")) or []

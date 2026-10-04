@@ -14,7 +14,7 @@ from flask import (
 )
 
 from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
-                       rename_seance_rows)
+                       rename_seance_rows, rename_exercise_rows, count_exercise_rows)
 from core.dates import DAYS_FR
 from core.limiter import limiter
 from core.rotation import rotation_de, rotation_nettoyee
@@ -748,6 +748,32 @@ def update_exo():
             pass
     save_prog(prog)
     return redirect(url_for("programme.programme") + f"#s-{seance}")
+
+
+@bp.route("/programme/exo/historique", methods=["POST"])
+@limiter.limit("30 per minute")
+def historique_exo():
+    """Renommer un exercice dans l'éditeur : ses séries passées le suivent-elles ?
+
+    L'éditeur ne peut pas deviner si l'on corrige une faute (les séries
+    doivent suivre) ou si l'on scinde un exercice en deux variantes (elles
+    appartiennent à l'ancien nom). Il demande, au moment du renommage :
+    sans `suivre`, cette route compte les séries de l'ancien nom ; avec,
+    elle les déplace (`core/db_renommage.py`, sans collision possible).
+    Avant, l'historique restait toujours derrière et seul un outil caché
+    dans Gestion pouvait le déplacer (audit du 03/10, I12)."""
+    data = request.get_json(silent=True) or {}
+    ancien = str(data.get("ancien") or "").strip()[:NOM_EXO_MAX]
+    nouveau = str(data.get("nouveau") or "").strip()[:NOM_EXO_MAX]
+    if not ancien or not nouveau or ancien == nouveau:
+        return jsonify({"ok": False, "error": "noms"}), 400
+    try:
+        if data.get("suivre") is True:
+            return jsonify({"ok": True, "deplacees": rename_exercise_rows([ancien], nouveau)})
+        return jsonify({"ok": True, "series": count_exercise_rows(ancien)})
+    except Exception as e:
+        logger.error("historique_exo FAILED: %s", e)
+        return jsonify({"ok": False, "error": "base"}), 503
 
 
 @bp.route("/programme/exo/delete", methods=["POST"])

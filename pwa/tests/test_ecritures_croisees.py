@@ -17,9 +17,9 @@ S = lambda n: [{"Séance": "Push", "Exercice": "Développé couché", "Série": 
 def _croiser(monkeypatch, ecrire_a, ecrire_b):
     orig = dh._insert_history
 
-    def lent(client, payload):
+    def lent(client, payload, **kw):
         time.sleep(0.2)
-        return orig(client, payload)
+        return orig(client, payload, **kw)
     monkeypatch.setattr(dh, "_insert_history", lent)
     a = threading.Thread(target=ecrire_a)
     b = threading.Thread(target=ecrire_b)

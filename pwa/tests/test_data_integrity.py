@@ -273,8 +273,12 @@ def test_planning_renvoye_a_lecran_avec_les_bonnes_valeurs(fake_db, logged_in):
     # Chaque menu sait quel jour il représente…
     for jour in ("Lundi", "Mardi", "Dimanche"):
         assert f'data-day="{jour}"' in html
-    # …et la resynchronisation est branchée à l'init et aux changements.
-    assert "syncPlanningSelects" in html
+    # …et la resynchronisation est branchée à l'init et aux changements
+    # (le composant vit dans static/js/programme.js, chargé par la page).
+    assert "/static/js/programme.js" in html
+    import pathlib
+    js = (pathlib.Path(__file__).resolve().parent.parent / "static" / "js" / "programme.js").read_text(encoding="utf-8")
+    assert "syncPlanningSelects" in js
     # Les valeurs partent bien au client.
     assert '"Lundi": "Full Body A"' in html or '"Lundi":"Full Body A"' in html
 

@@ -6,6 +6,8 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
 
     db_base         connexion Supabase, cache mémoire, pagination PostgREST
     db_historique   les séries enregistrées — la source de vérité de l'app
+    db_historique_lots  réécriture complète et ajout massif (sauvegarde, import)
+    db_renommage    renommer une séance ou un exercice dans tout l'historique
     db_programme    le programme, son planning et ses calques (blob JSON)
     db_profil       profil, onboarding, poids de corps
     db_nutrition    les repas et les sommes de macros
@@ -43,12 +45,17 @@ from core.db_base import (
 
 # ── les séries enregistrées ─────────────────────────────────────
 from core.db_historique import (
-    ajouter_lignes, append_exo_rows, delete_exo_rows, delete_session_rows, get_hist, list_history_shape,
-    rename_exercise_rows, rename_seance_rows, replace_exo_rows,
-    save_hist, _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
+    append_exo_rows, delete_exo_rows, delete_session_rows, get_hist, replace_exo_rows,
+    _HIST_COLS_LUES, _HIST_EXT_COLS, _delete_history_ids,
     _hist_ext_supported, _insert_history, _lire_history, _nettoyer_ligne, _norm_date,
-    _reporter_dans_le_cache,
+    _reporter_dans_le_cache, CLE_SERIE, _unicite, _index_absent, _series_distinctes, _append_une_fois,
     _row_to_supabase, _VERROUS, _verrou, _replace_exo_rows, _append_exo_rows
+)
+
+from core.db_historique_lots import ajouter_lignes, save_hist
+from core.db_renommage import (
+    count_exercise_rows, list_history_shape, rename_exercise_rows, rename_seance_rows,
+    _collision, _deplacer_ligne_a_ligne, _renommer
 )
 
 # ── le programme et son planning ────────────────────────────────

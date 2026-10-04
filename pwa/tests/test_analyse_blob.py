@@ -28,7 +28,7 @@ SANS_BASE = (RACINE / "tools" / "analyse_blob.py",
              RACINE / "core" / "blob_stats.py")
 # (fichier, fonction) : les deux seuls endroits où la mesure parle à Supabase.
 QUI_LIT = ((RACINE / "core" / "db_programme.py", "list_all_program_blobs"),
-           (RACINE / "core" / "db_historique.py", "list_history_shape"),
+           (RACINE / "core" / "db_renommage.py", "list_history_shape"),
            (RACINE / "routes" / "admin.py", "blob"))
 
 
@@ -274,7 +274,7 @@ def test_la_mesure_de_lhistorique_ne_lit_que_deux_colonnes():
     """Ni exercice, ni charge, ni remarque : on compte et on date."""
     import ast
     src = (RACINE / "core" / "db_historique.py").read_text(encoding="utf-8")
-    fn = _source_de(RACINE / "core" / "db_historique.py", "list_history_shape")
+    fn = _source_de(RACINE / "core" / "db_renommage.py", "list_history_shape")
     demandes = [n.args[0].value for n in ast.walk(ast.parse(fn))
                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
                 and n.func.attr == "select" and n.args

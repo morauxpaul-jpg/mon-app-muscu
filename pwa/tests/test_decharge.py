@@ -72,12 +72,16 @@ def test_parcours_accueil(fake_db, logged_in):
     from core.dates import continuous_week, logical_today_paris
     fake_db.table("programs").insert({"user_id": USER_ID, "data": {"_settings": {}}}).execute()
     semaine = continuous_week(logical_today_paris())
+    numeros = {}
     for r in _carnet():
         decal = semaine - W
         lundi = dt.date(2024, 1, 1) + dt.timedelta(weeks=r["Semaine"] + decal - 1)
+        # Une série = une clé (index unique v41) : numéros distincts par jour.
+        cle = (lundi, r["Exercice"])
+        numeros[cle] = numeros.get(cle, 0) + 1
         fake_db.table("history").insert({
             "user_id": USER_ID, "semaine": 1, "seance": "A", "exercice": r["Exercice"],
-            "serie": 1, "reps": r["Reps"], "poids": r["Poids"], "remarque": "",
+            "serie": numeros[cle], "reps": r["Reps"], "poids": r["Poids"], "remarque": "",
             "muscle": "Pecs", "date": lundi.isoformat(), "rpe": r["RPE"]}).execute()
     html = logged_in.get("/accueil").get_data(as_text=True)
     assert "Une semaine plus légère te ferait du bien" in html
