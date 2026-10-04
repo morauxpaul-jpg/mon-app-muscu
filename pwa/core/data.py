@@ -224,6 +224,10 @@ def rename_exercise_rows(old_names, new_name, muscle=None):
     return db.rename_exercise_rows(_uid(), old_names, new_name, muscle)
 
 
+def count_exercise_rows(name):
+    return db.count_exercise_rows(_uid(), name)
+
+
 # ── Suppression de compte (exigence stores) ─────────────────────────────
 def delete_user_account():
     return db.delete_user_account(_uid())

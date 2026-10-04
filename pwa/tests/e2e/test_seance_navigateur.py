@@ -402,3 +402,30 @@ def test_nutrition_repas_detaille_puis_quantite_corrigee(serveur, navigateur):
     assert pg.locator(".food-titre:visible").inner_text() == "TES ALIMENTS HABITUELS"
     assert erreurs == []
     ctx.close()
+
+
+# ── Renommer un exercice : l'historique suit si on le demande ────
+
+def test_renommer_un_exercice_propose_demmener_ses_series(serveur, navigateur):
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');localStorage.setItem('tutoSeanceSeen','true');")
+    pg = ctx.new_page()
+    erreurs = []
+    pg.on("pageerror", lambda e: erreurs.append(str(e)))
+    pg.goto(serveur + "/test-vierge")
+    pg.goto(serveur + "/seance?mode=prefaite&name=Push")
+    pg.wait_for_selector(".serie-valider")
+    _serie_faite(pg, 5, 100)
+    assert _attendre(lambda: len(_series(serveur)) == 1)
+
+    pg.goto(serveur + "/programme")
+    pg.locator(".exo-head:visible").first.click()
+    champ = pg.locator(f'input[aria-label="Nom de cet exercice : {EXO}"]')
+    champ.fill("Développé couché barre")
+    champ.dispatch_event("change")
+    pg.wait_for_selector(".renommage-choix:visible")
+    pg.get_by_role("button", name="Oui, emmener mes séries").click()
+    assert _attendre(lambda: _series(serveur, "Développé couché barre") == [(1, 5, 100.0)])
+    assert _series(serveur) == []
+    assert erreurs == []
+    ctx.close()

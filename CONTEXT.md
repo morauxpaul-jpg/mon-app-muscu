@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v40  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment)
+├── supabase_schema_v23.sql … v41  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -36,7 +36,9 @@ pwa/
 ├── core/
 │   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
 │   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
-│   ├── db_historique.py           # Table history : lecture, écriture, opérations ciblées, renommages
+│   ├── db_historique.py           # Table history : lecture, écriture par clé de série, opérations ciblées
+│   ├── db_historique_lots.py      # save_hist (sauvegarde, reset) et ajouter_lignes (import), par clé
+│   ├── db_renommage.py            # Renommer séance / exercice dans l'historique, sans collision
 │   ├── db_programme.py            # Blob programs.data : verrou optimiste, fusion 3 voies, corps vs données perso
 │   ├── db_profil.py               # profiles : profil, onboarding, poids de corps
 │   ├── db_nutrition.py            # nutrition : repas du jour (une ligne par aliment), sommes de macros, récents
@@ -465,6 +467,14 @@ pwa/
 - En-têtes comparés normalisés contre des alias ; séparateur `,` `;` ou tabulation ; dates ISO ou locales anglaises ; livres converties en kg (colonne `weight_lbs` ou `Weight Unit`). Échauffements (`set_type=warmup`, `Set Order=W`) et lignes sans reps (cardio, chrono) écartés et comptés.
 - Noms anglais → catalogue via `resoudre` (table `_ANGLAIS` complétée) ; le matériel entre parenthèses devient la variante sauf s'il est déjà supposé par l'exercice (« Lat Pulldown (Cable) » → « Tirage vertical »). Un exercice inconnu garde son nom d'origine.
 - Doublon = même jour + même nom de séance : réimporter le même fichier ne double rien. Écriture par paquets de séances entières (`ajouter_lignes`, lots de 500), donc jamais de séance à moitié écrite. Remarque « Import Hevy » / « Import Strong ».
+
+### Une série = une ligne (migration v41, vague 7 du 04/10)
+- Index unique `history_serie_unique` (user_id, date, seance, exercice, serie). `CLE_SERIE` dans `core/db_historique.py`. La migration refuse de s'appliquer s'il y a des doublons (au 04/10 : 1 136 lignes, 0 doublon).
+- Écritures **par clé** (upsert `on_conflict=CLE_SERIE`) : `replace_exo_rows` met à jour sur place les séries qui gardent leur numéro et supprime le reste ; `save_hist` idem par lots ; `ajouter_lignes` (import) en `ignore_duplicates` — réimporter ne double rien et n'écrase pas une saisie ; `append_exo_rows` relit et réessaie une fois sur collision (autre instance). `_series_distinctes` renumérote les doublons de clé dans un même envoi (rien ne se perd).
+- Sans l'index (erreur 42P10), repli automatique sur l'ancien chemin (insert puis suppression), `_unicite = False`.
+- Renommages (`core/db_renommage.py`) : UPDATE groupé ; sur collision (23505), déplacement ligne à ligne avec le numéro de série suivant libre.
+- La fausse base des tests applique le même index (`FakeQuery.UNIQUE`, insert tout-ou-rien, update annulé en bloc, `ignore_duplicates`).
+- Éditeur : renommer un exercice qui a des séries ouvre « Est-ce le même exercice ? » (`POST /programme/exo/historique` : compter, puis `suivre: true` pour déplacer). Oui = correction de nom, la progression suit ; Non = variante, l'historique reste à l'ancien nom. Le composant de l'éditeur vit dans `static/js/programme.js`.
 
 ### Éditeur de programme : bornes et premier passage (point 4 de l'audit, 04/10)
 - Bornes (`routes/programme.py`) : `MAX_SERIES` 20, `MAX_EXOS_PAR_SEANCE` 30, `MAX_SEANCES` 40, noms d'exercice ≤ 80, de séance ≤ 60. Appliquées dans `_exo_entry` (toutes les écritures y passent), `/programme/state`, `/programme/import`, `/programme/seance/new` (`?seance=trop`), `/programme/exo/add` (`?exo=trop`), `/programme/exo/update`. L'éditeur les reçoit (`var BORNES`) et borne aussi côté client (`bornerSeries`), avec un message plutôt qu'une troncature muette.

@@ -18,6 +18,7 @@ RACINE = Path(__file__).resolve().parent.parent
 CARTE = (RACINE / "templates" / "_programme_seance_card.html").read_text(
     encoding="utf-8")
 PAGE = (RACINE / "templates" / "programme.html").read_text(encoding="utf-8")
+JS = (RACINE / "static" / "js" / "programme.js").read_text(encoding="utf-8")
 
 
 def test_le_nom_dun_exercice_est_modifiable():
@@ -35,14 +36,14 @@ def test_le_bouton_de_la_bibliotheque_ne_ment_plus():
     assert ">Choisir</button>" in CARTE
 
 
-def test_le_renommage_previent_pour_lhistorique():
+def test_le_renommage_demande_si_lhistorique_suit():
     """Renommer ici ne peut pas deviner si on SCINDE un exercice en deux
     (les séries passées appartiennent alors à l'un des deux) ou si on
-    CORRIGE une faute (elles doivent suivre). On le dit plutôt que de
-    choisir à la place de l'utilisateur."""
-    bloc = PAGE[PAGE.index("renommerExo("):][:1400]
-    assert "ancien nom" in bloc
-    assert "Gestion" in bloc
+    CORRIGE une faute (elles doivent suivre). On le demande, au moment du
+    renommage, plutôt que de renvoyer vers un outil caché dans Gestion."""
+    bloc = JS[JS.index("renommerExo("):][:1600]
+    assert "/programme/exo/historique" in bloc
+    assert "Oui, emmener mes séries" in PAGE and "Non, c'est une variante" in PAGE
 
 
 def test_le_champ_de_saisie_dit_quon_peut_preciser():

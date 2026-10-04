@@ -709,3 +709,10 @@ html.has-ad-banner .topbar {
 /* Programme : accueil de « Créer mon propre programme » (onboarding). */
 .prog-bienvenue ol { margin: 8px 0 12px; padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-2); }
 .prog-bienvenue-titre { font-weight: 600; color: var(--text-1); }
+
+/* Programme : renommer un exercice, emmener ou non son historique. */
+.renommage-choix { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 20; border-color: var(--accent); background: var(--bg-base) !important; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+.renommage-choix p { margin: 0 0 8px; font-size: 0.88rem; color: var(--text-1); line-height: 1.45; }
+.renommage-aide { color: var(--text-3) !important; font-size: 0.8rem !important; }
+.renommage-echec { color: var(--danger) !important; }
+.renommage-boutons { display: flex; flex-wrap: wrap; gap: 8px; }

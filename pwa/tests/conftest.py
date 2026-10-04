@@ -90,6 +90,7 @@ class FakeQuery:
         self._op = "upsert"
         self._payload = payload
         self._on_conflict = kwargs.get("on_conflict")
+        self._ignorer = bool(kwargs.get("ignore_duplicates"))
         return self
 
     def update(self, payload):
@@ -140,6 +141,29 @@ class FakeQuery:
     # Valeur par défaut de `max-rows` côté PostgREST/Supabase.
     MAX_ROWS = 1000
 
+    # Index uniques de production (migration v41) : la fausse base les fait
+    # respecter, sinon un code qui double une série passerait ici et
+    # échouerait en production — ou l'inverse, un code qui suppose l'index
+    # ne serait jamais confronté à son refus.
+    UNIQUE = {"history": ("user_id", "date", "seance", "exercice", "serie")}
+
+    def _cle_unique(self, row):
+        cols = self.UNIQUE.get(self._table)
+        if not cols or any(row.get(c) is None for c in cols):
+            return None  # NULL n'entre jamais en collision (comme PostgreSQL)
+        return tuple(row.get(c) for c in cols)
+
+    def _verifier_unicite(self, rows):
+        vues = set()
+        for r in rows:
+            k = self._cle_unique(r)
+            if k is None:
+                continue
+            if k in vues:
+                raise Exception("{'code': '23505', 'message': 'duplicate key value violates "
+                                "unique constraint \"history_serie_unique\"'}")
+            vues.add(k)
+
     def _apply_defaults(self, row):
         """Valeurs par défaut du schéma SQL (migration v32 : programs.version)."""
         if self._table == "programs":
@@ -175,18 +199,25 @@ class FakeQuery:
                 p = dict(p)
                 p.setdefault("id", self._next_pk())
                 self._apply_defaults(p)
-                rows.append(p)
-                inserted.append(dict(p))
-            return FakeResponse(inserted)
+                inserted.append(p)
+            self._verifier_unicite(rows + inserted)   # tout ou rien, comme un INSERT
+            rows.extend(inserted)
+            return FakeResponse([dict(p) for p in inserted])
         if self._op == "upsert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]
             key = self._on_conflict or ("id" if self._table == "profiles" else "user_id")
             keys = [k.strip() for k in key.split(",")]
+            cols = self.UNIQUE.get(self._table)
+            if cols and tuple(keys) != cols:
+                # PostgreSQL : ON CONFLICT doit viser un index unique existant.
+                pass
             written = []
             for p in payload:
                 p = dict(p)
                 existing = next((r for r in rows
                                  if all(r.get(k) == p.get(k) for k in keys)), None)
+                if existing and getattr(self, "_ignorer", False):
+                    continue   # ON CONFLICT DO NOTHING : rien n'est renvoyé
                 if existing:
                     existing.update(p)
                     written.append(dict(existing))
@@ -201,8 +232,16 @@ class FakeQuery:
             self._db.tables[self._table] = [r for r in rows if not self._match(r)]
             return FakeResponse(matched)
         if self._op == "update":
+            avant = [dict(r) for r in matched]
             for r in matched:
                 r.update(self._payload or {})
+            try:
+                self._verifier_unicite(rows)
+            except Exception:
+                for r, a in zip(matched, avant):   # UPDATE refusé en bloc
+                    r.clear()
+                    r.update(a)
+                raise
             return FakeResponse(matched)
         # select
         if self._order_col:
