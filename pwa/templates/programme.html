@@ -8,6 +8,18 @@
     <span class="save-pill s-89a599" x-show="saveState" x-text="saveState" x-transition></span>
   </div>
 
+  {% if nouveau %}
+    <div class="card prog-bienvenue">
+      <div class="label-icon prog-bienvenue-titre"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Construis ton programme</div>
+      <ol><li>Dans <strong>Mes programmes</strong>, ajoute une séance (ex. « Push », « Jambes »).</li><li>Ouvre-la et ajoute tes exercices, avec le nombre de séries.</li><li>Dans <strong>Planning</strong>, choisis le jour de chaque séance.</li></ol>
+      <a class="btn primary" href="#mes-programmes">Commencer</a>
+    </div>
+  {% endif %}
+  {% if request.args.get('seance') == 'trop' %}
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Maximum de {{ bornes.seances }} séances atteint : supprime une séance qui ne sert plus.</div>
+  {% elif request.args.get('exo') == 'trop' %}
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Maximum de {{ bornes.exos }} exercices par séance atteint.</div>
+  {% endif %}
   {% if request.args.get('program_changed') %}
     <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Nouveau programme chargé.</div>
   {% endif %}
@@ -66,7 +78,7 @@
     </div>
   </template>
 
-  <h2 class="label-icon s-f128cb"><svg class="icon icon-sm s-8b872f"><use href="/static/img/icons.svg#folder"/></svg>MES PROGRAMMES</h2>
+  <h2 class="label-icon s-f128cb" id="mes-programmes"><svg class="icon icon-sm s-8b872f"><use href="/static/img/icons.svg#folder"/></svg>MES PROGRAMMES</h2>
   <p class="s-017590">Un programme regroupe des séances. Ex : « Push Pull Legs », « Full-body maison »…</p>
 
   {# ── Nouveau programme (haut de la liste) ────────────────── #}
@@ -445,6 +457,8 @@
 <script id="catalog-data" type="application/json">{{ catalog_programs|tojson }}</script>
 
 <script>
+  // Bornes de l'éditeur, données par le serveur (routes/programme.py).
+  var BORNES = {{ bornes|tojson }};
   function programmeApp() {
     return {
       isVip: {{ 'true' if is_vip else 'false' }},
@@ -673,6 +687,11 @@
             + "ils doivent rester uniques. Essaie « " + name + " B ».";
           return;
         }
+        if (this.seanceOrder.length >= BORNES.seances) {
+          this.seanceMsg = "Tu as atteint " + BORNES.seances + " séances, le maximum. "
+            + "Supprime une séance qui ne sert plus pour en créer une autre.";
+          return;
+        }
         this.seanceMsg = '';
         this.prog[name] = [];
         this.seanceOrder.push(name);
@@ -817,13 +836,25 @@
       },
 
       // ── Exercices ──
+      // Mêmes bornes que le serveur (routes/programme.py, MAX_SERIES…) :
+      // sinon l'éditeur affichait 50 séries que la sauvegarde ramenait à 20.
+      bornerSeries(v) {
+        var n = parseInt(v, 10);
+        if (!n || n < 1) return 3;
+        return Math.min(BORNES.series, n);
+      },
       addExo(sname, exo) {
         var name = (exo.name || '').trim();
         if (!name || !this.prog[sname]) return;
+        if (this.prog[sname].length >= BORNES.exos) {
+          this.seanceMsg = "« " + sname + " » a déjà " + BORNES.exos
+            + " exercices, le maximum pour une séance. Crée une deuxième séance.";
+          return;
+        }
         var muscle = (exo.muscles || []).join(',') || 'Autre';
         this.prog[sname].push({
           name: name,
-          sets: parseInt(exo.sets) || 3,
+          sets: this.bornerSeries(exo.sets),
           muscle: muscle,
         });
         this.scheduleSave();

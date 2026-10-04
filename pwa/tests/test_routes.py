@@ -319,7 +319,8 @@ def test_onboarding_submit_avec_csrf_statique(fake_db, client):
         "programme_id": "custom",
     })
     assert r.status_code == 302
-    assert r.headers["Location"].endswith("/accueil")
+    # « Créer mon propre programme » mène à l'éditeur (audit du 03/10).
+    assert r.headers["Location"].endswith("/programme?nouveau=1")
     rows = [x for x in fake_db.tables.get("onboarding", []) if x["user_id"] == USER_ID]
     assert rows and rows[0]["prenom"] == "Paul"
 

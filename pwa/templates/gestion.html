@@ -7,6 +7,9 @@
   {% if request.args.get('reset') == 'soft' %}
     <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Historique réinitialisé. Les records sont archivés.</div>
   {% endif %}
+  {% if request.args.get('reset') == 'confirm' %}
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Rien n'a été effacé : la réinitialisation doit être confirmée.</div>
+  {% endif %}
   {% if request.args.get('reset') == 'total' %}
     <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Tout a été remis à zéro.</div>
   {% endif %}
@@ -374,6 +377,7 @@
     <form method="post" action="/gestion/reset-soft" x-data="{ c:false }">
       <button type="button" class="btn label-icon s-23a086" x-show="!c" @click="c=true"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</button>
       <div class="inline-confirm" x-show="c" x-cloak>
+        <input type="hidden" name="confirm" value="yes">
         <span class="confirm-label">Vider l'historique ?</span>
         <button type="button" class="btn" @click="c=false">Annuler</button>
         <button type="submit" class="btn btn-danger">Confirmer</button>

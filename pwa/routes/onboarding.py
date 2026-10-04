@@ -197,7 +197,13 @@ def submit():
 
     # Parrainage : si l'onboarding vient d'un lien d'invitation (cookie posé sur
     # la landing), on crédite parrain + filleul une seule fois.
-    resp = redirect(url_for("accueil.index"))
+    # « Créer mon propre programme » promet l'éditeur : on y va, avec le mode
+    # d'emploi en tête (audit du 03/10 : le renvoi à l'accueil laissait
+    # devant un programme vide, sans savoir où le construire).
+    if programme_id == "custom":
+        resp = redirect(url_for("programme.programme", nouveau=1))
+    else:
+        resp = redirect(url_for("accueil.index"))
     ref = (request.cookies.get("pending_ref") or "").strip()
     if ref:
         resp.delete_cookie("pending_ref")

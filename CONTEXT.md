@@ -466,6 +466,11 @@ pwa/
 - Noms anglais → catalogue via `resoudre` (table `_ANGLAIS` complétée) ; le matériel entre parenthèses devient la variante sauf s'il est déjà supposé par l'exercice (« Lat Pulldown (Cable) » → « Tirage vertical »). Un exercice inconnu garde son nom d'origine.
 - Doublon = même jour + même nom de séance : réimporter le même fichier ne double rien. Écriture par paquets de séances entières (`ajouter_lignes`, lots de 500), donc jamais de séance à moitié écrite. Remarque « Import Hevy » / « Import Strong ».
 
+### Éditeur de programme : bornes et premier passage (point 4 de l'audit, 04/10)
+- Bornes (`routes/programme.py`) : `MAX_SERIES` 20, `MAX_EXOS_PAR_SEANCE` 30, `MAX_SEANCES` 40, noms d'exercice ≤ 80, de séance ≤ 60. Appliquées dans `_exo_entry` (toutes les écritures y passent), `/programme/state`, `/programme/import`, `/programme/seance/new` (`?seance=trop`), `/programme/exo/add` (`?exo=trop`), `/programme/exo/update`. L'éditeur les reçoit (`var BORNES`) et borne aussi côté client (`bornerSeries`), avec un message plutôt qu'une troncature muette.
+- Onboarding « Créer mon propre programme » (`programme_id=custom`) → `/programme?nouveau=1` : carte « Construis ton programme » (3 étapes), au lieu de l'accueil.
+- `/gestion/reset-soft` exige `confirm=yes` comme `/gestion/reset-total` ; sinon `?reset=confirm`, rien n'est effacé.
+
 ### Supersets (`superset: true` sur un exercice du programme)
 - « Enchaîner avec le suivant » : case dans l'éditeur de programme, conservée par `_exo_entry` (booléen strict). `_build_all_exo_contexts` nomme le partenaire des deux côtés (`superset_avec`, `superset_de`).
 - En séance : cartes reliées par un liseré ; après une série du premier exercice, pas de chrono, la carte du second s'ouvre ; après une série du second, chrono puis retour au premier (`allerAuPartenaire`, static/js/seance.js).
