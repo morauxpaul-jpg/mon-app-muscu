@@ -211,3 +211,68 @@ def lookup(code: str) -> dict | None:
     food = normalize(product, code) if isinstance(product, dict) else None
     _cache_put(code, food or False)
     return food
+
+
+# ── Recherche par nom ────────────────────────────────────────────
+# La base maison couvre ~400 aliments courants ; les produits du commerce se
+# cherchent ici par leur nom (« skyr », « pain de mie harrys »). Open Food
+# Facts limite la recherche à 10 requêtes par minute et par IP — et toute
+# l'app partage l'IP du serveur. D'où : recherche lancée par un geste
+# explicite (pas à chaque frappe), cache de 12 h par requête normalisée, et
+# un plafond global sous leur limite.
+SEARCH_URL = ("https://fr.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process"
+              "&json=1&page_size={n}&sort_by=unique_scans_n&search_terms={q}&fields=code," + FIELDS)
+SEARCH_MAX_PAR_MINUTE = 8
+SEARCH_RESULTATS = 12
+_recherches: list = []          # horodatages des appels réseau récents
+
+
+def _query_propre(q) -> str:
+    q = re.sub(r"\s+", " ", str(q or "")).strip().lower()
+    return q[:60] if len(q) >= 3 else ""
+
+
+def _place_disponible() -> bool:
+    now = time.time()
+    with _cache_lock:
+        _recherches[:] = [t for t in _recherches if now - t < 60]
+        if len(_recherches) >= SEARCH_MAX_PAR_MINUTE:
+            return False
+        _recherches.append(now)
+        return True
+
+
+def search(q) -> list | None:
+    """Produits normalisés pour une recherche texte ; [] si rien, None si
+    le service est indisponible ou saturé (l'appelant propose de réessayer)."""
+    from urllib.parse import quote_plus
+
+    q = _query_propre(q)
+    if not q:
+        return []
+    cle = "q:" + q
+    cached = _cache_get(cle)
+    if cached is not None:
+        return cached
+    if not _place_disponible():
+        return None
+    data = _http_get(SEARCH_URL.format(n=SEARCH_RESULTATS * 2, q=quote_plus(q)))
+    if not isinstance(data, dict):
+        return None
+    out, vus = [], set()
+    for p in data.get("products") or []:
+        if not isinstance(p, dict):
+            continue
+        food = normalize(p, clean_code(p.get("code")) or "")
+        if not food:
+            continue
+        food["g"] = food.get("brand") or "Produit du commerce"
+        cle_doublon = (food["n"].lower(), food.get("brand", "").lower())
+        if cle_doublon in vus:
+            continue
+        vus.add(cle_doublon)
+        out.append(food)
+        if len(out) >= SEARCH_RESULTATS:
+            break
+    _cache_put(cle, out)
+    return out

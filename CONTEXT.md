@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v31  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter)
+├── supabase_schema_v23.sql … v40  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -39,7 +39,9 @@ pwa/
 │   ├── db_historique.py           # Table history : lecture, écriture, opérations ciblées, renommages
 │   ├── db_programme.py            # Blob programs.data : verrou optimiste, fusion 3 voies, corps vs données perso
 │   ├── db_profil.py               # profiles : profil, onboarding, poids de corps
-│   ├── db_nutrition.py            # nutrition : repas du jour et sommes de macros
+│   ├── db_nutrition.py            # nutrition : repas du jour (une ligne par aliment), sommes de macros, récents
+│   ├── nutrition_cibles.py        # Cibles : protéines g/kg, cible du jour (entraînement / repos)
+│   ├── nutrition_aliments.py      # Panier → lignes par aliment, correction de quantité, aliments récents
 │   ├── db_bilans.py               # session_notes (v34) : bilans de séance
 │   ├── db_abonnement.py           # Tier PRO, Stripe, parrainage et VIP à durée limitée
 │   ├── db_push.py                 # push_subscriptions, newsletter, relance des inactifs
@@ -64,7 +66,7 @@ pwa/
 │   ├── openfoodfacts.py           # Produit emballé par code-barres (kJ→kcal, portion, cache mémoire)
 │   ├── catalog.py                 # Catalogue de 20 programmes prédéfinis (5 gratuits)
 │   ├── exercises_data.py          # Fiches exercices : matériel requis + substitutions
-│   ├── foods_data.py              # Base de ~270 aliments courants (kcal/macros pour 100 g + portions) pour la recherche Nutrition
+│   ├── foods_data.py              # Base de ~430 aliments courants (kcal/macros pour 100 g + portions) pour la recherche Nutrition
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
 │   ├── challenges.py              # Défis hebdomadaires (un défi tournant, évalué depuis l'historique)
 │   ├── push.py                    # Push web : config VAPID + envoi pywebpush, relance des inactifs
@@ -198,9 +200,11 @@ pwa/
 - Stockage dans la même table `history` (Exercice = `CARDIO:Type`, Reps = minutes, Poids = km, Remarque = `FC:… | Cal:… | RPE:…`, Muscle = `Cardio`)
 
 ### Nutrition
-- Profil métabolique : BMR Mifflin-St Jeor, TDEE × facteur d'activité (5 niveaux : sédentaire → athlète)
-- Objectif calorique ajusté selon objectif (Masse / Maintien / Sèche), macros recommandés en %
-- Table Supabase `nutrition` : un repas par ligne (date, meal_type, macros, note)
+- Cibles (`core/nutrition_cibles.py`, vague 5 du 04/10) : BMR Mifflin-St Jeor, TDEE × facteur d'activité (5 niveaux), ±400 kcal selon l'objectif (Masse / Maintien / Sèche), cible manuelle prioritaire (`_nutrition.calories_custom`). **Protéines en g/kg** (1,8 ; 2,2 en sèche ; plafond 40 % des kcal), lipides 25 % (≥ 0,7 g/kg), glucides = le reste.
+- **Cible du jour** (`cible_pour` / `cible_du_jour`) : jour d'entraînement (séance prévue au planning, ou faite ce jour-là) = plus de glucides, repos = moins ; écart total 15 % de la cible réparti selon le nombre de séances/semaine (planning, sinon moyenne des 4 dernières semaines) → **moyenne de la semaine inchangée**. Protéines et lipides fixes. Désactivable (`_nutrition.cycle = False`, case du profil ; `cycle_form` témoin). Utilisée par la page Nutrition ET la carte calories de l'accueil (qui affiche aussi les protéines du jour).
+- Table Supabase `nutrition` : **une ligne par aliment** (panier « Aliments », `core/nutrition_aliments.py`) avec `grams` + `food` (valeurs pour 100 g, migration **v40**) ; les macros sont recalculées côté serveur depuis `food` (le navigateur envoie `items` = aliments + grammes, plus de totaux). Les repas saisis en bloc (saisie rapide, composition, plats de la semaine) restent une ligne de totaux. Sans v40 : écriture retentée sans ces colonnes (PGRST204), le repas est noté.
+- `POST /nutrition/edit-meal` (corriger les grammes, macros recalculées), `POST /nutrition/copier` (« Reprendre … de la veille » pour un créneau vide aujourd'hui, rempli la veille), aliments **récents** (60 j, les plus fréquents d'abord, « comme la dernière fois ») en tête de recherche et proposés champ vide.
+- **Produits du commerce par leur nom** : `GET /nutrition/recherche?q=` → `openfoodfacts.search` (bouton explicite, pas à chaque frappe ; Open Food Facts limite la recherche à 10/min/IP → plafond global 8/min + cache 12 h ; 503 « réessaie » au-delà).
 - **Scan de code-barres** (mode « Scanner » du formulaire de repas) : `BarcodeDetector` du navigateur (Chrome/Android, donc l'app native et la PWA Android), repli par saisie des chiffres ailleurs — aucun décodeur JavaScript embarqué. Le produit est cherché côté **serveur** (`GET /nutrition/barcode/<code>` → `core/openfoodfacts.py` → Open Food Facts) : l'IP et les scans de l'utilisateur ne sortent pas de l'app et le cache est mutualisé. Le produit rejoint le panier « Aliments », donc mêmes réglages de portion et même bouton d'ajout.
 - Caméra : `Permissions-Policy: camera=(self)` (app.py) + `android.permission.CAMERA` dans le manifeste Android ; Capacitor demande la permission au premier scan.
 
@@ -413,7 +417,7 @@ pwa/
 ### Tests (pwa/tests)
 - `cd pwa && python -m pytest tests -q` — **≈ 915 tests** au 03/10/2026 (dont 10 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 106 tests). **Aucune date écrite en dur** relative à « aujourd'hui » : un test daté devient rouge un jour donné (trois l'étaient, audit du 03/10), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
 - **Tests JavaScript** : `pwa/tests/js/` — lanceur maison sous Node nu (`node tests/js/run.js`), sans npm install ni jsdom ; `harness.js` fournit un DOM/localStorage/fetch minimal. Couvre la **file hors-ligne** (ordre d'envoi, reprise après échec, session expirée, double synchronisation, phase d'écoute). `tests/test_js.py` le branche sur pytest (ignoré si Node manque).
-- Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
+- Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_nutrition_v5` (cibles, repas par aliment, recherche), `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
 ### Calques du jour dans le blob (`_extras`, `_libre_draft`, `_substituts`, `_seance_order`)
@@ -554,8 +558,8 @@ pwa/
 - Affichée sous « Dernière fois » (bouton Appliquer = pré-remplit la charge sur les séries vides ; reps cibles en placeholder). Réglage `_settings.show_overload_hint` (Gestion). Recalculée par `/seance/api/variant-history`.
 
 ### Base d'aliments (core/foods_data.py → nutrition.html)
-- `FOODS` (liste de dicts `{n, k, p, c, f, g, r, u}` : nom, kcal/prot/gluc/lip pour 100 g, catégorie, rang, portions `[[libellé, grammes]]`) est embarquée dans la page (`var FOODS = {{ foods|tojson }}`, ~27 Ko) ; la recherche est 100 % côté client (normalisation sans accents, tous les mots doivent matcher, début de mot > milieu, aliments simples avant plats/snacks `r=1`).
-- Mode « Aliments » (par défaut) du formulaire repas : panier `basket` (qty × portion) → totaux → POST `/nutrition/add-meal` classique, note = « Banane 120 g, Riz blanc cuit 180 g ». Pour ajouter un aliment : une ligne dans `FOODS_RAW` (une chaîne seule = titre de catégorie).
+- `FOODS` (liste de dicts `{n, k, p, c, f, g, r, u}` : nom, kcal/prot/gluc/lip pour 100 g, catégorie, rang, portions `[[libellé, grammes]]`, ~430 entrées) est embarquée dans la page (`var FOODS`, avec `RECENTS`) ; la recherche est côté client dans `static/js/nutrition.js` (normalisation sans accents, tous les mots doivent matcher, début de mot > milieu, récents `r=-1` puis aliments simples puis plats/snacks `r=1`, un aliment « cru » après le cuit sauf si on tape « cru »).
+- Mode « Aliments » (par défaut) du formulaire repas : panier `basket` (qty × portion) → `items` (JSON) → POST `/nutrition/add-meal` → une ligne par aliment. Pour ajouter un aliment : une ligne dans `FOODS_RAW` (une chaîne seule = titre de catégorie).
 
 ### Poids corporel (migration v33, routes/progres.py)
 - Table `body_weight` (user_id, date, poids_kg), une pesée / jour (upsert `on_conflict=user_id,date`). Carte gratuite dans Progrès : courbe SVG 90 j, variation 30 j (couleur selon `objectif_nutrition`), min/max, saisie + suppression.

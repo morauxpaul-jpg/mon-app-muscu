@@ -31,6 +31,7 @@ appmod._PUBLIC_PATHS.add("/test-seed")
 appmod._PUBLIC_PATHS.add("/test-vierge")
 appmod._PUBLIC_PATHS.add("/test-historique")
 appmod._PUBLIC_PATHS.add("/test-programme")
+appmod._PUBLIC_PATHS.add("/test-nutrition")
 
 
 @appmod.app.route("/test-login")
@@ -233,6 +234,15 @@ def test_historique():
     from flask import jsonify
     c = core_db.current_client()
     return jsonify(c.tables.get("history", []))
+
+
+@appmod.app.route("/test-nutrition")
+@limiter.exempt
+def test_nutrition():
+    """Lignes de la table nutrition (fausse base), pour les assertions."""
+    from flask import jsonify
+    c = core_db.current_client()
+    return jsonify(c.tables.get("nutrition", []))
 
 
 @appmod.app.route("/test-programme")

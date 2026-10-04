@@ -58,6 +58,7 @@
         <div class="s-8a0196">
           Prot {{ targets.macros_g.protein }}g · Gluc {{ targets.macros_g.carbs }}g · Lip {{ targets.macros_g.fat }}g
         </div>
+        <div class="nutri-explique">Protéines : {{ '%.1f'|format(targets.macros_g.protein / targets.poids) | replace('.', ',') }} g par kilo de poids de corps{% if cycle_actif %} · plus de glucides les jours d'entraînement, moins les jours de repos{% endif %}.</div>
       </div>
     {% endif %}
 
@@ -109,6 +110,12 @@
              placeholder="{% if targets %}Auto : {{ targets.calories_auto }} kcal — laisse vide pour l'automatique{% else %}Ex : 2400{% endif %}">
       <p class="s-0c39b5">Si tu suis un plan (ex. rééquilibrage à 2400 kcal), mets ta cible ici : elle remplace le calcul auto et les macros s'ajustent dessus. Vide = calcul automatique.</p>
 
+      <input type="hidden" name="cycle_form" value="1">
+      <label class="nutri-case">
+        <input type="checkbox" name="cycle" value="1" {% if cycle_actif %}checked{% endif %}>
+        <span>Adapter aux jours d'entraînement<br><small>Plus de glucides les jours de séance, moins les jours de repos. La moyenne de la semaine ne change pas.</small></span>
+      </label>
+
       <button type="submit" class="btn primary label-icon s-2068f6" data-haptic="1">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer
       </button>
@@ -125,7 +132,7 @@
       {% for wd in week_days %}
         <a href="/nutrition?date={{ wd.date_iso }}"
            class="week-day {{ 'selected' if wd.is_selected else '' }} {{ 'today' if wd.is_today and not wd.is_selected else '' }} {{ 'future' if wd.is_future else '' }}">
-          <div class="week-day-label">{{ wd.day_label }}</div>
+          <div class="week-day-label">{{ wd.day_label }}{% if wd.training %}<span class="week-day-seance" title="Jour d'entraînement"></span>{% endif %}</div>
           <div class="week-day-num">{{ wd.day_num }}</div>
           {% if wd.calories > 0 %}
             <div class="week-day-cal">{{ wd.calories }}</div>
@@ -142,6 +149,12 @@
   {% if targets %}
   <div class="card">
     <div class="label-icon s-a901d4"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#target"/></svg>OBJECTIF DU JOUR</div>
+    {% if jour and jour.jour and jour.ecart %}
+      <div class="nutri-jour {{ jour.jour }}">
+        {% if jour.jour == 'entrainement' %}Jour d'entraînement : +{{ jour.ecart }} kcal, en glucides
+        {% else %}Jour de repos : −{{ -jour.ecart }} kcal, sur les glucides{% endif %}
+      </div>
+    {% endif %}
 
     <div class="kcal-donut-wrap">
       {% set radius = 70 %}
@@ -155,7 +168,7 @@
       </svg>
       <div class="kcal-donut-center">
         <div class="kcal-big">{{ totals.calories }}</div>
-        <div class="kcal-sub">/ {{ targets.calories_cible }} kcal</div>
+        <div class="kcal-sub">/ {{ jour.calories }} kcal</div>
         <div class="kcal-pct">{{ cal_pct }}%</div>
       </div>
     </div>
@@ -229,7 +242,7 @@
 
     <div class="meal-grid">
       {% for mt_val, mt_label in meal_types %}
-        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="stopScan(); open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = 'aliments'; items = []; basket = []; q = ''; results = []; scanError = '';">
+        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="stopScan(); open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = 'aliments'; items = []; basket = []; q = ''; results = []; offResults = []; offError = ''; scanError = '';">
           <div class="meal-count">{{ meals_by_type.get(mt_val, []) | length }}</div>
           <div>{{ mt_label }}</div>
         </button>
@@ -306,8 +319,21 @@
         <div class="s-e5a6d3" x-show="mode === 'aliments'">
           <input type="search" class="field s-116966" :x-ref="'food-q-' + mt" x-model="q" @input.debounce.120ms="search()"
                  placeholder="Rechercher : banane, riz, poulet, whey…" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <template x-if="q.trim().length >= 2 && results.length === 0">
-            <p class="s-b801fa">Aucun aliment trouvé — essaie un autre mot, ou passe en « Saisie rapide ».</p>
+          <template x-if="!q.trim() && basket.length === 0 && recents.length > 0">
+            <div>
+              <div class="food-titre">Tes aliments habituels</div>
+              <div class="food-results">
+                <template x-for="r in recents.slice(0, 8)" :key="r.n + (r.code || '')">
+                  <button type="button" class="food-row" @click="pickFood(r)">
+                    <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g"></span></span>
+                    <span class="food-kcal"><span x-text="kcalFor(r, r.u[0][1])"></span> kcal · <span x-text="r.u[0][1] + ' g'"></span></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </template>
+          <template x-if="q.trim().length >= 2 && results.length === 0 && offResults.length === 0">
+            <p class="s-b801fa">Aucun aliment courant trouvé — cherche dans les produits du commerce, ou passe en « Saisie rapide ».</p>
           </template>
           <template x-if="results.length > 0">
             <div class="food-results">
@@ -315,6 +341,24 @@
                 <button type="button" class="food-row" @click="pickFood(r)">
                   <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g"></span></span>
                   <span class="food-kcal"><span x-text="kcalFor(r, r.u[0][1])"></span> kcal · <span x-text="r.u[0][0]"></span></span>
+                </button>
+              </template>
+            </div>
+          </template>
+
+          {# Produits du commerce (Open Food Facts) : à la demande, pas à chaque
+             frappe — leur recherche est limitée à 10 appels par minute. #}
+          <template x-if="q.trim().length >= 3">
+            <button type="button" class="btn food-off-btn" @click="offSearch()" :disabled="offBusy || offFor === q.trim().toLowerCase()"
+                    x-text="offBusy ? 'Recherche…' : 'Chercher « ' + q.trim() + ' » dans les produits du commerce'"></button>
+          </template>
+          <template x-if="offError"><p class="scan-error" x-text="offError"></p></template>
+          <template x-if="offResults.length > 0">
+            <div class="food-results">
+              <template x-for="(r, ri) in offResults" :key="ri">
+                <button type="button" class="food-row" @click="pickFood(r)">
+                  <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g + (r.quantity ? ' · ' + r.quantity : '')"></span></span>
+                  <span class="food-kcal"><span x-text="Math.round(r.k)"></span> kcal · 100 g</span>
                 </button>
               </template>
             </div>
@@ -347,18 +391,14 @@
               <form class="s-0d69e4" method="post" action="/nutrition/add-meal">
                 <input type="hidden" name="date" value="{{ date_iso }}">
                 <input type="hidden" name="meal_type" :value="mt">
-                <input type="hidden" name="calories" :value="sumBasket('k')">
-                <input type="hidden" name="protein" :value="sumBasket('p')">
-                <input type="hidden" name="carbs" :value="sumBasket('c')">
-                <input type="hidden" name="fat" :value="sumBasket('f')">
-                <input type="hidden" name="note" :value="basketNote()">
+                <input type="hidden" name="items" :value="basketItems()">
                 <button type="submit" class="btn primary label-icon s-9f1047" data-haptic="1">
                   <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Ajouter <span x-text="mealLabel(mt)"></span>
                 </button>
               </form>
             </div>
           </template>
-          <p class="s-ea6f12">Valeurs moyennes pour des aliments courants — pour un produit précis, reporte l'étiquette en « Saisie rapide ».</p>
+          <p class="s-ea6f12">Aliments courants : valeurs moyennes. Produits du commerce : Open Food Facts, base collaborative — vérifie l'étiquette si un chiffre te surprend.</p>
         </div>
 
         {# Quick mode (existing) #}
@@ -479,13 +519,26 @@
           <span class="s-a80552">{{ items | sum(attribute='calories') }} kcal</span>
         </div>
         {% for it in items %}
-          <div class="meal-item">
+          <div class="meal-item" x-data="{ e: false }">
             <div class="s-97445a">
-              <div class="s-1bccb6">{{ it.note or '—' }}</div>
+              <div class="s-1bccb6">{{ it.note or '—' }}{% if it.grams %} <span class="meal-grams">· {{ '%g'|format(it.grams|float) | replace('.', ',') }} g</span>{% endif %}</div>
               <div class="s-beee49">
                 {{ it.calories }} kcal · P {{ it.protein or 0 }}g · G {{ it.carbs or 0 }}g · L {{ it.fat or 0 }}g
               </div>
+              {% if it.grams %}
+                <form class="meal-edit" method="post" action="/nutrition/edit-meal" x-show="e" x-cloak>
+                  <input type="hidden" name="id" value="{{ it.id }}">
+                  <input type="hidden" name="date" value="{{ date_iso }}">
+                  <input type="number" inputmode="decimal" name="grams" class="field" min="1" max="3000" step="any"
+                         value="{{ '%g'|format(it.grams|float) }}" aria-label="Quantité en grammes" required>
+                  <span>g</span>
+                  <button type="submit" class="btn primary">OK</button>
+                </form>
+              {% endif %}
             </div>
+            {% if it.grams %}
+              <button type="button" class="mini-btn" @click="e = !e" title="Corriger la quantité" aria-label="Corriger la quantité"><svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg></button>
+            {% endif %}
             <form class="s-116966" method="post" action="/nutrition/delete-meal">
               <input type="hidden" name="id" value="{{ it.id }}">
               <input type="hidden" name="date" value="{{ date_iso }}">
@@ -497,145 +550,35 @@
     {% endif %}
   {% endfor %}
 
+  {# « Reprendre hier » : les créneaux vides aujourd'hui mais remplis la veille. #}
+  {% set a_reprendre = [] %}
+  {% for mt_val, mt_label in meal_types %}
+    {% if mt_val in veille_slots and not meals_by_type.get(mt_val) %}{% set _ = a_reprendre.append((mt_val, mt_label)) %}{% endif %}
+  {% endfor %}
+  {% if a_reprendre and nutrition_ready %}
+    <div class="card">
+      <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>COMME LA VEILLE ?</div>
+      <div class="reprendre-row">
+        {% for mt_val, mt_label in a_reprendre %}
+          <form method="post" action="/nutrition/copier">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="source" value="{{ veille }}">
+            <input type="hidden" name="meal_type" value="{{ mt_val }}">
+            <button type="submit" class="btn" data-haptic="1">Reprendre {% if mt_val == 'collation' %}la collation{% else %}le {{ mt_label | lower }}{% endif %} de la veille</button>
+          </form>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
   <script src="/static/js/barcode.js"></script>
   <script>
-    // Base d'aliments (core/foods_data.py) — hors composant Alpine : pas besoin
-    // de réactivité sur 270 entrées. Index normalisé (sans accents) pour la recherche.
+    // Données de la page, lues par static/js/nutrition.js.
     var FOODS = {{ foods|tojson }};
-    function foodNorm(s) {
-      return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
-    FOODS.forEach(function (f) { f._n = foodNorm(f.n); });
     var MEAL_LABELS = {{ meal_types_map|tojson }};
-
-    function mealForm() {
-      return {
-        open_meal: '',
-        mode: 'aliments',
-        // ── Aliments ──
-        q: '',
-        results: [],
-        basket: [],
-        search() {
-          var words = foodNorm(this.q).split(/\s+/).filter(Boolean);
-          if (!words.length) { this.results = []; return; }
-          var scored = [];
-          for (var i = 0; i < FOODS.length; i++) {
-            var f = FOODS[i], ok = true, score = 0;
-            for (var w = 0; w < words.length; w++) {
-              var pos = f._n.indexOf(words[w]);
-              if (pos < 0) { ok = false; break; }
-              // Début de mot (nom ou mot interne) = 0, milieu de mot = 3.
-              score += (pos === 0 || f._n[pos - 1] === ' ' ? 0 : 3) + pos / 100;
-            }
-            if (ok) scored.push([score, f]);
-          }
-          // Début de mot > milieu de mot ; aliments simples (r=0) avant plats/snacks ; puis nom court.
-          scored.sort(function (a, b) {
-            return Math.floor(a[0]) - Math.floor(b[0]) || a[1].r - b[1].r || a[0] - b[0]
-              || a[1].n.length - b[1].n.length || a[1].n.localeCompare(b[1].n);
-          });
-          this.results = scored.slice(0, 8).map(function (x) { return x[1]; });
-        },
-        kcalFor(f, grams) { return Math.round(f.k * grams / 100); },
-        pickFood(f) {
-          this.basket.push({ food: f, qty: 1, u: 0 });
-          this.q = ''; this.results = [];
-        },
-        grams(b) { return (parseFloat(b.qty) || 0) * b.food.u[b.u][1]; },
-        macro(b, key) { return b.food[key] * this.grams(b) / 100; },
-        sumBasket(key) {
-          var self = this;
-          return Math.round(this.basket.reduce(function (s, b) { return s + self.macro(b, key); }, 0));
-        },
-        basketNote() {
-          var self = this;
-          return this.basket.map(function (b) { return b.food.n + ' ' + Math.round(self.grams(b)) + ' g'; }).join(', ').slice(0, 200);
-        },
-        mealLabel(mt) {
-          var l = (MEAL_LABELS[mt] || mt).toLowerCase();
-          return mt === 'collation' ? 'en ' + l : 'au ' + l;
-        },
-        // ── Scanner ──
-        // BarcodeDetector n'existe que sur Chrome/Android (donc l'app native et
-        // la PWA Android). Ailleurs on garde la saisie des chiffres à la main
-        // plutôt que d'embarquer 250 ko de décodeur pour tout le monde.
-        scanSupported: !!(window.BarcodeScan && window.BarcodeScan.supported()),
-        scanLive: false,
-        scanBusy: false,
-        scanError: '',
-        scanCode: '',
-        openScan(mt) {
-          this.mode = 'scan';
-          this.scanError = '';
-          this.scanCode = '';
-          if (!this.scanSupported) return;
-          var self = this;
-          this.$nextTick(function () {
-            var v = document.getElementById('scan-video-' + mt);
-            if (!v) return;
-            window.BarcodeScan.start(v, function (code) {
-              self.scanLive = false;
-              self.lookupCode(code);
-            }).then(function (err) {
-              self.scanError = err || '';
-              self.scanLive = !err;
-            });
-          });
-        },
-        stopScan() {
-          this.scanLive = false;
-          if (window.BarcodeScan) window.BarcodeScan.stop();
-        },
-        lookupCode(code) {
-          var clean = String(code || '').replace(/[^0-9]/g, '');
-          if (clean.length < 8) {
-            this.scanError = 'Un code-barres fait 8 à 13 chiffres.';
-            return;
-          }
-          var self = this;
-          this.scanBusy = true;
-          this.scanError = '';
-          fetch('/nutrition/barcode/' + clean, { headers: { Accept: 'application/json' } })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-              self.scanBusy = false;
-              if (!d || !d.ok) {
-                self.scanError = (d && d.error) || 'Produit introuvable.';
-                return;
-              }
-              // Le produit rejoint le panier « Aliments » : mêmes réglages de
-              // portion, même bouton d'ajout, rien de nouveau à apprendre.
-              self.stopScan();
-              self.basket.push({ food: d.food, qty: 1, u: 0 });
-              self.scanCode = '';
-              self.mode = 'aliments';
-            })
-            .catch(function () {
-              self.scanBusy = false;
-              self.scanError = 'Pas de réseau — réessaie, ou passe en saisie rapide.';
-            });
-        },
-        // ── Composition ──
-        items: [],
-        cur: { name: '', calories: 0, protein: 0, carbs: 0, fat: 0 },
-        addItem() {
-          if (!this.cur.name.trim() || this.cur.calories <= 0) return;
-          this.items.push({
-            name: this.cur.name.trim(),
-            calories: this.cur.calories || 0,
-            protein: this.cur.protein || 0,
-            carbs: this.cur.carbs || 0,
-            fat: this.cur.fat || 0,
-          });
-          this.cur = { name: '', calories: 0, protein: 0, carbs: 0, fat: 0 };
-        },
-        sumItems(key) {
-          return this.items.reduce(function(s, i) { return s + (i[key] || 0); }, 0);
-        },
-      };
-    }
+    var RECENTS = {{ recents|tojson }};
   </script>
+  <script src="/static/js/nutrition.js"></script>
 
   <style>
     .scan-frame {
@@ -825,6 +768,21 @@
       padding: 7px 0;
       border-bottom: 0.5px solid var(--border-subtle);
     }
+    .food-titre { font-size: 0.72rem; color: var(--text-3); letter-spacing: 0.4px; text-transform: uppercase; margin-top: 8px; }
+    .food-off-btn { width: 100%; margin-top: 8px; font-size: 0.8rem; }
+    .meal-grams { color: var(--text-3); font-weight: 400; }
+    .meal-edit { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.8rem; color: var(--text-3); }
+    .meal-edit .field { width: 90px; padding: 6px 8px; font-size: 0.85rem; }
+    .meal-edit .btn { padding: 6px 12px; }
+    .reprendre-row { display: flex; flex-direction: column; gap: 6px; }
+    .reprendre-row .btn { width: 100%; }
+    .nutri-explique { font-size: 0.75rem; color: var(--text-3); margin-top: 6px; line-height: 1.45; }
+    .nutri-case { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; font-size: 0.85rem; color: var(--text-1); cursor: pointer; }
+    .nutri-case input { margin-top: 3px; }
+    .nutri-case small { color: var(--text-3); font-size: 0.75rem; }
+    .nutri-jour { font-size: 0.8rem; text-align: center; margin: -4px 0 10px; color: var(--text-2); }
+    .nutri-jour.entrainement { color: var(--accent); }
+    .week-day-seance { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); margin-left: 3px; vertical-align: middle; }
     .compose-total {
       display: flex;
       justify-content: space-between;

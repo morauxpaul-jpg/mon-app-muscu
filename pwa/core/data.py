@@ -128,6 +128,22 @@ def delete_body_weight(date_str):
     return db.delete_body_weight(_uid(), date_str)
 
 
+def insert_nutrition_rows(rows):
+    return db.insert_nutrition_rows(_uid(), rows)
+
+
+def get_nutrition(entry_id):
+    return db.get_nutrition(_uid(), entry_id)
+
+
+def update_nutrition(entry_id, fields):
+    return db.update_nutrition(_uid(), entry_id, fields)
+
+
+def list_nutrition_recents(since):
+    return db.list_nutrition_recents(_uid(), since)
+
+
 def delete_nutrition(entry_id):
     return db.delete_nutrition(_uid(), entry_id)
 

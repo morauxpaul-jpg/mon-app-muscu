@@ -352,3 +352,53 @@ def test_semaine_gardee_hors_ligne(serveur, navigateur):
     pg.goto(serveur + seances[-1])                # la plus lointaine, dans six jours
     pg.wait_for_selector(".serie-valider", timeout=15000)
     ctx.close()
+
+
+# ── Nutrition : un repas détaillé, aliment par aliment ───────────
+
+def _nutrition(serveur):
+    with urllib.request.urlopen(serveur + "/test-nutrition") as r:
+        return json.loads(r.read())
+
+
+def test_nutrition_repas_detaille_puis_quantite_corrigee(serveur, navigateur):
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');")
+    pg = ctx.new_page()
+    erreurs = []
+    pg.on("pageerror", lambda e: erreurs.append(str(e)))
+    pg.goto(serveur + "/test-vierge")
+    pg.goto(serveur + "/test-login?vip=1&to=/nutrition")
+
+    # Profil nutritionnel (formulaire ouvert tant qu'il manque).
+    pg.locator("#nutri-poids").fill("80")
+    pg.locator("#nutri-taille").fill("180")
+    pg.locator("#nutri-age").fill("30")
+    pg.get_by_role("button", name="Enregistrer").click()
+    pg.wait_for_selector("text=OBJECTIF DU JOUR")
+    assert pg.locator("text=par kilo de poids de corps").count() == 1
+
+    # Déjeuner : « banane » → premier résultat → ajouter.
+    pg.locator(".meal-btn", has_text="Déjeuner").click()
+    champ = pg.locator("input[type=search]:visible")
+    champ.fill("banane")
+    pg.locator(".food-row:visible").first.click()
+    pg.get_by_role("button", name="Ajouter au déjeuner").click()
+    pg.wait_for_selector(".meal-grams")
+
+    rows = _nutrition(serveur)
+    assert [(r["note"], r["grams"], r["calories"]) for r in rows] == [("Banane", 120, 107)]
+
+    # Corriger la quantité : 240 g → calories doublées, recalculées par le serveur.
+    pg.get_by_role("button", name="Corriger la quantité").click()
+    pg.get_by_label("Quantité en grammes").fill("240")
+    pg.get_by_role("button", name="OK").click()
+    pg.wait_for_selector(".meal-grams:has-text('240 g')")
+    assert [(r["grams"], r["calories"]) for r in _nutrition(serveur)] == [(240, 214)]
+
+    # La banane revient dans « Tes aliments habituels ».
+    pg.locator(".meal-btn", has_text="Collation").click()
+    pg.locator(".food-row:visible", has_text="Banane").wait_for(timeout=5000)
+    assert pg.locator(".food-titre:visible").inner_text() == "TES ALIMENTS HABITUELS"
+    assert erreurs == []
+    ctx.close()
