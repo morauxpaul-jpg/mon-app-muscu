@@ -85,10 +85,8 @@ def test_reglage_heure_enregistre(fake_db, logged_in):
     _seed(fake_db)
     logged_in.post("/gestion/settings", data={
         "_csrf": CSRF, "notifications": "on", "reminder_hour": "7",
-        "show_previous_weeks": "2",
     })
-    prog = fake_db.tables["programs"][0]["data"]
-    assert prog["_settings"]["reminder_hour"] == 7
+    assert fake_db.tables["reglages"][0]["reminder_hour"] == 7
 
 
 def test_reglage_heure_visible_dans_gestion(fake_db, logged_in):

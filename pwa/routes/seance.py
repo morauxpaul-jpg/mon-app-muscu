@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 from core.data import (
     get_hist, get_prog, clear_user_cache,
     replace_exo_rows, delete_exo_rows, delete_session_rows, echauffements_du_jour,
-    echauffements_disponibles,
+    echauffements_disponibles, get_reglages,
 )
 from core.dates import (today_paris_str, logical_today_paris, DAYS_FR, MONTHS_FR)
 from core.limiter import limiter
@@ -59,11 +59,11 @@ def seance():
             message="Impossible de charger ta séance. Vérifie ta connexion et réessaie.",
         ), 503
     hist, prog_seances = _normalize_hist(hist, prog)
-    _settings = prog.get("_settings", {})
-    auto_rest_timer = _settings.get("auto_rest_timer", True)
-    auto_prefill_weight = _settings.get("auto_prefill_weight", True)
-    show_rpe = _settings.get("show_rpe", True)
-    show_overload_hint = _settings.get("show_overload_hint", True)
+    _settings = get_reglages(prog)
+    auto_rest_timer = _settings["auto_rest_timer"]
+    auto_prefill_weight = _settings["auto_prefill_weight"]
+    show_rpe = _settings["show_rpe"]
+    show_overload_hint = _settings["show_overload_hint"]
 
     # « Aujourd'hui logique » : avant 04h du matin, on considère encore
     # la journée précédente — la séance faite « tard hier soir » est ainsi
@@ -663,7 +663,7 @@ def api_variant_history():
     record = _best_record(hist, exo_final, is_bw)
     prev_weeks = _previous_weeks_data(hist, exo_final, seance, s_act, n_weeks=2)
     suggestion = None
-    if prog.get("_settings", {}).get("show_overload_hint", True) and not detect_isometric(exo_base)[0]:
+    if get_reglages(prog)["show_overload_hint"] and not detect_isometric(exo_base)[0]:
         suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw,
                                      _cible_du_programme(prog, seance, exo_base))
 

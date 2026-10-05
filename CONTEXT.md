@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v44  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio)
+├── supabase_schema_v23.sql … v45  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -37,6 +37,7 @@ pwa/
 │   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
 │   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
 │   ├── db_historique.py           # Table history : lecture, écriture par clé de série, opérations ciblées
+│   ├── db_reglages.py             # Table reglages (v45) : réglages par compte, repli sur l'ancien _settings du programme
 │   ├── db_colonnes.py             # Colonnes facultatives de history (v42, v43, v44) : base en retard = lu et écrit sans
 │   ├── db_historique_lots.py      # save_hist (sauvegarde, reset) et ajouter_lignes (import), par clé
 │   ├── db_renommage.py            # Renommer séance / exercice dans l'historique, sans collision
@@ -308,13 +309,13 @@ pwa/
 ### Notifications
 - **Universelles (free + PRO)** depuis 2026-06-15 : la case « Notifications de rappel & relances » dans Gestion n'est plus réservée au VIP (rétention = on veut surtout faire revenir les gratuits). Un seul contrôle : cocher la case demande la permission ET abonne au push (`handleNotifToggle` → `window.enablePush`).
 - Rappels **locaux** : retirés le 30/09 (ils ne se déclenchaient jamais — script exécuté avant le chargement de notifications.js, audit R4 — et n'auraient prévenu que quelqu'un qui regarde déjà l'app). Seuls les rappels serveur (core/reminders.py) existent.
-- **Rappel de séance à l'heure choisie** (`core/reminders.py`) : réglage `_settings.reminder_hour` (6→22 h, 0 = aucun) dans Gestion. `POST /tasks/reminders` (même secret `CRON_SECRET`) est appelé **toutes les heures** par un cron externe et ne notifie que les comptes dont l'heure correspond ET qui ont une séance prévue non faite. Script équivalent : `pwa/cron_reminders.py`.
+- **Rappel de séance à l'heure choisie** (`core/reminders.py`) : réglage `reglages.reminder_hour` (6→22 h, 0 = aucun) dans Gestion. `POST /tasks/reminders` (même secret `CRON_SECRET`) est appelé **toutes les heures** par un cron externe et ne notifie que les comptes dont l'heure correspond ET qui ont une séance prévue non faite. Script équivalent : `pwa/cron_reminders.py`.
 - Relances **push** de réactivation (inactifs 3–30 j) : cf. section « Push web » plus haut. Au plus 3 relances par arrêt, espacées d'au moins 4 jours (`push_subscriptions.last_reactivation_at` / `reactivation_count`, migration v34) ; une relance antérieure à la dernière séance appartient à un arrêt terminé et ne compte plus (audit du 30/09, I14).
 - Désactivable dans Gestion > Paramètres.
 
 ### Récap de la semaine (core/recap.py)
 - Le dimanche à 19 h, le cron horaire des rappels (`/tasks/reminders`, `cron_reminders.py`) envoie un push : séances faites, volume, écart avec la semaine d'avant, prochaine séance prévue (rotation comprise). Hors de ce créneau, l'appel ne fait rien.
-- Seulement à qui s'est entraîné dans la semaine et a les notifications ; coupable dans Gestion (`_settings.recap_hebdo`, vrai par défaut). Lecture groupée : `history_between_for_users` par lots de 100 comptes.
+- Seulement à qui s'est entraîné dans la semaine et a les notifications ; coupable dans Gestion (`reglages.recap_hebdo`, vrai par défaut). Lecture groupée : `history_between_for_users` par lots de 100 comptes.
 
 ### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
 - **Texte non sélectionnable** : `theme.css` pose `user-select:none` + `-webkit-touch-callout:none` sur `body` (supprime le menu « Rechercher sur le web » au clic long en webview Android). Réactivé sur `input/textarea/select/[contenteditable]/.selectable`. Déployé par Railway → corrige l'app native **sans rebuild**.
@@ -394,22 +395,22 @@ pwa/
 - `HIDE_NATIVE_BILLING` — à `1`, retire tarifs et boutons d'achat du rendu dans l'app native. Inutile tant que l'APK est installé à la main ; **obligatoire avant un dépôt sur le Play Store**.
 - `GOOGLE_WEB_CLIENT_ID` — ID client OAuth Web Google (PUBLIC), requis par le login natif Capacitor (`login.html` → `@capgo/capacitor-social-login`). Inutile sur le web.
 
-### Settings utilisateur (`prog._settings`)
+### Réglages utilisateur (table `reglages`, v45)
 ```python
-# Valeurs par défaut : routes/gestion.py:DEFAULT_SETTINGS
+# Valeurs par défaut : core/db_reglages.py:DEFAUTS (les mêmes en base)
 {
-    "auto_collapse": True,        # Replier exercices terminés
-    "show_1rm": True,             # Afficher estimation 1RM
-    "theme_animations": True,     # Animations CSS
-    "auto_rest_timer": True,      # Chrono repos auto
+    "auto_rest_timer": True,      # Chrono de repos à « Série faite »
     "auto_prefill_weight": True,  # Pré-remplir les charges de la dernière fois
-    "show_rpe": True,             # Colonne RPE dans le tableau de séries
+    "show_rpe": True,             # Puces RPE dans le détail d'une série
     "show_overload_hint": True,   # Suggestion de surcharge
-    "show_previous_weeks": 2,     # Semaines d'historique affichées
-    "notifications": False,       # Rappels de séance
+    "notifications": False,       # Rappels, relances et récap
     "reminder_hour": 18,          # Heure du rappel push (6-22, 0 = aucun)
+    "recap_hebdo": True,          # Récap du dimanche
 }
 ```
+- **Depuis la v45**, une ligne par compte dans `reglages` (une colonne typée par réglage, pas de ligne = défauts), et plus dans `programs.data['_settings']`. Lecture `db.lire_reglages(uid, prog)` / façade `data.get_reglages(prog)` ; écriture `db.ecrire_reglages` / `data.save_reglages` ; crons : `db.reglages_pour(progs)`, une requête par lot de 100.
+- **Base en retard** : table absente = lecture et écriture dans le blob comme avant, table redemandée chaque minute (`REESSAI`). Tant qu'un compte n'a pas de ligne, un reste de `_settings` dans son programme fait foi.
+- **Retirés en v45** : « Replier automatiquement », « Afficher l'estimation 1RM », « Animations du thème » (vendu PRO) et « Semaines précédentes affichées ». Rien ne les lisait ; `tests/test_reglages.py` empêche leur retour sans usage.
 
 ### Semaine continue (migration 2026-06-10)
 - `Semaine` est un **index continu** ancré au lundi 2024-01-01 (`core/dates.py:continuous_week`), recalculé **à la lecture** depuis `Date` dans `db.get_hist()` — la colonne `semaine` stockée (n° ISO legacy) n'est plus une source de vérité.
@@ -593,7 +594,7 @@ pwa/
 
 ### Suggestion de surcharge (core/muscu.py → routes/seance.py)
 - `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE vient de la colonne `rpe` (où la saisie l'écrit depuis la v34), repli sur l'ancien jeton `@RPE8` des remarques (`core/seance_historique._rpe_de`). Avant le 03/10, seul le jeton était lu : tout RPE saisi était ignoré.
-- Affichée sous « Dernière fois » (bouton Appliquer = pré-remplit la charge sur les séries vides ; reps cibles en placeholder). Réglage `_settings.show_overload_hint` (Gestion). Recalculée par `/seance/api/variant-history`.
+- Affichée sous « Dernière fois » (bouton Appliquer = pré-remplit la charge sur les séries vides ; reps cibles en placeholder). Réglage `reglages.show_overload_hint` (Gestion). Recalculée par `/seance/api/variant-history`.
 
 ### Base d'aliments (core/foods_data.py → nutrition.html)
 - `FOODS` (liste de dicts `{n, k, p, c, f, g, r, u}` : nom, kcal/prot/gluc/lip pour 100 g, catégorie, rang, portions `[[libellé, grammes]]`, ~430 entrées) est embarquée dans la page (`var FOODS`, avec `RECENTS`) ; la recherche est côté client dans `static/js/nutrition.js` (normalisation sans accents, tous les mots doivent matcher, début de mot > milieu, récents `r=-1` puis aliments simples puis plats/snacks `r=1`, un aliment « cru » après le cuit sauf si on tape « cru »).

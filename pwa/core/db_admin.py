@@ -335,6 +335,7 @@ def delete_user_account(user_id: str) -> None:
         ("body_weight", "user_id"),
         ("session_notes", "user_id"),
         ("push_subscriptions", "user_id"),
+        ("reglages", "user_id"),
         # Mesure d'usage interne : sans clé étrangère vers le compte, ses
         # lignes survivaient à la suppression (la politique promet « toutes
         # tes données »).

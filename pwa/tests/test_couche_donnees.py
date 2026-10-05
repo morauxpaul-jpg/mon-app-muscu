@@ -29,7 +29,9 @@ PLAFOND = 400  # lignes : au-delà, un module porte plus d'un sujet
 # piège : `core.db._client` serait une copie du lien, figée à None, et une
 # affectation dessus n'aurait aucun effet sur `get_client()`. `use_client()`
 # et `current_client()` sont le chemin, et une lecture directe doit échouer.
-HORS_FACADE = {"db_base._client"}
+# `_absente_depuis` : un horodatage que le module réaffecte ; réexporté, la
+# façade en garderait une copie figée qui mentirait.
+HORS_FACADE = {"db_base._client", "db_reglages._absente_depuis"}
 
 
 def _modules():

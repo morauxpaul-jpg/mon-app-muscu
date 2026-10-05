@@ -61,6 +61,7 @@ def targets_for_hour(hour: int) -> list[dict]:
         logger.error("targets_for_hour lecture FAILED: %s", e)
         return []
 
+    reglages = core_db.reglages_pour(progs)
     out = []
     for row in progs:
         uid = row.get("user_id")
@@ -70,7 +71,7 @@ def targets_for_hour(hour: int) -> list[dict]:
         seance = _planned_today(data, today)
         if not seance:
             continue
-        settings = data.get("_settings") or {}
+        settings = reglages.get(uid) or {}
         if not settings.get("notifications"):
             continue
         user_hour = clean_hour(settings.get("reminder_hour"), DEFAULT_HOUR)
