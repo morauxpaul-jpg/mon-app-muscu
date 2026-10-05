@@ -3,10 +3,10 @@ flask-limiter==3.8.0
 redis==5.0.8
 gunicorn==23.0.0
 tzdata==2026.4
-supabase==2.8.1
-pyjwt==2.10.1
+supabase==2.31.0
+pyjwt==2.15.1
 cryptography==44.0.3
 anthropic==0.39.0
-sentry-sdk[flask]==2.19.2
+sentry-sdk[flask]==2.71.0
 stripe==15.2.0
-pywebpush==2.0.0
+pywebpush==2.5.0
