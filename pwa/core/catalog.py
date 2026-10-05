@@ -4,8 +4,9 @@ Chaque programme est un dict {seance_name: [exos]} compatible avec le format
 `programs.data` existant. Les exos suivent la structure utilisée dans
 routes/programme.py : {"name": str, "sets": int, "muscle": str}.
 
-Les reps ne sont PAS stockées (cf CONTEXT.md point 5) — elles sont juste
-affichées à titre indicatif dans l'UI onboarding via le champ `reps_hint`.
+Chaque exercice porte une cible de répétitions (`_reps_hint`) et de repos
+(`_rest`) : affichées dans l'onboarding, puis copiées dans le programme
+adopté (`reps`, `rest_seconds`) par `build_program`, où la séance les montre.
 """
 from copy import deepcopy
 from core.dates import DAYS_FR

@@ -180,8 +180,8 @@ def test_la_page_cardio_enregistre_la_distance_deduite(compte, logged_in):
         "distance_km": "", "vitesse": "10",
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
     ligne = _ligne_cardio(compte)
-    assert float(ligne["poids"]) == 5.0, "la distance déduite doit être stockée"
-    assert "Vit:10" in (ligne["remarque"] or "")
+    assert float(ligne["distance"]) == 5.0, "la distance déduite doit être stockée"
+    assert ligne["vitesse"] == 10.0
 
 
 def test_la_page_cardio_enregistre_la_vitesse_deduite(compte, logged_in):
@@ -190,7 +190,7 @@ def test_la_page_cardio_enregistre_la_vitesse_deduite(compte, logged_in):
         "activite": "Course", "date": JOUR, "duree_min": "30",
         "distance_km": "5", "vitesse": "",
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
-    assert "Vit:10" in (_ligne_cardio(compte)["remarque"] or "")
+    assert _ligne_cardio(compte)["vitesse"] == 10.0
 
 
 def test_la_seance_enregistre_la_vitesse_quon_lui_suggerait(compte, logged_in):
@@ -201,7 +201,7 @@ def test_la_seance_enregistre_la_vitesse_quon_lui_suggerait(compte, logged_in):
         "activite": "Course", "duree_min": "30", "distance_km": "5",
         "vitesse": "", "_csrf": CSRF,
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
-    assert "Vit:10" in (_ligne_cardio(compte)["remarque"] or "")
+    assert _ligne_cardio(compte)["vitesse"] == 10.0
 
 
 def test_la_seance_deduit_aussi_la_distance(compte, logged_in):
@@ -210,7 +210,7 @@ def test_la_seance_deduit_aussi_la_distance(compte, logged_in):
         "activite": "Course", "duree_min": "30", "distance_km": "",
         "vitesse": "10", "_csrf": CSRF,
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
-    assert float(_ligne_cardio(compte)["poids"]) == 5.0
+    assert float(_ligne_cardio(compte)["distance"]) == 5.0
 
 
 def test_ce_que_lutilisateur_a_saisi_nest_pas_recalcule(compte, logged_in):
@@ -221,20 +221,22 @@ def test_ce_que_lutilisateur_a_saisi_nest_pas_recalcule(compte, logged_in):
         "distance_km": "4", "vitesse": "12",
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
     ligne = _ligne_cardio(compte)
-    assert float(ligne["poids"]) == 4.0
-    assert "Vit:12" in (ligne["remarque"] or "")
+    assert float(ligne["distance"]) == 4.0
+    assert ligne["vitesse"] == 12.0
 
 
 def test_la_relecture_retrouve_la_vitesse(compte, logged_in):
-    """`_parse_cardio_remarque` doit savoir relire ce qu'on vient d'écrire,
-    sinon la séance passée s'affiche sans vitesse."""
+    """L'app doit savoir relire ce qu'on vient d'écrire, sinon la séance
+    passée s'affiche sans vitesse."""
+    import core.db as db
     from core.seance_cardio import _parse_cardio_remarque
     logged_in.post("/cardio/save", data={
         "activite": "Course", "date": JOUR, "duree_min": "30",
         "distance_km": "", "vitesse": "10",
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
-    relu = _parse_cardio_remarque(_ligne_cardio(compte)["remarque"])
-    assert relu["vitesse"] == "10"
+    (ligne,) = [r for r in db.get_hist(USER_ID) if r["Exercice"].startswith("CARDIO:")]
+    assert _parse_cardio_remarque(ligne["Remarque"])["vitesse"] == "10"
+    assert ligne["Vitesse"] == 10.0
 
 
 # ── Le GPS n'est pas bloqué par nos propres en-têtes ─────────────

@@ -8,6 +8,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_historique   les séries enregistrées — la source de vérité de l'app
     db_historique_lots  réécriture complète et ajout massif (sauvegarde, import)
     db_renommage    renommer une séance ou un exercice dans tout l'historique
+    db_colonnes     les colonnes de `history` qu'une base en retard n'a pas encore
     db_identite     rattacher les séries anciennes à l'identifiant de leur exercice (v42)
     db_programme    le programme, son planning et ses calques (blob JSON)
     db_profil       profil, onboarding, poids de corps
@@ -18,10 +19,11 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_coach        les conversations du coach
     db_admin        statistiques, funnel, fiche et suppression d'un compte
 
-Leurs dépendances forment un arbre : tous s'appuient sur `db_base`, trois
-seulement s'appuient sur un autre module (`db_abonnement`, `db_admin` et
-`db_push` lisent le profil ; `db_push` et `db_bilans` normalisent une date
-avec l'historique). Aucun cycle.
+Leurs dépendances forment un arbre : tous s'appuient sur `db_base`, et
+quelques-uns sur un autre module (`db_abonnement`, `db_admin` et `db_push`
+lisent le profil ; `db_push` et `db_bilans` normalisent une date avec
+l'historique ; `db_historique` et `db_push` consultent `db_colonnes`).
+Aucun cycle.
 
 **Choix d'archi (Phase 3).** Le backend utilise la clé `service_role`, qui
 contourne le RLS, et filtre donc manuellement **chaque** requête par
@@ -53,6 +55,9 @@ from core.db_historique import (
     _row_to_supabase, _verrou, _COLONNES, _ids_cibles, _colonne_refusee, _replace_exo_rows, _append_exo_rows
 )
 
+from core.db_colonnes import (
+    colonnes_mesures, lire_avec_mesures, sans_colonnes_absentes, _GROUPES, _noms
+)
 from core.db_historique_lots import ajouter_lignes, save_hist
 from core.db_identite import marquer_series, _variante
 from core.db_renommage import (
@@ -107,7 +112,7 @@ from core.db_admin import (
     auth_user_exists, delete_user_account, get_admin_stats, get_funnel_stats,
     get_user_details, insert_event, list_all_users_with_tier, purge_old_events,
     reset_user_coach_quota, EVENTS_RETENTION_DAYS,
-    _FUNNEL_STEPS, _tous_les_comptes
+    _FUNNEL_STEPS, _charge, _tous_les_comptes
 )
 
 # ── les bilans de séance ────────────────────────────────────────

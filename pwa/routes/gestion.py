@@ -220,7 +220,8 @@ def gestion():
 
 @bp.route("/gestion/redo-onboarding", methods=["POST"])
 def redo_onboarding():
-    """Force l'user à refaire l'onboarding (sans rien effacer)."""
+    """Renvoie à l'onboarding. Rien n'est effacé : l'historique reste, et un
+    programme choisi s'ajoute dans un nouveau dossier (routes/onboarding.py)."""
     session.pop("onboarded", None)
     return redirect(url_for("onboarding.index"))
 

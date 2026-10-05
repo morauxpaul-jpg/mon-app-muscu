@@ -160,8 +160,8 @@ def submit():
     # 2. Si l'user a choisi un programme du catalogue, on le clone.
     #    S'il a choisi "custom" (créer mon propre) → on ne touche pas à programs,
     #    il ira sur /programme pour construire le sien.
-    #    Pour un re-onboarding volontaire (refaire depuis Gestion), on écrase
-    #    le programme existant. Pour un premier onboarding, on le clone normalement.
+    #    Premier onboarding comme re-onboarding (refaire depuis Gestion) : le
+    #    programme choisi s'AJOUTE dans un nouveau dossier, rien n'est retiré.
     # Free users : on bloque les programmes PRO au niveau submit pour éviter
     # un bypass client-side (un user bidouille le <input hidden>).
     is_vip = bool(getattr(g, "is_vip_full", False))

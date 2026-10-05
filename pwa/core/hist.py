@@ -47,6 +47,17 @@ def is_perf(row) -> bool:
     return int(row.get("Reps") or 0) > 0 or float(row.get("Poids") or 0) > 0
 
 
+def perf_brute(ligne) -> bool:
+    """`is_perf` sur une ligne `history` brute (clés de la base), pour ce qui
+    lit la table sans passer par l'app (cron, récap, relances). Une ligne
+    cardio écrite depuis la v44 porte ses mesures dans `duree_min` et
+    `distance`, avec reps = poids = 0 : ne regarder que reps et poids la
+    rendait invisible, et le rappel partait le soir d'un footing."""
+    if ligne.get("exercice") == SESSION_MARKER:
+        return False
+    return any(float(ligne.get(c) or 0) > 0 for c in ("reps", "poids", "duree_min", "distance"))
+
+
 def is_muscu_perf(row) -> bool:
     """Perf réelle hors cardio (volume, records, body map)."""
     return not is_cardio(row) and is_perf(row)
