@@ -358,8 +358,10 @@ def test_une_serie_dechauffement_part_a_part(page, serveur):
     carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
     assert _attendre(lambda: [(r["serie"], r.get("type_serie")) for r in _historique(serveur)]
                      == [(1, "echauffement")])
-    assert "+200 échauff." in page.locator("#prog-vol").inner_text()
-    assert carte.locator(".serie-faite").first.inner_text().strip().split("\n")[-1].startswith("Échauff.")
+    # La ligne est en base avant que la page ait lu la réponse : attendre
+    # l'affichage, ne pas le lire aussitôt (échec de la CI du 04/10).
+    sync_api.expect(page.locator("#prog-vol")).to_contain_text("+200 échauff.")
+    sync_api.expect(carte.locator(".serie-faite").first).to_contain_text("Échauff.")
 
 
 def test_case_alterner_enregistre_la_rotation(serveur, navigateur):

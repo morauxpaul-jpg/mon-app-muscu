@@ -213,6 +213,43 @@ def test_seed():
     return jsonify({"ok": True, "conversation_id": conv, "history_rows": len(rows)})
 
 
+# Requêtes en cours (hors /test-*). Un test qui se termine peut laisser une
+# sauvegarde en route : si /test-vierge vidait la base avant qu'elle aboutisse,
+# elle atterrirait dans le décor du test SUIVANT (série 1 déjà « faite », son
+# bouton masqué — échec de la CI du 04/10). /test-vierge attend donc qu'elles
+# soient finies. E2E_LATENCE (secondes) ralentit chaque requête, comme un
+# runner de CI chargé, pour rejouer ces courses à volonté.
+import threading  # noqa: E402
+_EN_COURS = [0]
+_VERROU = threading.Lock()
+_LATENCE = float(os.environ.get("E2E_LATENCE") or 0)
+
+
+def _debut_requete():
+    from flask import g
+    if request.path.startswith(("/test-", "/static")):
+        return
+    with _VERROU:
+        _EN_COURS[0] += 1
+    g.e2e_suivie = True
+    if _LATENCE:
+        import time
+        time.sleep(_LATENCE)
+
+
+# En tête de chaîne : les before_request de l'app (auth, onboarding) peuvent
+# répondre eux-mêmes, et ceux placés après ne tournent alors pas.
+appmod.app.before_request_funcs.setdefault(None, []).insert(0, _debut_requete)
+
+
+@appmod.app.teardown_request
+def _fin_requete(_exc):
+    from flask import g
+    if g.pop("e2e_suivie", False):
+        with _VERROU:
+            _EN_COURS[0] -= 1
+
+
 @appmod.app.route("/test-vierge")
 @limiter.exempt
 def test_vierge():
@@ -220,6 +257,9 @@ def test_vierge():
     historique : le décor des tests navigateur (tests/e2e/)."""
     import time
     from flask import jsonify
+    fin = time.time() + 10
+    while _EN_COURS[0] > 0 and time.time() < fin:
+        time.sleep(0.05)
     c = core_db.current_client()
     c.tables.clear()
     c._id = 0
