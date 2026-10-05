@@ -41,7 +41,8 @@ def test_prochaine_seance_suit_la_rotation():
     assert p["body"].endswith("Prochaine : Pull mardi")
 
 
-def test_cibles_respecte_les_reglages():
+def test_cibles_respecte_les_reglages(fake_db):
+    """Sans ligne dans `reglages` (v45), un reste du programme fait foi."""
     progs = [{"user_id": "a", "data": {"_settings": {"notifications": True}}},
              {"user_id": "b", "data": {"_settings": {"notifications": True, "recap_hebdo": False}}},
              {"user_id": "c", "data": {"_settings": {"notifications": False}}}]
@@ -79,5 +80,5 @@ def test_reglage_recap_enregistre_et_affiche(fake_db, logged_in):
         **PROG, "_settings": {"notifications": True}}}).execute()
     assert 'name="recap_hebdo" checked' in logged_in.get("/gestion").get_data(as_text=True)
     logged_in.post("/gestion/settings", data={"_csrf": CSRF, "notifications": "on",
-                                              "reminder_hour": "18", "show_previous_weeks": "2"})
-    assert fake_db.tables["programs"][0]["data"]["_settings"]["recap_hebdo"] is False
+                                              "reminder_hour": "18"})
+    assert fake_db.tables["reglages"][0]["recap_hebdo"] is False

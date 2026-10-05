@@ -9,6 +9,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_historique_lots  réécriture complète et ajout massif (sauvegarde, import)
     db_renommage    renommer une séance ou un exercice dans tout l'historique
     db_colonnes     les colonnes de `history` qu'une base en retard n'a pas encore
+    db_reglages     les réglages de l'utilisateur (table `reglages`, v45)
     db_identite     rattacher les séries anciennes à l'identifiant de leur exercice (v42)
     db_programme    le programme, son planning et ses calques (blob JSON)
     db_profil       profil, onboarding, poids de corps
@@ -59,6 +60,10 @@ from core.db_colonnes import (
     colonnes_mesures, lire_avec_mesures, sans_colonnes_absentes, _GROUPES, _noms
 )
 from core.db_historique_lots import ajouter_lignes, save_hist
+from core.db_reglages import (
+    DEFAUTS, REESSAI, ecrire_reglages, lire_reglages, reglages_pour,
+    _completer, _disponible, _lignes, _marquer_absente, _oublier_absence, _table_absente
+)
 from core.db_identite import marquer_series, _variante
 from core.db_renommage import (
     count_exercise_rows, list_history_shape, rename_exercise_rows, rename_seance_rows,

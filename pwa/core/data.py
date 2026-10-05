@@ -32,6 +32,18 @@ def clear_user_cache():
     db.clear_user_cache(_uid())
 
 
+# ── Réglages (table `reglages`, v45) ───────────────────────────────────
+def get_reglages(prog=None):
+    """Les réglages de l'utilisateur courant ; `prog` sert de repli."""
+    return db.lire_reglages(_uid(), prog)
+
+
+def save_reglages(valeurs):
+    """False si la table manque (base en retard) : l'appelant range alors
+    les réglages dans le programme."""
+    return db.ecrire_reglages(_uid(), valeurs)
+
+
 # ── Historique ──────────────────────────────────────────────────────────
 def get_hist(echauffement=False):
     """L'historique, chaque série identifiée sous le nom ACTUEL de son

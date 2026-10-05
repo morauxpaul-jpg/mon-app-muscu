@@ -253,14 +253,6 @@
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sliders"/></svg>Paramètres d'affichage</h3>
     <form method="post" action="/gestion/settings">
       <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="auto_collapse" {% if settings.auto_collapse %}checked{% endif %}>
-        <span>Replier automatiquement les exercices terminés</span>
-      </label>
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="show_1rm" {% if settings.show_1rm %}checked{% endif %}>
-        <span>Afficher l'estimation 1RM</span>
-      </label>
-      <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
         <span>Chrono de repos automatique entre les séries</span>
       </label>
@@ -271,10 +263,6 @@
       <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="show_overload_hint" {% if settings.show_overload_hint %}checked{% endif %}>
         <span>Suggérer la progression (+2,5 kg / +1 rep) d'après les dernières séances</span>
-      </label>
-      <label class="muscle-check" style="display:flex; margin:6px 0; {% if not is_vip %}opacity:0.55;{% endif %}">
-        <input type="checkbox" name="theme_animations" {% if settings.theme_animations %}checked{% endif %} {% if not is_vip %}disabled{% endif %}>
-        <span>Animations du thème (cartes, glow, pulse) {% if not is_vip %}<span class="badge-pro s-580f44">PRO</span>{% endif %}</span>
       </label>
       <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
@@ -306,8 +294,6 @@
         <span>Recevoir les nouveautés par e-mail (mises à jour, nouveaux programmes)</span>
       </label>
       <p class="s-da7920">Quelques e-mails par an, jamais de spam. Désactivable ici à tout moment.</p>
-      <label class="field-label s-655d3d" for="show-previous-weeks">Nombre de semaines précédentes affichées en séance {% if not is_vip %}<span class="badge-pro s-bdcdd3">PRO au-delà de 2</span>{% endif %}</label>
-      <input type="number" id="show-previous-weeks" name="show_previous_weeks" min="0" max="{% if is_vip %}10{% else %}2{% endif %}" value="{{ settings.show_previous_weeks }}" class="field">
       <button type="submit" class="btn primary label-icon s-d5b41c"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
     </form>
   </div>

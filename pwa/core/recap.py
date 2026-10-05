@@ -8,7 +8,7 @@ de la semaine suivante, rotation comprise.
 
 Envoyé seulement à qui s'est entraîné dans la semaine : un récap à zéro
 n'informe pas, il culpabilise (la relance des inactifs existe pour ça).
-Désactivable (`_settings.recap_hebdo`), et suspendu avec les notifications.
+Désactivable (`reglages.recap_hebdo`), et suspendu avec les notifications.
 
 Le cron horaire des rappels (core/reminders.py) l'appelle à chaque passage ;
 hors du dimanche 19 h, ça ne coûte rien.
@@ -74,10 +74,12 @@ def recap_utilisateur(semaine: list, precedente: list, prog: dict, lundi_prochai
 
 def cibles(progs: list) -> dict:
     """{user_id: prog} : abonnés aux notifications qui n'ont pas coupé le récap."""
+    from core import db as core_db
+    reglages = core_db.reglages_pour(progs)
     out = {}
     for row in progs or []:
         uid, data = row.get("user_id"), row.get("data") or {}
-        settings = data.get("_settings") or {}
+        settings = reglages.get(uid) or {}
         if uid and settings.get("notifications") and settings.get("recap_hebdo", True):
             out[uid] = data
     return out

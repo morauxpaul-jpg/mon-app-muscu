@@ -17,7 +17,7 @@ from core.data import (
     get_hist, get_prog, save_prog, save_prog_body, save_hist, get_profile,
     get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
     upsert_body_weight, rename_exercise_rows, list_session_notes,
-    list_all_nutrition, export_coach,
+    list_all_nutrition, export_coach, get_reglages, save_reglages,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,25 +30,17 @@ from core.analytics import paywall
 PROFIL_OPTIONS = ["Maison", "Salle", "Les deux"]
 bp = Blueprint("gestion", __name__)
 
-DEFAULT_SETTINGS = {
-    "auto_collapse": True,
-    "show_1rm": True,
-    "theme_animations": True,
-    "auto_rest_timer": True,
-    "auto_prefill_weight": True,
-    "show_rpe": True,
-    "show_overload_hint": True,
-    "show_previous_weeks": 2,
-    "notifications": False,
-    "reminder_hour": 18,       # heure du rappel de séance (0 = aucun)
-    "recap_hebdo": True,       # récap de la semaine le dimanche (core/recap.py)
-}
-
-
 def _get_settings(prog):
-    s = dict(DEFAULT_SETTINGS)
-    s.update(prog.get("_settings", {}) or {})
-    return s
+    """Réglages de l'utilisateur (table `reglages`, v45 ; défauts dans
+    core/db_reglages.py)."""
+    return get_reglages(prog)
+
+
+def _enregistrer_reglages(prog, s):
+    """Dans la table ; dans le programme si la base n'a pas encore la v45."""
+    if not save_reglages(s):
+        prog["_settings"] = s
+        save_prog(prog)
 
 
 def _norm_tokens(name):
@@ -172,11 +164,6 @@ def gestion():
     prog = get_prog()
     hist = get_hist()
     settings = _get_settings(prog)
-
-    # Applique les limites Free côté affichage : historique capé à 2 semaines,
-    # options premium forcées à off si affichage pour un non-VIP.
-    if not getattr(g, "is_vip", False):
-        settings["show_previous_weeks"] = min(settings.get("show_previous_weeks", 2), 2)
 
     nb_seances = len([k for k in prog if not k.startswith("_")])
     nb_exos = sum(len(prog[k]) for k in prog if not k.startswith("_"))
@@ -360,9 +347,6 @@ def merge_exercise_history():
 def update_settings():
     prog = get_prog()
     s = _get_settings(prog)
-    is_vip = bool(getattr(g, "is_vip", False))
-    s["auto_collapse"] = request.form.get("auto_collapse") == "on"
-    s["show_1rm"] = request.form.get("show_1rm") == "on"
     s["auto_rest_timer"] = request.form.get("auto_rest_timer") == "on"
     s["show_rpe"] = request.form.get("show_rpe") == "on"
     s["show_overload_hint"] = request.form.get("show_overload_hint") == "on"
@@ -380,19 +364,10 @@ def update_settings():
     # dès qu'ils touchaient un réglage ne faisait pas payer, ça faisait partir
     # — et sans le moindre message pour l'expliquer.
     s["auto_prefill_weight"] = request.form.get("auto_prefill_weight") == "on"
-    # Les animations de thème restent PRO : c'est du confort, pas de l'usage.
-    if is_vip:
-        s["theme_animations"] = request.form.get("theme_animations") == "on"
-    else:
-        s["theme_animations"] = False
-    try:
-        weeks = int(request.form.get("show_previous_weeks", 2))
-    except (ValueError, TypeError):
-        weeks = 2
-    max_weeks = 10 if is_vip else 2
-    s["show_previous_weeks"] = max(0, min(max_weeks, weeks))
-    prog["_settings"] = s
-    save_prog(prog)
+    # « Replier automatiquement », « Afficher le 1RM », « Animations du thème »
+    # (vendu PRO) et « Semaines précédentes affichées » ont été retirés : rien
+    # ne les lisait, ils n'avaient aucun effet (v45).
+    _enregistrer_reglages(prog, s)
     # Newsletter : consentement stocké dans profiles (requêtable pour l'export),
     # avec l'e-mail du compte + la date (preuve RGPD). Best-effort : ne casse
     # pas l'enregistrement des autres réglages.
@@ -417,8 +392,7 @@ def set_notifications():
     prog = get_prog()
     s = _get_settings(prog)
     s["notifications"] = bool((request.get_json(silent=True) or {}).get("enabled"))
-    prog["_settings"] = s
-    save_prog(prog)
+    _enregistrer_reglages(prog, s)
     return ("", 204)
 
 

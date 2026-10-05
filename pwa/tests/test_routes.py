@@ -1282,23 +1282,8 @@ def test_le_gratuit_garde_le_preremplissage_des_charges(fake_db, client):
 
     client.post("/gestion/settings", data={"_csrf": CSRF, "auto_prefill_weight": "on"},
                 headers={"X-CSRFToken": CSRF})
-    reglages = fake_db.tables["programs"][0]["data"]["_settings"]
-    assert reglages["auto_prefill_weight"] is True
+    assert fake_db.tables["reglages"][0]["auto_prefill_weight"] is True
 
     # …et il peut toujours le couper lui-même s'il préfère.
     client.post("/gestion/settings", data={"_csrf": CSRF}, headers={"X-CSRFToken": CSRF})
-    assert fake_db.tables["programs"][0]["data"]["_settings"]["auto_prefill_weight"] is False
-
-
-def test_les_animations_restent_reservees_aux_membres_pro(fake_db, client):
-    """La distinction tient : le confort visuel reste payant, l'usage non."""
-    import time
-    fake_db.table("programs").insert({
-        "user_id": USER_ID, "data": {"_settings": {}, "_planning": {}},
-    }).execute()
-    with client.session_transaction() as s:
-        s.update(user_id=USER_ID, email="t@e.com", onboarded=True,
-                 is_vip=False, is_vip_full=False, is_vip_ts=time.time(), _csrf=CSRF)
-    client.post("/gestion/settings", data={"_csrf": CSRF, "theme_animations": "on"},
-                headers={"X-CSRFToken": CSRF})
-    assert fake_db.tables["programs"][0]["data"]["_settings"]["theme_animations"] is False
+    assert fake_db.tables["reglages"][0]["auto_prefill_weight"] is False
