@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v41  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries)
+├── supabase_schema_v23.sql … v44  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -37,6 +37,7 @@ pwa/
 │   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
 │   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
 │   ├── db_historique.py           # Table history : lecture, écriture par clé de série, opérations ciblées
+│   ├── db_colonnes.py             # Colonnes facultatives de history (v42, v43, v44) : base en retard = lu et écrit sans
 │   ├── db_historique_lots.py      # save_hist (sauvegarde, reset) et ajouter_lignes (import), par clé
 │   ├── db_renommage.py            # Renommer séance / exercice dans l'historique, sans collision
 │   ├── db_programme.py            # Blob programs.data : verrou optimiste, fusion 3 voies, corps vs données perso
@@ -58,7 +59,7 @@ pwa/
 │   ├── seance_contexte.py         # Le dictionnaire que reçoit chaque carte d'exercice
 │   ├── seance_calques.py          # Substituts, extras, brouillon libre, ordre des cartes (par séance+date)
 │   ├── seance_saisie.py           # Le formulaire devient des lignes d'historique + détection de record
-│   ├── seance_cardio.py           # Lecture/écriture du format « CARDIO:Type » dans la remarque
+│   ├── seance_cardio.py           # Unités cardio, et passage colonnes en base (v44) ↔ forme de l'app (Reps/Poids/Remarque)
 │   ├── hist.py                    # Prédicats UNIQUES sur l'historique (is_perf, is_muscu_perf, is_session_marker, tonnage) — une seule définition de « séance faite »
 │   ├── strength.py                # Standards de force relatifs au poids de corps (ratios par muscle × sexe, niveaux)
 │   ├── exercise_stats.py          # Fiche par exercice : variantes, séances, records, séries, sparkline SVG
@@ -202,7 +203,7 @@ pwa/
 
 ### Cardio
 - 10 activités (`routes/cardio.py`, `ACTIVITES_MAP`), avec MET pour estimation calories
-- Stockage dans la même table `history` (Exercice = `CARDIO:Type`, Reps = minutes, Poids = km, Remarque = `FC:… | Cal:… | RPE:…`, Muscle = `Cardio`)
+- Stockage dans la même table `history` (Exercice = `CARDIO:Type`, Muscle = `Cardio`). **Depuis la v44**, en base : `duree_min`, `distance`, `calories`, `vitesse`, et `reps = poids = 0` (contrainte `history_cardio_colonnes_check`) ; la remarque ne garde que FC, inclinaison, RPE et la note. **Dans l'app**, rien ne change : `get_hist()` rend Reps = minutes, Poids = distance, Cal/Vit en remarque, plus les clés Duree/Distance/Calories/Vitesse. La conversion est dans `core/seance_cardio.py` (`vers_colonnes`, `depuis_colonnes`), appelée par `db_historique` seulement. Ce qui lit la table sans passer par l'app (cron, récap, relances) utilise `hist.perf_brute` et `db_colonnes.lire_avec_mesures`.
 
 ### Nutrition
 - Cibles (`core/nutrition_cibles.py`, vague 5 du 04/10) : BMR Mifflin-St Jeor, TDEE × facteur d'activité (5 niveaux), ±400 kcal selon l'objectif (Masse / Maintien / Sèche), cible manuelle prioritaire (`_nutrition.calories_custom`). **Protéines en g/kg** (1,8 ; 2,2 en sèche ; plafond 40 % des kcal), lipides 25 % (≥ 0,7 g/kg), glucides = le reste.
@@ -539,6 +540,7 @@ pwa/
   - Le volume d'échauffement s'affiche à part (« +200 échauff. »).
   - Une série d'échauffement ne prend jamais la valeur grisée, et la marquer ajoute une case pour garder toutes les séries de travail prévues.
   - Sans la v43, un échauffement n'est jamais écrit comme une série de travail : il est écarté.
+- **Cardio en colonnes (vague 15, migration v44)** : voir « Cardio » plus haut. Ordre de mise en production : déployer le code, exécuter la v44, **redémarrer le service web** (un processus qui a vu les colonnes absentes continue sans elles ; une écriture refusée par la contrainte le remet d'elle-même au nouveau format). Rejouée avant livraison sur un PostgreSQL 16 local avec les 25 lignes cardio de production : SQL et Python convertissent à l'identique, migration idempotente, tonnage admin de 87 185 à 500 sur ce jeu.
 - **Remplace le point « C'est de la mise en page » ci-dessus.** « Série faite » ENREGISTRE : `save-exo` avec `partiel=1`, qui n'écrit que les séries remplies (les autres ne deviennent pas des SKIP en cours d'exercice). Avant, elle cochait en vert sans rien écrire, et « Terminer » effaçait les brouillons : trois séries cochées, séance terminée, zéro ligne en base.
 - « Enregistrer » garde son sens (tout, vides en SKIP). « Terminer » envoie d'abord ce qui n'est pas encore reçu (`_rev` ≠ `_revServeur`), vide la file si le réseau est là, et n'efface les brouillons qu'ensuite ; en cas de refus, la modale le dit et rien n'est effacé.
 - Réseau faible : délai de 8 s (`AbortController`), puis mise en file. 5xx / 408 / 429 / pas de réponse = file ; 4xx = refus affiché, brouillon gardé.

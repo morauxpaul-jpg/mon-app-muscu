@@ -9,7 +9,9 @@ import datetime as _dt
 import logging
 
 from core.db_base import _fetch_all, get_client
+from core.db_colonnes import lire_avec_mesures
 from core.db_historique import _norm_date
+from core.hist import perf_brute
 from core.db_profil import _profile_upsert
 
 logger = logging.getLogger(__name__)
@@ -115,11 +117,11 @@ def _last_activity_by_user() -> dict:
         logger.info("user_last_activity indisponible (%s) — repli sur history", e)
     if out:
         return out
-    rows = _fetch_all(lambda: (
-        client.table("history").select("user_id, date, reps, poids").order("id")
+    rows = lire_avec_mesures(lambda cols: (
+        client.table("history").select("user_id,date,exercice," + cols).order("id")
     ))
     for r in rows:
-        if int(r.get("reps") or 0) <= 0 and float(r.get("poids") or 0) <= 0:
+        if not perf_brute(r):
             continue
         uid = r.get("user_id")
         d = str(r.get("date") or "")[:10]
@@ -208,16 +210,14 @@ def users_trained_on(date_str: str) -> set:
     rappeler une séance déjà faite)."""
     client = get_client()
     try:
-        rows = _fetch_all(lambda: (
-            client.table("history").select("user_id, reps, poids")
+        rows = lire_avec_mesures(lambda cols: (
+            client.table("history").select("user_id,exercice," + cols)
             .eq("date", _norm_date(date_str)).order("id")
         ))
     except Exception as e:
         logger.error("users_trained_on FAILED: %s", e)
         return set()
-    return {r["user_id"] for r in rows
-            if r.get("user_id")
-            and (int(r.get("reps") or 0) > 0 or float(r.get("poids") or 0) > 0)}
+    return {r["user_id"] for r in rows if r.get("user_id") and perf_brute(r)}
 
 
 def mark_reactivation_sent(endpoint: str, count: int) -> None:
@@ -249,9 +249,9 @@ def history_between_for_users(user_ids, debut: str, fin: str) -> list[dict]:
     try:
         for i in range(0, len(ids), 100):
             lot = ids[i:i + 100]
-            out.extend(_fetch_all(lambda: (
+            out.extend(lire_avec_mesures(lambda cols: (
                 client.table("history")
-                .select("user_id, date, seance, exercice, reps, poids")
+                .select("user_id,date,seance,exercice," + cols)
                 .in_("user_id", lot).gte("date", _norm_date(debut))
                 .lte("date", _norm_date(fin)).order("id")
             )))

@@ -87,7 +87,7 @@ def test_cardio_deux_fois_dans_la_semaine_coexiste(fake_db, logged_in):
         assert r.status_code == 302
     rows = [r for r in fake_db.tables["history"] if r["exercice"] == "CARDIO:Course"]
     assert sorted(r["date"] for r in rows) == [MONDAY.isoformat(), FRIDAY.isoformat()]
-    assert sorted(r["poids"] for r in rows) == [5.0, 8.0]
+    assert sorted(r["distance"] for r in rows) == [5.0, 8.0]
 
 
 def test_session_id_partage_par_les_series_dune_meme_seance(fake_db, logged_in):

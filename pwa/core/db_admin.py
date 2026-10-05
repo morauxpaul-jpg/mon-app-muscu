@@ -8,6 +8,7 @@ import datetime as _dt
 import logging
 
 from core.db_base import _fetch_all, clear_user_cache, get_client
+from core.hist import CARDIO_PREFIX
 
 
 def _tous_les_comptes(client) -> list:
@@ -68,6 +69,15 @@ def list_all_users_with_tier() -> list[dict]:
 # Admin — stats globales + fiche user
 # ────────────────────────────────────────────────────────────
 
+def _charge(r: dict) -> float:
+    """Kilos soulevés par une ligne `history` brute. Zéro pour le cardio :
+    ses anciennes lignes portent des minutes et des kilomètres dans
+    reps/poids, et le tonnage admin les multipliait (audit du 03/10, M15)."""
+    if str(r.get("exercice") or "").startswith(CARDIO_PREFIX):
+        return 0.0
+    return int(r.get("reps") or 0) * float(r.get("poids") or 0)
+
+
 def get_admin_stats() -> dict:
     """Agrégats cross-users pour le dashboard admin.
     Retourne : total_rows, total_tonnage, total_seances (distinct user+date+seance),
@@ -86,7 +96,7 @@ def get_admin_stats() -> dict:
         logger.info("admin_history_stats indisponible (%s) — calcul complet", e)
     try:
         rows = _fetch_all(lambda: (
-            client.table("history").select("user_id, date, seance, reps, poids").order("id")
+            client.table("history").select("user_id, date, seance, exercice, reps, poids").order("id")
         ))
     except Exception as e:
         logger.error("get_admin_stats FAILED: %s", e)
@@ -100,9 +110,7 @@ def get_admin_stats() -> dict:
     sessions = set()
     a7, a30 = set(), set()
     for r in rows:
-        reps = int(r.get("reps") or 0)
-        poids = float(r.get("poids") or 0)
-        tonnage += reps * poids
+        tonnage += _charge(r)
         d = str(r.get("date") or "")[:10]
         uid = r.get("user_id")
         if uid and d:
@@ -151,14 +159,13 @@ def insert_event(user_id, event: str, props: dict | None = None,
 # Étapes du funnel : (clé, libellé, type, source).
 # type 'signup'  → compte auth.users (haut de funnel)
 # type 'event'   → distinct user_id ayant émis l'un des events listés
-# type 'tier'    → distinct user_id actuellement VIP (profiles.tier)
 _FUNNEL_STEPS = [
     ("signup",      "Inscrits",        "signup", None),
     ("onboarding",  "Onboarding fait", "event",  ("onboarding_completed",)),
     ("workout",     "1ʳᵉ séance",      "event",  ("workout_finished",)),
     ("offer",       "Offre vue",       "event",  ("premium_viewed", "paywall_viewed")),
     ("checkout",    "Checkout lancé",  "event",  ("checkout_started",)),
-    ("vip",         "VIP",             "tier",   None),
+    ("vip",         "VIP",             "event",  ("vip_activated",)),
 ]
 
 
@@ -167,8 +174,11 @@ def get_funnel_stats(days: int = 30) -> dict:
 
     Interprétation (v1, orientée vue d'ensemble) : pour chaque étape, nombre
     d'utilisateurs DISTINCTS ayant atteint l'étape DANS la fenêtre. Le haut de
-    funnel = comptes créés dans la fenêtre (auth.users). Les étapes du milieu
-    lisent la table `events`. La dernière = users actuellement VIP.
+    funnel = comptes créés dans la fenêtre (auth.users). Les autres étapes
+    lisent la table `events`, y compris la dernière (`vip_activated`) : elle
+    comptait les VIP de tous les temps (`profiles.tier`) contre des étapes
+    limitées à la fenêtre, et « Checkout → VIP » pouvait dépasser 100 %
+    (audit du 03/10, M14).
 
     Retourne {days, steps:[{key,label,users,pct_of_top,pct_of_prev}], coach_msgs}.
     """
@@ -208,22 +218,12 @@ def get_funnel_stats(days: int = 30) -> dict:
     except Exception as e:
         logger.error("get_funnel_stats signups FAILED: %s", e)
 
-    # VIP actuels (étape finale).
-    vip_count = 0
-    try:
-        prof = _fetch_all(lambda: client.table("profiles").select("tier").order("id"))
-        vip_count = sum(1 for p in prof if (p.get("tier") or "") == "vip")
-    except Exception as e:
-        logger.error("get_funnel_stats vip FAILED: %s", e)
-
     steps = []
     top = None
     prev = None
     for key, label, kind, events in _FUNNEL_STEPS:
         if kind == "signup":
             n = signups
-        elif kind == "tier":
-            n = vip_count
         else:
             seen: set = set()
             for ev in (events or ()):
@@ -248,7 +248,7 @@ def get_user_details(user_id: str) -> dict:
     # Historique
     try:
         rows = _fetch_all(lambda: (
-            client.table("history").select("date, seance, reps, poids")
+            client.table("history").select("date, seance, exercice, reps, poids")
             .eq("user_id", user_id).order("id")
         ))
     except Exception as e:
@@ -258,7 +258,7 @@ def get_user_details(user_id: str) -> dict:
     sessions = set()
     last_date = ""
     for r in rows:
-        tonnage += int(r.get("reps") or 0) * float(r.get("poids") or 0)
+        tonnage += _charge(r)
         d = str(r.get("date") or "")[:10]
         if d:
             sessions.add((d, r.get("seance") or ""))

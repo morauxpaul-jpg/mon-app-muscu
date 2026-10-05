@@ -17,7 +17,7 @@ def _ajouter(client, minutes):
 
 
 def _rameur(fake):
-    return sorted((r["serie"], r["reps"]) for r in fake.tables.get("history", [])
+    return sorted((r["serie"], r["duree_min"]) for r in fake.tables.get("history", [])
                   if r["exercice"] == "CARDIO:Rameur")
 
 

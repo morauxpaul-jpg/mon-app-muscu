@@ -11,8 +11,10 @@ import logging
 from core import partage
 from core.db_base import (_cache_get, _cache_invalidate, _cache_modifier, _cache_set,
                           _continuous_week_of, _fetch_all, get_client, session_id_for)
-from core.hist import TYPE_ECHAUFFEMENT
+from core.hist import CARDIO_PREFIX, TYPE_ECHAUFFEMENT
 from core.muscu import parse_rpe
+from core.db_colonnes import _COLONNES, _colonne_refusee, _noms, sans_colonnes_absentes
+from core.seance_cardio import COLONNES_CARDIO, depuis_colonnes, vers_colonnes
 
 logger = logging.getLogger(__name__)
 
@@ -47,14 +49,19 @@ def _nettoyer_ligne(r: dict) -> dict:
     rpe = r.get("rpe")
     if rpe is None:
         rpe = parse_rpe(remarque)
+    exercice = r.get("exercice") or ""
+    # Cardio (v44) : mesures dans leurs colonnes en base, forme d'origine
+    # dans l'app (Reps = minutes, Poids = distance, Cal/Vit en remarque).
+    cardio = depuis_colonnes(r) if exercice.startswith(CARDIO_PREFIX) else None
     return {
         "Semaine": week,
         "Séance": r.get("seance") or "",
-        "Exercice": r.get("exercice") or "",
+        "Exercice": exercice,
         "Série": int(r.get("serie") or 1),
-        "Reps": int(r.get("reps") or 0),
-        "Poids": float(r.get("poids") or 0),
-        "Remarque": remarque,
+        "Reps": cardio["reps"] if cardio else int(r.get("reps") or 0),
+        "Poids": cardio["poids"] if cardio else float(r.get("poids") or 0),
+        "Remarque": cardio["remarque"] if cardio else remarque,
+        **({k: cardio[k] for k in ("Duree", "Distance", "Calories", "Vitesse")} if cardio else {}),
         "Muscle": r.get("muscle") or "",
         "Date": date_str,
         "RPE": float(rpe) if rpe is not None else None,
@@ -104,16 +111,6 @@ _hist_ext_supported = True  # migration v34 appliquée le 2026-09-23
 # transfert). `id` n'y est pas : PostgREST sait trier sur une colonne non lue.
 _HIST_COLS_LUES = "date,semaine,seance,exercice,serie,reps,poids,remarque,muscle"
 
-# Colonnes facultatives : `exercise_id` (v42, core/exercice_ids.py) et
-# `type_serie` (v43, séries d'échauffement). Base en retard : lu et écrit sans.
-_COLONNES = {"exercise_id": True, "type_serie": True}   # dict partagé (façade)
-
-
-def _colonne_refusee(msg: str):
-    """La colonne facultative qu'une erreur PostgREST désigne, ou None."""
-    return next((c for c, ok in _COLONNES.items() if ok and c in msg), None)
-
-
 def _lire_history(client, user_id: str) -> list[dict]:
     """Les lignes d'historique d'un user, colonnes utiles seulement. Une
     colonne facultative absente (base en retard) fait échouer la requête : on
@@ -127,7 +124,7 @@ def _lire_history(client, user_id: str) -> list[dict]:
 
     while True:
         cols = _HIST_COLS_LUES + (",rpe" if _hist_ext_supported else "") \
-            + "".join("," + c for c, ok in _COLONNES.items() if ok)
+            + "".join("," + n for c, ok in _COLONNES.items() if ok for n in _noms(c))
         try:
             return lire(cols)
         except Exception as e:
@@ -184,11 +181,7 @@ def _insert_history(client, payload: list[dict], par_cle: bool = False, ignorer:
     global _hist_ext_supported, _unicite
     if par_cle and not _unicite:
         return None
-    absentes = {c for c, ok in _COLONNES.items() if not ok}
-    if "type_serie" in absentes:    # sans la v43, l'échauffement compterait comme du travail
-        payload = [p for p in payload if p.get("type_serie") != TYPE_ECHAUFFEMENT]
-    if absentes:
-        payload = [{k: v for k, v in p.items() if k not in absentes} for p in payload]
+    origine, payload = payload, sans_colonnes_absentes(payload)
 
     def _ecrire(rows):
         t = client.table("history")
@@ -206,6 +199,12 @@ def _insert_history(client, payload: list[dict], par_cle: bool = False, ignorer:
             _unicite = False
             return None
         msg = str(e).lower()
+        if "history_cardio_colonnes_check" in msg and not _COLONNES["cardio"]:
+            # La v44 a été appliquée après que ce processus a vu les colonnes
+            # absentes : la base refuse désormais l'ancien format.
+            logger.warning("history: colonnes cardio v44 présentes — retour au nouveau format")
+            _COLONNES["cardio"] = True
+            return _insert_history(client, origine, par_cle, ignorer)
         refusee = _colonne_refusee(msg)
         if refusee:
             logger.warning("history: colonne %s absente — écriture sans elle", refusee)
@@ -225,7 +224,7 @@ def _row_to_supabase(user_id: str, r: dict) -> dict:
     if rpe is None:
         rpe = parse_rpe(remarque)
     seance = r.get("Séance") or ""
-    return {
+    ligne = {
         "user_id": user_id,
         "semaine": int(r.get("Semaine") or 1),
         "seance": seance,
@@ -240,7 +239,11 @@ def _row_to_supabase(user_id: str, r: dict) -> dict:
         "rpe": float(rpe) if rpe is not None else None,
         "exercise_id": r.get("ExoId") or None,
         "type_serie": TYPE_ECHAUFFEMENT if r.get("Type") == TYPE_ECHAUFFEMENT else None,
+        **{c: None for c in COLONNES_CARDIO},
     }
+    if ligne["exercice"].startswith(CARDIO_PREFIX):
+        ligne.update(vers_colonnes(ligne["reps"], ligne["poids"], remarque))
+    return ligne
 
 # ────────────────────────────────────────────────────────────
 # Opérations ciblées (remplacement de ligne par exercice / date)

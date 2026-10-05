@@ -30,8 +30,8 @@ def _vol(rows) -> int:
 
 
 def _faites(rows) -> int:
-    return len({(r.get("date"), r.get("seance")) for r in rows
-                if int(r.get("reps") or 0) > 0 or float(r.get("poids") or 0) > 0})
+    from core.hist import perf_brute
+    return len({(r.get("date"), r.get("seance")) for r in rows if perf_brute(r)})
 
 
 def _milliers(n: int) -> str:

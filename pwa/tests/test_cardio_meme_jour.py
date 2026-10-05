@@ -50,7 +50,7 @@ def test_le_premier_nest_pas_ecrase(compte, logged_in):
     celle du soir."""
     _enregistrer(logged_in, 30, 5.0, "matin")
     _enregistrer(logged_in, 45, 8.0, "soir")
-    minutes = sorted(int(r["reps"]) for r in _lignes(compte))
+    minutes = sorted(int(r["duree_min"]) for r in _lignes(compte))
     assert minutes == [30, 45]
 
 
@@ -58,7 +58,7 @@ def test_les_kilometres_sadditionnent(compte, logged_in):
     """Ce qui se voyait à l'écran : 8 km au lieu de 13."""
     _enregistrer(logged_in, 30, 5.0)
     _enregistrer(logged_in, 45, 8.0)
-    assert sum(float(r["poids"]) for r in _lignes(compte)) == pytest.approx(13.0)
+    assert sum(float(r["distance"]) for r in _lignes(compte)) == pytest.approx(13.0)
 
 
 def test_les_series_se_suivent(compte, logged_in):

@@ -251,8 +251,8 @@ def test_la_confirmation_ecrit_ce_qui_a_ete_montre(compte, logged_in):
                    headers={"X-CSRFToken": CSRF})
     lignes = _cardio(compte)
     assert len(lignes) == 1
-    assert int(lignes[0]["reps"]) == 30
-    assert float(lignes[0]["poids"]) == 5.0
+    assert int(lignes[0]["duree_min"]) == 30
+    assert float(lignes[0]["distance"]) == 5.0
     assert "Import Strava" in (lignes[0]["remarque"] or "")
 
 
@@ -264,7 +264,7 @@ def test_la_vitesse_est_calculee_a_limport(compte, logged_in):
                           "duree_min": 30, "distance_km": 5.0}])
     logged_in.post("/cardio/import/confirmer", data={"charge": charge},
                    headers={"X-CSRFToken": CSRF})
-    assert "Vit:10" in (_cardio(compte)[0]["remarque"] or "")
+    assert _cardio(compte)[0]["vitesse"] == 10.0
 
 
 def test_une_charge_trafiquee_est_revalidee(compte, logged_in):
