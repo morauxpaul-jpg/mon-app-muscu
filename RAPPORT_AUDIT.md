@@ -1,5 +1,482 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Audit complet du 06/10/2026 (après-midi) · commit `8916176` · **6,6 / 10** (132 / 20)
+
+**Commit audité** : `8916176` (tête de `main`, CI verte, déployé sur Railway le 06/10 à 14:02 UTC). Le code applicatif est celui de `b09989a` (PR #34) ; `8916176` n'ajoute que le rapport précédent.
+**Note précédente** : 6,9 (138 / 20), même code. **Historique** : 4,9 (30/09) → 5,6 (03/10) → 6,5 → 6,7 → 6,8 → 6,8 → 6,9 (04/10) → 6,9 (05/10, trois mises à jour) → 6,9 (06/10, deux mises à jour) → **6,6** (06/10, cet audit).
+**Auditeur** : audit indépendant des corrections, lecture seule partout (aucune écriture en base, aucune migration, aucun déploiement, rien poussé sur `main`).
+
+> **Verdict.** Le code n'a pas régressé : 1 270 tests Python, 23 tests navigateur et 113 tests JS passent, sur les sept jours de la semaine, avec 85 % de couverture. La note baisse parce que cet audit a confronté l'app à la **production**, ce que les précédents n'avaient fait que pour les migrations récentes. Quatre constats : (1) **la migration v29 n'a jamais été appliquée** — l'essai PRO et le parrainage n'existent pas en production, alors que l'onglet Plus promet à chaque utilisateur des jours PRO pour un ami invité ; (2) **aucun paiement n'a jamais été enregistré** (0 activation PRO depuis le 14/06, pour 3 paiements commencés) ; (3) **« Série faite » met 2 s côté serveur** (0,85 s le 29/09) ; (4) la carte « Prochaine séance · Demain » fait **enregistrer une séance à la date du lendemain**, ce qui est arrivé en vrai le 04/10. Aucune donnée n'est perdue, tout se corrige vite, mais le barème note ce qui est prouvé : 6,6.
+
+| Bloc | 30/09 | 03/10 | 06/10 (précédent) | **Aujourd'hui** | Écart |
+|---|---:|---:|---:|---:|---:|
+| Produit (axes 1 à 8) | 5,0 | 5,4 | 6,9 | **6,8** | −0,1 |
+| Plateforme (axes 9 à 12) | 4,8 | 5,5 | 6,8 | **6,5** | −0,3 |
+| Technique (axes 13 à 17) | 5,0 | 5,6 | 7,0 | **6,6** | −0,4 |
+| Business (axes 18 à 20) | 4,7 | 6,0 | 7,0 | **6,3** | −0,7 |
+| **Global (20 axes)** | 4,9 | 5,6 | 6,9 | **6,6** | **−0,3** |
+
+**Constats de cet audit** : 1 critique · 5 importants · 12 mineurs, chacun avec sa reproduction (annexe Z). Des 45 constats suivis des audits précédents (I1-I14, M1-M16, F1-F5, U1-U10), 39 sont corrigés et tenus par les tests, 3 ne sont corrigés que dans le code, sans preuve en production (I11 sur un seul processus, I12 et U4 sans aucune série réelle depuis), 1 est ouvert (M5), 1 non reproduit (U5) et 1 reste à mesurer sur le téléphone (U7).
+
+### Lexique minimal
+
+- **Production** : l'app réelle, sur Railway (le serveur) et Supabase (la base de données).
+- **Migration** : un script qui modifie la structure de la base (ajoute une colonne, une table). Le code la suppose appliquée ; si elle ne l'est pas, ce qui en dépend ne marche pas.
+- **Fausse base** : la base simulée en mémoire qu'utilisent les tests ; elle ne vérifie pas que les colonnes existent.
+- **Médiane** : la valeur du milieu ; la moitié des mesures est au-dessus, l'autre en dessous.
+- **Cron** : un service externe qui appelle l'app à heure fixe (ici, toutes les heures) pour envoyer rappels et relances.
+- **RLS** : verrou de la base qui empêche un navigateur de lire les tables directement.
+
+---
+
+### Z.0 Corrections de l'audit précédent (règle 6)
+
+| # | Ce que disait l'audit précédent | Ce qui est vrai | Preuve | Gravité |
+|---|---|---|---|---|
+| E1 | Profil « Essai » noté 6/10 ; monétisation notée 7 grâce à « l'essai qui montre coach et debrief » ; parrainage décrit comme fonctionnel (CONTEXT.md, § Parrainage). | **La migration v29 n'est pas en base** : `profiles` n'a ni `vip_until`, ni `referral_code`, ni `referred_by`. Aucun essai n'a jamais pu exister en production, et le parrainage ne crédite rien. Les audits du 03 au 06/10 ont vérifié v37 à v47 en base, jamais v29. | SQL Z.4-a et Z.4-b ; reproduction RB | **Majeure** : deux notes surévaluées (monétisation, profil essai) |
+| E2 | « Le blob ne garde plus que des clés de programme (`_planning`, `_programmes`, `_profiles`, …) » (§ A.1, v47). | `_profiles` (9 programmes) et `_active_profile` (9) sont les restes d'une fonction **retirée le 01/10** ; aucun code ne les lit. | SQL Z.4-c ; `grep` Z.5 | Mineure |
+| E3 | « Les dernières séries de musculation datent du 04/10, avant la v42 » (§ A.6). | 9 séries ont été écrites **après** la migration v42 (17:14:44 UTC) mais **avant** que le code v42 soit en ligne (ancien déploiement retiré à 17:21:13 UTC). Conclusion inchangée : pas de bug, aucune série réelle avec identifiant. | SQL Z.4-d ; déploiements Railway Z.6 | Précision |
+| E4 | « Cron horaire : non vérifiable » (§ A.6). | **Vérifié** : cron-job.org appelle `/tasks/reminders` toutes les heures ; 39 appels sur les 39 dernières heures, tous en 200. | Journaux HTTP Railway Z.6 | Levée d'une réserve |
+| E5 | « Redis ajouté et branché… journal relu après le redémarrage du 05/10 » (§ A.6). | Redis est actif depuis le **04/10 à 13:58 UTC** (journal « partage: stockage redis »), avec une interruption de 12 min le 05/10 (07:02-07:15 UTC, démarrage en « stockage memoire »). | Journaux de déploiement Z.6 | Précision |
+| E6 | Instruction d'audit : `cd pwa && pip install -r requirements.txt -r requirements-dev.txt`. | Les deux fichiers sont **à la racine** du dépôt ; la commande échoue telle quelle. | `ls` Z.1 | Doc |
+
+---
+
+### Z.1 Méthode et exécution
+
+- **Environnement** : Python 3.11 (comme `runtime.txt`, dans un environnement isolé), Node 22, dépendances installées depuis la racine. Chromium préinstallé en version 1194, alors que Playwright 1.60 attend la 1223 : les tests navigateur se sont d'abord **ignorés** (23 « skipped »), puis ont tourné via un alias vers le binaire installé (hors dépôt).
+- **Résultats** :
+
+| Commande | Résultat | Avant (06/10) |
+|---|---|---|
+| `python -c "import app"` sans aucune variable | OK (journal CRITICAL « FLASK_SECRET_KEY absente — clé de DEV », stockage mémoire, 1 processus) | OK |
+| `python -m pytest tests -q --ignore=tests/e2e` | **1 270 passés** en 33 s | 1 270 |
+| `pytest --cov=core --cov=routes` | **85 %** (9 506 lignes, 1 461 non couvertes) | 81 % (mesuré sur `345334c`) |
+| `python -m pytest tests/e2e` | **23 passés** en 100 s (avec l'alias Chromium) | 23 |
+| `node tests/js/run.js` | **113 passés** | 113 |
+| Suite figée sur chaque jour du lundi 05/10 au dimanche 11/10 | **1 270 passés × 7** ; date vue par l'app vérifiée (`2026-10-10`, `2026-10-11`) | verte |
+| CI GitHub « Tests » sur `8916176` | **succès** (run 181, 06/10 13:57 UTC) | succès |
+
+- **Parcours navigateur** : serveur local sur fausse base (`run_local_fake.py`) + un décor par profil daté d'aujourd'hui, Chromium 375 × 812, locale fr-FR ; 43 captures. Scripts hors dépôt.
+- **Production, lecture seule** : Supabase (`list_tables`, `list_migrations`, `get_advisors`, 14 requêtes `select`), Railway (service, variables par nom, déploiements, journaux de 48 h, journaux HTTP, latences sur 7 jours), GitHub Actions.
+- **Barème** : 10 = état de l'art · 8-9 = niveau Hevy/Strong **prouvé** · 6-7 = correct, un concurrent fait mieux · 4-5 = utilisable mais faible · 1-3 = cassé ou absent.
+
+---
+
+### Z.2 Vérifications en production (chiffres réels)
+
+**1. Schéma**
+- 14 tables, **RLS active sur les 14**, **0 règle** (`pg_policies`), **0 droit** `anon`/`authenticated` (`information_schema.role_table_grants`) — dont `history`, `programs`, `reglages`, `calques_seance`, `etat_compte`, `session_notes`, `nutrition`, `profiles`.
+- Vues `user_last_activity` et `admin_history_stats` : `security_invoker=true`.
+- Index `history_serie_unique (user_id, date, seance, exercice, serie)` : présent.
+- Contraintes v43 (`history_type_serie_check`) et v44 (`history_cardio_colonnes_check`) : présentes ; contraintes v45-v47 aussi (heure de rappel, types JSON, compteurs ≥ 0).
+- Historique Supabase des migrations : v40 à v47 seulement (les précédentes passées à la main).
+- **Colonnes attendues par le code, migration par migration (v23 → v44)** : 31 présentes sur 34. **Manquent les 3 colonnes de la v29** (`referral_code`, `referred_by`, `vip_until`).
+
+**2. `programs.data`** — 15 programmes, 25,9 ko au total (4,1 ko au plus). Clés `_x` : `_planning` 14, `_started_at` 14, `_origin` 10, `_active_profile` 9, `_profiles` 9, `_programmes` 8, `_seance_prog` 8, `_equipement` 6, `_equipment_details` 6, `_name` 5, `_rotation` 1. Plus aucune clé d'état (`_settings`, `_badges`, `_extras`, `_archive`…). **Résidus** : `_profiles` et `_active_profile` (fonction retirée le 01/10, lues nulle part). 257 exercices dans les programmes, 33 avec un `id` gravé (1 programme) — le code calcule l'identifiant à la lecture, ce n'est pas un obstacle.
+
+**3. Séries réelles depuis la v42** — 1 169 lignes au total ; **0 avec `exercise_id`, 0 avec `type_serie`**. Dernière série de musculation : 04/10 à 17:18:29 UTC, écrite par l'ancien code (voir E3). Aucune séance de musculation depuis : **pas de bug à reproduire**, mais pas de preuve non plus.
+
+**4. Cardio** — 2 lignes réelles au format v44, toutes deux avec `reps = poids = 0` : vélo du 04/10 (10 min, 2,47 km, 115 kcal, 14,82 km/h) et vélo du 05/10 (9 min, 2,26 km, 103 kcal, 15,07 km/h). **Aucune durée décimale** encore : la PR #34 est en ligne depuis le 06/10 à 14:02 UTC et aucun cardio n'a été saisi depuis.
+
+**5. Cohérence** — 0 doublon de série ; 0 ligne orpheline dans les 14 tables (aucune ligne d'un compte supprimé) ; 0 bilan sans séance ; 0 `etat_compte` sans programme ; 0 message de coach sans conversation ; 0 série sans `session_id`. 193 lignes « 0 rep × 0 kg » (séries passées, par conception) et 2 vieilles lignes `SESSION`. **Anomalie** : 2 séries « Push 1 » **datées du 05/10 écrites le 04/10 à 15:57 UTC** (17:57 à Paris), copies des deux premières séries du 04/10 → bug I-1 ci-dessous.
+
+**6. Usage (chiffres bruts)** — 15 comptes (14 Google, 1 e-mail) ; **dernière inscription le 01/07** ; 0 inscription en 30 jours. Comptes avec une séance : **2 sur 7 jours, 2 sur 30 jours**. Séances : 6 sur 7 jours, 18 sur 30 jours (16 de musculation) ; par semaine depuis le 10/08 : 2, 3, 4, 5, 2, 6, 4, 4, 2. Événements sur 30 jours : 13 séances terminées, 4 debriefs, 1 programme généré, 0 message au coach (10 depuis juin), 17 rappels, 29 relances, 3 défis validés, 20 pages PRO vues, 2 paiements commencés. **Essais PRO démarrés : impossible (colonne absente). Paiements convertis : 0 `vip_activated` depuis le 14/06** (3 `checkout_started` pour 2 comptes ; 2 clients Stripe). 8 profils ont `tier = 'vip'`, aucun avec un événement d'activation.
+
+**7. Railway** — service `web`, 1 réplique (europe-west4), dernier déploiement `e38cc588` (commit `8916176`) réussi le 06/10 à 14:02 UTC ; « Wait for CI » actif (`checkSuites: true` ; les PR #24 et #25 avaient été ignorées sur CI rouge). Journal de démarrage : gunicorn « gthread », **1 processus**, Redis pour le limiteur et l'état partagé. **`WEB_CONCURRENCY` : absente** des variables (21 noms listés). Erreurs sur 48 h : **3 078 requêtes, 1 réponse 5xx** (`/seance` en 503 le 05/10 à 06:26 UTC, cause : `ConnectionTerminated` vers Supabase) et 1 avertissement Open Food Facts (produit inconnu, 404). Les journaux INFO sortent tous étiquetés « error » (sortie d'erreur).
+
+**8. Alertes Supabase** (`get_advisors`)
+
+| Alerte | Niveau | Classement |
+|---|---|---|
+| `rls_enabled_no_policy` × 14 | INFO | **Voulu** : tables fermées au navigateur (v38) |
+| `handle_new_user()` exécutable par `anon` et `authenticated` (SECURITY DEFINER) | WARN | **Mineur** : c'est un déclencheur (`returns trigger`), qui refuse un appel direct ; à fermer quand même (`revoke execute`) |
+| Protection contre les mots de passe fuités désactivée | WARN | **Mineur** : un compte e-mail existe (09/04) ; si l'inscription par e-mail est ouverte, l'activer ou fermer l'e-mail |
+| `profiles_stripe_customer_idx`, `history_session_idx` jamais utilisés | INFO | **Négligeable** (peu de trafic) |
+
+---
+
+### Partie 1 — Les 20 axes
+
+| # | Axe | 03/10 | 06/10 (préc.) | **Aujourd'hui** | Écart | En une phrase |
+|---|---|---:|---:|---:|---:|---|
+| 1 | Onboarding | 5 | 7 | **6** | −1 | Quatre étapes claires, mais un jour sans séance prévue, la seule action proposée ouvre la séance de demain. |
+| 2 | Saisie de séance | 5 | 7 | **7** | 0 | Un tap coche, lance le repos et enregistre en arrière-plan ; mais une séance future s'enregistre sans garde. |
+| 3 | Programme et planning | 5 | 7 | **7** | 0 | Rotation, éditeur borné, supersets ; la « prochaine séance » ignore l'envie de s'entraîner aujourd'hui. |
+| 4 | Progression et statistiques | 6 | 7 | **7** | 0 | Progrès racontés, séries par muscle, streak ; graphiques moins riches que Strong. |
+| 5 | Coach IA | 6 | 7 | **7** | 0 | Contexte riche et testé ; 0 message réel en 30 jours, et l'ouverture « à l'essai » n'existe pas en production. |
+| 6 | Générateur IA | 5 | 7 | **7** | 0 | Tâche de fond fiable (testée) ; 1 génération réelle en 30 jours. |
+| 7 | Nutrition | 5 | 7 | **7** | 0 | Repas par aliment, cibles reliées aux séances ; 21 lignes en base, pas de recettes ni de cible adaptative. |
+| 8 | Cardio | 6 | 6 | **6** | 0 | Colonnes v44 constatées sur 2 vrais cardios ; pas encore de durée en secondes réelle, pas de zones cardiaques. |
+| 9 | Hors-ligne | 5 | 7 | **7** | 0 | Rejoué en mode avion : rien ne se perd, « Terminer » rend la main en 7,6 s. |
+| 10 | Notifications et relances | 6 | 7 | **7** | 0 | Cron enfin prouvé (39 appels sur 39 h) ; 3 abonnés push seulement, effet non mesuré. |
+| 11 | Design et cohérence UI | 5 | 6 | **6** | 0 | Belles cartes illustrées ; e-mail en tête de chaque page et quatre verbes par carte. |
+| 12 | Performance ressentie | 6 | 7 | **6** | −1 | Pages légères, mais en production « Série faite » prend 2 s côté serveur et l'accueil 1,2 à 1,8 s. |
+| 13 | Architecture du code | 6 | 7 | **7** | 0 | Modules petits et testés ; replis silencieux qui cachent une migration oubliée. |
+| 14 | Modèle de données | 4 | 7 | **7** | 0 | Propre et vérifié en base ; la preuve demandée pour 8 (une série avec identifiant) n'existe toujours pas. |
+| 15 | Sécurité | 6 | 7 | **7** | 0 | Base fermée au navigateur, webhook signé, admin Google ; CSP permissive, deux alertes Supabase mineures. |
+| 16 | Robustesse | 6 | 7 | **6** | −1 | Une seule 5xx en 48 h, mais aucune nouvelle tentative sur coupure, et une colonne manquante passe inaperçue des mois. |
+| 17 | Tests | 6 | 7 | **6** | −1 | 1 406 tests verts et 85 % de couverture, mais la fausse base a laissé passer une fonction morte en production. |
+| 18 | Monétisation et paywall | 5 | 7 | **5** | −2 | Paiement et paywall en place, mais 0 activation enregistrée et un essai qui n'existe pas. |
+| 19 | Rétention | 6 | 7 | **7** | 0 | Rappels, relances, défis et récap tournent vraiment ; 2 comptes actifs, aucune dimension sociale. |
+| 20 | Accessibilité | 7 | 7 | **7** | 0 | Contrastes, cibles et noms accessibles testés ; jamais essayé avec un vrai lecteur d'écran. |
+
+Total **132 / 20 = 6,6**. Produit 54/8 = 6,75 · Plateforme 26/4 = 6,5 · Technique 33/5 = 6,6 · Business 19/3 = 6,33.
+
+#### Détail, preuves et écart
+
+**1. Onboarding — 6 (−1)**
+- **Pour** : 4 étapes avec retour, poids et taille utilisés ; 7 programmes proposés dont 3 marqués « Recommandé » (capture `03_onboarding_programmes`) ; aperçu des séances avant de choisir ; validation en 0,4 s ; tutoriel de 6 bulles.
+- **Contre** : un mardi, après un programme lundi-mercredi-vendredi, l'accueil n'offre que « Prochaine séance · Full Body A · Demain · 07/10 » (`routes/accueil.py:390-395`). Le toucher ouvre `/seance?…&date=2026-10-07` avec le bandeau **« RATTRAPAGE · Mercredi 07/10/2026 »** (`routes/seance.py:291`, `templates/seance_edit.html:11-16`), et les séries s'enregistrent à la date du lendemain (reproduction RA, constaté en production, § Z.2-5). La dernière bulle du tutoriel dit « Lance ta première séance » ; son bouton « Commencer » reste sur l'accueil. La carte d'exercice conseille « barre vide (20 kg) » mais laisse le poids vide : « Série faite » est alors refusée (« Indique tes répétitions et ta charge », `static/js/seance.js:498-509`, capture `09`). Connexion Google seule.
+- **Écart** : l'audit précédent l'avait **surévalué** — le parcours du jour 1 n'avait pas été joué un jour sans séance prévue, soit 4 jours sur 7 pour un programme à 3 séances.
+- **Pour 8** : un jour 1 qui mène à une vraie séance d'aujourd'hui en un tap (charge de départ pré-remplie), prouvé sur au moins 5 inscriptions réelles terminant leur première séance le jour même.
+
+**2. Saisie de séance — 7 (=)**
+- **Pour** : « Série faite » est optimiste — la série se coche, le chrono part, l'envoi suit (`static/js/seance.js:514-523`) ; avec un historique, la charge est pré-remplie (« Même charge, vise 7 reps », 70 kg, capture `19`) ; échauffement à part, supersets ; 37 enregistrements réels le 04/10, tous réussis, 0 doublon en base.
+- **Contre** : une date future est acceptée sans garde (`core/seance_saisie.py:22-27`, I-1) ; quatre verbes sur chaque carte (`templates/_seance_carte_exercice.html:325`, `:374`, `:385`) ; « Séance terminée 💪 » proposé alors que rien n'a été enregistré (capture `10`) ; le message d'erreur recouvre « Enregistrer » et « Skip » (capture `09`) ; le RPE n'a jamais été saisi en usage réel (32 lignes du 04/10, `rpe` vide).
+- **Pour 8** : 10 séances réelles sans accroc rapporté, aucune série à une mauvaise date, et le temps entre deux « Série faite » mesuré au niveau de Strong (une frappe + un tap).
+
+**3. Programme et planning — 7 (=)**
+- **Pour** : rotation A/B réelle (`core/rotation.py`), éditeur borné, renommage qui garde l'historique (v42), supersets.
+- **Contre** : la carte « Prochaine séance » vise toujours le prochain jour planifié, jamais « fais-la aujourd'hui » ; pas de blocs ni de % d'e1RM ; 0 superset dans les 13 programmes de production (fonction inutilisée).
+- **Pour 8** : séance du jour à la demande (« faire la prochaine maintenant »), blocs ou cycles simples, et au moins un utilisateur réel qui s'en sert.
+
+**4. Progression et statistiques — 7 (=)**
+- **Pour** : « Tes progrès » sur l'accueil (« Développé militaire : +7,5 kg en 3 semaines », capture `12`), séries par muscle face aux repères (capture `13`), calendrier, streak et paliers.
+- **Contre** : pas de courbe d'e1RM avec tendance ni de comparaison entre périodes comme chez Strong ; carte du corps réservée au PRO.
+- **Pour 8** : courbe e1RM par exercice avec tendance et records datés, vérifiée sur un vrai historique de plus de 3 mois.
+
+**5. Coach IA — 7 (=)**
+- **Pour** : contexte complet (RPE, prescription, bilans, cardio à part) tenu par `tests/test_coach_contexte.py` ; quota atomique ; réponses en flux.
+- **Contre** : 10 messages réels depuis juin, **0 sur 30 jours** ; « ouvert à l'essai (5 messages/jour) » impossible en production (v29) ; qualité des réponses non mesurée.
+- **Pour 8** : usage réel récurrent (au moins un PRO payant qui l'utilise chaque semaine) et un retour qualitatif documenté.
+
+**6. Générateur IA — 7 (=)**
+- **Pour** : tâche de fond, reprise après rechargement (test navigateur), « Refaire cette séance ».
+- **Contre** : 8 générations et 2 adoptions depuis juin, 1 génération en 30 jours ; aucune évaluation des programmes produits.
+- **Pour 8** : un programme généré suivi 4 semaines par un vrai utilisateur, avec ses progrès visibles.
+
+**7. Nutrition — 7 (=)**
+- **Pour** : repas par aliment, ~430 aliments, Open Food Facts côté serveur, cibles reliées aux jours d'entraînement (capture `33`).
+- **Contre** : 21 lignes de repas en base au total ; pas de recettes, d'aliments perso, ni de cible qui s'ajuste au poids réel (MacroFactor le fait) ; recherche Open Food Facts jamais exercée d'ici (réseau).
+- **Pour 8** : aliments perso et recettes, tendance hebdomadaire, cible adaptative, et 2 semaines de saisie réelle.
+
+**8. Cardio — 6 (=)**
+- **Pour** : format v44 constaté sur les 2 cardios réels (`reps = poids = 0`, mesures dans leurs colonnes) ; durée en minutes et secondes (PR #34) ; import Strava.
+- **Contre** : aucune durée décimale encore en base ; GPS seulement écran allumé ; pas de zones cardiaques ni Health Connect.
+- **Pour 7** : un cardio réel avec secondes en base et le suivi GPS écran éteint (service natif) ; **pour 8** : zones cardiaques via Health Connect.
+
+**9. Hors-ligne — 7 (=)**
+- **Pour** : rejoué dans Chromium (P9) : pastille « Séances de la semaine prêtes hors-ligne », séance rouverte en mode avion, série en file, « Terminer » rend la main en 7,6 s, retour du réseau → 461 → 462 lignes en base.
+- **Contre** : jamais vérifié dans une vraie salle en sous-sol ; dépend du service worker (la webview Android charge le site distant).
+- **Pour 8** : une séance complète faite réellement sans réseau, synchronisée sans perte, constatée en base.
+
+**10. Notifications et relances — 7 (=)**
+- **Pour** : **cron prouvé** — `POST /tasks/reminders` par cron-job.org toutes les heures, 39 appels sur 39 h, tous en 200 ; sur 30 jours : 17 rappels, 29 relances ; récap du dimanche envoyé le 04/10 (« sent=1 errors=0 »).
+- **Contre** : 3 abonnements push au total ; aucun effet mesuré (retour dans les 24 h après un rappel).
+- **Écart** : la preuve lève la principale réserve, pas assez pour 8 sans mesure d'effet.
+- **Pour 8** : taux de séances faites dans les 24 h suivant un rappel, mesuré sur au moins 20 abonnés.
+
+**11. Design et cohérence UI — 6 (=)**
+- **Pour** : cartes illustrées, thème sombre cohérent, bandeaux clairs (hors-ligne, file d'attente).
+- **Contre** : e-mail et déconnexion en tête de chaque page (toutes les captures ; signalé le 30/09 et le 03/10) ; carte d'exercice chargée ; la barre du bas reste visible pendant l'onboarding (capture `03`) ; 60 `style="` bruts dans les gabarits (le cliquet du test, mesuré autrement, passe à ≤ 56).
+- **Pour 7** : en-tête allégé, un seul verbe par carte ; **pour 8** : une revue visuelle de toutes les pages avec des utilisateurs, sans incohérence relevée.
+
+**12. Performance ressentie — 6 (−1)**
+- **Pour** : HTML compressé léger (séance 21,8 ko, accueil 8,3 ko, programme 24,1 ko) ; accueil à **6 requêtes** à froid en régime normal (7 le 03/10 ; 9 la toute première fois, quand les badges s'écrivent) ; « Série faite » ne fait pas attendre l'écran.
+- **Contre (mesuré en production)** : `/seance/save-exo` **1,42 à 2,95 s, médiane ≈ 2,0 s** sur les 37 appels du 04/10, contre **0,54 à 1,20 s, médiane 0,85 s** sur les 5 appels du 29/09 ; `/accueil` médiane 1,20 à 1,77 s par jour du 04 au 06/10, contre 0,20 à 0,79 s du 01 au 03/10. Cause non établie (Redis actif depuis le 04/10 13:58 UTC et beaucoup de code changé le même jour ; traçage Railway désactivé). Un seul processus.
+- **Écart** : **surévalué** auparavant faute de mesure de production.
+- **Pour 7** : retrouver une médiane < 1 s ; **pour 8** : < 300 ms et une saisie qui ne dépend plus du serveur (stockage local d'abord).
+
+**13. Architecture du code — 7 (=)**
+- **Pour** : 69 modules `core/` (13 345 lignes), plafond de 400 lignes par module de données tenu par test ; couche données sans cycle ; état partagé Redis/mémoire.
+- **Contre** : 5 imports entre blueprints (`routes/programme.py:311`, `routes/onboarding.py:210`, `routes/gestion.py:448`, `routes/premium.py:15`, `routes/progres.py:394`) ; `routes/programme.py` à 849 lignes pour un plafond de 850 ; replis silencieux sur colonne absente (voir 16).
+- **Pour 8** : un contrôle de schéma au démarrage et zéro import entre blueprints.
+
+**14. Modèle de données — 7 (=)**
+- **Pour** : v41 à v47 vérifiées en base (index unique, contraintes, 3 tables typées fermées) ; 0 doublon, 0 orphelin.
+- **Contre** : la condition posée pour 8 n'est pas remplie (0 série avec `exercise_id` ou `type_serie`) ; schéma de production en retard sur le code (v29) ; 2 clés mortes dans 9 programmes.
+- **Pour 8** : une séance réelle qui écrit `exercise_id` et `type_serie`, et un schéma de production égal à celui que le code attend.
+
+**15. Sécurité — 7 (=)**
+- **Pour** : RLS sur 14 tables sans règle ni droit client ; webhook Stripe signé (`routes/billing.py:244-255`) ; admin réservé à une connexion Google (`core/admin_acces.py`) ; CSRF partout sauf 4 chemins signés ou à secret (`app.py:274`) ; aucun secret dans le dépôt (`git grep`).
+- **Contre** : CSP avec `'unsafe-inline' 'unsafe-eval'` (`app.py:352`, M5) ; alertes Supabase (déclencheur appelable, mots de passe fuités) ; configuration Auth non lisible d'ici (un compte e-mail existe).
+- **Pour 8** : CSP sans `unsafe-eval` (version CSP d'Alpine), alertes Supabase à zéro, et un test d'intrusion simple documenté.
+
+**16. Robustesse — 6 (−1)**
+- **Pour** : 1 seule 5xx sur 3 078 requêtes en 48 h ; panne de Redis prévue et testée ; fin de séance bornée ; quota rendu si l'IA échoue.
+- **Contre** : (a) une colonne absente est journalisée puis ignorée (`core/db_abonnement.py:96-112`, `core/db_profil.py:42-58`) : la v29 manque depuis juin sans aucune alerte ; (b) **aucune nouvelle tentative** sur coupure de connexion : le 05/10 à 06:26 UTC, `/seance` a répondu 503 et l'accueil s'est affiché vide (`core/db_base.py:34-50`, `routes/seance.py:54-58`, reproduction RC) ; (c) une date future est acceptée (I-1).
+- **Écart** : **surévalué** — l'audit n'avait pas comparé le schéma de production au code.
+- **Pour 7** : contrôle de schéma au démarrage + une nouvelle tentative ; **pour 8** : 30 jours sans 5xx en production.
+
+**17. Tests — 6 (−1)**
+- **Pour** : 1 270 + 23 + 113 tests, verts 7 jours sur 7 ; couverture 85 % (81 %).
+- **Contre** : la fausse base l'écrit elle-même : « Ce que ça n'attrape PAS : un nom de colonne qui n'existe pas en base » (`tests/conftest.py:67`). Résultat : l'essai et le parrainage passent tous leurs tests (`tests/test_essai_pro.py`, `tests/test_essai_et_bilan_pro.py`) alors qu'ils sont impossibles en production ; aucun test ne joue un jour sans séance prévue (I-1) ; aucun test contre un vrai PostgreSQL en CI.
+- **Écart** : un défaut réel, durable, invisible aux tests.
+- **Pour 7** : CI avec un PostgreSQL qui applique v23 → v47 ; **pour 8** : en plus, un test qui vérifie que chaque colonne lue par le code existe, et des parcours navigateur sur les 7 jours.
+
+**18. Monétisation et paywall — 5 (−2)**
+- **Pour** : Checkout Stripe et webhook signé avec remboursements et litiges ; page PRO honnête ; invitation PRO après la 10ᵉ séance (capture `12`) ; tarifs masquables dans l'app native.
+- **Contre** : **0 `vip_activated` depuis le 14/06** pour 3 paiements commencés ; les 8 profils PRO n'ont aucun événement d'activation (accordés à la main ? invérifiable) ; l'essai n'existe pas en production ; le parrainage (« Gagnez des jours PRO à deux », `templates/plus.html:54`) ne crédite rien.
+- **Écart** : **surévalué** (essai jamais vérifié en base) et conversion désormais mesurée : zéro.
+- **Pour 7** : v29 appliquée et un essai réel suivi jusqu'à la fin ; **pour 8** : au moins un paiement réel abouti, et un taux de conversion de l'essai mesuré.
+
+**19. Rétention — 7 (=)**
+- **Pour** : mécanismes vérifiés en production sur 30 jours (17 rappels, 29 relances, 3 défis validés, récap).
+- **Contre** : 2 comptes actifs sur 15 (7 et 30 jours), 0 inscription depuis le 01/07 ; aucune dimension sociale, et le seul mécanisme à deux (parrainage) est mort. Échantillon trop petit pour mesurer une rétention.
+- **Pour 8** : rétention J7/J30 mesurée sur au moins 20 inscrits, et un mécanisme social (binôme ou streak partagé).
+
+**20. Accessibilité — 7 (=)**
+- **Pour** : `tests/test_accessibilite.py` (9 pages, contrastes, noms accessibles), cibles de 44 px, `prefers-reduced-motion`.
+- **Contre** : jamais essayé avec TalkBack ; le message d'erreur de « Série faite » recouvre des boutons.
+- **Pour 8** : une séance complète faite au lecteur d'écran (TalkBack), sans blocage.
+
+---
+
+### Partie 2 — Les 9 parcours (joués dans Chromium, 375 × 812)
+
+| # | Profil | 06/10 (préc.) | **Aujourd'hui** | Ce qui marche ✅ | Ce qui coince ⚠️ |
+|---|---|---:|---:|---|---|
+| 1 | Débutant jour 1 | 7 | **6** | Onboarding en 4 étapes, programme recommandé, tutoriel, conseil de charge de départ | Un jour sans séance prévue : « Prochaine séance · Demain » → séance datée du lendemain, bandeau « RATTRAPAGE » ; « Commencer » du tutoriel ne lance rien ; 20 kg conseillés mais pas pré-remplis → « Série faite » refusée ; « Séance terminée 💪 » sur une séance vide |
+| 2 | Débutant semaine 3 | 7 | **7** | Accueil : « +7,5 kg en 3 semaines », défi 1/3, streak 4 semaines, séries par muscle | Invitation PRO plein écran à la 10ᵉ séance ; pas de récap visuel du mois pour un gratuit |
+| 3 | Intermédiaire (import Hevy) | 7 | **7** | CSV Hevy : 2 séances, 5 séries, échauffement écarté, noms traduits (« Bench Press (Barbell) → Développé couché »), 5 lignes en base | Pas de séries dégressives ; import par fichier seulement |
+| 4 | Avancé | 6 | **6** | Charge pré-remplie, « Même charge, vise 7 reps », échauffement 4 séries, superset | Pas de blocs ni de % d'e1RM ; RPE jamais utilisé en vrai |
+| 5 | Gratuit | 7 | **6** | Séances, progrès simples, cardio, import, export gratuits ; murs PRO clairs | « Inviter des amis — Gagnez des jours PRO à deux » promis dans Plus, **rien n'est crédité en production** |
+| 6 | Essai restreint | 6 | **2** | Fonctionne sur la fausse base (badge ESSAI, « encore 19 h », coach 0/5) | **N'existe pas en production** : la colonne `vip_until` est absente, aucun essai ne peut démarrer |
+| 7 | PRO payant | 7 | **7** | Coach, générateur, nutrition détaillée, « Ce mois-ci avec PRO » | 0 paiement abouti enregistré : parcours jamais vécu par un vrai payant |
+| 8 | App Android (webview) | 6 | **6** | Séance réelle du 04/10 sur Android 16 : 37 envois, tous réussis ; compte à rebours natif | Webview du site distant ; tarifs visibles (normal hors Play Store) ; 2 s par enregistrement côté serveur |
+| 9 | Salle sans réseau | 7 | **7** | Mode avion : séance ouverte, série en file, « Terminer » en 7,6 s, synchro au retour | Jamais prouvé dans une vraie salle |
+
+Moyenne des parcours : 54 / 9 = 6,0 (préc. 6,7).
+
+---
+
+### Partie 3 — Audit technique
+
+#### Critique
+
+**C1 — Migration v29 absente : essai PRO et parrainage morts en production.**
+- **Reproduction** : SQL Z.4-a (`vip_until`, `referral_code`, `referred_by` absents) ; RB (base aussi stricte que la production) → `/parrainage` affiche un lien et « 1 jour d'essai PRO… et toi 3 jours », le code n'est jamais enregistré, `apply_referral` renvoie `False`, aucun `vip_until` posé. Journaux attendus : `get_or_create_referral_code read FAILED … 42703`.
+- **Impact** : chaque utilisateur voit une promesse fausse (onglet Plus, page Parrainage) ; 2 liens déjà partagés (`referral_shared` = 2) ; le levier de conversion par l'essai n'a jamais existé.
+- **Correction** : appliquer `supabase_schema_v29_referral.sql` (avec ton accord) et ajouter au démarrage un contrôle qui compare les colonnes attendues à la base et alerte `/admin`. **Effort S.**
+
+#### Importants
+
+| # | Constat | Reproduction | Impact | Correction | Effort |
+|---|---|---|---|---|---|
+| I-1 | **Séance d'un autre jour enregistrable**, et l'accueil y mène : « Prochaine séance · Demain » ouvre la séance datée du lendemain avec un bandeau « RATTRAPAGE » (`routes/accueil.py:390-395`, `routes/seance.py:73-75`, `:291`, `core/seance_saisie.py:22-27`). | RA (test) + navigateur (captures `42`, `43`) + production : 2 séries « Push 1 » du 05/10 écrites le 04/10 à 17:57 | Séries à la mauvaise date ; le lendemain, la séance apparaît déjà faite ; calendrier et streak faussés | La carte propose « Faire maintenant » (date du jour) ; le serveur refuse une date future ; bandeau « En avance » sinon | S |
+| I-2 | **Latence d'enregistrement ×2,4** : `/seance/save-exo` médiane 0,85 s (29/09) → ≈ 2,0 s (04/10) ; accueil 0,2-0,8 s → 1,2-1,8 s. | Journaux HTTP Railway (Z.6) | Batterie et données ; « Terminer » attend les envois ; sous réseau faible, le délai de 8 s est mangé par le serveur | Activer le traçage, chronométrer Redis et Supabase par étape, regrouper les allers-retours | M |
+| I-3 | **Aucune nouvelle tentative sur coupure de connexion** à la base (`core/db_base.py:34-50`). | RC + production 05/10 06:26 UTC (`ConnectionTerminated` → `/seance` 503, accueil vide) | Page d'erreur à la première ouverture du matin | Retenter une fois les lectures sur erreur de transport | S |
+| I-4 | **Les tests ne voient pas le schéma** : fausse base sans colonnes (`tests/conftest.py:67`) et replis silencieux (`core/db_profil.py:42-58`). | C1 est passée inaperçue avec 1 270 tests verts | Toute migration oubliée reste invisible | PostgreSQL en CI avec toutes les migrations ; test « chaque colonne lue existe » | M |
+| I-5 | **0 activation PRO enregistrée** depuis le 14/06 pour 3 paiements commencés (2 comptes). | SQL Z.4-e | Soit aucun paiement n'a abouti, soit l'activation ne laisse pas de trace : invérifiable sans Stripe | Comparer le tableau de bord Stripe aux événements ; alerte si un paiement n'active rien | S |
+
+#### Mineurs
+
+| # | Constat | Preuve | Impact | Correction | Effort |
+|---|---|---|---|---|---|
+| m1 | `handle_new_user()` (SECURITY DEFINER) exécutable par `anon` et `authenticated` | `get_advisors` ; SQL Z.4-f | Faible (déclencheur) | `revoke execute … from anon, authenticated` | S |
+| m2 | Protection des mots de passe fuités désactivée ; 1 compte e-mail existe | `get_advisors` ; SQL Z.4-g | Faible si l'inscription e-mail est fermée (invérifiable) | Fermer le fournisseur e-mail ou activer la protection | S |
+| m3 | Clés mortes `_profiles` / `_active_profile` dans 9 programmes | SQL Z.4-c ; `grep` vide | Aucun, dette | Nettoyage idempotent | S |
+| m4 | Variables Railway nommées avec espaces (`SUPABASE_URL  `, `SUPABASE_ANON_KEY  `) | `describe-service` | Compensé par `_env` (`core/db_base.py:69-81`), fragile | Renommer les variables | S |
+| m5 | Journaux INFO étiquetés « error » sur Railway | Journaux Z.6 | Impossible de filtrer les vraies erreurs | Journaux applicatifs sur la sortie standard | S |
+| m6 | CSP `unsafe-inline` + `unsafe-eval` (M5 du 03/10) | `app.py:352` | Une future injection s'exécuterait | Version CSP d'Alpine.js | M |
+| m7 | Message d'erreur de « Série faite » recouvrant « Enregistrer » / « Skip » | capture `09` | Gêne d'usage | Toast au-dessus de la barre d'actions | S |
+| m8 | « Séance terminée 💪 » proposé pour une séance vide | capture `10` | Bilan sans séance possible | Message « Aucune série enregistrée » | S |
+| m9 | Tutoriel : « Lance ta première séance → Commencer » reste sur l'accueil | P1 (notes) | Promesse non tenue au jour 1 | Ouvrir la séance du jour | S |
+| m10 | « Barre vide (20 kg) » conseillée mais non pré-remplie | capture `08` | Une frappe de plus, refus au premier tap | Pré-remplir 20 kg pour un mouvement à la barre | S |
+| m11 | Écarts doc/code (CONTEXT.md, Z.5) | voir ci-dessous | Induit en erreur | Mise à jour | S |
+| m12 | e-mail + déconnexion en tête de chaque page (M9 du 30/09, toujours là) | toutes les captures | Bruit visuel, déconnexion accidentelle | Les déplacer dans Gestion | S |
+
+#### Synthèse par sujet
+- **Sécurité** : auth Google + pont JWT ; admin Google uniquement ; CSRF partout sauf `/auth/session`, `/billing/webhook` (signé), `/tasks/*` (secret à temps constant) ; CSP faible (m6) ; quotas atomiques (`core/quota.py`) ; webhooks Stripe signés et traitant remboursements/litiges ; aucun secret dans le dépôt ; variables lues par nom seulement.
+- **Intégrité** : écritures par clé (index unique), 0 doublon ; verrous Redis ; cache invalidé par génération ; Redis en panne → repli mémoire (testé) ; mais dates futures acceptées (I-1) et colonnes manquantes ignorées (C1).
+- **Performance** : 6 requêtes base pour l'accueil à froid, 3 pour « Série faite », 0 N+1 relevé ; poids compressés 7-24 ko ; latence de production en hausse (I-2).
+- **Dette** : 69 modules `core/`, 19 blueprints, 5 imports entre blueprints, `routes/programme.py` à 1 ligne de son plafond, code mort (`_profiles`), doc en retard.
+
+#### Écarts doc/code (CONTEXT.md)
+
+| La doc dit | La réalité |
+|---|---|
+| `:250-251` parrainage et `:277-278` essai décrits comme actifs | v29 absente en production |
+| `:433-434` « Dernières migrations : v34 … v39 » | v47 ; et v29 jamais appliquée |
+| `:437` « ≈ 915 tests … 10 navigateur … JS 106 » | 1 270 Python, 23 navigateur, 113 JS |
+| `:513` échauffement « jamais enregistré » | Enregistré à part depuis la v43 (`:555`) |
+| `:608` « `_session_notes` … purgée à chaque /seance/finish » | Bilans en table depuis la v34, reste du blob repris en v46 |
+| `:609` `replace_program_body` conserve `_settings`, `_streak_record`, `_meal_plan` | Ces clés vivent en tables depuis v45-v47 |
+| `:624` limiteur « mémoire process » | Redis en production (« Rate limiter backend: redis ») |
+| `:638` « Railway déploie depuis main sans attendre » | « Wait for CI » actif |
+| `:641-642` « Branche unique main, pas de branches de feature » | Travail par PR depuis la #6 |
+| `:645` `CACHE_VERSION` base `v127` | `v132` (`static/service-worker.js:6`) |
+
+#### Suivi des constats précédents
+
+| Repère | Statut au 06/10 (cet audit) | Preuve |
+|---|---|---|
+| I1 RPE ignoré | Corrigé | `tests/test_rpe_suggestion.py` vert |
+| I2 « Série faite » sur champ vide | Corrigé (refus explicite sans charge proposée) | capture `09`, tests JS |
+| I3 « Terminer » figé | Corrigé | P9 : 7,6 s en mode avion |
+| I4 Test dépendant du jour | Corrigé | suite verte 7 jours |
+| I5 Catalogue tronqué | Corrigé | `tests/test_rotation.py` |
+| I6 Onboarding destructeur | Corrigé | `tests/test_onboarding.py` |
+| I7 Doublons | Corrigé **et prouvé en production** | 0 doublon (SQL) |
+| I8 Compteur faux | Corrigé | capture `12` (« 1/3 ») |
+| I9 Coach pauvre | Corrigé | `tests/test_coach_contexte.py` |
+| I10 Promesses PRO | Corrigé pour la page PRO ; **nouvelle promesse fausse** : parrainage (C1) | `templates/plus.html:54` |
+| I11 Mono-processus | Corrigé dans le code ; production : 1 processus, `WEB_CONCURRENCY` absente | journal de démarrage |
+| I12 Renommage | Corrigé dans le code ; jamais exercé en production | 0 `exercise_id` |
+| I13 Échecs avalés | Corrigé | `tests/test_integrite_0310.py` |
+| I14 Couverture | Corrigé (auth 90 %, admin 89 %, programme 84 %) | rapport de couverture |
+| M1-M4, M6-M16 | Corrigés (tests verts) | suite complète |
+| M5 CSP | **Ouvert** | `app.py:352` |
+| F1-F5 | Corrigés ; F5 confirmé (0 bilan sans séance) | SQL Z.4 |
+| U1-U3, U6, U8-U10 | Corrigés (tests navigateur) | e2e 23/23 |
+| U4 Échauffement | Fait ; **0 échauffement réel** en base | SQL |
+| U5 Revalider 3 séries | Non reproduit | — |
+| U7 Batterie | À mesurer sur le téléphone | — |
+
+---
+
+### Partie 4 — Améliorations
+
+#### 4.1 Les 10 améliorations à impact maximal (impact / effort)
+
+| # | Amélioration | Effort | Impact | Axes |
+|---|---|---|---|---|
+| 1 | Appliquer la v29 et contrôler le schéma au démarrage (alerte `/admin`) | S | Fort : essai et parrainage existent, promesses tenues | 16, 18, 19 |
+| 2 | « Faire maintenant » sur la carte Prochaine séance + refus serveur des dates futures | S | Fort : jour 1 juste, données justes | 1, 2, 3 |
+| 3 | Une nouvelle tentative sur coupure de connexion | S | Moyen : plus de 503 au réveil | 16 |
+| 4 | Charge de départ pré-remplie et « Commencer » qui ouvre la séance | S | Moyen : premier tap qui marche | 1, 2 |
+| 5 | Rapprocher Stripe et les événements ; alerte si un paiement n'active rien | S | Fort : savoir si l'app encaisse | 18 |
+| 6 | Tracer et ramener « Série faite » sous 500 ms | M | Fort : batterie, fluidité, sous-sol | 12 |
+| 7 | PostgreSQL réel en CI avec toutes les migrations | M | Fort : plus de dérive invisible | 17, 16 |
+| 8 | Fermer les deux alertes Supabase | S | Faible | 15 |
+| 9 | Nettoyer `_profiles`/`_active_profile` et mettre CONTEXT.md à jour | S | Faible | 13, 14 |
+| 10 | Séries dégressives et blocs pour l'avancé | L | Moyen, sur un public précis | 3, 4 |
+
+#### 4.2 Quinze idées face à Hevy, Strong, MyFitnessPal, MacroFactor et Strava
+Fonctions des concurrents citées **de mémoire**, non vérifiables d'ici (Partie 5).
+
+| # | Idée | Face à | Pourquoi |
+|---|---|---|---|
+| 1 | Séance vide démarrée d'un tap, à tout moment | Hevy, Strong | Le jour 1 ne dépend plus du planning |
+| 2 | Saisie enregistrée d'abord sur le téléphone, synchronisée ensuite | Strong | Instantané, sous-sol natif, moins de batterie |
+| 3 | Séries dégressives et rest-pause | Hevy | Attendu par l'intermédiaire |
+| 4 | Courbe d'e1RM avec tendance par exercice | Strong | Lecture de progression |
+| 5 | Échauffement et disques calculés dans la carte | Strong | Le calculateur existe déjà, à intégrer |
+| 6 | Routine partagée par lien | Hevy | Acquisition gratuite |
+| 7 | Binôme : streak commun avec un ami | Hevy (social) | Seule dimension sociale manquante |
+| 8 | Health Connect (poids, pas, FC) | Strava, Strong | Données sans saisie |
+| 9 | Application montre (Wear OS) pour valider une série | Hevy, Strong | Téléphone au vestiaire |
+| 10 | Dépense énergétique adaptative (TDEE recalculé sur le poids réel) | MacroFactor | Nutrition au niveau 8 |
+| 11 | Recettes et aliments perso | MyFitnessPal | Fidélise la saisie |
+| 12 | Repas en photo → aliments (IA) | MyFitnessPal | Saisie rapide |
+| 13 | Défi cardio du mois (distance cumulée) | Strava | Rétention cardio |
+| 14 | Bilan du mois partageable en image | Strava | Viral, existe déjà pour PRO |
+| 15 | Le bilan de séance ajuste la suivante (« épaule qui tire » → variante proposée) | — | Inédit à ma connaissance |
+
+#### 4.3 Trois choses à supprimer
+1. **Les verbes en double sur chaque carte** (« Réinitialiser les poids », « Recommencer cet exercice », `templates/_seance_carte_exercice.html:374`, `:385`) : « Série faite » enregistre déjà.
+2. **L'e-mail et le bouton de déconnexion en tête de chaque page** : leur place est dans Gestion.
+3. **Les replis silencieux sur colonne absente** (`core/db_profil.py:42-58`, `core/db_abonnement.py:96-176`) : ils ont caché la v29 pendant des mois ; une alerte au démarrage vaut mieux.
+
+#### 4.4 Ce qui manque pour atteindre 8/10
+La note globale de 8 demande que la plupart des axes passent à 8 **avec preuve**. Condition exacte, axe par axe :
+
+| Axe | Note | Condition exacte pour 8 |
+|---|---:|---|
+| 1 Onboarding | 6 | Jour 1 → séance d'aujourd'hui en un tap, charge pré-remplie, prouvé sur 5 vraies inscriptions |
+| 2 Saisie | 7 | 10 séances réelles sans accroc, 0 série mal datée, saisie au rythme de Strong |
+| 3 Programme | 7 | Séance à la demande + blocs, utilisés par un vrai utilisateur |
+| 4 Progression | 7 | Courbe e1RM avec tendance sur 3 mois réels |
+| 5 Coach | 7 | Usage hebdomadaire par un PRO payant + retour qualitatif |
+| 6 Générateur | 7 | Un programme généré suivi 4 semaines, progrès visibles |
+| 7 Nutrition | 7 | Aliments perso, recettes, cible adaptative, 2 semaines de saisie réelle |
+| 8 Cardio | 6 | Secondes réelles en base, GPS écran éteint, zones cardiaques |
+| 9 Hors-ligne | 7 | Une séance réelle complète sans réseau, synchronisée sans perte |
+| 10 Notifications | 7 | Effet mesuré : séances dans les 24 h après rappel, sur 20 abonnés |
+| 11 Design | 6 | En-tête allégé, un verbe par carte, revue visuelle avec utilisateurs |
+| 12 Performance | 6 | « Série faite » < 300 ms en production, saisie locale d'abord |
+| 13 Architecture | 7 | Contrôle de schéma au démarrage, 0 import entre blueprints |
+| 14 Données | 7 | Une vraie série avec `exercise_id` et `type_serie`, schéma = code |
+| 15 Sécurité | 7 | CSP sans `unsafe-eval`, 0 alerte Supabase |
+| 16 Robustesse | 6 | Contrôle de schéma, nouvelle tentative, 30 jours sans 5xx |
+| 17 Tests | 6 | PostgreSQL en CI + test des colonnes + parcours sur 7 jours |
+| 18 Monétisation | 5 | v29, un essai réel, un paiement réel abouti, conversion mesurée |
+| 19 Rétention | 7 | J7/J30 mesurés sur 20 inscrits + un mécanisme social |
+| 20 Accessibilité | 7 | Une séance complète avec TalkBack |
+
+#### 4.5 Une seule action pour les 30 prochains jours
+**Faire coïncider la production avec ce que l'app promet** : appliquer la v29 et ajouter un contrôle qui compare, au démarrage, les colonnes attendues par le code à celles de la base (alerte `/admin` et journal), puis rejouer chaque promesse visible sur la vraie app (essai, parrainage, séance du jour, paiement).
+**Pourquoi** : c'est un effort S qui débloque trois axes (robustesse, monétisation, tests), rend vraie une promesse affichée à chaque utilisateur, et empêche la prochaine migration oubliée de durer des mois. Tant que le code et la base divergent en silence, aucune autre note ne peut être *prouvée*.
+
+---
+
+### Partie 5 — Non vérifiable d'ici
+
+1. **Stripe** : si les 3 paiements commencés ont abouti, quels événements le webhook reçoit, d'où viennent les 8 profils PRO.
+2. **Configuration Auth Supabase** : fournisseur e-mail ouvert ou non, confirmation exigée.
+3. **Valeurs des variables** (lues par nom seulement) : validité de `ANTHROPIC_API_KEY`, `CRON_SECRET`, identifiants AdMob.
+4. **Cause de la hausse de latence** (traçage Railway désactivé).
+5. **Sur le téléphone** : batterie (U7), notifications réellement affichées, connexion Google native, affichage AdMob, comportement de la webview hors réseau.
+6. **Usage réel** : satisfaction, rétention statistique (2 comptes actifs), qualité des réponses du coach et des programmes générés.
+7. **Open Food Facts** : recherche par nom (réseau de l'audit).
+8. **Concurrents** : fonctions et prix cités de mémoire.
+9. **Une vraie salle en sous-sol** (seul le mode avion simulé a été joué).
+
+---
+
+### Annexe Z — Reproductions, commandes, requêtes et mesures
+
+#### Z.3 Reproductions (scripts hors dépôt, lancés depuis `pwa/` avec `PYTHONPATH=tests python -m pytest <fichier> -s`)
+Sortie réelle :
+```
+[RA] aujourd'hui = 2026-10-06 | liens « prochaine séance » : ['/seance?mode=prefaite&name=Push&date=2026-10-07']
+[RA] réponse 200 | lignes en base : [('2026-10-07', 'Push', 10, 60.0)]
+[RB] /parrainage : lien affiché = True | promesse '3 jours' : True | texte : Ton ami reçoit 1 jour d'essai PRO à l'inscription, et toi 3 jours
+[RB] code relu en base : None
+[RB] apply_referral -> False | profils avec vip_until : []
+[RC] 1re requête après coupure : 503 | requêtes encore en échec : 0
+[RC] 2e requête (connexion neuve) : 200
+3 passed in 0.90s
+```
+- **RA** : programme dont le seul jour planifié est demain ; GET `/accueil` → lien de la carte ; POST `/seance/save-exo` avec cette date → ligne datée de demain. Navigateur : bandeau « RATTRAPAGE · Mercredi 07/10/2026 » un mardi 06/10.
+- **RB** : la fausse base est rendue stricte (toute requête sur `profiles` citant une colonne v29 lève `42703 column … does not exist`, comme PostgREST) ; GET `/parrainage`, puis `apply_referral("u-filleul-0002", code)`.
+- **RC** : la première requête lève `ConnectionTerminated` (même nom qu'en production), la suivante passe.
+- **P1 navigateur** : « premier champ de saisie à 595 px (écran 812 px) » ; « après "Série faite" sans rien taper : lignes en base = [] » (message « Indique tes répétitions et ta charge »).
+- **P3 navigateur** : « Fichier Hevy, 6 lignes lues · 1 série d'échauffement écartée · Bench Press (Barbell) → Développé couché » ; 5 lignes importées.
+- **P9 navigateur** : « séance rouverte en mode avion : True » ; « "Terminer" hors-ligne : URL /accueil après 7.6s » ; « lignes en base avant/après retour du réseau : 461 → 462 ».
+
+#### Z.4 Requêtes SQL (Supabase, `select` uniquement)
+- **a. Colonnes attendues** : jointure de 34 couples (migration, table, colonne) extraits des fichiers `supabase_schema_v23…v44` avec `information_schema.columns` → 31 `present = true`, 3 `false` : `29 profiles referral_code`, `29 profiles referred_by`, `29 profiles vip_until`.
+- **b.** `select count(*) from profiles where vip_until is not null` → `ERROR: 42703: column "vip_until" does not exist`.
+- **c.** `select k, count(*) from (select jsonb_object_keys(data) k from programs) x where k like '\_%' group by k` → `_active_profile 9, _equipement 6, _equipment_details 6, _name 5, _origin 10, _planning 14, _profiles 9, _programmes 8, _rotation 1, _seance_prog 8, _started_at 14`.
+- **d.** Séries depuis la v42 : `total 1169, avec_exercise_id 0, avec_type_serie 0, ecrites_depuis_v42 10, muscu_ecrites_depuis_v42 9, derniere_muscu 2026-10-04 17:18:29 UTC` ; détail ligne à ligne : 2 séries « Push 1 » `date = 2026-10-05` avec `created_at` 2026-10-04 15:57:11 et 16:00:03 UTC.
+- **e.** Événements : `vip_activated` absent sur toute la table (premier événement 2026-06-14) ; `checkout_started` 3 (2 comptes) ; `tier = 'vip'` 8 ; `stripe_customer_id` renseigné 2.
+- **f.** `handle_new_user` : `returns trigger`, `security_definer true`, `anon_exec true`, `auth_exec true`, déclencheur `on_auth_user_created`.
+- **g.** `auth.users` par fournisseur : google 14, email 1 (09/04) ; dernière création 2026-07-01.
+- **h.** Cohérence : `doublons_cle_serie 0`, `*_sans_compte 0` sur 13 tables, `etat_sans_programme 0`, `bilans_sans_seance 0`, `series_sans_session_id 0`, `series_vides_0_0 193`, `lignes_session_legacy 2`.
+- **i.** Usage : `comptes_auth 15, inscrits_30j 0, actifs_seance_7j 2, actifs_seance_30j 2, seances_7j 6, seances_30j 18, seances_muscu_30j 16`.
+
+#### Z.5 Code
+- `git grep` de motifs de secrets (`sk_live_`, `whsec_`, jetons JWT, clés Google) : seulement une fausse clé dans `tests/test_illustrations.py:580`.
+- `grep "_active_profile\|_profiles"` dans `core/`, `routes/`, `app.py`, gabarits et JS : **aucun résultat**.
+- Requêtes base par page (fausse base, compte de 461 séries, cache froid / chaud) : accueil 9 / 3 la première fois puis **6** / 3 ; séance (choix) 4 / 1 ; séance Push 6 / 3 ; progrès 6 / 1 ; programme 4 / 1 ; nutrition 7 / 3 ; cardio 1 / 0 ; gestion 5 / 1 ; coach 3 / 1 ; « Série faite » 3.
+- Poids HTML brut / compressé : accueil 28,8 / 8,3 ko ; séance Push 159,5 / 21,8 ko ; progrès 90,7 / 18,6 ko ; programme 201,7 / 24,1 ko ; nutrition 115,1 / 22,6 ko ; gestion 41,8 / 11,3 ko ; JavaScript total 266 ko non compressé.
+
+#### Z.6 Railway
+- Déploiement PR #22 créé le 04/10 à 17:17:09 UTC ; déploiement précédent retiré à 17:21:13 UTC.
+- Démarrage du 06/10 14:02 UTC : `Using worker: gthread` · `Rate limiter backend: redis (partagé)` · `partage: stockage redis, 1 processus`. Le 05/10 07:02 UTC : `stockage memoire`, puis redis à 07:15.
+- 48 h : 3 078 requêtes, 1 erreur 5xx ; `2026-10-05 06:26:22 routes.seance ERROR seance() DB failed: <ConnectionTerminated error_code:9 …>` et `/seance` 503 à la même seconde.
+- `/tasks/reminders` : `POST … 200`, une fois par heure du 05/10 00:00 au 06/10 14:00 UTC (39 appels), user-agent cron-job.org, 0,69 à 1,59 s.
+- `/seance/save-exo` le 04/10 (37 appels, ms) : 1777, 2596, 1881, 2811, 1502, 1904, 2080, 1540, 1427, 2193, 2403, 1591, 1573, 2575, 2095, 2950, 2339, 1552, 2001, 1562, 2574, 1433, 1578, 2330, 2277, 2189, 2009, 2681, 2583, 1419, 2387, 1506, 1548, 1444, 2548, 1520, 1420. Le 29/09 (5 appels) : 799, 540, 1111, 1197, 848.
+- `/accueil`, médiane par jour (ms) : 29/09 1129 · 30/09 364 · 01/10 790 · 03/10 199 · 04/10 1274 · 05/10 1202 · 06/10 1768. `/seance` médiane sur 7 jours : 234-237 ms.
+
+---
+
+# Mises à jour précédentes (conservées telles quelles)
+
+## Rapport précédent — 6,9/10 (06/10/2026, après les PR #33 et #34, commit `b09989a`)
+
 **Mise à jour** : 06/10/2026 (après les PR #33 et #34 : état du compte sorti de `programs.data`, v47, reset soft retiré ; durée du cardio en secondes) · **Commit audité** : `b09989a` (tête de `main` après les PR #6 à #34, CI verte, déployé) · **Audit initial** : 03/10/2026 sur `6126f95` (5,6/10). Mises à jour précédentes : 04/10 — 6,5 (`d2362f9`), 6,7 (`c4528b3`), 6,8 (`ee13985`), 6,8 (`158d1e0`), 6,9 (`67b346f`, 137 / 20) ; 05/10 — 6,9 (`345334c`, 138 / 20, après les PR #22 à #24), 6,9 (`0144587`, après la PR #27), 6,9 (`6fcc9f6`, après la PR #29) ; 06/10 — 6,9 (`201199a`, après la PR #31).
 **Historique** : 30/09/2026, `ac44673`, 4,9/10. Les versions précédentes de ce fichier restent dans l'historique git ; `RAPPORT_AUDIT_2.md` n'a pas été touché.
 
