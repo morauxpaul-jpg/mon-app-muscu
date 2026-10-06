@@ -9,6 +9,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_historique_lots  réécriture complète et ajout massif (sauvegarde, import)
     db_renommage    renommer une séance ou un exercice dans tout l'historique
     db_colonnes     les colonnes de `history` qu'une base en retard n'a pas encore
+    db_etat         l'état du compte : badges, défis, plats… (table `etat_compte`, v47)
     db_calques      les calques du jour d'une séance (table `calques_seance`, v46)
     db_reglages     les réglages de l'utilisateur (table `reglages`, v45)
     db_identite     rattacher les séries anciennes à l'identifiant de leur exercice (v42)
@@ -61,6 +62,10 @@ from core.db_colonnes import (
     colonnes_mesures, lire_avec_mesures, sans_colonnes_absentes, _GROUPES, _noms
 )
 from core.db_historique_lots import ajouter_lignes, save_hist
+from core.db_etat import (
+    CLES_BLOB as CLES_ETAT, COLONNES, etat_lu, extraire, superposer,
+    _depuis_prog as _etat_depuis_prog, _lire, _propre, _vide as _etat_vide
+)
 from core.db_calques import (
     CLES_BLOB, GARDE_JOURS, effacer_calques, effacer_tous_calques, ecrire_calque, lire_calque,
     modifier_calque, purger_calques, renommer_seance_calques,

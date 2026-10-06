@@ -356,6 +356,15 @@ def partage_neuf():
     yield
 
 
+def prog_lu(user_id=USER_ID):
+    """Le programme tel que l'app le lit : depuis la v47, badges, défis,
+    plats et cibles nutrition vivent dans `etat_compte` et y sont superposés
+    (core/db_etat.py). Lire `programs.data` à la main ne les voit plus."""
+    import core.db as core_db
+    core_db.vider_cache()
+    return core_db.get_prog(user_id)
+
+
 @pytest.fixture()
 def fake_db():
     import core.db as core_db
@@ -365,6 +374,8 @@ def fake_db():
     import core.db_reglages as db_reglages
     db_reglages._oublier_absence()  # tables `reglages` et `calques_seance`
     db_calques._oublier_absence()   # présentes par défaut
+    import core.db_etat as db_etat
+    db_etat._oublier_absence()
     core_db._data_cache.clear()
     core_db._prog_base.clear()
     yield fake

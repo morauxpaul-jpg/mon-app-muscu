@@ -75,7 +75,9 @@ def test_une_serie_faite_ne_relit_pas_lhistorique_apres_lecriture(un_an, logged_
     import core.db_base as db_base
     db_base._data_cache.clear()
     assert _serie_faite(logged_in, 1).status_code == 200
-    assert len(compteur) <= 7, compteur
+    # +1 depuis la v47 : l'état du compte (`etat_compte`) se lit avec le
+    # programme, une fois par cache froid.
+    assert len(compteur) <= 8, compteur
     assert compteur.count(("history", "select")) <= 5, compteur
     compteur.clear()
     assert _serie_faite(logged_in, 2).status_code == 200

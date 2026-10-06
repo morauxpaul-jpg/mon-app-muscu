@@ -21,7 +21,7 @@ import datetime as dt
 
 import pytest
 
-from conftest import USER_ID, CSRF
+from conftest import USER_ID, CSRF, prog_lu
 
 LUNDI = dt.date(2026, 9, 14)
 PREFETCH = {"Sec-Fetch-Mode": "same-origin"}
@@ -66,7 +66,7 @@ def test_un_prefetch_necrit_aucun_record_de_streak(compte, logged_in):
 def test_une_vraie_visite_enregistre_bien(compte, logged_in):
     """Le garde-fou ne doit pas empêcher ce pour quoi le code existe."""
     logged_in.get("/accueil", headers=VISITE)
-    prog = _prog(compte)
+    prog = prog_lu()
     assert prog.get("_badges") or prog.get("_streak_record"), \
         "une visite réelle doit graver quelque chose"
 
@@ -85,7 +85,7 @@ def test_sans_en_tete_on_considere_que_cest_une_visite(compte, logged_in):
     """Un vieux navigateur n'envoie pas `Sec-Fetch-Mode`. Mieux vaut écrire
     une fois de trop que perdre un badge pour toujours."""
     logged_in.get("/accueil")
-    prog = _prog(compte)
+    prog = prog_lu()
     assert prog.get("_badges") or prog.get("_streak_record")
 
 

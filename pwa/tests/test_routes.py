@@ -8,7 +8,7 @@ import datetime as dt
 import json
 import types
 
-from conftest import USER_ID, CSRF
+from conftest import USER_ID, CSRF, prog_lu
 from core.dates import continuous_week
 
 
@@ -672,7 +672,7 @@ def test_upsell_post_win_shown_once_for_free(fake_db, client):
     assert r1.status_code == 200
     assert "séances au compteur" in r1.data.decode("utf-8")
     # Flag durable posé
-    prog = fake_db.tables["programs"][0]["data"]
+    prog = prog_lu()
     assert prog.get("_upsell_seen") is True
     # 2e visite : plus jamais
     r2 = client.get("/accueil")
@@ -1021,7 +1021,7 @@ def test_import_plats_et_affichage(fake_db, logged_in):
     r = logged_in.post("/nutrition/plats/import", data={"_csrf": CSRF, "data": _PLATS_JSON})
     assert r.status_code == 302 and "plats=ok" in r.headers["Location"]
 
-    prog = next(p for p in fake_db.tables["programs"] if p["user_id"] == USER_ID)["data"]
+    prog = prog_lu()
     assert len(prog["_meal_plan"]["plats"]) == 2
     assert prog["_meal_plan"]["plats"][0]["name"] == "Poulet riz brocoli"
 
@@ -1075,7 +1075,7 @@ def test_cible_calorique_manuelle_prime(fake_db, logged_in):
     prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
     assert prof["calories_cible"] == 2400
     assert "calories_custom" not in prof  # jamais écrit dans la table profiles
-    assert _prog()["_nutrition"]["calories_custom"] == 2400
+    assert prog_lu()["_nutrition"]["calories_custom"] == 2400
 
     html = logged_in.get("/nutrition").data.decode("utf-8")
     assert "2400" in html

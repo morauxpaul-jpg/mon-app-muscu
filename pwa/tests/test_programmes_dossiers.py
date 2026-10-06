@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from conftest import USER_ID, CSRF
+from conftest import USER_ID, CSRF, prog_lu
 from core.programmes_dossiers import (fusionner_dans_le_programme_en_cours,
                                       remplacer_programme_en_cours)
 
@@ -105,7 +105,7 @@ def test_adopter_un_programme_genere_garde_les_autres(membre, logged_in):
     d = _data(membre)
     assert {"Maison A", "Hôtel", "Haut"} <= set(d)
     assert {p["name"] for p in d["_programmes"]} == {"Maison", "Vacances", "Programme IA"}
-    assert d["_badges"] == ["first_session"], "les données perso restent"
+    assert prog_lu()["_badges"] == ["first_session"], "les données perso restent"
 
 
 def test_changer_de_programme_garde_les_autres(membre, logged_in):

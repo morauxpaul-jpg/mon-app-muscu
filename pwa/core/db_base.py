@@ -204,7 +204,7 @@ def vider_cache():
 def clear_user_cache(user_id: str):
     """Invalide explicitement toutes les entrées cache d'un utilisateur.
     Appelé après chaque save réussi pour éviter les séances vides au reload."""
-    for prefix in ("hist", "prog", "profile", "onboarding"):
+    for prefix in ("hist", "prog", "profile", "onboarding", "etat"):
         _cache_invalidate(f"{prefix}:{user_id}")
 
 
