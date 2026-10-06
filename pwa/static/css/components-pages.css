@@ -716,3 +716,8 @@ html.has-ad-banner .topbar {
 .renommage-aide { color: var(--text-3) !important; font-size: 0.8rem !important; }
 .renommage-echec { color: var(--danger) !important; }
 .renommage-boutons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Durée du cardio : minutes + secondes côte à côte (page Cardio, séance). */
+.duree-champs { display: flex; align-items: center; gap: 6px; }
+.duree-champs input { flex: 1 1 0; min-width: 0; width: auto; }
+.duree-champs span { color: var(--text-3); font-size: 0.85em; }

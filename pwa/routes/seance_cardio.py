@@ -13,6 +13,7 @@ from core.limiter import limiter
 from core.navigation_seance import _back_to_editor
 from core.seance_semaine import _iso_week, _parse_date
 from core.seance_saisie import _form_date
+from core.cardio_duree import lire_duree, reps_de
 from core.seance_cardio import completer_mesures
 
 logger = logging.getLogger(__name__)
@@ -37,10 +38,8 @@ def add_cardio():
         activite = "Autre"
     _icon, met = ACTIVITES_MAP[activite]
 
-    try:
-        duree_min = max(0, int(float(f.get("duree_min") or 0)))
-    except ValueError:
-        duree_min = 0
+    # Minutes + secondes : le champ secondes manquait (retour du 06/10).
+    duree_min = lire_duree(f)
     try:
         distance_val = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
     except ValueError:
@@ -90,7 +89,8 @@ def add_cardio():
         "Séance": seance_name,
         "Exercice": exo_final,
         "Série": 1,
-        "Reps": duree_min,
+        "Reps": reps_de(duree_min),
+        "Duree": duree_min,
         "Poids": distance_val,
         "Remarque": remarque,
         "Muscle": "Cardio",

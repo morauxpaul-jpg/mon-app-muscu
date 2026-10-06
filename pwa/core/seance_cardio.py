@@ -24,6 +24,8 @@ Les noms gardent leur préfixe `_` là où ils viennent tels quels de
 `routes/seance.py` : le déplacement s'était fait sans en renommer un seul.
 """
 
+from core.cardio_duree import reps_de
+
 # Unité de distance et de vitesse, par activité. C'est la SEULE table : le
 # formulaire de séance la reçoit en JSON (`seance-config`) au lieu d'en garder
 # une copie, et un test vérifie qu'aucune copie ne réapparaît.
@@ -117,6 +119,14 @@ def _parse_cardio_remarque(remarque):
     return out
 
 
+def _duree_ligne(r):
+    """Minutes d'une ligne de l'app : `Duree` (décimale, avec les secondes)
+    si elle est là, sinon les minutes entières de `Reps`."""
+    duree = r.get("Duree")
+    duree = float(duree) if duree is not None else float(r.get("Reps") or 0)
+    return int(duree) if duree == int(duree) else duree
+
+
 def _build_cardio_done(hist, seance_name, date_iso):
     """Retourne la liste des blocs cardio déjà enregistrés pour cette séance/date."""
     out = []
@@ -130,7 +140,7 @@ def _build_cardio_done(hist, seance_name, date_iso):
         parsed = _parse_cardio_remarque(r.get("Remarque") or "")
         out.append({
             "activite": activite,
-            "duree": int(r.get("Reps") or 0),
+            "duree": _duree_ligne(r),
             "distance": float(r.get("Poids") or 0),
             "semaine": int(r.get("Semaine") or 0),
             "serie": int(r.get("Série") or 1),
@@ -157,8 +167,11 @@ def _mesure(txt):
     return n if n >= 0 else None
 
 
-def vers_colonnes(reps, poids, remarque) -> dict:
+def vers_colonnes(reps, poids, remarque, duree=None) -> dict:
     """Ligne cardio telle que l'app l'écrit → valeurs des colonnes en base.
+
+    `duree` : la durée exacte en minutes (clé `Duree` de la ligne), quand
+    elle porte des secondes ; sinon les minutes entières de `Reps`.
 
     Calories et vitesse quittent la remarque seulement si ce sont des
     nombres : une allure saisie « 2:05 » reste en texte, plutôt que perdue.
@@ -175,7 +188,8 @@ def vers_colonnes(reps, poids, remarque) -> dict:
         else:
             reste.append(p)
     return {"reps": 0, "poids": 0.0, "remarque": " | ".join(reste),
-            "duree_min": int(reps or 0), "distance": float(poids or 0),
+            "duree_min": round(float(duree), 4) if duree is not None else int(reps or 0),
+            "distance": float(poids or 0),
             "calories": calories, "vitesse": vitesse}
 
 
@@ -209,7 +223,7 @@ def depuis_colonnes(ligne: dict) -> dict:
     if vitesse is None:
         vitesse = _mesure(lu["vitesse"]) if lu["vitesse"] else None
     return {
-        "reps": int(round(duree)), "poids": distance,
+        "reps": reps_de(duree), "poids": distance,
         "remarque": _remarque_complete(rem, ligne.get("calories"), ligne.get("vitesse")),
         "Duree": duree, "Distance": distance,
         "Calories": int(calories) if calories is not None else None,
@@ -222,5 +236,5 @@ def vers_ancien_format(p: dict) -> dict:
     en retard : les colonnes n'existent pas encore)."""
     if not str(p.get("exercice") or "").startswith("CARDIO:") or p.get("duree_min") is None:
         return p
-    return {**p, "reps": int(p.get("duree_min") or 0), "poids": float(p.get("distance") or 0),
+    return {**p, "reps": reps_de(p.get("duree_min")), "poids": float(p.get("distance") or 0),
             "remarque": _remarque_complete(p.get("remarque"), p.get("calories"), p.get("vitesse"))}

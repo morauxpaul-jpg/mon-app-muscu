@@ -431,6 +431,13 @@ def _hide_native_billing() -> bool:
 
 
 
+@app.template_filter("duree_cardio")
+def _duree_cardio(minutes):
+    """« 25 min 30 s » (core/seance_cardio.py)."""
+    from core.cardio_duree import format_duree
+    return format_duree(minutes)
+
+
 @app.template_filter("sans_prive")
 def _sans_prive(dictionnaire):
     """Retire les clés préfixées `_` avant de sérialiser pour le navigateur.

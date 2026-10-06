@@ -242,7 +242,7 @@ def _row_to_supabase(user_id: str, r: dict) -> dict:
         **{c: None for c in COLONNES_CARDIO},
     }
     if ligne["exercice"].startswith(CARDIO_PREFIX):
-        ligne.update(vers_colonnes(ligne["reps"], ligne["poids"], remarque))
+        ligne.update(vers_colonnes(ligne["reps"], ligne["poids"], remarque, r.get("Duree")))
     return ligne
 
 # ────────────────────────────────────────────────────────────

@@ -65,8 +65,11 @@
       <p x-show="gpsErreur" x-cloak class="gps-note s-497726" x-text="gpsErreur"></p>
 
       <div class="s-3fdfbc">ou saisie manuelle :</div>
-      <label class="field-label">Durée (minutes)</label>
-      <input type="number" inputmode="numeric" min="0" name="duree_min" class="field" x-model.number="dureeMin" placeholder="ex. 30">
+      <label class="field-label">Durée</label>
+      <div class="duree-champs">
+        <input type="number" inputmode="numeric" min="0" name="duree_min" class="field" x-model.number="dureeMin" placeholder="ex. 30" aria-label="Minutes"><span>min</span>
+        <input type="number" inputmode="numeric" min="0" max="59" name="duree_sec" class="field" x-model.number="dureeSec" placeholder="0" aria-label="Secondes"><span>s</span>
+      </div>
     </div>
 
     <!-- Distance + Inclinaison + FC + Intensité -->
@@ -129,12 +132,12 @@
     </div>
 
     <!-- Résumé -->
-    <div class="card" x-show="dureeMin > 0" x-cloak>
+    <div class="card" x-show="totalMin() > 0" x-cloak>
       <div class="label-icon s-a988a5"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>RÉSUMÉ</div>
       <div class="cardio-summary">
         <div class="summary-item">
           <div class="summary-label">Durée</div>
-          <div class="summary-value" x-text="dureeMin + ' min'"></div>
+          <div class="summary-value" x-text="dureeTexte()"></div>
         </div>
         <div class="summary-item" x-show="distanceKm || autoDistance()">
           <div class="summary-label" x-text="unites().dist.replace(/ *\(.*/, '')"></div>
@@ -307,6 +310,7 @@
       return {
         activite: {{ (pre_activite or "Course")|tojson }},
         dureeMin: {{ pre_duree or 0 }},
+        dureeSec: 0,
         distanceKm: "",
         vitesse: "",
         fcMoy: "",
@@ -361,7 +365,7 @@
           this.tickTimer = setInterval(() => {
             const now = Date.now();
             this.elapsed = this.baseAccum + Math.floor((now - this.startedAt) / 1000);
-            this.dureeMin = Math.floor(this.elapsed / 60);
+            this._dureeDuChrono();
           }, 500);
         },
         _stopTick() {
@@ -381,7 +385,7 @@
           this.running = false;
           this._stopTick();
           this.elapsed = this.baseAccum;
-          this.dureeMin = Math.floor(this.elapsed / 60);
+          this._dureeDuChrono();
           this._persist();
         },
         resume() {
@@ -398,8 +402,21 @@
             this._stopTick();
           }
           this.elapsed = this.baseAccum;
-          this.dureeMin = Math.floor(this.elapsed / 60);
+          this._dureeDuChrono();
           try { localStorage.removeItem(this.storageKey); } catch (e) {}
+        },
+        // Le chrono garde les secondes : 25:59 ne devient plus 25 min.
+        _dureeDuChrono() {
+          this.dureeMin = Math.floor(this.elapsed / 60);
+          this.dureeSec = this.elapsed % 60;
+        },
+        totalMin() {
+          return (parseFloat(this.dureeMin) || 0) + (parseFloat(this.dureeSec) || 0) / 60;
+        },
+        dureeTexte() {
+          const sec = Math.round(this.totalMin() * 60), m = Math.floor(sec / 60), s = sec % 60;
+          if (!m) return s + " s";
+          return s ? m + " min " + s + " s" : m + " min";
         },
         formatTime(sec) {
           const h = Math.floor(sec / 3600);
@@ -473,7 +490,7 @@
         },
         // Combien d'unités de distance pour une unité de vitesse.
         _facteur() {
-          const t = parseFloat(this.dureeMin) || 0;
+          const t = this.totalMin();
           const r = this.unites().regle;
           if (!r || t <= 0) return 0;
           return r === "par_heure" ? t / 60 : (r === "m_par_min" ? t / 1000 : t);
@@ -490,7 +507,7 @@
         },
         estimatedCal() {
           const met = this.adjustedMet();
-          const mn = parseInt(this.dureeMin) || 0;
+          const mn = this.totalMin();
           if (mn <= 0) return 0;
           return Math.round(met * POIDS_KG * (mn / 60));
         },
