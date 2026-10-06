@@ -25,7 +25,7 @@
           </form>
         </div>
         <div class="s-b4238c">
-          {% if c.duree %}<span><strong class="s-38f301">{{ c.duree }}</strong> min</span>{% endif %}
+          {% if c.duree %}<span><strong class="s-38f301">{{ c.duree|duree_cardio }}</strong></span>{% endif %}
           {% if c.distance %}<span><strong class="s-38f301">{{ c.distance|round(2) }}</strong></span>{% endif %}
           {% if c.vitesse %}<span>Vit. <strong class="s-38f301">{{ c.vitesse }}</strong></span>{% endif %}
           {% if c.calories %}<span><strong class="s-52df2b">{{ c.calories }}</strong> kcal</span>{% endif %}
@@ -64,8 +64,11 @@
       </select>
       <div class="s-c669ae">
         <div>
-          <label class="s-b0be71">Durée (min)</label>
-          <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input s-046678" placeholder="20">
+          <label class="s-b0be71">Durée</label>
+          <div class="duree-champs">
+            <input type="number" inputmode="numeric" min="0" name="duree_min" x-model="duree" class="cell-input" placeholder="20" aria-label="Minutes"><span>min</span>
+            <input type="number" inputmode="numeric" min="0" max="59" name="duree_sec" x-model="dureeSec" class="cell-input" placeholder="0" aria-label="Secondes"><span>s</span>
+          </div>
         </div>
         <div>
           <label class="s-b0be71" x-text="units().dist"></label>

@@ -950,6 +950,7 @@
       open: false,
       activite: "Course",
       duree: "",
+      dureeSec: "",
       distance: "",
       vitesse: "",
       calories: "",
@@ -960,7 +961,8 @@
       // marchait par accident — « Allure (min/500m) » ne tombait dans aucun
       // cas et l'allure du rameur ne se calculait jamais.
       _facteur: function () {
-        var t = parseFloat(this.duree) || 0, r = this.units().regle;
+        // Minutes + secondes : 25 min 30 s font 25,5 min.
+        var t = (parseFloat(this.duree) || 0) + (parseFloat(this.dureeSec) || 0) / 60, r = this.units().regle;
         if (!r || t <= 0) return 0;
         return r === "par_heure" ? t / 60 : (r === "m_par_min" ? t / 1000 : t);
       },

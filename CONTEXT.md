@@ -63,6 +63,7 @@ pwa/
 │   ├── seance_calques.py          # Applique substituts et ordre des cartes ; purge des restes d'avant la v46 dans le blob
 │   ├── seance_saisie.py           # Le formulaire devient des lignes d'historique + détection de record
 │   ├── seance_cardio.py           # Unités cardio, et passage colonnes en base (v44) ↔ forme de l'app (Reps/Poids/Remarque)
+│   ├── cardio_duree.py            # Durée cardio en minutes + secondes (lire_duree, format_duree, filtre duree_cardio)
 │   ├── hist.py                    # Prédicats UNIQUES sur l'historique (is_perf, is_muscu_perf, is_session_marker, tonnage) — une seule définition de « séance faite »
 │   ├── strength.py                # Standards de force relatifs au poids de corps (ratios par muscle × sexe, niveaux)
 │   ├── exercise_stats.py          # Fiche par exercice : variantes, séances, records, séries, sparkline SVG
@@ -207,6 +208,7 @@ pwa/
 ### Cardio
 - 10 activités (`routes/cardio.py`, `ACTIVITES_MAP`), avec MET pour estimation calories
 - Stockage dans la même table `history` (Exercice = `CARDIO:Type`, Muscle = `Cardio`). **Depuis la v44**, en base : `duree_min`, `distance`, `calories`, `vitesse`, et `reps = poids = 0` (contrainte `history_cardio_colonnes_check`) ; la remarque ne garde que FC, inclinaison, RPE et la note. **Dans l'app**, rien ne change : `get_hist()` rend Reps = minutes, Poids = distance, Cal/Vit en remarque, plus les clés Duree/Distance/Calories/Vitesse. La conversion est dans `core/seance_cardio.py` (`vers_colonnes`, `depuis_colonnes`), appelée par `db_historique` seulement. Ce qui lit la table sans passer par l'app (cron, récap, relances) utilise `hist.perf_brute` et `db_colonnes.lire_avec_mesures`.
+- **Durée en minutes et secondes** (06/10) : les deux formulaires ont un champ secondes (`duree_sec`) et le chrono garde les secondes. `duree_min` stocke des minutes décimales (25 min 30 s = 25.5). Dans l'app, `Duree` porte la durée exacte et `Reps` les minutes entières arrondies (jamais 0 pour un cardio fait). Affichage : filtre `duree_cardio` (« 25 min 30 s »). Code : `core/cardio_duree.py`.
 
 ### Nutrition
 - Cibles (`core/nutrition_cibles.py`, vague 5 du 04/10) : BMR Mifflin-St Jeor, TDEE × facteur d'activité (5 niveaux), ±400 kcal selon l'objectif (Masse / Maintien / Sèche), cible manuelle prioritaire (`_nutrition.calories_custom`). **Protéines en g/kg** (1,8 ; 2,2 en sèche ; plafond 40 % des kcal), lipides 25 % (≥ 0,7 g/kg), glucides = le reste.

@@ -14,6 +14,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for
 
 from core.data import append_exo_rows, get_hist, get_profile
+from core.cardio_duree import lire_duree, reps_de
 from core.seance_cardio import UNITES_CARDIO, completer_mesures
 from core.strava_import import lire_activites, lire_date, marquer_doublons
 from core.analytics import track
@@ -88,10 +89,8 @@ def save():
         activite = "Autre"
     _icon, met = ACTIVITES_MAP[activite]
 
-    try:
-        duree_min = max(0, int(float(f.get("duree_min") or 0)))
-    except ValueError:
-        duree_min = 0
+    # Minutes + secondes : le champ secondes manquait (retour du 06/10).
+    duree_min = lire_duree(f)
     try:
         distance_km = max(0.0, float((f.get("distance_km") or "0").replace(",", ".")))
     except ValueError:
@@ -158,7 +157,8 @@ def save():
         "Séance": seance_name,
         "Exercice": exo_final,
         "Série": 1,
-        "Reps": duree_min,
+        "Reps": reps_de(duree_min),
+        "Duree": duree_min,
         "Poids": distance_km,
         "Remarque": remarque,
         "Muscle": "Cardio",
