@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 from core.data import (
     get_hist, get_prog, clear_user_cache,
     replace_exo_rows, delete_exo_rows, delete_session_rows, echauffements_du_jour,
-    echauffements_disponibles, get_reglages,
+    echauffements_disponibles, get_reglages, get_calque, modifier_calque, ecrire_calque,
 )
 from core.dates import (today_paris_str, logical_today_paris, DAYS_FR, MONTHS_FR)
 from core.limiter import limiter
@@ -34,8 +34,7 @@ from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows
                                     _last_session_sets, _norm, _previous_weeks_data,
                                     _suggestion_for, _cible_du_programme)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
-from core.seance_calques import (_appliquer_substituts, _apply_seance_order,
-                                 _update_extras, _update_libre_draft)
+from core.seance_calques import _appliquer_substituts, _apply_seance_order
 from core.seance_saisie import (_form_date, _known_exo_names, _pr_check,
                                 _reps_saisies, _rows_from_sets, _session_totals)
 from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done)
@@ -231,12 +230,13 @@ def seance():
             )
         logger.info("seance ordre exos seance=%s exos=%s",
                     name, [e.get("name") for e in exos_prog])
-        # Extras : stockés dans prog sous "_extras" par (seance, date) pour partage entre sessions
-        extras_key = f"{name}|{date_iso}"
+        # Calques du jour (table `calques_seance`, v46) : exos ajoutés,
+        # échanges et ordre des cartes, pour cette séance à cette date.
+        calque = get_calque(name, date_iso, prog)
         # Échanges du jour : le programme reste intact, seule la séance
         # d'aujourd'hui voit la variante.
-        exos_prog = _appliquer_substituts(prog, extras_key, exos_prog)
-        extras = prog.get("_extras", {}).get(extras_key, [])
+        exos_prog = _appliquer_substituts(calque["substituts"], exos_prog)
+        extras = calque["extras"]
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
         from core.decharge import semaine_allegee
@@ -260,7 +260,7 @@ def seance():
                 exos_ctx = exos_ctx + recon
 
         # Ordre personnalisé (drag dans la séance en cours)
-        exos_ctx = _apply_seance_order(prog, extras_key, exos_ctx)
+        exos_ctx = _apply_seance_order(calque["ordre"], exos_ctx)
 
         # Volume
         vol_curr = sum(r["Poids"] * r["Reps"] for r in hist
@@ -316,7 +316,8 @@ def seance():
     # ── Vue édition : mode libre ──────────────────────────────────
     if mode == "libre":
         libre_name = name or "Séance Libre"
-        libre_exos = prog.get("_libre_draft", {}).get(f"{libre_name}|{date_iso}", [])
+        calque = get_calque(libre_name, date_iso, prog)
+        libre_exos = calque["brouillon"]
         all_exos = [(e, False) for e in libre_exos]
         exos_ctx = _build_all_exo_contexts(hist, all_exos, libre_name, s_act, date_iso,
                                            auto_prefill_weight, show_overload_hint,
@@ -329,7 +330,7 @@ def seance():
             hist, libre_name, s_act, date_iso, covered, len(exos_ctx))
 
         # Ordre personnalisé (drag dans la séance en cours)
-        exos_ctx = _apply_seance_order(prog, f"{libre_name}|{date_iso}", exos_ctx)
+        exos_ctx = _apply_seance_order(calque["ordre"], exos_ctx)
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])
         exos_total = len(exos_ctx)
@@ -530,15 +531,12 @@ def add_extra():
         return _back_to_editor(f)
     muscle = f.get("muscle") or auto_muscles(name) or "Autre"
     sets = int(f.get("sets_count") or 3)
-    prog = get_prog()
-    key = f"{seance_name}|{date_str}"
     item = {"name": name, "muscle": muscle, "sets": sets}
-    if mode == "libre":
-        _update_libre_draft(prog, key, lambda lst: lst.append(item))
-    else:
-        _update_extras(prog, key, lambda lst: lst.append(item))
-    from core.data import save_prog
-    save_prog(prog)
+    try:
+        modifier_calque(seance_name, date_str, "brouillon" if mode == "libre" else "extras",
+                        lambda lst: lst + [item])
+    except ValueError:      # date illisible : rien à quoi rattacher l'exercice
+        pass
     return _back_to_editor(f)
 
 
@@ -559,24 +557,20 @@ def substitute_exo():
     if not origine or not seance_name:
         return _back_to_editor(f)
 
-    prog = get_prog()
-    key = f"{seance_name}|{date_str}"
-    calque = prog.setdefault("_substituts", {})
-    du_jour = calque.get(key, {})
-    if vers and _norm(vers) != _norm(origine):
-        du_jour[_norm(origine)] = vers
-    else:
-        # Champ vide, ou variante égale à l'original : c'est un retour en
-        # arrière. On efface plutôt que d'écrire un échange neutre, sinon le
-        # calque se remplit d'entrées qui ne font rien.
-        du_jour.pop(_norm(origine), None)
-    if du_jour:
-        calque[key] = du_jour
-    else:
-        calque.pop(key, None)
-
-    from core.data import save_prog
-    save_prog(prog)
+    def echanger(du_jour):
+        du_jour = dict(du_jour)
+        if vers and _norm(vers) != _norm(origine):
+            du_jour[_norm(origine)] = vers
+        else:
+            # Champ vide, ou variante égale à l'original : c'est un retour en
+            # arrière. On efface plutôt que d'écrire un échange neutre, sinon
+            # le calque se remplit d'entrées qui ne font rien.
+            du_jour.pop(_norm(origine), None)
+        return du_jour
+    try:
+        modifier_calque(seance_name, date_str, "substituts", echanger)
+    except ValueError:      # date illisible
+        pass
     return _back_to_editor(f)
 
 
@@ -593,24 +587,21 @@ def remove_extra():
         idx = int(f.get("index"))
     except (TypeError, ValueError):
         idx = None
-    prog = get_prog()
-    key = f"{seance_name}|{date_str}"
-
     def _remove(lst):
+        lst = list(lst)
         if target_name:
             for i, e in enumerate(lst):
                 if _norm(e.get("name") or "") == _norm(target_name):
                     lst.pop(i)
-                    return
+                    return lst
         if idx is not None and 0 <= idx < len(lst):
             lst.pop(idx)
+        return lst
 
-    if mode == "libre":
-        _update_libre_draft(prog, key, _remove)
-    else:
-        _update_extras(prog, key, _remove)
-    from core.data import save_prog
-    save_prog(prog)
+    try:
+        modifier_calque(seance_name, date_str, "brouillon" if mode == "libre" else "extras", _remove)
+    except ValueError:      # date illisible
+        pass
     return _back_to_editor(f)
 
 
@@ -626,15 +617,10 @@ def reorder_exos():
     if not seance_name or not isinstance(order, list):
         return {"ok": False}, 400
     order = [str(n).strip() for n in order if str(n).strip()][:200]
-    prog = get_prog()
-    key = f"{seance_name}|{date_str}"
-    store = prog.setdefault("_seance_order", {})
-    if order:
-        store[key] = order
-    else:
-        store.pop(key, None)
-    from core.data import save_prog
-    save_prog(prog)
+    try:
+        ecrire_calque(seance_name, date_str, "ordre", order)
+    except ValueError:      # date illisible
+        return {"ok": False}, 400
     return {"ok": True}
 
 

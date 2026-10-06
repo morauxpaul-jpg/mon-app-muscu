@@ -31,7 +31,7 @@ PLAFOND = 400  # lignes : au-delà, un module porte plus d'un sujet
 # et `current_client()` sont le chemin, et une lecture directe doit échouer.
 # `_absente_depuis` : un horodatage que le module réaffecte ; réexporté, la
 # façade en garderait une copie figée qui mentirait.
-HORS_FACADE = {"db_base._client", "db_reglages._absente_depuis"}
+HORS_FACADE = {"db_base._client", "db_reglages._absente_depuis", "db_calques._absente_depuis"}
 
 
 def _modules():

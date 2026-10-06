@@ -7,7 +7,7 @@ import logging
 from flask import Blueprint, request, redirect, url_for, jsonify, g, session
 
 from core.data import (
-    get_hist, get_prog, clear_user_cache,
+    get_hist, get_prog, clear_user_cache, effacer_calques, purger_calques,
 )
 from core.dates import logical_today_paris, now_paris
 from core.limiter import limiter
@@ -32,6 +32,13 @@ def finish():
     seance_name = f["seance_name"]
     date_str = _form_date(f)
     key = f"{seance_name}|{date_str}"
+    # Calques du jour (table v46) : le brouillon libre ou les exos ajoutés,
+    # les échanges et l'ordre des cartes ne servent qu'à cette séance-là.
+    effacer_calques(seance_name, date_str,
+                    ("brouillon" if mode == "libre" else "extras", "substituts", "ordre"))
+    # Et les séances ouvertes puis abandonnées, qui ne passent jamais ici.
+    purger_calques()
+    # Restes de l'ancien stockage dans le programme (avant la v46).
     prog = get_prog()
     changed = False
     if mode == "libre" and "_libre_draft" in prog and key in prog["_libre_draft"]:

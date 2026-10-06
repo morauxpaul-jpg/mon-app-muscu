@@ -15,7 +15,7 @@ from flask import (
 
 from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
                        rename_seance_rows, rename_exercise_rows, count_exercise_rows,
-                       marquer_series)
+                       marquer_series, renommer_seance_calques)
 from core.exercice_ids import valide as valide_exo_id
 from core.dates import DAYS_FR
 from core.limiter import limiter
@@ -476,6 +476,10 @@ def rename_seance():
         logger.error("rename_seance historique FAILED user=%s: %s",
                      getattr(g, "user_id", "?"), e)
         return jsonify({"ok": False, "error": "historique"}), 500
+    try:
+        renommer_seance_calques(ancien, nouveau)
+    except Exception as e:
+        logger.warning("rename_seance calques FAILED: %s", e)
     try:
         from core.data import rename_session_notes
         rename_session_notes(ancien, nouveau)

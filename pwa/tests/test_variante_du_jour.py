@@ -160,13 +160,14 @@ def test_echanger_un_exercice_contre_lui_meme_neffface_le_calque(programme, logg
 
 
 def test_le_calque_est_efface_en_fin_de_seance(programme, logged_in):
-    """Comme les exos ajoutés à la volée. Le garder ferait grossir d'une
-    entrée par séance un blob relu et réécrit à chaque interaction."""
+    """Comme les exos ajoutés à la volée : l'échange ne vaut que pour la
+    séance du jour (table `calques_seance`, v46)."""
     _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
-    assert _prog(programme)["_substituts"]
+    assert programme.tables["calques_seance"]
     logged_in.post("/seance/finish", data={
         "mode": "prefaite", "name": "Push", "seance_name": "Push", "date": JOUR,
     }, headers={"X-CSRFToken": CSRF}, follow_redirects=True)
+    assert not programme.tables["calques_seance"]
     assert not (_prog(programme).get("_substituts") or {})
 
 

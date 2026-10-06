@@ -361,7 +361,10 @@ def fake_db():
     import core.db as core_db
     fake = FakeSupabase()
     core_db.use_client(fake)
-    core_db._oublier_absence()      # table `reglages` présente par défaut
+    import core.db_calques as db_calques
+    import core.db_reglages as db_reglages
+    db_reglages._oublier_absence()  # tables `reglages` et `calques_seance`
+    db_calques._oublier_absence()   # présentes par défaut
     core_db._data_cache.clear()
     core_db._prog_base.clear()
     yield fake
