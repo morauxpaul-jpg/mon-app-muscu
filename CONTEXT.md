@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v45  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages)
+├── supabase_schema_v23.sql … v46  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -37,6 +37,7 @@ pwa/
 │   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
 │   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
 │   ├── db_historique.py           # Table history : lecture, écriture par clé de série, opérations ciblées
+│   ├── db_calques.py              # Table calques_seance (v46) : extras, brouillon libre, échanges, ordre, par séance+date
 │   ├── db_reglages.py             # Table reglages (v45) : réglages par compte, repli sur l'ancien _settings du programme
 │   ├── db_colonnes.py             # Colonnes facultatives de history (v42, v43, v44) : base en retard = lu et écrit sans
 │   ├── db_historique_lots.py      # save_hist (sauvegarde, reset) et ajouter_lignes (import), par clé
@@ -58,7 +59,7 @@ pwa/
 │   ├── seance_semaine.py          # Semaine de programme, libellé du jour, séance réellement faite
 │   ├── seance_historique.py       # Ce que l'historique dit d'un exercice : variante, record, suggestion
 │   ├── seance_contexte.py         # Le dictionnaire que reçoit chaque carte d'exercice
-│   ├── seance_calques.py          # Substituts, extras, brouillon libre, ordre des cartes (par séance+date)
+│   ├── seance_calques.py          # Applique substituts et ordre des cartes ; purge des restes d'avant la v46 dans le blob
 │   ├── seance_saisie.py           # Le formulaire devient des lignes d'historique + détection de record
 │   ├── seance_cardio.py           # Unités cardio, et passage colonnes en base (v44) ↔ forme de l'app (Reps/Poids/Remarque)
 │   ├── hist.py                    # Prédicats UNIQUES sur l'historique (is_perf, is_muscu_perf, is_session_marker, tonnage) — une seule définition de « séance faite »
@@ -429,7 +430,12 @@ pwa/
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_nutrition_v5` (cibles, repas par aliment, recherche), `test_auth_admin_chemins` (jeton, session, console admin), `test_partage` (deux instances sur un même Redis, panne de Redis, flux du coach ; `REDIS_TEST_URL` pour un vrai serveur), `test_identite_exercice` (identifiants, renommage oui/non, séance passée, base sans v42), `test_programme_chemins` (planning, séances, export/import), `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
 - Le paquet `supabase` local étant cassé, conftest stubbe `sys.modules["supabase"]` avant l'import de l'app.
 
-### Calques du jour dans le blob (`_extras`, `_libre_draft`, `_substituts`, `_seance_order`)
+### Calques du jour (table `calques_seance`, v46)
+- **Depuis la v46**, une ligne par (compte, séance, date) et une colonne par calque : `extras` (exos ajoutés à la volée), `brouillon` (séance libre), `substituts` (échanges du jour), `ordre` (ordre des cartes). Une ligne vide n'est pas gardée. Chaque geste en séance écrit **sa ligne** (`data.modifier_calque`, sous verrou `partage`) au lieu de réécrire le programme entier. Fin de séance : `effacer_calques` + `purger_calques` (84 jours). Renommer une séance (`renommer_seance_calques`), reset total et suppression de compte suivent.
+- **Base en retard** : table absente = lecture et écriture dans le blob comme avant, table redemandée chaque minute ; sans ligne, un reste de calque dans le blob s'affiche encore. Les paragraphes ci-dessous décrivent l'ancien stockage, dont la purge sert encore à ces restes.
+- La v46 a aussi repris en table `session_notes` les bilans restés dans le blob (`_session_notes`, d'avant la v34) : la page de séance les relisait, mais l'export et le coach, qui ne lisent que la table, ne les voyaient pas.
+
+#### Avant la v46 : dans le blob (`_extras`, `_libre_draft`, `_substituts`, `_seance_order`)
 - Ces quatre clés rangent **une entrée par séance ET par date**. `/seance/finish` en nettoyait trois ; `_seance_order` était écrit et **jamais effacé**. Corrigé : même suppression que ses trois voisins.
 - Mais effacer en fin de séance ne suffit pas : une séance **ouverte puis abandonnée** ne passe jamais par `finish`. Mesuré en production fin septembre, un `_extras` du 27 avril et un `_libre_draft` du 11 juin traînaient encore. `purger_les_calques(prog)` applique donc une fenêtre de 84 jours aux **quatre**, à chaque fin de séance.
 - Limite assumée : la purge ne tourne qu'à `finish`. Quelqu'un qui n'en termine aucune ne la déclenche jamais — mais il n'y a pas d'autre point d'écriture naturel, et un nettoyage pendant un GET serait pire (cf. N4).

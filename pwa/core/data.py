@@ -44,6 +44,36 @@ def save_reglages(valeurs):
     return db.ecrire_reglages(_uid(), valeurs)
 
 
+# ── Calques du jour (table `calques_seance`, v46) ─────────────────────
+def get_calque(seance, date_str, prog=None):
+    """{extras, brouillon, substituts, ordre} d'une séance ce jour-là."""
+    return db.lire_calque(_uid(), seance, date_str, prog)
+
+
+def modifier_calque(seance, date_str, champ, fn):
+    return db.modifier_calque(_uid(), seance, date_str, champ, fn)
+
+
+def ecrire_calque(seance, date_str, champ, valeur):
+    return db.ecrire_calque(_uid(), seance, date_str, champ, valeur)
+
+
+def effacer_calques(seance, date_str, champs=None):
+    return db.effacer_calques(_uid(), seance, date_str, champs)
+
+
+def purger_calques():
+    return db.purger_calques(_uid())
+
+
+def renommer_seance_calques(ancien, nouveau):
+    return db.renommer_seance_calques(_uid(), ancien, nouveau)
+
+
+def effacer_tous_calques():
+    return db.effacer_tous_calques(_uid())
+
+
 # ── Historique ──────────────────────────────────────────────────────────
 def get_hist(echauffement=False):
     """L'historique, chaque série identifiée sous le nom ACTUEL de son

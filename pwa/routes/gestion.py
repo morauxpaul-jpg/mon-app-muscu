@@ -17,7 +17,7 @@ from core.data import (
     get_hist, get_prog, save_prog, save_prog_body, save_hist, get_profile,
     get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
     upsert_body_weight, rename_exercise_rows, list_session_notes,
-    list_all_nutrition, export_coach, get_reglages, save_reglages,
+    list_all_nutrition, export_coach, get_reglages, save_reglages, effacer_tous_calques,
 )
 
 logger = logging.getLogger(__name__)
@@ -457,6 +457,7 @@ def reset_total():
     prog.pop("_extras", None)
     prog.pop("_libre_draft", None)
     save_prog(prog)
+    effacer_tous_calques()
     save_hist([])
     return redirect(url_for("gestion.gestion") + "?reset=total")
 

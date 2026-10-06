@@ -3,8 +3,10 @@
 « Aujourd'hui je fais mon curl à la poulie » ne doit pas réécrire le
 programme : la semaine prochaine, le curl incliné revient tout seul. Les
 substitutions, les exercices ajoutés à la volée, le brouillon de séance
-libre et l'ordre des cartes sont donc rangés par séance+date dans le blob
-du programme, et cette date seule.
+libre et l'ordre des cartes sont donc rangés par séance+date, et cette date
+seule : dans la table `calques_seance` depuis la v46 (core/db_calques.py).
+Ce module les applique à la séance ; la purge de l'ancien stockage, dans le
+blob du programme, sert encore aux restes d'avant la migration.
 
 Contient aussi la purge des bilans trop vieux, qui suit la même règle de
 fenêtre glissante.
@@ -23,18 +25,17 @@ from core.seance_semaine import _parse_date
 
 logger = logging.getLogger(__name__)
 
-def _appliquer_substituts(prog_dict, key, exos_prog):
+def _appliquer_substituts(remplacements, exos_prog):
     """Échange des exercices pour CETTE séance-là, sans toucher au programme.
 
     « Aujourd'hui je fais mon curl à la poulie » ne doit pas réécrire le
     programme : la semaine prochaine, le curl incliné revient tout seul. Le
     calque est donc rangé par séance+date, exactement comme les exos ajoutés
-    à la volée (`_extras`) et l'ordre des cartes (`_seance_order`).
+    à la volée et l'ordre des cartes (`calques_seance`, v46).
 
     Le créneau garde ses séries et ses reps cibles : c'est tout l'intérêt
     de l'échange, on ne resaisit rien.
     """
-    remplacements = (prog_dict.get("_substituts") or {}).get(key) or {}
     if not remplacements:
         return exos_prog
     sortie = []
@@ -52,34 +53,13 @@ def _appliquer_substituts(prog_dict, key, exos_prog):
     return sortie
 
 
-def _update_extras(prog_dict, key, mutate_fn):
-    extras_all = prog_dict.setdefault("_extras", {})
-    lst = extras_all.get(key, [])
-    mutate_fn(lst)
-    if lst:
-        extras_all[key] = lst
-    else:
-        extras_all.pop(key, None)
-
-
-def _update_libre_draft(prog_dict, key, mutate_fn):
-    drafts = prog_dict.setdefault("_libre_draft", {})
-    lst = drafts.get(key, [])
-    mutate_fn(lst)
-    if lst:
-        drafts[key] = lst
-    else:
-        drafts.pop(key, None)
-
-
-def _apply_seance_order(prog_dict, key, exos_ctx):
+def _apply_seance_order(order, exos_ctx):
     """Réordonne les cartes d'exos selon l'ordre personnalisé sauvegardé pour
     cette séance+date (drag dans la séance en cours). Les exos absents de
     l'ordre (nouveaux, reconstruits depuis l'historique) restent en fin, dans
     leur ordre d'origine. L'ordre est stocké comme une simple liste de noms de
     base, donc purement cosmétique : il ne touche ni au programme ni à
     l'historique (source de vérité)."""
-    order = (prog_dict.get("_seance_order") or {}).get(key)
     if not order:
         return exos_ctx
     norm_order = [_norm(n) for n in order]
