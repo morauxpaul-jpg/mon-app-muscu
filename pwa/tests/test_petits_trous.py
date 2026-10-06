@@ -144,27 +144,20 @@ def _serie(fake):
                                   "reps": 8, "poids": 60.0, "remarque": "", "muscle": "Pecs"}).execute()
 
 
-def test_vider_lhistorique_sans_confirmation_nefface_rien(fake_db, logged_in):
+def test_tout_effacer_sans_confirmation_nefface_rien(fake_db, logged_in):
+    """Le « reset soft » a disparu en v47 ; le reset total garde la même
+    règle : un POST nu (formulaire rejoué, double tap) n'efface rien."""
     _prog(fake_db)
     _serie(fake_db)
-    r = logged_in.post("/gestion/reset-soft", data={"_csrf": CSRF})
+    r = logged_in.post("/gestion/reset-total", data={"_csrf": CSRF})
     assert r.headers["Location"].endswith("?reset=confirm")
     assert len(fake_db.tables["history"]) == 1
     html = logged_in.get("/gestion?reset=confirm").get_data(as_text=True)
     assert "Rien n'a été effacé" in html
 
 
-def test_vider_lhistorique_confirme_archive_puis_efface(fake_db, logged_in):
-    _prog(fake_db)
-    _serie(fake_db)
-    r = logged_in.post("/gestion/reset-soft", data={"_csrf": CSRF, "confirm": "yes"})
-    assert r.headers["Location"].endswith("?reset=soft")
-    assert [x for x in fake_db.tables.get("history", []) if x["user_id"] == USER_ID] == []
-    assert _data(fake_db)["_archive"][0]["Exercice"] == "Développé couché"
-
-
 def test_le_formulaire_envoie_la_confirmation(fake_db, logged_in):
     _prog(fake_db)
     html = logged_in.get("/gestion").get_data(as_text=True)
-    form = html.split('action="/gestion/reset-soft"', 1)[1].split("</form>", 1)[0]
+    form = html.split('action="/gestion/reset-total"', 1)[1].split("</form>", 1)[0]
     assert 'name="confirm" value="yes"' in form

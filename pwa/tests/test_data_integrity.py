@@ -122,7 +122,11 @@ PERSO = {
 
 
 def _perso_survivant(fake):
-    data = fake.tables["programs"][0]["data"]
+    """Le programme tel que l'app le lit : badges, défis, plats… vivent dans
+    `etat_compte` depuis la v47 et y sont superposés."""
+    import core.db as db
+    db.vider_cache()
+    data = db.get_prog(USER_ID)
     return {k: data.get(k) for k in PERSO}
 
 
@@ -234,7 +238,7 @@ def test_seance_poids_du_corps_pas_de_streak_en_danger(fake_db, logged_in):
 def test_seance_poids_du_corps_debloque_le_badge_premiere_seance(fake_db, logged_in):
     _seed_bodyweight_session(fake_db)
     logged_in.get("/accueil")
-    assert "first_session" in (fake_db.tables["programs"][0]["data"].get("_badges") or [])
+    assert "first_session" in (fake_db.tables["etat_compte"][0]["badges"] or [])
 
 
 # ── Planning : l'écran doit refléter les données ─────────────────

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from conftest import CSRF, USER_ID
+from conftest import CSRF, USER_ID, prog_lu
 from core import nutrition_cibles as nc
 from core import nutrition_aliments as na
 from core import openfoodfacts as off
@@ -122,14 +122,14 @@ def test_la_case_desactive_la_modulation(fake_db, logged_in):
     r = logged_in.post("/nutrition/profile", data={
         "_csrf": CSRF, **{k: str(v) for k, v in PROFIL.items()}, "cycle_form": "1"})
     assert r.status_code == 302
-    prog = next(p for p in fake_db.tables["programs"] if p["user_id"] == USER_ID)["data"]
+    prog = prog_lu()
     assert prog["_nutrition"]["cycle"] is False
     html = logged_in.get("/nutrition").get_data(as_text=True)
     assert "Jour d'entraînement : +" not in html
     # Recochée : la clé disparaît (comportement par défaut).
     logged_in.post("/nutrition/profile", data={
         "_csrf": CSRF, **{k: str(v) for k, v in PROFIL.items()}, "cycle_form": "1", "cycle": "1"})
-    prog = next(p for p in fake_db.tables["programs"] if p["user_id"] == USER_ID)["data"]
+    prog = prog_lu()
     assert "cycle" not in prog["_nutrition"]
 
 
@@ -137,7 +137,7 @@ def test_un_formulaire_sans_la_case_ne_touche_pas_au_reglage(fake_db, logged_in)
     _profil(fake_db)
     _prog(fake_db, nutrition={"cycle": False})
     logged_in.post("/nutrition/profile", data={"_csrf": CSRF, **{k: str(v) for k, v in PROFIL.items()}})
-    prog = next(p for p in fake_db.tables["programs"] if p["user_id"] == USER_ID)["data"]
+    prog = prog_lu()
     assert prog["_nutrition"]["cycle"] is False
 
 

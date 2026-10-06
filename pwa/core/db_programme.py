@@ -17,6 +17,7 @@ from flask import g, has_app_context
 
 from core import db_base
 from core.db_base import _cache_get, _cache_invalidate, _cache_set, _fetch_all, get_client
+from core.db_etat import etat_lu, extraire, superposer
 from core.exercice_ids import assurer_ids
 
 logger = logging.getLogger(__name__)
@@ -94,7 +95,12 @@ def _prog_en_cache(user_id: str) -> dict:
 def get_prog(user_id: str) -> dict:
     cached = _prog_en_cache(user_id)
     _remember_base(user_id, cached["data"], cached["version"])
-    return _copy(cached["data"])
+    # L'état du compte (badges, défis, plats…, table `etat_compte`, v47)
+    # revient sous ses anciennes clés : les lecteurs ne changent pas. Ce que
+    # la requête en a vu devient la base de sa prochaine écriture.
+    prog = superposer(user_id, _copy(cached["data"]))
+    _bases()[user_id]["etat"] = etat_lu(prog)
+    return prog
 
 
 def lire_prog(user_id: str) -> dict:
@@ -205,7 +211,11 @@ def save_prog(user_id: str, prog_dict: dict):
     conditionné à la version lue ; en cas de conflit on relit et on ne
     réapplique que nos propres modifications (cf. _merge_prog)."""
     assurer_ids(prog_dict)
+    # L'état du compte part dans sa table (v47) ; le blob ne garde que le
+    # programme. Base en retard : rendu tel quel.
     base = _bases().get(user_id)
+    etat_ecrit = etat_lu(prog_dict)
+    prog_dict = extraire(user_id, prog_dict, (base or {}).get("etat"))
     if base is None or base["version"] is None:
         # Pas de lecture préalable dans ce process (ou colonne version absente)
         # → écriture inconditionnelle, comme avant.
@@ -226,6 +236,7 @@ def save_prog(user_id: str, prog_dict: dict):
         if resp.data:
             _cache_invalidate(f"prog:{user_id}")
             _remember_base(user_id, prog_dict, version + 1)
+            _bases()[user_id]["etat"] = etat_ecrit
             return
         # Conflit : quelqu'un a écrit depuis notre lecture.
         theirs, their_version = _read_prog_row(user_id)

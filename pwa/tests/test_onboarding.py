@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from conftest import USER_ID, CSRF
+from conftest import USER_ID, CSRF, prog_lu
 from core import strength
 
 
@@ -164,7 +164,7 @@ def test_refaire_lonboarding_garde_les_autres_programmes(fake_db, nouveau):
     assert data["_seance_prog"]["Push"] == "p1" and data["_seance_prog"]["Maison A"] == "p2"
     assert data["_planning"]["Lundi"] == "Full Body A"
     assert "Push" not in data["_planning"].values()
-    assert data["_badges"] == ["first_session"]
+    assert prog_lu()["_badges"] == ["first_session"]
     assert data["_origin"] == "fb_deb_3j"
 
 

@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v46  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance)
+├── supabase_schema_v23.sql … v47  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance, v47 table etat_compte)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -37,6 +37,7 @@ pwa/
 │   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
 │   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
 │   ├── db_historique.py           # Table history : lecture, écriture par clé de série, opérations ciblées
+│   ├── db_etat.py                 # Table etat_compte (v47) : badges, défis, plats, cibles nutrition, compteurs ; superposé par get_prog, extrait par save_prog
 │   ├── db_calques.py              # Table calques_seance (v46) : extras, brouillon libre, échanges, ordre, par séance+date
 │   ├── db_reglages.py             # Table reglages (v45) : réglages par compte, repli sur l'ancien _settings du programme
 │   ├── db_colonnes.py             # Colonnes facultatives de history (v42, v43, v44) : base en retard = lu et écrit sans
@@ -85,7 +86,7 @@ pwa/
 │   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline, suggestion de surcharge)
 │   ├── programme.py               # CRUD programme + planning + import/export
 │   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement, poids corporel (/progres/poids)
-│   ├── gestion.py                 # Paramètres, settings, export/import, fusion doublons, reset soft/total
+│   ├── gestion.py                 # Paramètres, settings, export/import, fusion doublons, reset total (le reset soft a été retiré en v47)
 │   ├── onboarding.py              # Questionnaire post-login (recommend, submit)
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
 │   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas (recherche aliments, plats de la semaine, saisie rapide, composition)
@@ -297,7 +298,7 @@ pwa/
 ### Streak
 - Affiché en gros sur l'accueil avec icône flamme
 - Paliers : 🥉 Bronze (4 sem), 🥈 Argent (8), 🥇 Or (12), 💎 Diamant (24)
-- Record personnel sauvegardé dans `prog._streak_record`
+- Record personnel : `etat_compte.record_serie` (v47), lu sous `prog["_streak_record"]`
 - État « en danger » (orange + pulse) si séance du jour non faite
 
 ### Mode Offline
@@ -396,6 +397,13 @@ pwa/
 - `HIDE_NATIVE_BILLING` — à `1`, retire tarifs et boutons d'achat du rendu dans l'app native. Inutile tant que l'APK est installé à la main ; **obligatoire avant un dépôt sur le Play Store**.
 - `GOOGLE_WEB_CLIENT_ID` — ID client OAuth Web Google (PUBLIC), requis par le login natif Capacitor (`login.html` → `@capgo/capacitor-social-login`). Inutile sur le web.
 
+### État du compte (table `etat_compte`, v47)
+- Badges (`_badges`), record de série (`_streak_record`), défis (`_challenges_done`, `_challenges_won`), « upsell vu », quota de debrief gratuit (`_debrief_free`), semaine allégée (`_decharge_semaine`, `_decharge_ignoree`), plats de la semaine (`_meal_plan`) et cibles nutrition perso (`_nutrition`) : **une ligne par compte, une colonne typée par donnée**, plus dans le blob.
+- **Conversion à la frontière** (`core/db_etat.py`) : `get_prog` superpose ces valeurs sous leurs anciennes clés (les lecteurs ne changent pas) ; `save_prog` les extrait du programme et les range en table. Une écriture qui passe par le programme atterrit donc quand même dans la table.
+- **Concurrence** : `save_prog` n'écrit que les colonnes que la requête a changées depuis SA lecture (base gardée dans `g`, comme le programme), par-dessus la ligne relue fraîchement. A grave un badge, B enregistre ses plats avec un état lu avant : le badge reste (`tests/test_etat_compte.py`).
+- **Base en retard** : table absente = tout reste dans le programme, table redemandée chaque minute. Sans ligne, un reste du blob fait foi et la première sauvegarde le range en table.
+- Les lecteurs bruts (`lire_prog`, `list_all_programs`, crons) ne voient pas cet état : aucun n'en a besoin.
+
 ### Réglages utilisateur (table `reglages`, v45)
 ```python
 # Valeurs par défaut : core/db_reglages.py:DEFAUTS (les mêmes en base)
@@ -493,7 +501,7 @@ pwa/
 ### Éditeur de programme : bornes et premier passage (point 4 de l'audit, 04/10)
 - Bornes (`routes/programme.py`) : `MAX_SERIES` 20, `MAX_EXOS_PAR_SEANCE` 30, `MAX_SEANCES` 40, noms d'exercice ≤ 80, de séance ≤ 60. Appliquées dans `_exo_entry` (toutes les écritures y passent), `/programme/state`, `/programme/import`, `/programme/seance/new` (`?seance=trop`), `/programme/exo/add` (`?exo=trop`), `/programme/exo/update`. L'éditeur les reçoit (`var BORNES`) et borne aussi côté client (`bornerSeries`), avec un message plutôt qu'une troncature muette.
 - Onboarding « Créer mon propre programme » (`programme_id=custom`) → `/programme?nouveau=1` : carte « Construis ton programme » (3 étapes), au lieu de l'accueil.
-- `/gestion/reset-soft` exige `confirm=yes` comme `/gestion/reset-total` ; sinon `?reset=confirm`, rien n'est effacé.
+- `/gestion/reset-total` exige `confirm=yes` ; sinon `?reset=confirm`, rien n'est effacé. Le « reset soft » (archive de l'historique dans `_archive`/`_legacy_volume`, réinjectée dans Progrès) a été **retiré en v47** : aucun compte ne s'en servait, l'export gratuit couvre le besoin.
 
 ### Supersets (`superset: true` sur un exercice du programme)
 - « Enchaîner avec le suivant » : case dans l'éditeur de programme, conservée par `_exo_entry` (booléen strict). `_build_all_exo_contexts` nomme le partenaire des deux côtés (`superset_avec`, `superset_de`).

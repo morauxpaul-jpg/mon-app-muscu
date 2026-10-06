@@ -1,7 +1,7 @@
 """Semaine allégée proposée quand la fatigue s'accumule (audit du 03/10, idée 10)."""
 import datetime as dt
 
-from conftest import CSRF, USER_ID
+from conftest import CSRF, USER_ID, prog_lu
 from core.decharge import a_proposer, diagnostic, semaine_allegee
 from core.seance_contexte import _build_exo_context
 
@@ -87,13 +87,13 @@ def test_parcours_accueil(fake_db, logged_in):
     assert "Une semaine plus légère te ferait du bien" in html
 
     logged_in.post("/accueil/decharge", data={"_csrf": CSRF, "choix": "appliquer"})
-    assert fake_db.tables["programs"][0]["data"]["_decharge_semaine"] == semaine
+    assert prog_lu()["_decharge_semaine"] == semaine
     html = logged_in.get("/accueil").get_data(as_text=True)
     assert "Semaine allégée en cours" in html and "te ferait du bien" not in html
 
     logged_in.post("/accueil/decharge", data={"_csrf": CSRF, "choix": "annuler"})
     logged_in.post("/accueil/decharge", data={"_csrf": CSRF, "choix": "ignorer"})
-    data = fake_db.tables["programs"][0]["data"]
+    data = prog_lu()
     assert "_decharge_semaine" not in data and data["_decharge_ignoree"] == semaine
     assert "te ferait du bien" not in logged_in.get("/accueil").get_data(as_text=True)
 

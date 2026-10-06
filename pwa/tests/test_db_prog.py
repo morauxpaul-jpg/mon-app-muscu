@@ -129,7 +129,10 @@ def test_deux_requetes_du_meme_worker_ne_se_volent_pas_leur_base(fake_db):
     req_b.pop()
 
     data = _db_row(fake_db)["data"]
-    assert data.get("_badges") == ["first_session"], "le badge de A a survécu"
+    # Le badge vit dans `etat_compte` (v47) : la même règle y tient, B
+    # n'écrit que ce qu'il a changé.
+    assert fake_db.tables["etat_compte"][0]["badges"] == ["first_session"], "le badge de A a survécu"
+    assert db.get_prog(USER_ID).get("_badges") == ["first_session"]
     assert data["_settings"] == {"auto_rest_timer": False}
 
 

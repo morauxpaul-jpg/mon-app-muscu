@@ -103,35 +103,14 @@ def _sid(m):
 
 
 def _normalize(hist, prog):
-    """Historique normalisé (la normalisation commune, core.seance_semaine)
-    + l'archive des records, propre aux écrans de progrès.
+    """Historique normalisé (la normalisation commune, core.seance_semaine).
+    L'archive du « reset soft » qu'on y réinjectait a disparu avec lui (v47).
 
     Cette route en avait sa propre copie — la troisième, non mémoïsée, et
     qui effaçait le muscle de l'historique quand le programme n'en donnait
     pas (audit du 30/09, M4)."""
     from core.seance_semaine import _normalize_hist
     hist, prog_seances = _normalize_hist(hist, prog)
-    muscle_mapping = {ex["name"]: ex.get("muscle", "Autre")
-                      for s in prog_seances for ex in prog_seances[s]}
-    # Ajoute l'archive si présente
-    archive = prog.get("_archive", [])
-    for a in archive:
-        try:
-            a_reps = int(float(a.get("Reps", 0) or 0))
-            a_poids = float(a.get("Poids", 0) or 0)
-            a_sem = int(float(a.get("Semaine", 0) or 0))
-        except (ValueError, TypeError):
-            continue
-        if a_reps <= 0:
-            continue
-        base = get_base_name(str(a.get("Exercice", "")))
-        muscle = muscle_mapping.get(base, a.get("Muscle", "")) or ""
-        muscle = fix_muscle(a.get("Exercice", ""), muscle)
-        hist.append({
-            "Semaine": a_sem, "Séance": "", "Exercice": str(a.get("Exercice", "")),
-            "Série": 0, "Reps": a_reps, "Poids": a_poids,
-            "Remarque": "", "Muscle": muscle, "Date": "",
-        })
     return hist
 
 

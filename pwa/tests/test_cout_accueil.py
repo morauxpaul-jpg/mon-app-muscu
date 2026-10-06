@@ -17,7 +17,7 @@ import datetime as dt
 
 import pytest
 
-from conftest import USER_ID, CSRF
+from conftest import USER_ID, CSRF, prog_lu
 
 LUNDI = dt.date(2026, 9, 14)
 VISITE = {"Sec-Fetch-Mode": "navigate"}
@@ -101,7 +101,7 @@ def test_une_deuxieme_visite_nechrit_plus_rien(
 def test_lunique_sauvegarde_porte_les_badges_et_le_streak(compte, logged_in):
     """Regrouper ne doit pas faire tomber l'une des quatre en route."""
     logged_in.get("/accueil", headers=VISITE)
-    prog = _prog(compte)
+    prog = prog_lu()
     assert prog.get("_badges"), "les badges ne sont plus gravés"
     assert prog.get("_streak_record"), "le record de streak n'est plus gravé"
 
@@ -123,7 +123,7 @@ def test_un_badge_obtenu_nest_jamais_perdu(compte, logged_in):
         "user_id", USER_ID).execute()
 
     logged_in.get("/accueil", headers=VISITE)
-    assert "badge_fantome" in (_prog(compte).get("_badges") or [])
+    assert "badge_fantome" in (prog_lu().get("_badges") or [])
 
 
 def test_une_sauvegarde_qui_echoue_naffiche_pas_une_erreur(

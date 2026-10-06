@@ -2,7 +2,7 @@
 
 Le planning et le CRUD du programme sont déjà gérés dans /programme.
 Cette page regroupe : paramètres d'affichage, auto-assignation des muscles,
-reset soft, reset total, vider l'archive.
+reset total (le « reset soft » et son archive ont été retirés en v47).
 """
 import json
 import logging
@@ -168,7 +168,6 @@ def gestion():
     nb_seances = len([k for k in prog if not k.startswith("_")])
     nb_exos = sum(len(prog[k]) for k in prog if not k.startswith("_"))
     nb_hist = len(hist)
-    nb_archive = len(prog.get("_archive", []))
     custom_exercises = prog.get("_custom_exercises", [])
 
     # Noms d'exercices distincts présents dans l'historique (hors marqueurs
@@ -194,7 +193,6 @@ def gestion():
         nb_seances=nb_seances,
         nb_exos=nb_exos,
         nb_hist=nb_hist,
-        nb_archive=nb_archive,
         custom_exercises=custom_exercises,
         hist_exercises=hist_exercises,
         dup_groups=_duplicate_groups(exo_counts),
@@ -396,64 +394,12 @@ def set_notifications():
     return ("", 204)
 
 
-@bp.route("/gestion/reset-soft", methods=["POST"])
-@limiter.limit("3 per minute")
-def reset_soft():
-    # Vider l'historique se confirme côté serveur, comme le reset total : un
-    # POST nu (formulaire rejoué, double tap) n'efface plus rien (audit du
-    # 03/10, M10).
-    if request.form.get("confirm") != "yes":
-        return redirect(url_for("gestion.gestion") + "?reset=confirm")
-    prog = get_prog()
-    hist = get_hist()
-
-    # Volume legacy : sum(Poids * Reps)
-    v_tot = 0
-    for r in hist:
-        try:
-            v_tot += int(float(r.get("Poids", 0) or 0) * float(r.get("Reps", 0) or 0))
-        except (ValueError, TypeError):
-            pass
-    prog["_legacy_volume"] = int(prog.get("_legacy_volume", 0) or 0) + v_tot
-
-    # Archive : par (exo, semaine), garde le set au plus gros poids
-    by_key = {}
-    for r in hist:
-        try:
-            reps = int(float(r.get("Reps", 0) or 0))
-            poids = float(r.get("Poids", 0) or 0)
-            sem = int(float(r.get("Semaine", 0) or 0))
-        except (ValueError, TypeError):
-            continue
-        if reps <= 0:
-            continue
-        key = (r.get("Exercice", ""), sem)
-        cur = by_key.get(key)
-        if cur is None or poids > cur["Poids"]:
-            by_key[key] = {
-                "Exercice": r.get("Exercice", ""),
-                "Semaine": sem,
-                "Poids": poids,
-                "Reps": reps,
-                "Muscle": r.get("Muscle", ""),
-            }
-    archive = prog.get("_archive", []) or []
-    archive.extend(by_key.values())
-    prog["_archive"] = archive[-2000:]
-
-    save_prog(prog)
-    save_hist([])
-    return redirect(url_for("gestion.gestion") + "?reset=soft")
-
-
 @bp.route("/gestion/reset-total", methods=["POST"])
 @limiter.limit("3 per minute")
 def reset_total():
     if request.form.get("confirm") != "yes":
-        return redirect(url_for("gestion.gestion"))
+        return redirect(url_for("gestion.gestion") + "?reset=confirm")
     prog = get_prog()
-    prog.pop("_archive", None)
-    prog.pop("_legacy_volume", None)
     prog.pop("_extras", None)
     prog.pop("_libre_draft", None)
     save_prog(prog)

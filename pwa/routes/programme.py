@@ -231,7 +231,7 @@ def programme():
 @bp.route("/programme/state", methods=["POST"])
 def save_state():
     """Reçoit l'état complet (nom, planning, séances) et le persiste.
-    Préserve les clés techniques (_origin, _settings, _archive, _extras, _libre_draft).
+    Préserve les clés techniques du programme (_origin, _planning, _rotation…).
     """
     try:
         data = request.get_json(force=True, silent=False)

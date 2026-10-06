@@ -4,9 +4,6 @@
 {% block content %}
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>Gestion</h1>
 
-  {% if request.args.get('reset') == 'soft' %}
-    <div class="card label-icon s-578371"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>Historique réinitialisé. Les records sont archivés.</div>
-  {% endif %}
   {% if request.args.get('reset') == 'confirm' %}
     <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Rien n'a été effacé : la réinitialisation doit être confirmée.</div>
   {% endif %}
@@ -322,9 +319,6 @@
       <div class="detail-metric"><div class="detail-label">EXOS</div><div class="detail-value s-bea3ad">{{ nb_exos }}</div></div>
       <div class="detail-metric"><div class="detail-label">LIGNES HIST.</div><div class="detail-value s-bea3ad">{{ nb_hist }}</div></div>
     </div>
-    <div class="s-bf4588">
-      Archive : {{ nb_archive }} record(s)
-    </div>
   </div>
 
   {# L'EXPORT est pour tout le monde (droit à la portabilité, RGPD art. 20) ;
@@ -357,23 +351,9 @@
     <a href="/gestion/import-muscu" class="btn label-icon s-b8db1d"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer un export CSV</a>
   </div>
 
-  <div class="card s-040ce7">
-    <h3 class="label-icon s-839aae"><svg class="icon icon-md s-839aae"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</h3>
-    <p class="s-7e1751">Vide l'historique pour repartir à la semaine 1. Les meilleurs sets par exo/semaine sont automatiquement archivés et restent visibles dans Progrès. Le programme et le planning sont conservés.</p>
-    <form method="post" action="/gestion/reset-soft" x-data="{ c:false }">
-      <button type="button" class="btn label-icon s-23a086" x-show="!c" @click="c=true"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser l'historique</button>
-      <div class="inline-confirm" x-show="c" x-cloak>
-        <input type="hidden" name="confirm" value="yes">
-        <span class="confirm-label">Vider l'historique ?</span>
-        <button type="button" class="btn" @click="c=false">Annuler</button>
-        <button type="submit" class="btn btn-danger">Confirmer</button>
-      </div>
-    </form>
-  </div>
-
   <div class="card s-121b3c">
     <h3 class="label-icon s-9cb6f5"><svg class="icon icon-md icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>Tout remettre à zéro</h3>
-    <p class="label-icon s-7e1751"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Efface DÉFINITIVEMENT : historique + archive + records + extras. Le programme et le planning sont conservés.</p>
+    <p class="label-icon s-7e1751"><svg class="icon icon-sm s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Efface DÉFINITIVEMENT : historique + exercices ajoutés en séance. Le programme et le planning sont conservés.</p>
     <form method="post" action="/gestion/reset-total" x-data="{ c:false }">
       <label class="muscle-check s-2e0efa">
         <input type="checkbox" name="confirm" value="yes" required>
