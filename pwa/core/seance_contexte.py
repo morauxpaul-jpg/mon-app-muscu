@@ -17,8 +17,8 @@ import logging
 
 from core.exercises_data import detect_isometric, get_exercise_info, variantes
 from core.decharge import suggestion_allegee
-from core.muscu import (BW_EXOS, auto_muscles, conseil_depart, est_a_la_barre, get_base_name,
-                        series_echauffement)
+from core.muscu import (BW_EXOS, auto_muscles, charge_de_depart, conseil_depart, est_a_la_barre,
+                        get_base_name, series_echauffement)
 from core.seance_historique import (_all_used_variants, _best_record, _exo_completed,
                                     _exo_curr_rows, _extract_variant, _last_session_sets,
                                     _last_variant, _norm, _previous_weeks_data,
@@ -88,8 +88,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
                 "type": r.get("Type") or "",
             })
         else:
-            # Cellule vide — pré-remplir poids uniquement (si activé)
-            poids_val = None
+            poids_val = (charge_de_depart(base, is_bw, is_iso)  # cellule vide, 1re fois
+                         if prefill_weight and not (completed or last_sets) else None)
             if prefill_weight and not completed and i <= len(last_sets):
                 poids_val = poids_allege if poids_allege is not None else last_sets[i - 1]["poids"]
             sets.append({

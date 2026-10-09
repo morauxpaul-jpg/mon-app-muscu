@@ -47,6 +47,12 @@ import app as appmod  # noqa: E402
 from flask import session, redirect, request  # noqa: E402
 from core.limiter import limiter  # noqa: E402
 
+# Tests navigateur : toutes les pages viennent de 127.0.0.1, et la limite de
+# 60 requêtes par minute et par adresse finissait par répondre 429 au milieu
+# de la suite (une page de séance sans « Série faite »). Coupée à la demande.
+if os.environ.get("SANS_LIMITE") == "1":
+    limiter.enabled = False
+
 # L'auth gate tourne avant la route : /test-login doit être public.
 appmod._PUBLIC_PATHS.add("/test-login")
 appmod._PUBLIC_PATHS.add("/test-seed")

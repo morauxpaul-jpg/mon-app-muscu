@@ -109,7 +109,13 @@ def index():
         stats=stats,
         admob=_etat_admob(),
         partage=_etat_partage(),
+        schema=_etat_schema(),
     )
+
+
+def _etat_schema() -> dict:
+    from core.schema import etat_a_jour
+    return etat_a_jour(core_db.get_client)
 
 
 def _etat_partage() -> dict:

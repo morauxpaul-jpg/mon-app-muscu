@@ -35,11 +35,13 @@
       text: "Coach IA, programme, nutrition, cardio, calcul de plaques, gestion… et ce tutoriel, à relancer quand tu veux.",
     },
     {
-      target: null,
+      // Le bouton « Commencer » ne lançait rien : il fermait le tutoriel sur
+      // l'accueil (audit du 06/10, profil 1). On montre la carte qui lance
+      // vraiment la séance, même un jour où rien n'est prévu.
+      target: ".next-session-card",
       title: "C'est parti ! 💪",
-      text: "Tu connais l'essentiel. Lance ta première séance — et bon entraînement !",
-      center: true,
-      finalLabel: "Commencer",
+      text: "Touche « Prochaine séance » pour lancer ta première séance, dès aujourd'hui si tu veux. Bon entraînement !",
+      finalLabel: "Compris",
     },
   ];
 

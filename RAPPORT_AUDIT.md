@@ -1,5 +1,33 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 09/10/2026 — corrections sur la branche de la PR #36 · note inchangée : **6,6 / 10**
+
+**Ce qui change en production** : seulement la **v29**, appliquée le 09/10 à 21:55 UTC (`list_migrations` : `20261009215501 v29_referral`) et vérifiée (`information_schema` : `referral_code`, `referred_by`, `vip_until` présentes). Tout le reste est du code sur la branche `claude/nifty-hawking-0natha`, **ni fusionné ni déployé**. La note n'est pas relevée : elle le sera après déploiement, sur preuves en production.
+
+| Repère | Statut | Preuve |
+|---|---|---|
+| C1 v29 absente | **Corrigé en production** (v29) ; contrôle du schéma au démarrage sur la branche (`core/schema.py`, journal ERREUR + carte /admin) | SQL ci-dessus ; `tests/test_schema.py` (17 tests) |
+| I-1 Séance d'un autre jour | Sur la branche : la carte « Demain » ouvre la séance **d'aujourd'hui** (« Faire maintenant », bandeau « EN AVANCE ») ; page gardée hors ligne ramenée à aujourd'hui (`static/js/jour-seance.js`) ; dates futures refusées par `save-exo`, `add-cardio`, `cardio/save`, `finish` | `tests/test_seance_a_venir.py` (13), `tests/js/test_jour_seance.js` (6), test navigateur `test_la_seance_de_demain_senregistre_aujourdhui` |
+| I-2 Latence ×2,4 | **Pas corrigé** : cause non isolable hors production. Mesure ajoutée : en-tête `Server-Timing` (base / redis / total) et journal « lent : … » dès 800 ms (`core/chrono.py`) | `tests/test_reprise_base.py` (partie mesure) |
+| I-3 Coupure de connexion | Sur la branche : une **lecture** coupée (`ConnectionTerminated`…) est retentée une fois ; jamais une écriture (`core/reprise_base.py`) | `tests/test_reprise_base.py` (16 au total), dont un passage par le vrai client PostgREST |
+| I-4 Tests aveugles au schéma | Sur la branche : la fausse base refuse une colonne inconnue comme PostgREST (42703 / PGRST204). Elle a trouvé 5 fichiers de tests qui écrivaient `series` au lieu de `serie` | `tests/conftest.py`, `tests/test_schema.py` |
+| I-5 0 activation PRO | **Non traité** : demande l'accès Stripe | — |
+| m1 `handle_new_user()` exécutable | **v48 écrite, pas appliquée** (attend ton accord). Rejouée sur un PostgreSQL 16 local : droit retiré, inscription intacte, idempotente | `pwa/supabase_schema_v48_durcissement.sql` |
+| m3 `_profiles` dans 9 programmes | Même v48 (version du programme incrémentée) | idem |
+| m2, m4 | **À faire par toi** (Supabase Auth ; noms des variables Railway) | — |
+| m5 Journaux « error » | Sur la branche : INFO sur la sortie standard, WARNING+ sur la sortie d'erreur | `tests/test_journaux.py` ; processus réel : INFO sur stdout, ERROR et CRITICAL sur stderr |
+| m8 « Séance terminée 💪 » à vide | Sur la branche : « Terminer sans série ? » + avertissement | `tests/js/test_petits_correctifs.js` |
+| m9 Tutoriel | Sur la branche : la dernière bulle désigne la carte « Prochaine séance », qui ouvre la séance dès aujourd'hui | relu dans `static/js/tutorial.js` |
+| m10 Barre vide non pré-remplie | Sur la branche : 20 kg pré-remplis la première fois sur un mouvement à la barre ; la charge passe aussi à la série suivante vide | `tests/test_premiere_seance.py` (6), `tests/js/test_petits_correctifs.js`, test navigateur `test_premiere_fois_a_la_barre_…` |
+| m11 Doc en retard | Sur la branche : `CONTEXT.md` corrigé (10 écarts de Z.5) et complété | diff de la PR |
+| m6, m7, m12 | Non traités | — |
+
+**Trouvé en route** : les tests navigateur finissaient en **429** (trop de requêtes) au 17e test : tous viennent de la même adresse et la limite est de 60 par minute. Le serveur de test tourne désormais sans limite (`SANS_LIMITE=1`, `run_local_fake.py` seulement).
+
+**Tests au 09/10** : 1 349 tests Python passent (dont 25 navigateur), les mêmes sur Redis simulé (`PARTAGE_TEST=fakeredis`, 1 324 hors navigateur), et 127 tests JS. Les tests de la charge de 20 kg et de la recopie ont été vus **échouer** sans leur correctif.
+
+---
+
 ## Audit complet du 06/10/2026 (après-midi) · commit `8916176` · **6,6 / 10** (132 / 20)
 
 **Commit audité** : `8916176` (tête de `main`, CI verte, déployé sur Railway le 06/10 à 14:02 UTC). Le code applicatif est celui de `b09989a` (PR #34) ; `8916176` n'ajoute que le rapport précédent.

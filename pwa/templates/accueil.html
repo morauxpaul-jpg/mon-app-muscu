@@ -126,7 +126,7 @@
   {% if next_session %}
     {# Directement la séance, pas la liste des séances : un tap de moins, et
        pas de risque d'ouvrir la mauvaise (audit du 30/09, M8). #}
-    <a href="/seance?mode=prefaite&name={{ next_session.seance|urlencode }}&date={{ next_session.date_iso }}" class="card next-session-card">
+    <a href="/seance?mode=prefaite&name={{ next_session.seance|urlencode }}&date={{ next_session.date_lien }}{% if not next_session.is_today %}&prevue={{ next_session.date_iso }}{% endif %}" class="card next-session-card">
       <div class="card-label">PROCHAINE SÉANCE</div>
       <div class="next-session-row">
         <div class="next-session-info">
@@ -134,7 +134,7 @@
           <div class="next-session-when">{{ next_session.relative }} · {{ next_session.date_short }}</div>
         </div>
         <div class="next-session-cta label-icon">
-          <span>{% if next_session.is_today %}Commencer{% else %}Voir{% endif %}</span>
+          <span>{% if next_session.is_today %}Commencer{% else %}Faire maintenant{% endif %}</span>
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg>
         </div>
       </div>

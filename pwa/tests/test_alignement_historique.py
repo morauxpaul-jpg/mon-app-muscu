@@ -14,10 +14,10 @@ import pytest
 from conftest import USER_ID, CSRF
 
 
-def _serie(exercice, date="2026-09-14", reps=10, poids=50.0):
+def _serie(exercice, date="2026-09-14", reps=10, poids=50.0, serie=1):
     return {"user_id": USER_ID, "date": date, "semaine": "2026-W38",
             "seance": "Push", "exercice": exercice, "muscle": "Pecs",
-            "series": 1, "reps": reps, "poids": poids}
+            "serie": serie, "reps": reps, "poids": poids}
 
 
 @pytest.fixture()
@@ -26,7 +26,7 @@ def historique(fake_db):
                    ("Développé couché", 1), ("Mon exercice à moi", 4),
                    ("ÉCARTÉ POULIE VIS À VIS HAUTE", 2)):
         for i in range(n):
-            fake_db.table("history").insert(_serie(nom)).execute()
+            fake_db.table("history").insert(_serie(nom, serie=i + 1)).execute()
     fake_db.table("programs").insert({"user_id": USER_ID, "data": {
         "Push": [{"name": "Développé couché", "sets": 3, "muscle": "Pecs"}],
         "_planning": {"Lundi": "Push"}, "_settings": {},

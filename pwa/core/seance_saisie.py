@@ -11,7 +11,7 @@ pour que chaque corps de fonction reste comparable au caractère près.
 """
 import logging
 
-from core.dates import logical_today_paris, now_paris
+from core.dates import logical_today_paris, now_paris, today_paris
 from core.hist import TYPE_ECHAUFFEMENT, is_muscu_perf, tonnage
 from core.muscu import get_base_name
 from core.seance_historique import _norm
@@ -25,6 +25,22 @@ def _form_date(form):
     (les opérations ciblées dérivent la plage de semaine de cette date)."""
     d = _parse_date(form.get("date"))
     return (d or logical_today_paris()).strftime("%Y-%m-%d")
+
+
+MESSAGE_DATE_A_VENIR = ("Cette séance est prévue un jour à venir : rouvre-la depuis "
+                        "l'accueil pour l'enregistrer aujourd'hui.")
+
+
+def date_a_venir(date_str) -> bool:
+    """Vrai si la date est postérieure au jour civil de Paris.
+
+    Audit du 06/10 (I-1) : la page de la séance du lendemain enregistrait ses
+    séries à la date du lendemain. La page ramène désormais sa date à
+    aujourd'hui (static/js/jour-seance.js) ; ce garde-fou refuse ce qui y
+    échapperait (ancienne page en cache, formulaire trafiqué). Le jour civil,
+    et non logique, laisse quatre heures de marge à un téléphone en avance."""
+    d = _parse_date(date_str)
+    return bool(d and d > today_paris())
 
 
 def _known_exo_names(hist, prog, prog_seances):

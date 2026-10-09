@@ -512,6 +512,16 @@
           if (sansPoids) s.poids = poidsPropose;
         }
         if (this.faits.indexOf(i) < 0) this.faits.push(i);
+        // La charge passe à la série suivante encore vide, comme chez Strong :
+        // un débutant retapait son poids à chaque série (audit du 06/10,
+        // profil 1). Jamais depuis ou vers un échauffement, plus léger exprès.
+        var suivante = this.sets[i + 1];
+        if (suivante && s && s.type !== "echauffement" && suivante.type !== "echauffement"
+            && !this._estRemplie(suivante)
+            && (suivante.poids === "" || suivante.poids == null)
+            && s.poids !== "" && s.poids != null) {
+          suivante.poids = s.poids;
+        }
         this.optionsDe = -1;
         this._saveDraft();
         // Le repos démarrait sur la frappe d'un champ ; il démarre maintenant
@@ -985,6 +995,15 @@
   };
 
   // ── Bilan de fin de séance ───────────────────────────────────────
+  // Rien de saisi sur aucune carte, et aucun cardio déjà enregistré.
+  function seanceVide() {
+    if (document.querySelector("[data-cardio-fait]")) return false;
+    return BLOCS.every(function (b) {
+      return !(b.sets || []).some(function (s) { return b._estRemplie(s); });
+    });
+  }
+  window.seanceVide = seanceVide;
+
   function initFinish() {
     var LABELS = ["", "Difficile", "Moyenne", "Correcte", "Très bonne", "Excellente"];
     var form = document.getElementById("finish-form");
@@ -1083,6 +1102,13 @@
     }
 
     document.getElementById("finish-open").addEventListener("click", function () {
+      // « Séance terminée 💪 » s'affichait sur une séance où rien n'était
+      // enregistré (audit du 06/10, profil 1) : on le dit au lieu de féliciter.
+      var vide = seanceVide();
+      var titre = document.getElementById("finish-titre");
+      var avert = document.getElementById("finish-vide");
+      if (titre) titre.textContent = vide ? "Terminer sans série ?" : "Séance terminée 💪";
+      if (avert) avert.hidden = !vide;
       paintStars();
       var mins = elapsedMinutes();
       if (durationEl) {

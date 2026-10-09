@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v47  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance, v47 table etat_compte)
+├── supabase_schema_v23.sql … v48  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance, v47 table etat_compte, v48 durcissement — écrite, PAS encore appliquée)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -36,6 +36,9 @@ pwa/
 ├── core/
 │   ├── db.py                      # Façade de la couche données : la carte des dix modules db_* (aucun code)
 │   ├── db_base.py                 # Connexion Supabase (service_role), cache LRU TTL 60s, pagination PostgREST, use_client()
+│   ├── reprise_base.py            # Lecture (GET/HEAD) coupée par Supabase (« ConnectionTerminated ») retentée une fois ; chronomètre chaque appel
+│   ├── chrono.py                  # Temps passé en base et dans Redis par requête : en-tête Server-Timing, journal « lent : … » dès 800 ms
+│   ├── schema.py                  # Colonnes attendues par le code (ATTENDU), vérifiées au démarrage : journal ERREUR + alerte /admin si la base est en retard
 │   ├── db_historique.py           # Table history : lecture, écriture par clé de série, opérations ciblées
 │   ├── db_etat.py                 # Table etat_compte (v47) : badges, défis, plats, cibles nutrition, compteurs ; superposé par get_prog, extrait par save_prog
 │   ├── db_calques.py              # Table calques_seance (v46) : extras, brouillon libre, échanges, ordre, par séance+date
@@ -142,6 +145,7 @@ pwa/
 │   │   ├── alpine.min.js / alpine-sort.min.js  # Alpine.js + plugin sort bundlés localement
 │   │   ├── sw-register.js         # Enregistrement SW + auto-update
 │   │   ├── offline.js             # Détection hors-ligne, queue localStorage, sync
+│   │   ├── jour-seance.js         # Page de séance datée d'un jour à venir : rouverte pour aujourd'hui (en ligne) ou ramenée à aujourd'hui (hors ligne)
 │   │   ├── push.js                # Abonnement push web (VAPID)
 │   │   ├── install.js             # Expérience d'installation PWA (détection plateforme)
 │   │   ├── ads.js                 # AdMob (app native + Free uniquement)
@@ -249,6 +253,7 @@ pwa/
 - **Boucle** : chaque user a un `profiles.referral_code` (stable, dérivé de l'user_id) → lien `/?ref=CODE`. Page **/parrainage** (hub Plus) : lien + copier + partager (Web Share) + compteur de filleuls/jours gagnés.
 - **Capture** : la landing pose un cookie `pending_ref` (survit au round-trip OAuth). À l'onboarding du filleul, `parrainage.apply_referral` crédite **une seule fois** : filleul **+1 j essai**, parrain **+3 j essai** (via `db.grant_vip_days` → `vip_until` cumulatif). L'essai = accès **restreint** (Nutrition + stats, cf. `is_vip_full`). Garde-fous : code valide, pas d'auto-parrainage, `referred_by` posé une seule fois. Le filleul passe en essai immédiatement (`session.pop('is_vip'/'is_vip_full')`) ; le parrain via la revalidation FREE (15 s). Récompenses ajustables : `REFERRER_VIP_DAYS` / `REFEREE_VIP_DAYS` dans `routes/parrainage.py`.
 - **Migration** : `supabase_schema_v29_referral.sql` (`profiles` += `referral_code` [unique], `referred_by`, `vip_until`). Helpers `db_abonnement.py` : `get_or_create_referral_code`, `get_user_by_referral_code`, `set_referred_by`, `grant_vip_days`, `count_referrals`, `get_referred_by`, `vip_until_active`. Events : `referral_shared`, `referral_signup`.
+- ⚠ **En production depuis le 09/10/2026 seulement.** La v29 n'avait jamais été appliquée (audit du 06/10, E1) : avant cette date, aucun parrainage n'a crédité de jours et aucun essai n'a existé. Ce genre d'oubli est maintenant signalé au démarrage (`core/schema.py`).
 
 ### Nudge de relance (rétention, 2026-06-14)
 - **Banner de retour** sur l'accueil : un user avec un historique mais inactif depuis ≥ `REACTIVATION_DAYS`=3 j (jours depuis la dernière perf réelle muscu/cardio) est accueilli par « Content de te revoir ! Ça fait N jours — on reprend en douceur ? » + bouton **Reprendre** (→ /seance). Dismissible (sessionStorage `reac_hidden`). Jamais pour un compte sans historique.
@@ -276,11 +281,13 @@ pwa/
 
 ### Essai PRO et bilan du mois
 - L'essai (`vip_until`, `g.is_vip` sans `is_vip_full`) ouvre le coach (5 messages/jour, `ESSAI_QUOTA`) et le debrief après chaque séance, en plus de la nutrition et des stats ; le générateur et les programmes avancés restent à l'abonnement.
+- Effectif depuis le 09/10/2026 seulement (v29, voir « Parrainage »).
 - Page Plus, membre PRO : « Ce mois-ci avec PRO » (core/bilan_pro.py) — debriefs, messages au coach, programmes générés, séances refaites (événements sur 30 jours) et records battus (historique).
 
 ### Progression racontée et charge de départ
 - Accueil, carte « Tes progrès » (core/progression.py) : meilleur des 2 dernières semaines vs meilleur de 3 à 8 semaines avant, par exercice ; charge, ou reps au poids du corps ; gains nets seulement (≥ 2,5 kg / ≥ 2 reps), les 2 plus forts en relatif.
 - Séance, première fois sur un exercice (`conseil_depart`, core/muscu.py) : une méthode, pas un chiffre tiré du poids de corps — barre vide pour un mouvement à la barre, sinon RPE 6-7, réserve de reps au poids du corps. Tient sur la ligne « Première fois » (le premier champ doit rester dans le premier écran, test e2e).
+- Mouvement à la barre jamais fait : le poids des séries part de 20 kg (`core.muscu.charge_de_depart`, appelée par `core/seance_contexte.py`), la barre vide que la carte conseille. « Série faite » était refusé au premier tap (audit du 06/10, profil 1). Désactivé avec le réglage « Pré-remplir les charges ».
 
 ### Semaine allégée (core/decharge.py)
 - Proposée sur l'accueil quand, après ≥ 4 semaines d'affilée sans semaine déjà allégée, l'e1RM de la dernière semaine complète recule de ≥ 3 % sur plusieurs exercices et/ou le RPE moyen atteint 9 (deux signes, ou un recul sur ≥ 3 exercices).
@@ -308,6 +315,7 @@ pwa/
 - Les formulaires de séance sont interceptés et stockés dans localStorage (écoute en phase **bulle** : en phase capture, une série était mise deux fois en file)
 - Synchronisation **séquentielle** au retour du réseau (`_syncing` + `step()` récursif), avec toast typé
 - Badge orange « X action(s) en attente » en bas à droite
+- **Séance d'un autre jour** (audit du 06/10, I-1) : la page de séance gardée pour un jour à venir s'ouvre pour AUJOURD'HUI. En ligne, `jour-seance.js` la rouvre avec `date=aujourd'hui&prevue=…` (bandeau « EN AVANCE ») ; hors ligne, il réécrit la date de la page avant que seance.js la lise. Le serveur refuse de son côté toute date postérieure à aujourd'hui (`save-exo`, `add-cardio`, `cardio/save` : 400 ; `finish` : retour à l'accueil sans bilan). La carte « Prochaine séance · Demain » mène à « Faire maintenant », daté d'aujourd'hui.
 - **La séance du jour est pré-chargée** : le SW reçoit un message `PRECACHE` avec ses URLs, donc en sous-sol on ouvre sa séance au lieu d'être renvoyé sur une page d'erreur. `CACHE_VERSION` en tête de `static/service-worker.js`.
 
 ### Notifications
@@ -430,11 +438,14 @@ pwa/
 - Raison : le n° ISO recommençait chaque année → collision des données au-delà d'un an, streak/« dernière fois » cassés au Nouvel An.
 
 ### Migrations Supabase
-- Le code a **toujours un repli** quand une colonne manque (upsert sans la colonne, warning loggué) : rien ne signale à l'exécution qu'une migration a été oubliée. Vérifier l'état réel par un `select exists(…)` sur `information_schema` dans le SQL Editor.
-- Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`), **v37** (vue `user_last_activity` réservée au serveur), **v38** (plus aucune règle ni droit côté navigateur : sans elle, un compte gratuit pouvait se passer `tier='vip'` depuis la console), **v39** (vue d'agrégats de la console admin). ⚠ v37-v39 conditionnent la sécurité : vérifier qu'elles sont appliquées (requêtes en fin de v38).
+- Le code a **toujours un repli** quand une colonne manque (upsert sans la colonne, warning loggué). Depuis le 09/10, `core/schema.py` compare au démarrage la base à `ATTENDU` (une lecture par table) : colonne absente = journal ERREUR « schéma : colonnes absentes en base » et carte rouge dans /admin (revérifiée toutes les 10 min). Une migration ajoutée doit l'être aussi dans `ATTENDU` : `tests/test_schema.py` lit les fichiers SQL et le vérifie.
+- Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`), **v37** (vue `user_last_activity` réservée au serveur), **v38** (plus aucune règle ni droit côté navigateur : sans elle, un compte gratuit pouvait se passer `tier='vip'` depuis la console), **v39** (vue d'agrégats de la console admin). ⚠ v37-v39 conditionnent la sécurité : vérifier qu'elles sont appliquées (requêtes en fin de v38). Puis v40 à v47 (voir l'arborescence), toutes appliquées.
+- **v29** (parrainage, essai) : appliquée le **09/10/2026** seulement, vérifiée par `information_schema`.
+- **v48** (`supabase_schema_v48_durcissement.sql`) : retire à `anon`/`authenticated` le droit d'appeler `handle_new_user()` (alerte Supabase 0028/0029) et efface `_profiles`/`_active_profile` des programmes. Rejouée sur un PostgreSQL 16 local (inscription intacte, idempotente). **Pas encore appliquée** : attend l'accord du propriétaire.
 
 ### Tests (pwa/tests)
-- `cd pwa && python -m pytest tests -q` — **≈ 915 tests** au 03/10/2026 (dont 10 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 106 tests). **Aucune date écrite en dur** relative à « aujourd'hui » : un test daté devient rouge un jour donné (trois l'étaient, audit du 03/10), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
+- `cd pwa && python -m pytest tests -q` — **1 349 tests** au 09/10/2026 (dont 25 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 127 tests). Le serveur des tests navigateur tourne avec `SANS_LIMITE=1` : sans cela, la limite de 60 requêtes par minute répondait 429 au milieu de la suite.
+- **Fausse base stricte** (depuis le 09/10) : une colonne inconnue de `core/schema.ATTENDU` en lecture, filtre, tri ou écriture fait échouer la requête comme PostgREST (42703 / PGRST204). `db.schema_libre = True` la rend permissive pour un test qui simule une base en retard. **Aucune date écrite en dur** relative à « aujourd'hui » : un test daté devient rouge un jour donné (trois l'étaient, audit du 03/10), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
 - **Stockage partagé** : `PARTAGE_TEST=fakeredis` (Redis simulé neuf par test) ou `PARTAGE_TEST=redis://…` (vrai serveur, vidé avant chaque test) rejoue toute la suite avec cache, verrous, quotas et tâches IA dans Redis. La CI le fait sur un service `redis:7-alpine` (étape « Tests Python sur Redis »).
 - **Tests JavaScript** : `pwa/tests/js/` — lanceur maison sous Node nu (`node tests/js/run.js`), sans npm install ni jsdom ; `harness.js` fournit un DOM/localStorage/fetch minimal. Couvre la **file hors-ligne** (ordre d'envoi, reprise après échec, session expirée, double synchronisation, phase d'écoute). `tests/test_js.py` le branche sur pytest (ignoré si Node manque).
 - Fichiers : `test_routes`, `test_db_prog`, `test_data_integrity` (pagination, corps du programme, même séance 2×/semaine), `test_seance_saisie` (enregistrement JSON, records), `test_progres_exercice` (fiche exercice, standards relatifs), `test_offline_reminders` (file hors-ligne, rappels), `test_coach_stream` (SSE, mémoire), `test_debrief`, `test_nutrition_barcode`, `test_nutrition_v5` (cibles, repas par aliment, recherche), `test_auth_admin_chemins` (jeton, session, console admin), `test_partage` (deux instances sur un même Redis, panne de Redis, flux du coach ; `REDIS_TEST_URL` pour un vrai serveur), `test_identite_exercice` (identifiants, renommage oui/non, séance passée, base sans v42), `test_programme_chemins` (planning, séances, export/import), `test_accessibilite`, `test_app_native`, `test_challenges`, `test_foods`, `test_generator`, `test_overload`.
@@ -510,7 +521,7 @@ pwa/
 - En séance : cartes reliées par un liseré ; après une série du premier exercice, pas de chrono, la carte du second s'ouvre ; après une série du second, chrono puis retour au premier (`allerAuPartenaire`, static/js/seance.js).
 
 ### Échauffement (core.muscu.series_echauffement)
-- Rampe affichée, repliée, sur la carte d'exercice : barre vide (mouvements à la barre), 40/60/80 %, 90 % au-delà de 100 kg, arrondi 2,5 kg, vers la charge suggérée sinon la plus lourde de la dernière fois. Seuil 30 kg. Jamais enregistrée (volume, records et suggestion resteraient faussés).
+- Rampe affichée, repliée, sur la carte d'exercice : barre vide (mouvements à la barre), 40/60/80 %, 90 % au-delà de 100 kg, arrondi 2,5 kg, vers la charge suggérée sinon la plus lourde de la dernière fois. Seuil 30 kg. La rampe affichée ne s'enregistre pas d'elle-même ; une série cochée « échauffement » s'enregistre à part depuis la v43 (voir plus bas), hors volume, records et suggestion.
 
 ### Import Strava (core/strava_import.py, /cardio/import)
 - **Par le fichier, pas par l'API.** Depuis juin 2026 l'API « Standard » de Strava exige un abonnement actif (11,99 $/mois) ; l'export de ses propres données reste gratuit. Bâtir sur l'API, c'était bâtir quelque chose qui s'éteint le jour où l'abonnement s'arrête — et il fallait manipuler un client_secret.
@@ -542,6 +553,8 @@ pwa/
 - Un seul comportement bouge : le chrono de repos démarrait sur le `change` d'un champ, il démarre sur « Série faite ». `onSetFilled` reste appelé par les deux chemins et ne se déclenche qu'une fois par série.
 - `tests/js/test_saisie_serie.js` (16 tests) tient l'ensemble, dont le recalcul des index après `removeSet` — sans lui, retirer une série en rouvrait une autre.
 - Le mode isométrique (`isIso`, gainage) garde son propre chrono, intouché.
+- **Charge recopiée (09/10)** : « Série faite » recopie la charge dans la série suivante si elle est encore vide, comme chez Strong. Jamais depuis ni vers un échauffement.
+- **Terminer sans série (09/10)** : si aucune série n'est remplie et aucun cardio enregistré (`window.seanceVide()`), la fenêtre de fin dit « Terminer sans série ? » et prévient que la séance ne comptera pas, au lieu de « Séance terminée 💪 ». Tests : `tests/js/test_petits_correctifs.js`.
 
 ### Une série saisie ne se perd plus (audit du 30/09, C1 + I4 + I5 + I9 + I18 + I21 + M7)
 - **Valeur grisée (03/10)** : le champ Reps affiche l'objectif en gris (suggestion, sinon bas de la fourchette). « Série faite » sur un champ vide valide CETTE valeur, avec la charge suggérée, comme chez Hevy/Strong ; sans reps ni charge à proposer, la série reste ouverte avec un message. « Terminer » n'attend la file hors-ligne que 6 s (rejeu borné à 8 s) : le reste part derrière le bilan.
@@ -605,8 +618,8 @@ pwa/
 - (30/09) Avec deux workers, chaque worker avait son cache et servait un historique périmé jusqu'à 60 s après une écriture faite sur l'autre (audit I8). D'où un seul processus sans Redis (`gunicorn.conf.py`), et la validité partagée du cache avec Redis (ci-dessus). Le cache est protégé par `_cache_lock`. La base du verrou optimiste vit dans `flask.g`, par requête (audit I7 : partagée par les threads, deux requêtes du même utilisateur se la volaient).
 - Deux requêtes peuvent toujours partir du même blob (deux onglets, le cache) et s'écraser. `save_prog()` fait donc `update … eq(user_id).eq(version)` ; si 0 ligne touchée, relecture + `_merge_prog()` (fusion 3 voies par clé : seules NOS clés modifiées sont réappliquées sur la version DB), 3 tentatives, puis upsert brut loggué en `error`.
 - Base de comparaison = dernier `get_prog()` du process (`_prog_base`). Sans lecture préalable ou sans colonne `version` (migration pas appliquée) → upsert comme avant.
-- `_session_notes` (bilans de séance) : fenêtre glissante de 84 jours purgée à chaque `/seance/finish` (`routes/seance.py`), comme `_extras`/`_libre_draft`.
-- **`replace_program_body(old, body)`** + `PROG_BODY_KEYS` : l'autosave du programme envoie le corps (séances, planning, cardio…) et **conserve** toutes les autres clés personnelles (`_settings`, `_streak_record`, `_meal_plan`, `_challenges_won`…). Avant, une seule liste blanche recopiait 3 clés sur 11 : un autosave effaçait les réglages, le record de streak et les plats de la semaine. Toute clé personnelle reçue dans le corps est ignorée et loggée.
+- `_session_notes` (bilans de séance) : fenêtre glissante de 84 jours purgée à chaque `/seance/finish` (`routes/seance.py`), comme `_extras`/`_libre_draft`. Les bilans eux-mêmes sont dans la table `session_notes` depuis la v34 : cette purge ne touche que les restes de l'ancien emplacement.
+- **`replace_program_body(old, body)`** + `PROG_BODY_KEYS` : l'autosave du programme envoie le corps (séances, planning, cardio…) et **conserve** toutes les autres clés personnelles (`_settings`, `_streak_record`, `_meal_plan`, `_challenges_won`…). Avant, une seule liste blanche recopiait 3 clés sur 11 : un autosave effaçait les réglages, le record de streak et les plats de la semaine. Toute clé personnelle reçue dans le corps est ignorée et loggée. Ces clés vivent maintenant en tables (`reglages` v45, `etat_compte` v47) : la règle protège ce qui reste dans le blob.
 
 ### Suggestion de surcharge (core/muscu.py → routes/seance.py)
 - `overload_suggestion(last_sets, prev_sets, is_bw)` : double progression simplifiée. RPE moyen ≥ 9,5 → « Consolide » ; même charge partout ET (≥ 12 reps, ou ≥ 8 reps avec RPE ≤ 8, ou ≥ 8 reps deux séances de suite sans régression) → « Monte à X kg » (+2,5 kg ≥ 30 kg, +1 kg en dessous) ; sinon « Même charge, vise N+1 reps ». Le RPE vient de la colonne `rpe` (où la saisie l'écrit depuis la v34), repli sur l'ancien jeton `@RPE8` des remarques (`core/seance_historique._rpe_de`). Avant le 03/10, seul le jeton était lu : tout RPE saisi était ignoré.
@@ -621,8 +634,13 @@ pwa/
 - Après chaque pesée/suppression, `_sync_profile_weight()` recopie la dernière pesée dans `profiles.poids_kg` et recalcule `tdee` / `calories_cible` (helpers de `routes/nutrition.py`). Le formulaire profil Nutrition crée aussi une pesée du jour. Export/import JSON : clé `poids`.
 
 ### Rate limiting (core/limiter.py)
-- Default : 60 req/min par IP (mémoire process)
+- Default : 60 req/min par IP (Redis si `REDIS_URL` est une URL Redis — c'est le cas en production —, sinon mémoire du processus). `SANS_LIMITE=1` la coupe, pour `run_local_fake.py` seulement.
 - Sur-limites ajoutées via `@limiter.limit(...)` sur les actions sensibles
+
+### Journaux et lenteur (09/10/2026)
+- **Deux flux** (`app.py`) : INFO et DEBUG sur la sortie standard, WARNING et au-delà sur la sortie d'erreur. Railway étiquette « error » tout ce qui sort sur la sortie d'erreur : avant, chaque INFO y passait et une vraie erreur ne se filtrait plus (audit du 06/10, m5). `tests/test_journaux.py`.
+- **Server-Timing** (`core/chrono.py`) : chaque réponse dit le temps passé en base (`base;dur=…;desc="N appels"`), dans Redis (`redis;…`) et au total. Lisible dans l'onglet Réseau du navigateur. Une requête de 800 ms ou plus écrit « lent : MÉTHODE CHEMIN … — base … ms (n requêtes), redis … ms (n appels), reste … ms » (INFO) : de quoi savoir où part le temps de « Série faite » en production (2 s le 06/10, I-2).
+- **Coupure Supabase** (`core/reprise_base.py`) : une lecture (GET/HEAD) dont la connexion HTTP/2 est fermée par le serveur (`ConnectionTerminated`, la 503 du 05/10) est retentée une fois. Jamais une écriture : on ne sait pas si elle est passée.
 
 ## Thème (refonte UI dark minimal — style Strong / Hevy)
 - Background : `#0a0a0f` (`--bg-base`, repris par `theme-color` dans `base.html`)
@@ -635,14 +653,13 @@ pwa/
 - `.github/workflows/tests.yml` — à chaque push sur `main` et sur chaque PR : `pytest` (dont les tests navigateur, Chromium installé par la CI) puis `node tests/js/run.js`, sur **Python 3.11** comme en production. Une étape refuse de démarrer si `runtime.txt` et le workflow ne sont plus d'accord sur la version.
 - Les dépendances sont installées depuis `requirements.txt` **tel quel** : une dépendance oubliée fait échouer la CI au lieu du serveur.
 - La suite JS a **sa propre étape** : `tests/test_js.py` s'ignore quand Node est absent, et un test ignoré passerait pour un succès.
-- ⚠ **C'est un signal, pas encore une barrière.** Railway déploie depuis `main` sans attendre. Pour bloquer un déploiement quand la CI échoue : Railway → service → Settings → Source → **Wait for CI**.
+- **C'est une barrière** : « Wait for CI » est actif côté Railway (constaté à l'audit du 06/10) ; un commit sur `main` dont la CI échoue n'est pas déployé.
 
 ## Git
-- **Branche unique** : `main` — tout commit/push se fait ici, Railway redéploie automatiquement
-- **Pas de branches de feature**
+- **Travail par PR** depuis la PR #6 : une branche, une PR, fusion sur `main` ; Railway redéploie après la CI.
 - Auteur : `morauxpaul-jpg <morauxpaul@users.noreply.github.com>`
 - Flags requis : `-c user.name="morauxpaul-jpg" -c user.email="morauxpaul@users.noreply.github.com"`
-- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v127` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
+- **CACHE_VERSION** : plus besoin de la bumper à chaque déploiement. La route `/service-worker.js` (`app.py`) suffixe la base (`v133` en tête de `pwa/static/service-worker.js`) avec les 8 premiers caractères de `RAILWAY_GIT_COMMIT_SHA` → chaque déploiement invalide le cache du SW automatiquement. Bumper la base uniquement pour forcer un refresh en local ou si l'APP_SHELL change.
 
 ## Conventions UI / UX
 - **Jamais** de `prompt()`, `confirm()`, `alert()` natifs — toujours modal in-app ou inline-confirm
@@ -652,7 +669,7 @@ pwa/
 
 ### Retiré le 01/10/2026 (audit du 30/09, partie 4-C)
 - **Arcade** (mini-jeux, `/arcade`) : hors sujet ; sa place sur la landing revient au Coach IA.
-- **Profils d'entraînement** (`_profiles`, `_active_profile`, `profile_id` des dossiers) : une hiérarchie profil → programme → séance pour un besoin que « un programme par lieu » couvre. Les routes `/programme/profile/*` n'existent plus ; les clés restent dans les blobs existants, ignorées.
+- **Profils d'entraînement** (`_profiles`, `_active_profile`, `profile_id` des dossiers) : une hiérarchie profil → programme → séance pour un besoin que « un programme par lieu » couvre. Les routes `/programme/profile/*` n'existent plus ; les clés restent dans les blobs existants, ignorées (9 programmes au 06/10) ; la v48 les efface.
 - **Bouton « Séance manquée »** (`/seance/mark-missed`, lignes `SESSION`) : le calendrier déduit déjà une séance manquée. On n'en écrit plus ; les lignes `SESSION` déjà en base restent filtrées par `core.hist.is_session_marker`.
 
 ### Styles des gabarits (01/10/2026, audit M9)

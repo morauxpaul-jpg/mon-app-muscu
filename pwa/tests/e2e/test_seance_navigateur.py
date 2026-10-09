@@ -39,7 +39,8 @@ def _port_libre():
 @pytest.fixture(scope="module")
 def serveur():
     port = _port_libre()
-    env = dict(os.environ, PORT=str(port), FLASK_SECRET_KEY="e2e", PYTHONUTF8="1", FAUX_IA="lent")
+    env = dict(os.environ, PORT=str(port), FLASK_SECRET_KEY="e2e", PYTHONUTF8="1", FAUX_IA="lent",
+               SANS_LIMITE="1")
     proc = subprocess.Popen([sys.executable, "run_local_fake.py"], cwd=PWA, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     base = f"http://127.0.0.1:{port}"
@@ -151,6 +152,22 @@ def test_une_serie_saisie_sans_valider_part_quand_meme_a_la_fin(page, serveur):
     assert _series(serveur) == [(1, 6, 90.0)]
 
 
+def test_la_seance_de_demain_senregistre_aujourdhui(page, serveur):
+    """Audit du 06/10 (I-1), constaté en production : la page datée du
+    lendemain enregistrait ses séries à cette date. Le navigateur la rouvre
+    pour aujourd'hui (jour-seance.js) avant toute saisie."""
+    import datetime as dt
+    aujourdhui = page.evaluate("JourSeance.jourLogique()")
+    demain = (dt.date.fromisoformat(aujourdhui) + dt.timedelta(days=1)).isoformat()
+    page.goto(f"{serveur}/seance?mode=prefaite&name=Push&date={demain}")
+    page.wait_for_url(f"**date={aujourdhui}**prevue={demain}**", timeout=10000)
+    page.wait_for_selector(".serie-valider")
+    assert "EN AVANCE" in page.inner_text("main")
+    _serie_faite(page, 5, 100)
+    assert _attendre(lambda: _series(serveur) == [(1, 5, 100.0)])
+    assert {r["date"] for r in _historique(serveur) if r["exercice"] == EXO} == {aujourdhui}
+
+
 # ── Skip ─────────────────────────────────────────────────────────
 
 
@@ -252,8 +269,21 @@ def test_serie_faite_sans_taper_enregistre_la_valeur_proposee(page, serveur):
     assert _attendre(lambda: _series(serveur) == [(1, 5, 60.0)])
 
 
+def test_premiere_fois_a_la_barre_le_premier_tap_enregistre_la_barre_vide(page, serveur):
+    """Compte neuf, développé couché : la carte conseille « barre vide » et
+    le poids part de 20 kg. « Série faite » était refusé au premier tap
+    (audit du 06/10, profil 1) ; il enregistre maintenant 5 × 20 kg."""
+    carte = page.locator("#exo-anchor-0")
+    assert carte.get_by_label("Poids série 1", exact=True).input_value() == "20"
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: _series(serveur) == [(1, 5, 20.0)])
+
+
 def test_sans_charge_ni_reps_la_serie_nest_pas_pretendue_faite(page, serveur):
     carte = page.locator("#exo-anchor-0")
+    # La barre vide est pré-remplie depuis le 06/10 : on l'efface, comme
+    # quelqu'un qui ne sait pas encore quelle charge il prendra.
+    carte.get_by_label("Poids série 1", exact=True).fill("")
     carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
     time.sleep(0.8)
     assert _series(serveur) == []

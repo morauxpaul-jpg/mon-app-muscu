@@ -396,6 +396,11 @@ def index():
             "date_short": f"{d.day:02d}/{d.month:02d}",
             "relative": relative,
             "is_today": offset == 0,
+            # La carte ouvre TOUJOURS une séance datée d'aujourd'hui : la page
+            # du jour prévu enregistrait les séries à cette date-là (audit du
+            # 06/10, I-1). Le jour prévu part en `prevue`, pour le bandeau
+            # « En avance ».
+            "date_lien": today.strftime("%Y-%m-%d"),
         }
         break
 

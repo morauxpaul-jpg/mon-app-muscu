@@ -13,7 +13,18 @@
       <span class="s-790fac">RATTRAPAGE · </span>
       <span class="s-a38b54">{{ date_label }}</span>
     </div>
+  {% elif en_avance_label %}
+    <div class="bandeau-avance">
+      <span class="bandeau-avance-titre">EN AVANCE · </span>
+      <span class="bandeau-avance-texte">prévue {{ en_avance_label }}. Tes séries comptent pour aujourd'hui.</span>
+    </div>
   {% endif %}
+  {# Affiché par static/js/jour-seance.js quand une page gardée hors ligne pour
+     un autre jour est ouverte plus tôt : sa date est ramenée à aujourd'hui. #}
+  <div class="bandeau-avance" id="seance-en-avance" hidden>
+    <span class="bandeau-avance-titre">EN AVANCE · </span>
+    <span class="bandeau-avance-texte">séance prévue un autre jour. Tes séries comptent pour aujourd'hui.</span>
+  </div>
 
   <div class="seance-header">
     <div class="seance-label"><a href="/seance?date={{ date_iso }}" class="seance-retour">← Changer</a> · SÉANCE · SEMAINE {{ s_display }}</div>
@@ -148,7 +159,8 @@
   {# ── Bilan de séance : note sur 5 + commentaire (skippable) ──────── #}
   <div id="finish-modal" class="exo-info-modal" style="display:none;">
     <div class="exo-info-box s-b86dc2" onclick="event.stopPropagation()">
-      <h4 class="s-8d0f29">Séance terminée 💪</h4>
+      <h4 class="s-8d0f29" id="finish-titre">Séance terminée 💪</h4>
+      <p class="finish-vide" id="finish-vide" hidden>Aucune série n'est enregistrée : cette séance ne comptera pas. Touche en dehors de la fenêtre pour revenir.</p>
       <div class="s-9e661f">Comment elle s'est passée ?</div>
       <div id="finish-duration" class="finish-duration"></div>
 
@@ -189,6 +201,9 @@
   {# Sans « defer » : Alpine (chargé en defer par base.html) démarre dès son
      exécution, donc les composants doivent être définis AVANT. Un script
      classique en fin de body s'exécute avant tout script différé. #}
+  {# En premier : ramène une page datée d'un jour à venir à aujourd'hui,
+     avant que seance.js et Alpine ne lisent la date. #}
+  <script src="/static/js/jour-seance.js"></script>
   <script src="/static/js/exercise-library.js"></script>
   <script src="/static/js/exo-info.js"></script>
   <script src="/static/js/seance.js"></script>

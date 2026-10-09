@@ -337,6 +337,14 @@ def est_a_la_barre(base: str) -> bool:
     return " barre" in f" {(base or '').casefold()}" and "traction" not in (base or "").casefold()
 
 
+def charge_de_depart(base: str, is_bw: bool = False, is_iso: bool = False):
+    """Charge pré-remplie la toute première fois : la barre vide (20 kg) que la
+    carte conseille, pour un mouvement à la barre. Sans elle, « Série faite »
+    était refusé au premier tap (audit du 06/10, profil 1). Sinon rien : une
+    charge ne s'invente pas."""
+    return POIDS_BARRE if not is_bw and not is_iso and est_a_la_barre(base) else None
+
+
 def series_echauffement(poids_travail, barre: bool = False) -> list[dict]:
     """[{poids, reps}] avant une charge de travail donnée, ou [] si elle est
     trop légère pour qu'un échauffement spécifique serve à quelque chose."""

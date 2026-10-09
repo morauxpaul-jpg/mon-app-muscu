@@ -41,7 +41,7 @@ def compte(fake_db, monkeypatch):
         fake_db.table("history").insert({
             "user_id": USER_ID, "date": jour, "semaine": "2026-W38",
             "seance": "Push", "exercice": "Développé couché", "muscle": "Pecs",
-            "series": 1, "reps": 10, "poids": 60.0}).execute()
+            "serie": 1, "reps": 10, "poids": 60.0}).execute()
     return fake_db
 
 

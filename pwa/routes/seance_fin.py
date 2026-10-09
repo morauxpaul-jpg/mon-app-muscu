@@ -15,7 +15,7 @@ from core.analytics import track
 from core.bilans_seance import _save_session_note, _load_session_note
 from core.seance_semaine import _normalize_hist
 from core.seance_calques import purger_les_calques
-from core.seance_saisie import _form_date, _parse_session_note, _session_duration_min
+from core.seance_saisie import _form_date, _parse_session_note, _session_duration_min, date_a_venir
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,11 @@ def finish():
     mode = f["mode"]
     seance_name = f["seance_name"]
     date_str = _form_date(f)
+    if date_a_venir(date_str):
+        # Ses séries ont été refusées (même garde dans save-exo) : pas de
+        # bilan daté d'un jour à venir non plus (audit du 06/10, I-1).
+        logger.warning("finish refusé : séance datée d'un jour à venir")
+        return redirect(url_for("accueil.index"))
     key = f"{seance_name}|{date_str}"
     # Calques du jour (table v46) : le brouillon libre ou les exos ajoutés,
     # les échanges et l'ordre des cartes ne servent qu'à cette séance-là.
