@@ -12,7 +12,7 @@ from core.dates import today_paris
 from core.limiter import limiter
 from core.navigation_seance import _back_to_editor
 from core.seance_semaine import _iso_week, _parse_date
-from core.seance_saisie import _form_date
+from core.seance_saisie import MESSAGE_DATE_A_VENIR, _form_date, date_a_venir
 from core.cardio_duree import lire_duree, reps_de
 from core.seance_cardio import completer_mesures
 
@@ -30,6 +30,8 @@ def add_cardio():
     f = request.form
     target = _parse_date(f.get("date")) or today_paris()
     date_str = target.strftime("%Y-%m-%d")
+    if date_a_venir(date_str):   # audit du 06/10, I-1
+        return render_template("error.html", code=400, message=MESSAGE_DATE_A_VENIR), 400
     semaine = _iso_week(target)
     seance_name = f["seance_name"]
 

@@ -24,6 +24,11 @@ from supabase import create_client, Client
 
 from core import partage
 from core.dates import continuous_week
+from core.reprise_base import installer as _installer_reprise
+
+# Une lecture coupée en route (connexion HTTP/2 fermée pendant la nuit) est
+# retentée une fois, et chaque requête est chronométrée (audit du 06/10, I-3).
+_installer_reprise()
 
 # Taille de page PostgREST : Supabase plafonne chaque réponse à `max-rows`
 # (1 000 par défaut) SANS erreur. Toute lecture potentiellement longue passe

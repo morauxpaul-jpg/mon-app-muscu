@@ -42,7 +42,7 @@ def compte(fake_db):
         fake_db.table("history").insert({
             "user_id": USER_ID, "date": jour, "semaine": "2026-W38",
             "seance": "Push", "exercice": "Développé couché", "muscle": "Pecs",
-            "series": 1, "reps": 10, "poids": 60.0}).execute()
+            "serie": 1, "reps": 10, "poids": 60.0}).execute()
     return fake_db
 
 
@@ -107,7 +107,7 @@ def compte_sans_date_de_depart(fake_db):
         fake_db.table("history").insert({
             "user_id": USER_ID, "date": jour, "semaine": "2026-W38",
             "seance": "Push", "exercice": "Développé couché", "muscle": "Pecs",
-            "series": 1, "reps": 10, "poids": 60.0}).execute()
+            "serie": 1, "reps": 10, "poids": 60.0}).execute()
     return fake_db
 
 

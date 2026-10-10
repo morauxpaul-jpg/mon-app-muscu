@@ -16,6 +16,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from core.data import append_exo_rows, get_hist, get_profile
 from core.cardio_duree import lire_duree, reps_de
 from core.seance_cardio import UNITES_CARDIO, completer_mesures
+from core.seance_saisie import MESSAGE_DATE_A_VENIR, date_a_venir
 from core.strava_import import lire_activites, lire_date, marquer_doublons
 from core.analytics import track
 from core.dates import today_paris, today_paris_str, continuous_week, DAYS_FR, MONTHS_FR
@@ -47,6 +48,9 @@ def _iso_week(d):
 def new():
     date_iso = request.args.get("date") or today_paris_str()
     target = _parse_date(date_iso) or today_paris()
+    # Un cardio ne s'enregistre pas à l'avance : le lien « Faire du cardio »
+    # d'un jour à venir ouvre la page d'aujourd'hui (audit du 06/10, I-1).
+    target = min(target, today_paris())
     date_iso = target.strftime("%Y-%m-%d")
     date_label = f"{DAYS_FR[target.weekday()]} {target.day} {MONTHS_FR[target.month-1]}"
 
@@ -82,6 +86,8 @@ def save():
     f = request.form
     target = _parse_date(f.get("date")) or today_paris()
     date_str = target.strftime("%Y-%m-%d")
+    if date_a_venir(date_str):   # audit du 06/10, I-1
+        return render_template("error.html", code=400, message=MESSAGE_DATE_A_VENIR), 400
     semaine = _iso_week(target)
 
     activite = (f.get("activite") or "Autre").strip()

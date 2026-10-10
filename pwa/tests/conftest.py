@@ -64,10 +64,11 @@ class FakeQuery:
         colonne qu'il n'a pas demandée — et ça ne se voit qu'en production.
         On projette donc, comme le vrai.
 
-        Ce que ça n'attrape PAS : un nom de colonne qui n'existe pas en base.
-        Ici les lignes sont des dicts, donc une clé absente d'une ligne est
-        indiscernable d'une colonne absente de la table ; elle ressort à
-        `None`, comme le ferait PostgREST pour une colonne non renseignée.
+        Une colonne qui n'existe pas en base est refusée, comme PostgREST le
+        fait, d'après le schéma de production (`core/schema.py`) : voir
+        `_verifier_colonnes`. Avant, elle ressortait à `None`, et l'essai PRO
+        passait tous ses tests alors que sa colonne manquait en production
+        (audit du 06/10, C1).
         """
         self._op = "select"
         spec = str(args[0]) if args and args[0] else "*"
@@ -188,7 +189,35 @@ class FakeQuery:
                 return False
         return True
 
+    def _verifier_colonnes(self):
+        """Refuse un nom de colonne absent du schéma de production, avec les
+        codes de PostgREST : 42703 en lecture, filtre ou tri ; PGRST204 en
+        écriture (les replis du code reconnaissent ces deux formes)."""
+        from core.schema import ATTENDU
+        connues = ATTENDU.get(self._table)
+        if connues is None or getattr(self._db, "schema_libre", False):
+            return
+        lues = list(self._colonnes or [])
+        lues += [col for _op, col, _v in self._filters]
+        if self._order_col:
+            lues.append(self._order_col)
+        if self._on_conflict:
+            lues += [c.strip() for c in self._on_conflict.split(",")]
+        for c in lues:
+            if c not in connues:
+                raise Exception("{'code': '42703', 'details': None, 'hint': None, "
+                                f"'message': 'column {self._table}.{c} does not exist'}}")
+        if self._op in ("insert", "upsert", "update"):
+            payload = self._payload if isinstance(self._payload, list) else [self._payload or {}]
+            for p in payload:
+                for c in p:
+                    if c not in connues:
+                        raise Exception("{'code': 'PGRST204', 'details': None, 'hint': None, "
+                                        f"'message': \"Could not find the '{c}' column of "
+                                        f"'{self._table}' in the schema cache\"}}")
+
     def execute(self):
+        self._verifier_colonnes()
         rows = self._db.tables.setdefault(self._table, [])
         if self._op == "insert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]

@@ -160,6 +160,25 @@ class _Redis:
         return int(p.execute()[0]) <= limite
 
 
+def _chronometre(methode):
+    """Temps passé à attendre Redis, compté pour la requête en cours
+    (core/chrono.py). Tout accès à Redis passe par une méthode de _Redis."""
+    def mesuree(self, *args, **kwargs):
+        t0 = time.perf_counter()
+        try:
+            return methode(self, *args, **kwargs)
+        finally:
+            from core import chrono
+            chrono.ajouter("redis", time.perf_counter() - t0)
+    mesuree.__name__ = methode.__name__
+    mesuree.__doc__ = methode.__doc__
+    return mesuree
+
+
+for _nom in ("acquerir", "relacher", "ajouter", "entiers", "ecrire", "lire", "supprimer", "fenetre"):
+    setattr(_Redis, _nom, _chronometre(getattr(_Redis, _nom)))
+
+
 # ── Choix du stockage et repli en cas de panne ───────────────────
 
 _memoire = _Memoire()

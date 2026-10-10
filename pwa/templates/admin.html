@@ -14,6 +14,9 @@
   {% if partage is defined and partage.alerte %}
     <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>{{ partage.alerte }}</div>
   {% endif %}
+  {% if schema is defined and schema.alerte %}
+    <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#alert-triangle"/></svg>{{ schema.alerte }}</div>
+  {% endif %}
 
   <div class="card s-da12f2">
     <div class="s-767234">

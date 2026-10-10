@@ -14,7 +14,7 @@ from core.data import (
     replace_exo_rows, delete_exo_rows, delete_session_rows, echauffements_du_jour,
     echauffements_disponibles, get_reglages, get_calque, modifier_calque, ecrire_calque,
 )
-from core.dates import (today_paris_str, logical_today_paris, DAYS_FR, MONTHS_FR)
+from core.dates import (logical_today_paris, DAYS_FR, MONTHS_FR)
 from core.limiter import limiter
 from core.rotation import planning_semaine, seance_prevue
 from core.muscu import BW_EXOS, MUSCLE_LIST, VARIANTS, auto_muscles
@@ -35,8 +35,9 @@ from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows
                                     _suggestion_for, _cible_du_programme)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import _appliquer_substituts, _apply_seance_order
-from core.seance_saisie import (_form_date, _known_exo_names, _pr_check,
-                                _reps_saisies, _rows_from_sets, _session_totals)
+from core.seance_saisie import (MESSAGE_DATE_A_VENIR, _form_date, _known_exo_names,
+                                _pr_check, _reps_saisies, _rows_from_sets,
+                                _session_totals, date_a_venir)
 from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done)
 from core.bilans_seance import _load_session_note
 from core.navigation_seance import _back_to_editor
@@ -80,6 +81,15 @@ def seance():
     mode = request.args.get("mode")   # "prefaite" | "libre" | None
     name = request.args.get("name")   # nom séance (prefaite) ou libre
     today = logical_today
+    # Rattrapage = un jour PASSÉ. Une page datée d'un jour à venir n'est rendue
+    # telle quelle que pour le cache hors-ligne : static/js/jour-seance.js la
+    # ramène à aujourd'hui à l'ouverture (audit du 06/10, I-1). `prevue` dit,
+    # sur la page d'aujourd'hui, pour quel jour la séance était prévue.
+    is_rattrapage = date_iso < logical_today_str
+    prevue = _parse_date(request.args.get("prevue"))
+    en_avance_label = (f"{DAYS_FR[prevue.weekday()].lower()} {prevue.day:02d}/{prevue.month:02d}"
+                       if prevue and date_iso == logical_today_str and prevue > target_date
+                       else None)
 
     done_name = _find_done_session(date_iso, hist)
 
@@ -288,7 +298,7 @@ def seance():
             seance_name=name,
             date_iso=date_iso,
             date_label=_date_label(target_date),
-            is_rattrapage=(date_iso != today_paris_str()),
+            is_rattrapage=is_rattrapage, en_avance_label=en_avance_label,
             s_act=s_act,
             s_display=s_display,
             week_offset=week_offset,
@@ -347,7 +357,7 @@ def seance():
             seance_name=libre_name,
             date_iso=date_iso,
             date_label=_date_label(target_date),
-            is_rattrapage=(date_iso != today_paris_str()),
+            is_rattrapage=is_rattrapage, en_avance_label=en_avance_label,
             s_act=s_act,
             s_display=s_display,
             week_offset=week_offset,
@@ -392,6 +402,8 @@ def save_exo():
     variant = f["variant"]
     muscle = f["muscle"]
     date_str = _form_date(f)
+    if date_a_venir(date_str):
+        return _refus_date_a_venir()
     semaine = _iso_week(_parse_date(date_str) or logical_today_paris())
     is_bw = f.get("is_bw") == "1"
     try:
@@ -462,6 +474,15 @@ def save_exo():
             "%gkg × %d" % (r["Poids"], r["Reps"]) for r in travail if r["Reps"] > 0
         ),
     })
+
+
+def _refus_date_a_venir():
+    """Réponse commune aux écritures datées d'un jour à venir (400 : la file
+    hors-ligne met l'envoi de côté et le dit, au lieu de le rejouer)."""
+    logger.warning("écriture refusée : séance datée d'un jour à venir")
+    if "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify({"ok": False, "error": MESSAGE_DATE_A_VENIR}), 400
+    return render_template("error.html", code=400, message=MESSAGE_DATE_A_VENIR), 400
 
 
 @bp.route("/seance/skip-exo", methods=["POST"])

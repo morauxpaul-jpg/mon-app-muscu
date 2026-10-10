@@ -62,7 +62,7 @@ def _compte(fake_db, derniere_seance, semaines=4):
             fake_db.table("history").insert({
                 "user_id": USER_ID, "date": jour, "semaine": "x",
                 "seance": "Full", "exercice": "Squat", "muscle": "Jambes",
-                "series": serie, "reps": 8, "poids": 100.0}).execute()
+                "serie": serie, "reps": 8, "poids": 100.0}).execute()
 
 
 def _stats(html):

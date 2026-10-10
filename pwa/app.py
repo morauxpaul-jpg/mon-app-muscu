@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import secrets
+import sys
 import time
 from datetime import timedelta
 
@@ -41,10 +42,27 @@ from core import db as core_db
 from core.admin_acces import est_admin
 
 # Logging structuré — remplace print() un peu partout dans le code.
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(name)s %(levelname)s %(message)s",
-)
+# Railway range en « error » tout ce qui sort sur la sortie d'erreur : avec un
+# seul flux, le moindre INFO y passait et une vraie erreur ne se filtrait plus
+# (audit du 06/10, m5). INFO et DEBUG vont donc sur la sortie standard,
+# WARNING et au-delà sur la sortie d'erreur.
+class _SousLeNiveau(logging.Filter):
+    def __init__(self, niveau):
+        super().__init__()
+        self.niveau = niveau
+
+    def filter(self, record):
+        return record.levelno < self.niveau
+
+
+_journal_format = logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+_journal_sortie = logging.StreamHandler(sys.stdout)
+_journal_sortie.addFilter(_SousLeNiveau(logging.WARNING))
+_journal_erreurs = logging.StreamHandler(sys.stderr)
+_journal_erreurs.setLevel(logging.WARNING)
+for _h in (_journal_sortie, _journal_erreurs):
+    _h.setFormatter(_journal_format)
+logging.basicConfig(level=logging.INFO, handlers=[_journal_sortie, _journal_erreurs])
 logger = logging.getLogger(__name__)
 
 # Monitoring d'erreurs (Sentry) — actif uniquement si SENTRY_DSN est défini.
@@ -60,6 +78,15 @@ if _sentry_dsn:
         logger.error("Sentry init FAILED: %s", _e)
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+
+
+@app.before_request
+def _chrono_debut():
+    """Premier crochet enregistré, donc premier exécuté : le total compte aussi
+    le limiteur de débit et la vérification de session (cf. _chronometrer)."""
+    from core import chrono
+    chrono.debut()
+
 
 # Railway (comme tout PaaS) place un reverse-proxy devant gunicorn. Sans
 # ProxyFix :
@@ -113,6 +140,11 @@ _admob_ids = _verifier_admob(_IS_PROD)
 # Journal ERREUR si plusieurs processus tournent sans Redis (core/partage.py).
 from core.partage import verifier_au_demarrage as _verifier_partage  # noqa: E402
 _verifier_partage()
+# Colonnes attendues par le code, vérifiées en base en tâche de fond : une
+# migration oubliée (la v29 l'a été des mois) est journalisée en ERREUR et
+# affichée sur /admin au lieu de désactiver une fonction en silence.
+from core.schema import verifier_au_demarrage as _verifier_schema  # noqa: E402
+_verifier_schema(core_db.get_client)
 app.permanent_session_lifetime = timedelta(days=30)
 # Revalidation du tier VIP depuis la base (cf. before_request). TTL asymétrique :
 #   - un VIP confirmé est re-vérifié peu souvent (évite de marteler la DB) ;
@@ -370,6 +402,14 @@ def _compression(response):
         return response
     from core.compression import compresser
     return compresser(request, response)
+
+
+@app.after_request
+def _chronometrer(response):
+    """Server-Timing (base, Redis, total) et journal des requêtes lentes :
+    « Série faite » met 2 s en production sans cause isolée (audit du 06/10, I-2)."""
+    from core import chrono
+    return chrono.terminer(response, request.method, request.path)
 
 
 @app.after_request

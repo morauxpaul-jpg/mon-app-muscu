@@ -3,7 +3,7 @@
 // valeur avec le SHA du commit déployé (RAILWAY_GIT_COMMIT_SHA) → chaque
 // déploiement invalide le cache automatiquement. Ne bumper la base que pour
 // forcer un refresh en local (pas de SHA) ou changer l'APP_SHELL.
-const CACHE_VERSION = "v132";
+const CACHE_VERSION = "v133";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 // Au-delà, une page déjà gardée est servie depuis le cache (réseau faible).
 const NAV_DELAI = 3500;
@@ -30,6 +30,7 @@ const APP_SHELL = [
   "/static/js/ui-fx.js",
   "/static/js/prefetch.js",
   "/static/js/exercise-library.js",
+  "/static/js/jour-seance.js",
   "/static/js/seance.js",
   "/static/js/exo-info.js",
   "/static/js/barcode.js",

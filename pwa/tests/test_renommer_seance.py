@@ -38,7 +38,7 @@ def deux_programmes(fake_db):
         fake_db.table("history").insert({
             "user_id": USER_ID, "date": MONDAY.isoformat(), "semaine": "2026-W38",
             "seance": "Push 1", "exercice": "Développé couché", "muscle": "Pecs",
-            "series": 1, "reps": 8, "poids": 80.0}).execute()
+            "serie": i + 1, "reps": 8, "poids": 80.0}).execute()
     return fake_db
 
 
