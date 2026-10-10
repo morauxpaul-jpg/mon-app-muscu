@@ -4,9 +4,8 @@
 # tests ne protègent que celui qui pense à les lancer — et quatre défauts ont
 # atteint l'utilisateur en trois jours faute de les exécuter au bon moment.
 #
-# ⚠ Ce fichier produit un SIGNAL. Pour en faire une vraie barrière, activer
-# « Wait for CI » dans Railway → service → Settings → Source. Sans cette
-# option, Railway déploie sans attendre le résultat.
+# C'est une vraie barrière : « Wait for CI » est actif dans Railway (constaté
+# à l'audit du 06/10) ; un commit dont ces tests échouent n'est pas déployé.
 name: Tests
 
 on:
@@ -35,6 +34,22 @@ jobs:
           - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      # Un vrai PostgreSQL, de la version de production : toutes les
+      # migrations du dépôt y sont rejouées, deux fois, et chaque colonne lue
+      # par le code doit exister (tests/test_migrations_postgres.py). La
+      # fausse base des tests, elle, ne connaît que ce qu'on lui dit : la v29
+      # est restée des mois hors de la production (audit du 06/10, I-4).
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -88,6 +103,8 @@ jobs:
 
       - name: Tests Python
         working-directory: pwa
+        env:
+          PG_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: python -m pytest tests -q
 
       # Même suite, cache, verrous, quotas et tâches IA rangés dans Redis :
