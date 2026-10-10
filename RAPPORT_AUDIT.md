@@ -1,5 +1,16 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Mise à jour du 10/10/2026, 14:45 UTC — PR #37 en production, v25 appliquée · note inchangée : **6,6 / 10**
+
+| Repère | Statut | Preuve |
+|---|---|---|
+| PR #37 | **Fusionnée et déployée** (accord du propriétaire) | commit `b3bffdd` sur `main` ; déploiement Railway `b38188fb` en SUCCESS à 14:42 UTC |
+| v25 | **Appliquée en production** (accord du propriétaire) | `list_migrations` : `20261010143152 v25_vip` ; `pg_get_constraintdef` : `CHECK (tier = ANY (ARRAY['free','vip']))` ; index `profiles_tier_idx` présent ; 15 profils, 7 `free` et 8 `vip`, comme avant |
+| Démarrage | Contrôle du schéma : « 16 tables et vues vérifiées, rien ne manque » ; lignes de démarrage de gunicorn classées `info` (m5) | journaux du déploiement `b38188fb` |
+| À confirmer à l'usage | I-2 (temps de « Série faite », en-tête `Server-Timing`), CSP en conditions réelles (aucun « CSP bloqué » attendu), app Android | aucune visite depuis le déploiement au moment de l'écriture |
+
+La note ne bouge pas encore : elle attend une vraie séance en production (temps d'enregistrement mesuré, aucun blocage CSP).
+
 ## Suivi du 10/10/2026 (soir) — les derniers constats de l'audit, PR #37 · note inchangée : **6,6 / 10**
 
 Tout ce qui suit est sur la branche `claude/nifty-hawking-0natha` (PR #37), **ni fusionné ni déployé**. Rien n'a été écrit en production. La note sera revue après déploiement, sur preuves en production.
