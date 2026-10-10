@@ -26,7 +26,7 @@ pwa/
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
 │   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
 │   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
-├── supabase_schema_v23.sql … v48  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance, v47 table etat_compte, v48 durcissement — écrite, PAS encore appliquée)
+├── supabase_schema_v23.sql … v48  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance, v47 table etat_compte, v48 durcissement, appliquée le 10/10/2026)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
 ├── supabase_schema_v34_session_notes.sql # history.session_id + history.rpe, index (user_id,date), table session_notes, push_subscriptions.last_reactivation_at
@@ -441,7 +441,7 @@ pwa/
 - Le code a **toujours un repli** quand une colonne manque (upsert sans la colonne, warning loggué). Depuis le 09/10, `core/schema.py` compare au démarrage la base à `ATTENDU` (une lecture par table) : colonne absente = journal ERREUR « schéma : colonnes absentes en base » et carte rouge dans /admin (revérifiée toutes les 10 min). Une migration ajoutée doit l'être aussi dans `ATTENDU` : `tests/test_schema.py` lit les fichiers SQL et le vérifie.
 - Dernières : **v34** (session_id + rpe sur `history`, index `(user_id,date)`, table `session_notes`, `push_subscriptions.last_reactivation_at`), **v35** (`session_notes.duration_min`), **v36** (`profiles.coach_memory`), **v37** (vue `user_last_activity` réservée au serveur), **v38** (plus aucune règle ni droit côté navigateur : sans elle, un compte gratuit pouvait se passer `tier='vip'` depuis la console), **v39** (vue d'agrégats de la console admin). ⚠ v37-v39 conditionnent la sécurité : vérifier qu'elles sont appliquées (requêtes en fin de v38). Puis v40 à v47 (voir l'arborescence), toutes appliquées.
 - **v29** (parrainage, essai) : appliquée le **09/10/2026** seulement, vérifiée par `information_schema`.
-- **v48** (`supabase_schema_v48_durcissement.sql`) : retire à `anon`/`authenticated` le droit d'appeler `handle_new_user()` (alerte Supabase 0028/0029) et efface `_profiles`/`_active_profile` des programmes. Rejouée sur un PostgreSQL 16 local (inscription intacte, idempotente). **Pas encore appliquée** : attend l'accord du propriétaire.
+- **v48** (`supabase_schema_v48_durcissement.sql`) : retire à `anon`/`authenticated` le droit d'appeler `handle_new_user()` (alerte Supabase 0028/0029) et efface `_profiles`/`_active_profile` des programmes. Rejouée sur un PostgreSQL 16 local (inscription intacte, idempotente). **Appliquée le 10/10/2026** (11:46 UTC) et vérifiée : plus aucun rôle n'a `execute` sur `handle_new_user()`, les alertes 0028/0029 ont disparu de `get_advisors`, 0 programme avec ces clés (9 nettoyés, version +1 chacun), déclencheur `on_auth_user_created` toujours actif.
 
 ### Tests (pwa/tests)
 - `cd pwa && python -m pytest tests -q` — **1 349 tests** au 09/10/2026 (dont 25 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent ; la suite JS compte 127 tests). Le serveur des tests navigateur tourne avec `SANS_LIMITE=1` : sans cela, la limite de 60 requêtes par minute répondait 429 au milieu de la suite.
@@ -669,7 +669,7 @@ pwa/
 
 ### Retiré le 01/10/2026 (audit du 30/09, partie 4-C)
 - **Arcade** (mini-jeux, `/arcade`) : hors sujet ; sa place sur la landing revient au Coach IA.
-- **Profils d'entraînement** (`_profiles`, `_active_profile`, `profile_id` des dossiers) : une hiérarchie profil → programme → séance pour un besoin que « un programme par lieu » couvre. Les routes `/programme/profile/*` n'existent plus ; les clés restent dans les blobs existants, ignorées (9 programmes au 06/10) ; la v48 les efface.
+- **Profils d'entraînement** (`_profiles`, `_active_profile`, `profile_id` des dossiers) : une hiérarchie profil → programme → séance pour un besoin que « un programme par lieu » couvre. Les routes `/programme/profile/*` n'existent plus ; les clés restent dans les blobs existants, ignorées (9 programmes au 06/10) ; effacées par la v48 le 10/10/2026.
 - **Bouton « Séance manquée »** (`/seance/mark-missed`, lignes `SESSION`) : le calendrier déduit déjà une séance manquée. On n'en écrit plus ; les lignes `SESSION` déjà en base restent filtrées par `core.hist.is_session_marker`.
 
 ### Styles des gabarits (01/10/2026, audit M9)

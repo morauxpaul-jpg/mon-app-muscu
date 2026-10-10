@@ -1,5 +1,16 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Mise à jour du 10/10/2026 — v48 appliquée, réponses du propriétaire · note inchangée : **6,6 / 10**
+
+| Repère | Statut | Preuve |
+|---|---|---|
+| m1, m3 | **Corrigé en production** : v48 appliquée le 10/10 à 11:46 UTC (accord explicite du propriétaire) | `list_migrations` : `20261010114603 v48_durcissement` ; SQL : `execute` sur `handle_new_user()` = false pour `anon`, `authenticated`, `public` ; 0 programme avec `_profiles`/`_active_profile` (9 avant), somme de leurs versions 318 → 327 ; déclencheur `on_auth_user_created` actif ; `get_advisors` : alertes 0028/0029 disparues |
+| I-5 0 activation PRO | **Pas un défaut** : les 3 paiements commencés étaient des essais du propriétaire (dit le 10/10) | déclaration du propriétaire |
+| m4 Variables Railway avec espaces | **Corrigé** par le propriétaire | `describe-service` : `SUPABASE_URL` et `SUPABASE_ANON_KEY` sans espace ; redéploiement du 10/10 à 11:44 UTC réussi |
+| m2 Mots de passe fuités | **Reste ouvert**, à trancher par le propriétaire. Le seul compte e-mail est le sien, et il a aussi Google ; l'app ne propose que Google. La protection Supabase est réservée à l'offre Pro | `auth.identities` : google 15, email 1 ; `templates/login.html` (Google seulement) |
+
+Inscription après la v48 : PostgreSQL ne vérifie le droit `execute` d'une fonction de déclencheur qu'à la création du déclencheur ; rejoué en local. La prochaine inscription réelle le confirmera en production (ligne `profiles` créée).
+
 ## Suivi du 09/10/2026 — corrections sur la branche de la PR #36 · note inchangée : **6,6 / 10**
 
 **Ce qui change en production** : seulement la **v29**, appliquée le 09/10 à 21:55 UTC (`list_migrations` : `20261009215501 v29_referral`) et vérifiée (`information_schema` : `referral_code`, `referred_by`, `vip_until` présentes). Tout le reste est du code sur la branche `claude/nifty-hawking-0natha`, **ni fusionné ni déployé**. La note n'est pas relevée : elle le sera après déploiement, sur preuves en production.
