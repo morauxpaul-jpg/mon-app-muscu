@@ -67,19 +67,48 @@
   // donc rejouer un état périmé après le récent effacerait des séries.
   var _enVol = null;   // id de l'élément en cours d'envoi : on n'y touche pas
 
-  function enqueue(url, formData, cle) {
+  // Qui attend l'issue d'un envoi (seance.js), par id. En mémoire seulement :
+  // la donnée, elle, est dans localStorage.
+  var _attentes = {};
+
+  function attendre(id, resolve) {
+    (_attentes[id] = _attentes[id] || []).push(resolve);
+  }
+
+  // Rend la main à ceux qui attendaient cet envoi. Vrai s'il y en avait.
+  function repondre(id, issue) {
+    var liste = _attentes[id];
+    delete _attentes[id];
+    (liste || []).forEach(function (r) { r(issue); });
+    return !!(liste && liste.length);
+  }
+
+  // `options.json` : l'envoi veut la réponse JSON du serveur (record,
+  // volume…), comme l'envoi direct de « Série faite ».
+  function enqueue(url, formData, cle, options) {
     var data = {};
     formData.forEach(function (val, key) {
       data[key] = val;
     });
+    var id = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
     var q = getQueue();
     if (cle) {
-      q = q.filter(function (it) { return it.cle !== cle || it.id === _enVol; });
+      q = q.filter(function (it) {
+        var remplace = it.cle === cle && it.id !== _enVol;
+        // Qui attendait l'ancien état attend désormais le nouveau.
+        if (remplace && _attentes[it.id]) {
+          _attentes[id] = (_attentes[id] || []).concat(_attentes[it.id]);
+          delete _attentes[it.id];
+        }
+        return !remplace;
+      });
     }
-    q.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
-             url: url, data: data, ts: Date.now(), cle: cle || null });
+    var item = { id: id, url: url, data: data, ts: Date.now(), cle: cle || null, essais: 0 };
+    if (options && options.json) item.json = true;
+    q.push(item);
     saveQueue(q);
     updateBadge();
+    return id;
   }
 
   // Un envoi direct a réussi pour cette clé : ce qui attendait pour elle est
@@ -96,10 +125,13 @@
   }
 
   // ── Badge "en attente de sync" ────────────────────────────
+  // Chaque série passe par la file : le badge n'apparaît que si un envoi
+  // a vraiment échoué (ou hors ligne), pas pendant la seconde où il part.
   function updateBadge() {
     var q = getQueue();
     var existing = document.getElementById("offline-badge");
-    if (q.length === 0) {
+    var enRetard = q.filter(function (it) { return !it.json || it.essais > 0; }).length;
+    if (q.length === 0 || (navigator.onLine && enRetard === 0)) {
       if (existing) existing.remove();
       return;
     }
@@ -121,18 +153,56 @@
   // SÉQUENTIELLE et dans l'ordre de saisie : deux enregistrements du même
   // exercice rejoués en parallèle laissaient gagner le plus rapide, pas le
   // plus récent. On s'arrête au premier échec pour ne pas désordonner la
-  // suite (le reste repartira au prochain retour de réseau).
-  var _syncing = false;
+  // suite, et on réessaie tout seul un peu plus tard (3 s, 6 s… 30 s) :
+  // avant, la file n'attendait que le prochain chargement de page.
+  var _sync = null;          // la synchronisation en cours (une seule à la fois)
   var DELAI_REJEU = 8000;
+  var _echecs = 0;           // échecs réseau d'affilée
+  var _relance = null;
+  var _ecouteurs = [];       // seance.js : une série arrivée après coup
+
+  function relancerPlusTard() {
+    if (_relance || !navigator.onLine || getQueue().length === 0) return;
+    _echecs++;
+    var delai = Math.min(30000, 3000 * Math.pow(2, _echecs - 1));
+    _relance = setTimeout(function () { _relance = null; syncQueue(); }, delai);
+  }
+
+  function annoncer(r) {
+    _ecouteurs.forEach(function (fn) { try { fn(r); } catch (e) {} });
+  }
 
   function syncQueue() {
-    if (_syncing) return Promise.resolve(0);
+    // Déjà en cours : on attend la même (« Terminer » doit savoir quand
+    // elle finit), sans envoyer deux fois.
+    if (_sync) return _sync;
     if (getQueue().length === 0) return Promise.resolve(0);
-    _syncing = true;
     var synced = 0;
+    var panne = false;       // réseau ou serveur en défaut : on réessaiera
+    var auth = false;        // session expirée : on attend une reconnexion
 
     function retirer(id) {
       saveQueue(getQueue().filter(function (it) { return it.id !== id; }));
+    }
+    function restePour(cle) {
+      return cle ? getQueue().filter(function (it) { return it.cle === cle; }).length : 0;
+    }
+    // Un envoi qui a échoué alors qu'un état plus récent du même exercice
+    // attend derrière lui : inutile de le rejouer, le plus récent le contient.
+    function compterEssai(item) {
+      var q = getQueue();
+      var depasse = item.cle && q.some(function (it) { return it.cle === item.cle && it.id !== item.id; });
+      if (depasse) q = q.filter(function (it) { return it.id !== item.id; });
+      // L'échec compte pour ce qui reste de l'exercice (badge « en attente »).
+      q.forEach(function (it) {
+        if (it.id === item.id || (depasse && it.cle === item.cle)) it.essais = (it.essais || 0) + 1;
+      });
+      saveQueue(q);
+    }
+    // Plus rien ne part dans ce tour : ceux qui attendaient l'apprennent
+    // (« Gardé sur l'appareil »). Leur envoi reste en file.
+    function enAttente() {
+      getQueue().forEach(function (it) { repondre(it.id, { statut: "reseau" }); });
     }
 
     function step() {
@@ -146,6 +216,8 @@
       var data = Object.assign({}, item.data);
       var jeton = csrfCourant();
       if (jeton) data._csrf = jeton;
+      var entetes = { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": jeton };
+      if (item.json) entetes.Accept = "application/json";
       // Délai : au sous-sol, le téléphone se croit en ligne et la requête ne
       // revient jamais. Sans lui, le rejeu restait pendu — et « Terminer »,
       // qui l'attend, restait figé sur « Enregistrement… » (audit du 03/10,
@@ -155,8 +227,7 @@
       return fetch(item.url, {
         method: "POST",
         body: new URLSearchParams(data),
-        headers: { "Content-Type": "application/x-www-form-urlencoded",
-                   "X-CSRFToken": jeton },
+        headers: entetes,
         credentials: "same-origin",
         redirect: "follow",
         signal: ctrl ? ctrl.signal : undefined,
@@ -173,47 +244,90 @@
           showToast("Reconnecte-toi pour envoyer tes séries en attente.", "warn");
           throw new Error("auth");
         }
-        if (!resp.ok && !resp.redirected) {
-          // Refus définitif (données refusées, et non réseau, session ou
-          // quota) : il bloquait toute la file derrière lui. On le met de
-          // côté — gardé, pas jeté — et on continue.
-          var s = resp.status;
-          if (s >= 400 && s < 500 && [401, 403, 408, 429].indexOf(s) < 0) {
-            mettreDeCote(item);
-            retirer(item.id);
-            updateBadge();
-            return step();
+        var lu = item.json && resp.json
+          ? resp.json().catch(function () { return null; })
+          : Promise.resolve(null);
+        return lu.then(function (d) {
+          if (!resp.ok && !resp.redirected) {
+            // Refus définitif (données refusées, et non réseau, session ou
+            // quota) : il bloquait toute la file derrière lui. On le met de
+            // côté — gardé, pas jeté — et on continue.
+            var s = resp.status;
+            if (s >= 400 && s < 500 && [401, 403, 408, 429].indexOf(s) < 0) {
+              mettreDeCote(item, item.json);
+              retirer(item.id);
+              var refus = { cle: item.cle, url: item.url, statut: "refus", d: d || {} };
+              refus.attendu = repondre(item.id, refus);
+              annoncer(refus);
+              updateBadge();
+              return step();
+            }
+            throw new Error("http " + s);
           }
-          throw new Error("http " + s);
-        }
-        synced++;
-        retirer(item.id);
-        updateBadge();
-        return step();
+          retirer(item.id);
+          var ok = { cle: item.cle, url: item.url, statut: "ok", d: d || {}, reste: restePour(item.cle) };
+          ok.attendu = repondre(item.id, ok);
+          // Le toast « tout est à jour » ne parle que du retard rattrapé :
+          // une série envoyée dans la seconde n'a rien à annoncer.
+          if (!ok.attendu) synced++;
+          annoncer(ok);
+          updateBadge();
+          return step();
+        });
+      }, function (err) {
+        if (minuterie) clearTimeout(minuterie);
+        throw err;
+      }).catch(function (err) {
+        if (err && err.message === "auth") auth = true;
+        else { panne = true; compterEssai(item); }
+        throw err;
       });
     }
 
-    return step()
+    _sync = step()
       .catch(function () {})
       .then(function () {
         _enVol = null;
-        _syncing = false;
+        _sync = null;
+        if (!panne) _echecs = 0;
         updateBadge();
         if (synced > 0) {
           showToast(synced + " série(s) enregistrée(s) — tout est à jour.", "ok");
         }
+        var reste = getQueue().length > 0;
+        // Une série tapée pendant la fin du tour : elle part maintenant.
+        if (reste && !panne && !auth && navigator.onLine) {
+          return syncQueue().then(function (n) { return synced + n; });
+        }
+        if (reste) enAttente();
+        if (panne) relancerPlusTard();
         return synced;
       });
+    return _sync;
+  }
+
+  // « Série faite » : gardée d'abord dans le téléphone, envoyée ensuite.
+  // Le téléphone peut s'éteindre ou l'app être fermée juste après le tap :
+  // la série est déjà dans la file, elle repartira au prochain lancement.
+  // Résout {statut: "ok", d} | {statut: "reseau"} | {statut: "refus", d}.
+  function envoyer(url, champs, cle) {
+    var formData = { forEach: function (cb) { Object.keys(champs).forEach(function (k) { cb(champs[k], k); }); } };
+    var id = enqueue(url, formData, cle, { json: true });
+    var issue = new Promise(function (resolve) { attendre(id, resolve); });
+    if (navigator.onLine) syncQueue();
+    else repondre(id, { statut: "reseau" });
+    return issue;
   }
 
   var REJET_KEY = "muscu_offline_rejets";
-  function mettreDeCote(item) {
+  // `discret` : la page qui a fait l'envoi affiche elle-même le refus.
+  function mettreDeCote(item, discret) {
     try {
       var r = JSON.parse(localStorage.getItem(REJET_KEY) || "[]");
       r.push(item);
       localStorage.setItem(REJET_KEY, JSON.stringify(r.slice(-50)));
     } catch (e) {}
-    showToast("Un envoi a été refusé par le serveur — il reste gardé sur l'appareil.", "warn");
+    if (!discret) showToast("Un envoi a été refusé par le serveur — il reste gardé sur l'appareil.", "warn");
   }
 
   var TOAST_COLORS = {
@@ -319,9 +433,14 @@
   // AUCUN retour : la série semblait perdue, et il la ressaisissait.
   window.OfflineQueue = {
     enqueue: function (url, formData, cle) { enqueue(url, formData, cle); },
+    envoyer: envoyer,
     drop: drop,
     pending: function () { return getQueue().length; },
+    // Une série de cet exercice attend-elle encore dans la file ?
+    contient: function (cle) { return getQueue().some(function (it) { return it.cle === cle; }); },
     sync: syncQueue,
+    // fn({cle, statut, d, attendu, reste}) à chaque envoi traité.
+    surReponse: function (fn) { _ecouteurs.push(fn); },
   };
 
   // ── Pré-cache des séances du jour ─────────────────────────
@@ -367,6 +486,14 @@
   // ── Init ──────────────────────────────────────────────────
   window.addEventListener("online", updateStatus);
   window.addEventListener("offline", updateStatus);
+  // Retour dans l'app (écran rallumé, app ramenée devant) : ce qui attend
+  // repart tout de suite, sans attendre la prochaine tentative.
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && navigator.onLine && getQueue().length) {
+      if (_relance) { clearTimeout(_relance); _relance = null; }
+      syncQueue();
+    }
+  });
   // Au chargement
   function init() {
     updateStatus();

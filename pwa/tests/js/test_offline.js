@@ -89,8 +89,11 @@ module.exports = ({ test, assert }) => {
     const b = env.window.OfflineQueue.sync();   // pendant que la première tourne
     liberer();
     const [na, nb] = await Promise.all([a, b]);
-    assert.equal(na + nb, 1, 'une seule requête aboutie');
-    assert.equal(env.calls.length, 1);
+    assert.equal(env.calls.length, 1, 'une seule requête');
+    // La seconde attend la première au lieu de rendre 0 tout de suite :
+    // « Terminer » doit savoir quand l'envoi en cours a fini.
+    assert.equal(na, 1);
+    assert.equal(nb, 1);
   });
 
   test('un envoi réussi vide la file même après une redirection normale', async () => {
@@ -245,5 +248,74 @@ module.exports = ({ test, assert }) => {
     env.setResponder(() => ({ ok: false, status: 503, redirected: false, url: SAVE_URL }));
     await env.window.OfflineQueue.sync();
     assert.equal(env.queue().length, 1);
+  });
+
+  // ── « Série faite » : gardée dans le téléphone d'abord ─────────────
+  // seance.js n'envoie plus lui-même : il écrit dans la file, qui envoie.
+  // L'app peut être fermée juste après le tap, la série est déjà gardée.
+
+  const OK_JSON = (d) => ({ ok: true, status: 200, redirected: false, url: SAVE_URL,
+                            json: () => Promise.resolve(Object.assign({ ok: true }, d || {})) });
+
+  test('envoyer : la série est dans la file AVANT que la requête parte', async () => {
+    const env = createEnv({ scripts: ['offline.js'] });
+    let dansLaFile = null;
+    env.setResponder(() => { dansLaFile = env.queue().length; return OK_JSON({ volume: 500 }); });
+    const issue = await env.window.OfflineQueue.envoyer(SAVE_URL, { poids: '60' }, 'exo-1');
+    assert.equal(dansLaFile, 1, 'gardée avant l’envoi');
+    assert.equal(issue.statut, 'ok');
+    assert.equal(issue.d.volume, 500, 'la réponse du serveur revient à la carte');
+    assert.equal(env.queue().length, 0);
+  });
+
+  test('envoyer : l’état le plus récent d’un exercice remplace celui qui attendait', async () => {
+    const env = createEnv({ scripts: ['offline.js'], online: false });
+    const a = env.window.OfflineQueue.envoyer(SAVE_URL, { series: '1' }, 'exo-1');
+    const b = env.window.OfflineQueue.envoyer(SAVE_URL, { series: '2' }, 'exo-1');
+    assert.equal((await a).statut, 'reseau');
+    assert.equal((await b).statut, 'reseau');
+    assert.deepEqual(env.queue().map((it) => it.data.series), ['2']);
+  });
+
+  test('envoyer : un réseau muet garde la série et prévoit un nouvel essai', async () => {
+    const env = createEnv({ scripts: ['offline.js'] });
+    env.setResponder(() => ({ ok: false, status: 503, redirected: false, url: SAVE_URL,
+                              json: () => Promise.resolve({ ok: false }) }));
+    const recus = [];
+    env.window.OfflineQueue.surReponse((r) => recus.push(r));
+    const issue = await env.window.OfflineQueue.envoyer(SAVE_URL, { poids: '60' }, 'exo-1');
+    assert.equal(issue.statut, 'reseau');
+    assert.equal(env.queue().length, 1);
+    assert.equal(env.queue()[0].essais, 1, 'l’échec est compté (badge « en attente »)');
+
+    // Le réseau revient : le nouvel essai programmé envoie seul.
+    env.setResponder(() => OK_JSON({ pr: { kind: 'weight', value: 60 } }));
+    env.flushTimers();
+    await env.settle(); await env.settle(); await env.settle();
+    assert.equal(env.queue().length, 0);
+    const tardif = recus.filter((r) => r.statut === 'ok');
+    assert.equal(tardif.length, 1, 'la carte apprend l’envoi tardif');
+    assert.equal(tardif[0].attendu, false);
+    assert.equal(tardif[0].cle, 'exo-1');
+    assert.equal(tardif[0].d.pr.value, 60);
+  });
+
+  test('envoyer : un refus du serveur est rendu à la carte, sans toast en double', async () => {
+    const env = createEnv({ scripts: ['offline.js'] });
+    env.setResponder(() => ({ ok: false, status: 400, redirected: false, url: SAVE_URL,
+                              json: () => Promise.resolve({ ok: false, error: 'date' }) }));
+    const issue = await env.window.OfflineQueue.envoyer(SAVE_URL, { poids: '60' }, 'exo-1');
+    assert.equal(issue.statut, 'refus');
+    assert.equal(issue.d.error, 'date');
+    assert.equal(env.queue().length, 0);
+    assert.equal(JSON.parse(env.localStorage.getItem('muscu_offline_rejets')).length, 1);
+  });
+
+  test('envoyer : la requête demande la réponse JSON', async () => {
+    const env = createEnv({ scripts: ['offline.js'] });
+    let accept = null;
+    env.setResponder((url, init) => { accept = init.headers.Accept; return OK_JSON(); });
+    await env.window.OfflineQueue.envoyer(SAVE_URL, { poids: '60' }, 'exo-1');
+    assert.equal(accept, 'application/json');
   });
 };

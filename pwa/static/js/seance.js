@@ -232,6 +232,7 @@
     // remplace celui qui attendait.
     var cle = draftKey;
     return {
+      _cle: cle,
       open: !data.completed,
       saving: false,
       // Révision des séries : `_rev` bouge à chaque modification,
@@ -242,7 +243,6 @@
       etat: "",
       etatRefus: "",              // pourquoi « Série faite » a été refusée (état « vide »)
       _enCours: null,
-      _suite: null,
       skipArme: false,
       // Panneau « aujourd'hui, à la place : ». Replié par défaut : on
       // change d'exercice de temps en temps, pas à chaque séance.
@@ -376,7 +376,14 @@
               : this.faits.filter(function (i) { return i < n; });
             // Un brouillon est, par définition, ce que le serveur n'a pas.
             this._rev = 1;
-            if (this._aDesSeries()) {
+            var Q = window.OfflineQueue;
+            if (Q && Q.contient && Q.contient(cle)) {
+              // Les séries validées attendent dans la file (app fermée
+              // pendant l'envoi) : elles repartent seules, rien à revalider.
+              this._revServeur = 1;
+              this.etat = "attente";
+              markSessionActive();
+            } else if (this._aDesSeries()) {
               markSessionActive();
               toast("Saisie non enregistrée reprise : vérifie-la et valide tes séries.");
             }
@@ -540,8 +547,24 @@
         // série, donc les deux chemins ne se marchent pas dessus.
         this.onSetFilled(i);
         // Et la série part en base : cocher en vert sans écrire, c'était
-        // promettre ce qu'on ne tenait pas.
-        if (this._estRemplie(this.sets[i])) this._envoyer("partiel");
+        // promettre ce qu'on ne tenait pas. Elle est d'abord gardée dans le
+        // téléphone (offline.js), donc la carte n'attend pas le serveur.
+        if (this._estRemplie(this.sets[i])) {
+          this._envoyer("partiel");
+          this._termineLocalement();
+        }
+      },
+      // Ce que le serveur dira dans une seconde, la carte le montre tout de
+      // suite : verte dès la première série (core/seance_historique.
+      // _exo_completed : une série suffit), « Exercice suivant » après la
+      // dernière. Elle attendait la réponse, 2 s en production (audit I-2).
+      _termineLocalement: function () {
+        if (!this._aDesSeries()) return;
+        this.completed = true;
+        var card = this._carte();
+        if (card) card.classList.add("done");
+        refreshProgress();
+        if (!this.isIso && this.indexCourant() === -1) this.toutFait = true;
       },
       rouvrir: function (i) {
         this.faits = this.faits.filter(function (x) { return x !== i; });
@@ -638,9 +661,9 @@
       etatTexte: function () {
         if (this.etat === "vide" && this.etatRefus) return this.etatRefus;
         return {
-          envoi: "Enregistrement…",
+          envoi: "✓ Gardé sur l'appareil, envoi en cours",
           ok: "Enregistré",
-          attente: "Gardé sur l'appareil — envoi au retour du réseau",
+          attente: "✓ Gardé sur l'appareil — envoi au retour du réseau",
           erreur: "Pas enregistré — touche « Enregistrer » pour réessayer",
           vide: "Indique tes répétitions (et ta charge) avant de valider",
         }[this.etat] || "";
@@ -648,57 +671,70 @@
 
       // mode "partiel" (Série faite, Terminer) : les séries remplies seules.
       // mode "complet" (Enregistrer) : toutes, les vides deviennent SKIP.
-      // Résout "ok" | "attente" | "erreur" pour l'état le plus récent : un
-      // envoi demandé pendant qu'un autre est en vol part juste après lui.
+      // Résout "ok" | "attente" | "erreur".
+      //
+      // L'envoi passe par la file du téléphone (offline.js) : la série y est
+      // écrite AVANT de partir, la plus récente de l'exercice remplace celle
+      // qui attendait, et la file réessaie seule. Fermer l'app pendant
+      // l'envoi ne perd plus rien : tout repart au prochain lancement.
       _envoyer: function (mode) {
         var self = this;
-        if (this._enCours) {
-          if (this._suite !== "complet") this._suite = mode;
-          return this._enCours;
-        }
         if (mode === "partiel" && !this._aDesSeries()) return Promise.resolve("ok");
         var form = this._form();
         if (!form) return Promise.resolve("erreur");
+        var Q = window.OfflineQueue;
         var rev = this._rev;
         var champs = lireChamps(form);
         champs.sets_json = this.serializedSets();
         champs._csrf = csrf();
         if (mode === "partiel") champs.partiel = "1";
-        this.etat = "envoi";
-        if (mode === "complet") this.saving = true;
-
-        var envoi = navigator.onLine
-          ? posterFormulaire(form.action, champs)
-          : Promise.resolve({ statut: "reseau" });
+        this.etatRefus = "";
+        var envoi;
+        if (Q && Q.envoyer) {
+          envoi = Q.envoyer(form.action, champs, cle);
+          // En file = en sûreté : « Terminer » n'a pas à le renvoyer.
+          this._revServeur = rev;
+          this.etat = navigator.onLine ? "envoi" : "attente";
+        } else {
+          envoi = navigator.onLine ? posterFormulaire(form.action, champs)
+                                   : Promise.resolve({ statut: "reseau" });
+          this.etat = "envoi";
+        }
         var p = envoi
           .then(function (res) {
             if (res.statut === "ok") {
               self._recu(res.d, rev, mode);
               return "ok";
             }
-            if (res.statut === "reseau" && window.OfflineQueue) {
-              window.OfflineQueue.enqueue(form.action, versFormData(champs), cle);
-              // En file = en sûreté : « Terminer » n'a pas à le renvoyer. Le
-              // brouillon reste, il ne coûte rien et survit à un rechargement.
-              if (self._rev === rev) self._revServeur = rev;
-              return "attente";
-            }
+            if (res.statut === "reseau" && Q && Q.envoyer) return "attente";
+            // Refusé : la série reste à envoyer, « Terminer » réessaiera.
+            if (self._revServeur === rev) self._revServeur = -1;
             if (window.console) console.warn("save-exo refusé", res.d);
             return "erreur";
           })
           .then(function (statut) {
-            self.etat = statut;
-            self.saving = false;
-            self._enCours = null;
-            var suite = self._suite;
-            self._suite = null;
-            if (suite && (suite === "complet" || self._rev !== self._revServeur)) {
-              return self._envoyer(suite);
+            // Un envoi plus récent a pris le relais : c'est lui qui parlera.
+            if (self._enCours === p) {
+              self.etat = statut;
+              self._enCours = null;
             }
             return statut;
           });
         this._enCours = p;
         return p;
+      },
+
+      // Une série partie après coup (réseau revenu, nouvel essai, app
+      // relancée) : la carte reçoit record et volume, et dit « Enregistré ».
+      _recuApresCoup: function (r) {
+        if (r.statut === "refus") {
+          this._revServeur = -1;
+          this.etat = "erreur";
+          return;
+        }
+        if (r.statut !== "ok") return;
+        this._recu(r.d, this._revServeur, "partiel");
+        if (!r.reste && !this._enCours) this.etat = "ok";
       },
 
       _recu: function (d, rev, mode) {
@@ -718,15 +754,11 @@
         if (card) card.classList.toggle("done", this.completed);
         refreshProgress(d.volume, d.volume_echauffement);
         if (d.pr) showPr(card, d.pr);
-        // « Enregistrer » : on referme la carte et on ouvre la suivante.
-        // Dernière série prévue faite : la carte RESTE ouverte, avec « Exercice
-        // suivant » à côté de « Ajouter une série » — la refermer d'office
-        // empêchait d'ajouter une série de plus (retour du 04/10).
-        if (mode === "complet" && !this.supersetAvec) this.startRestTimer();
-        if (this.completed && mode === "complet") {
-          this.open = false;
-          openNextPending(card);
-        } else if (this.completed && !this.isIso && this.indexCourant() === -1) {
+        // « Enregistrer » a déjà refermé la carte et ouvert la suivante
+        // (save). Dernière série prévue faite : la carte RESTE ouverte, avec
+        // « Exercice suivant » à côté de « Ajouter une série » — la refermer
+        // d'office empêchait d'ajouter une série de plus (retour du 04/10).
+        if (mode !== "complet" && this.completed && !this.isIso && this.indexCourant() === -1) {
           this.toutFait = true;
         }
       },
@@ -738,21 +770,26 @@
         openNextPending(this._carte());
       },
 
+      // « Enregistrer » : gardé dans le téléphone, la carte se ferme et la
+      // suivante s'ouvre tout de suite. Elle attendait le serveur.
       save: function (ev) {
         var form = ev.target.closest("form");
         if (!form) return;
         ev.preventDefault();
         var self = this;
-        this._envoyer("complet").then(function (statut) {
+        var card = this._carte();
+        var envoi = this._envoyer("complet");
+        this.completed = true;
+        this.open = false;
+        if (card) card.classList.add("done");
+        refreshProgress();
+        if (!this.supersetAvec) this.startRestTimer();
+        openNextPending(card);
+        envoi.then(function (statut) {
           if (statut === "attente") {
-            var card = self._carte();
-            self.completed = true;
-            self.open = false;
-            if (card) card.classList.add("done");
-            refreshProgress();
-            openNextPending(card);
             toast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
           } else if (statut === "erreur") {
+            self.open = true;
             toast("Pas enregistré — tes séries restent sur l'appareil.", "error");
           }
         });
@@ -875,6 +912,7 @@
         }
         this.isoRemaining = this.targetSeconds;
         this._envoyer("partiel");
+        this._termineLocalement();
       },
       isoClearLast: function () {
         for (var i = this.sets.length - 1; i >= 0; i--) {
@@ -1171,14 +1209,16 @@
   function boot() {
     initFinish();
     refreshProgress();
-    // Retour du réseau : offline.js rejoue la file, puis on recharge pour
-    // repartir de ce que le serveur a réellement enregistré.
-    window.addEventListener("online", function () {
-      if (!window.OfflineQueue || !window.OfflineQueue.pending()) return;
-      window.OfflineQueue.sync().then(function (n) {
-        if (n > 0) setTimeout(function () { location.reload(); }, 1200);
+    // Une série partie après coup (offline.js la rejoue au retour du réseau,
+    // ou à un nouvel essai) : sa carte est prévenue. La page se rechargeait
+    // pour le savoir, en pleine séance.
+    var Q = window.OfflineQueue;
+    if (Q && Q.surReponse) {
+      Q.surReponse(function (r) {
+        if (r.attendu || !r.cle) return;
+        BLOCS.forEach(function (b) { if (b._cle === r.cle) b._recuApresCoup(r); });
       });
-    });
+    }
     // Les formulaires restants (reset, extras, cardio) gardent le rechargement
     // classique : ce sont des actions rares où un aller-retour est acceptable.
     document.addEventListener("submit", function (e) {
