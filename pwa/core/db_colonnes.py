@@ -26,9 +26,14 @@ def _noms(cle: str) -> tuple:
 
 
 def _colonne_refusee(msg: str):
-    """La colonne facultative qu'une erreur PostgREST désigne, ou None."""
-    return next((c for c, ok in _COLONNES.items()
-                 if ok and any(n in msg for n in _noms(c))), None)
+    """La colonne facultative qu'une erreur PostgREST désigne, ou None. Le
+    manque est signalé à /admin (core/schema.py) : le repli ne le cache plus."""
+    refusee = next((c for c, ok in _COLONNES.items()
+                    if ok and any(n in msg for n in _noms(c))), None)
+    if refusee:
+        from core.schema import signaler
+        signaler(msg, "history")
+    return refusee
 
 
 def sans_colonnes_absentes(payload: list[dict]) -> list[dict]:

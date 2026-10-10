@@ -36,6 +36,8 @@ _absente_depuis = None
 
 def _marquer_absente():
     global _absente_depuis
+    from core.schema import signaler_absence
+    signaler_absence("reglages")
     _absente_depuis = time.monotonic()
     logger.warning("reglages: table absente (v45 non appliquée) — réglages lus dans le programme")
 

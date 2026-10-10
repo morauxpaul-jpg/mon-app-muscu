@@ -261,3 +261,55 @@ def test_le_parrainage_credite_filleul_et_parrain(fake_db):
     assert profils[filleul]["referred_by"] == parrain
     assert apply_referral(filleul, code) is False                # une seule fois
     assert REFEREE_VIP_DAYS == 1 and REFERRER_VIP_DAYS == 3
+
+
+# ── Un repli « base en retard » ne cache plus le manque (audit du 06/10, 4.3) ──
+
+@pytest.mark.parametrize("message, attendu", [
+    ("{'code': '42703', 'message': 'column profiles.referral_code does not exist'}",
+     "profiles.referral_code"),
+    ("{'code': 'PGRST204', 'message': \"Could not find the 'vip_until' column of 'profiles' in the schema cache\"}",
+     "profiles.vip_until"),
+    (str({"code": "42P01", "message": 'relation "public.reglages" does not exist'}), "table reglages"),
+    ('{"code":"42P01","message":"relation \\"public.reglages\\" does not exist"}', "table reglages"),
+    ("{'code': 'PGRST205', 'message': \"Could not find the table 'public.etat_compte' in the schema cache\"}",
+     "table etat_compte"),
+    ("column history.exercise_id does not exist".lower(), "history.exercise_id"),
+])
+def test_signaler_reconnait_les_quatre_formes(message, attendu):
+    from core import schema
+    assert schema.signaler(Exception(message), "x") is True
+    assert attendu in schema.etat()["alerte"]
+
+
+def test_une_panne_nest_pas_un_manque():
+    from core import schema
+    assert schema.signaler(TimeoutError("read timed out"), "profiles") is False
+    assert schema.etat()["alerte"] == ""
+
+
+def test_le_parrainage_en_repli_allume_ladmin_une_seule_fois(fake_db, monkeypatch, caplog):
+    import logging
+    import conftest
+    import core.db as core_db
+    from core import schema
+    vraie = conftest.FakeQuery.execute
+
+    def sans_v29(self):
+        if self._table == "profiles" and "referral_code" in str(self._colonnes or "") + str(self._payload or ""):
+            raise Exception("{'code': '42703', 'message': 'column profiles.referral_code does not exist'}")
+        return vraie(self)
+    monkeypatch.setattr(conftest.FakeQuery, "execute", sans_v29)
+    caplog.set_level(logging.ERROR, logger="core.schema")
+    core_db.get_or_create_referral_code(conftest.USER_ID)
+    core_db.get_or_create_referral_code(conftest.USER_ID)
+    assert "profiles.referral_code" in schema.etat()["alerte"]
+    assert sum("profiles.referral_code" in r.getMessage() for r in caplog.records
+               if r.name == "core.schema") == 1
+
+
+def test_une_table_v45_absente_allume_ladmin():
+    from core import db_reglages, schema
+    db_reglages._marquer_absente()
+    db_reglages._oublier_absence()
+    assert "table reglages" in schema.etat()["alerte"]

@@ -268,6 +268,14 @@ def webhook():
             if uid:
                 _activate_vip(uid, obj.get("customer"))
                 _handle_upgrade_cancel(stripe, obj.get("metadata"), obj.get("subscription"))
+            else:
+                # Un paiement abouti qui n'active personne : à voir dans
+                # Stripe, jamais en silence (audit du 06/10, 4.1-5).
+                logger.error("billing: paiement sans compte associé (session %s, client %s)",
+                             obj.get("id"), obj.get("customer"))
+                track("paiement_sans_compte", {"session": obj.get("id") or "",
+                                               "client": obj.get("customer") or ""},
+                      user_id=None, tier="free")
         elif etype == "customer.subscription.deleted":
             _downgrade_from_subscription(obj)
         elif etype == "customer.subscription.updated":
@@ -314,6 +322,9 @@ def _downgrade_from_subscription(obj) -> None:
         uid = core_db.get_user_by_stripe_customer(obj.get("customer"))
     if uid:
         core_db.set_user_tier(uid, "free")
+        # Pendant de `vip_activated` : sans lui, le funnel ne voyait que des
+        # entrées (audit du 06/10, 4.1-5).
+        track("vip_resilie", {"statut": obj.get("status") or "deleted"}, user_id=uid, tier="free")
 
 
 # ────────────────────────────────────────────────────────────────

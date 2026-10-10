@@ -39,6 +39,8 @@ def _vide() -> dict:
 
 def _marquer_absente():
     global _absente_depuis
+    from core.schema import signaler_absence
+    signaler_absence("calques_seance")
     _absente_depuis = time.monotonic()
     logger.warning("calques_seance: table absente (v46 non appliquée) — calques dans le programme")
 

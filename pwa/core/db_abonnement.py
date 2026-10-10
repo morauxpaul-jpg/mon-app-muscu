@@ -10,6 +10,9 @@ from typing import Optional
 
 from core.db_base import get_client
 from core.db_profil import _profile_upsert
+# Colonne v29 absente : signalée à /admin au lieu d'un parrainage qui ne
+# crédite rien en silence (audit du 06/10, C1 et 4.3).
+from core.schema import signaler
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +100,7 @@ def get_or_create_referral_code(user_id: str) -> str:
         resp = client.table("profiles").select("referral_code").eq("id", user_id).maybe_single().execute()
         existing = (resp.data or {}).get("referral_code") if resp else None
     except Exception as e:
+        signaler(e, "profiles")
         logger.error("get_or_create_referral_code read FAILED user=%s: %s", user_id, e)
         existing = None
     if existing:
@@ -108,6 +112,7 @@ def get_or_create_referral_code(user_id: str) -> str:
     try:
         _profile_upsert(user_id, {"referral_code": code})
     except Exception as e:
+        signaler(e, "profiles")
         logger.error("get_or_create_referral_code write FAILED user=%s: %s", user_id, e)
     return code
 
@@ -123,6 +128,7 @@ def get_user_by_referral_code(code: str) -> Optional[str]:
         rows = resp.data or []
         return rows[0]["id"] if rows else None
     except Exception as e:
+        signaler(e, "profiles")
         logger.error("get_user_by_referral_code FAILED code=%s: %s", code, e)
         return None
 
@@ -150,6 +156,7 @@ def grant_vip_days(user_id: str, days: int) -> None:
             if cur_dt > base:
                 base = cur_dt
     except Exception as e:
+        signaler(e, "profiles")
         logger.error("grant_vip_days read FAILED user=%s: %s", user_id, e)
     new_until = (base + _dt.timedelta(days=int(days))).isoformat()
     _profile_upsert(user_id, {"vip_until": new_until})
@@ -162,6 +169,7 @@ def count_referrals(user_id: str) -> int:
         resp = client.table("profiles").select("id", count="exact").eq("referred_by", user_id).execute()
         return int(getattr(resp, "count", None) or 0)
     except Exception as e:
+        signaler(e, "profiles")
         logger.error("count_referrals FAILED user=%s: %s", user_id, e)
         return 0
 
@@ -173,5 +181,6 @@ def get_referred_by(user_id: str) -> Optional[str]:
         resp = client.table("profiles").select("referred_by").eq("id", user_id).maybe_single().execute()
         return (resp.data or {}).get("referred_by") if resp else None
     except Exception as e:
+        signaler(e, "profiles")
         logger.error("get_referred_by FAILED user=%s: %s", user_id, e)
         return None

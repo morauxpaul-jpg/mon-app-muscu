@@ -52,6 +52,8 @@ def _profile_upsert(user_id: str, payload: dict) -> None:
                    if c in payload and c in str(e).lower()]
         if not missing:
             raise
+        from core.schema import signaler
+        signaler(e, "profiles")
         logger.warning("profiles : colonne(s) %s absente(s) — écriture partielle", missing)
         reduced = {k: v for k, v in payload.items() if k not in missing}
         if reduced:

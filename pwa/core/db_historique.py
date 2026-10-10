@@ -286,7 +286,7 @@ def _ids_cibles(client, user_id, date_str, seance, exercice, exo_id) -> list:
     try:
         lignes = lire("id,exercice,exercise_id" if par_id else "id,exercice")
     except Exception as e:                        # v42 absente : par le nom seul
-        if not par_id or "exercise_id" not in str(e).lower():
+        if not par_id or _colonne_refusee(str(e).lower()) != "exercise_id":
             raise
         _COLONNES["exercise_id"] = par_id = False
         lignes = lire("id,exercice")

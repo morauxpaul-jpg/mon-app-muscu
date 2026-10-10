@@ -18,10 +18,15 @@ COLONNES_V40 = ("grams", "food")
 
 
 def _colonne_absente(err) -> bool:
-    """Erreur PostgREST « colonne inconnue » (migration v40 pas encore passée)."""
+    """Erreur PostgREST « colonne inconnue » (migration v40 pas encore passée),
+    signalée à /admin (core/schema.py)."""
     msg = str(err)
-    return "PGRST204" in msg or "schema cache" in msg or any(
+    absente = "PGRST204" in msg or "schema cache" in msg or any(
         f"'{c}'" in msg or f'"{c}"' in msg for c in COLONNES_V40)
+    if absente:
+        from core.schema import signaler
+        signaler(err, "nutrition")
+    return absente
 
 
 def _sans_v40(row: dict) -> dict:
