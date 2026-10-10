@@ -1,5 +1,32 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 10/10/2026 (soir) — les derniers constats de l'audit, PR #37 · note inchangée : **6,6 / 10**
+
+Tout ce qui suit est sur la branche `claude/nifty-hawking-0natha` (PR #37), **ni fusionné ni déployé**. Rien n'a été écrit en production. La note sera revue après déploiement, sur preuves en production.
+
+| Repère | Statut | Preuve |
+|---|---|---|
+| I-2 Latence de « Série faite » | Sur la branche : **7 appels base par série pendant une séance → 2 à 3**. Le cache durait 60 s, moins qu'un temps de repos : chaque série relisait historique et programme. Il dure 10 min (sa validité partagée, en place depuis le 04/10, le rend sûr) ; la vérification du compte passe de 2 à 10 min ; une requête au lieu de deux pour retrouver les séries à remplacer | `tests/test_cout_serie.py` (6 : séance simulée avec repos, au plus 3 appels par série, cadence du contrôle de compte). **À confirmer en production** à la prochaine séance (en-tête `Server-Timing`, journal « lent : ») |
+| I-4 / 4.1-7 Migrations jamais rejouées | Sur la branche : socle **v00** reconstitué depuis la production (les 5 tables d'origine, faites à la main avant la v23). La CI rejoue v00 + v23 → v48 sur un **PostgreSQL 17** neuf, deux fois, vérifie chaque colonne lue par le code et l'inscription après la v48 | `tests/test_migrations_postgres.py` (5) ; vu **échouer** sans la v29 ; passés en local sur PostgreSQL 16 |
+| **Trouvé : v25 jamais appliquée** | La contrainte `profiles_tier_check` et l'index `profiles_tier_idx` manquent en production (seule différence entre la production et la base rejouée). Données propres : 7 `free`, 8 `vip`, l'appliquer ne change aucune ligne. **Attend ton accord** | `pg_constraint` et `pg_indexes` : production contre base rejouée ; `select tier, count(*) from profiles` |
+| 4.3 Replis silencieux | Sur la branche : chaque repli « colonne absente » de la couche données écrit un journal ERREUR et allume la carte rouge de /admin (`core/schema.signaler`) | `tests/test_schema.py`, `tests/test_identite_exercice.py` |
+| 4.1-5 Paiement sans trace | Sur la branche : un paiement Stripe sans compte rattachable écrit `paiement_sans_compte` + journal ERREUR ; une résiliation écrit `vip_resilie` | `tests/test_stripe_suppression.py` (2) |
+| m2 Mots de passe fuités | **Résolu par toi** : fournisseur e-mail désactivé dans Supabase, Google seul | ta capture du 10/10 (Email : désactivé, Google : activé) |
+| m5 Journaux « error » | Sur la branche, complété : les journaux de **gunicorn** suivent la même règle (INFO sur la sortie standard, WARNING+ sur la sortie d'erreur) | `tests/test_journaux.py` |
+| **m6 CSP faible** | Sur la branche : **CSP bloquante, sans `unsafe-inline` ni `unsafe-eval`** pour les scripts. Alpine passe en version CSP (3.17.4) ; 62 expressions réécrites, 30 `onclick`/`onchange` retirés, chaque script de page porte un jeton neuf par réponse. Les blocages arrivent dans les journaux (« CSP bloqué »). Retour arrière sans déploiement : `CSP_OBSERVER=1` | Alpine version CSP sans réécrire les pages : **1 761 erreurs** (32 couples page × profil) ; après réécriture, politique bloquante : **0 erreur Alpine ou CSP** (22 pages × profils gratuit, PRO et essai, plus admin et pages publiques). `tests/test_csp.py` (80) ; `tests/e2e/test_csp_navigateur.py` (8, dont un script injecté effectivement bloqué) |
+| m7 Message sur les boutons | Sur la branche : le refus de « Série faite » s'écrit dans la carte, plus en bandeau par-dessus « Enregistrer » / « Skip » | `tests/js/test_petits_correctifs.js` (2) |
+| m12 E-mail et déconnexion partout | Sur la branche : carte **COMPTE** en tête de Gestion (e-mail, badge PRO / ESSAI, déconnexion) ; la barre du haut disparaît | `tests/test_mineurs_audit.py`, `tests/test_essai_pro.py` |
+| 4.3 Verbes en double | Sur la branche : « Réinitialiser les poids » et « Recommencer cet exercice » retirés de la carte d'exercice | `tests/test_mineurs_audit.py` |
+
+**Trouvé en route** :
+- **Accents** : la version CSP 3.15.12 d'Alpine lit `\u00e9` comme « u00e9 », or les données d'exercice arrivent ainsi encodées dans la page. Avec elle, le chrono de repos annonçait « Du00e9veloppu00e9 couchu00e9 » et l'historique d'une variante était cherché sous ce nom (les séries, envoyées par le formulaire, restaient justes). D'où la 3.17.4, qui les décode (empreintes vérifiées contre npm) : le test navigateur `test_le_repos_part_a_serie_faite_avec_le_bon_exercice` **échoue** avec la 3.15.12 et passe avec la 3.17.4.
+- **Sauvegarde envoyée deux fois** : `init()` était appelé deux fois sur 5 pages (Programme, Cardio, Coach, Onboarding, Plaques). Reproduit sur l'ancienne version : quitter Programme après une modification envoyait **2** sauvegardes, **1** maintenant.
+- **App Android** : lu dans le code de Capacitor 7.6.6, son pont natif s'injecte hors de portée de la CSP. À confirmer sur téléphone après déploiement.
+
+**Reste ouvert** : I-2 à mesurer en production ; v25 (ton accord) ; les idées de la partie 4.2 (ce sont des fonctionnalités, pas des défauts).
+
+**Tests au 10/10** : 1 461 tests Python passent (dont 33 navigateur et 5 sur PostgreSQL), 1 423 sur Redis simulé (hors navigateur), 129 tests JS.
+
 ## Mise à jour du 10/10/2026 — v48 appliquée, réponses du propriétaire · note inchangée : **6,6 / 10**
 
 | Repère | Statut | Preuve |
