@@ -1,5 +1,17 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 11/10/2026 — « Série faite » : le téléphone d'abord (axe 12, idée 4.2-2) · note inchangée : **6,6 / 10**
+
+Sur une branche, **ni fusionné ni déployé**.
+
+| Constat | Correction | Preuve |
+|---|---|---|
+| La carte attend le serveur (~2 s en production) pour dire « Enregistré », passer au vert et proposer « Exercice suivant » | La série est écrite dans la file du téléphone **avant** de partir ; la carte confirme tout de suite, l'envoi se fait en arrière-plan | Mesuré dans la page, serveur ralenti à 2 s : confirmation **7 à 50 ms** (avant : ~2 050 ms). `tests/e2e/test_serie_instantanee.py` : < 300 ms serveur muet |
+| **Trouvé : une série validée puis l'app fermée pendant l'envoi était perdue** (seulement dans le brouillon de la carte, jamais renvoyée) | Elle est dans la file avant l'envoi : elle repart seule au prochain lancement | Reproduit sur l'ancienne version (rien en base 12 s après la relance, file vide) ; la nouvelle l'enregistre seule. Test navigateur `test_une_app_fermee_pendant_lenvoi_ne_perd_rien` |
+| La file n'était rejouée qu'au chargement d'une page ou au retour du réseau signalé par le téléphone (souvent jamais au sous-sol) | Nouvel essai automatique : 3 s, 6 s… 30 s, et dès que l'app revient au premier plan ; la page ne se recharge plus | `test_la_serie_est_confirmee_sans_attendre_le_serveur` (renvoi seul, sans rechargement) ; `tests/js/test_offline.js` |
+
+L'axe 12 demande aussi « Série faite < 300 ms **en production** » côté serveur : à mesurer à la prochaine séance réelle (`Server-Timing`). La note attend cette mesure.
+
 ## Mise à jour du 10/10/2026, 14:45 UTC — PR #37 en production, v25 appliquée · note inchangée : **6,6 / 10**
 
 | Repère | Statut | Preuve |
