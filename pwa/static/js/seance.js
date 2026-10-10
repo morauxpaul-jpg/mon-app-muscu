@@ -266,6 +266,18 @@
       // Case « échauffement » proposée seulement si la base sait la garder à
       // part (migration v43) : sinon la série compterait comme du travail.
       echauffOk: !!CONFIG.echauffements,
+      // Lectures et gestes pour le gabarit : Alpine CSP ne connaît ni
+      // Number(), ni String(), ni les fonctions fléchées, ni les globales.
+      aDuTemps: function (s) { return Number(s.reps) > 0; },
+      aUneSerieFaite: function () {
+        return this.sets.some(function (s) { return Number(s.reps) > 0; });
+      },
+      placeholderReps: function () {
+        var sg = this.suggestion;
+        return sg && sg.reps ? String(sg.reps) : (this.targetReps || "0");
+      },
+      ouvrirFiche: function () { if (window.showExoInfo) window.showExoInfo(this.exoInfo); },
+      deplacer: function (sens) { window.moveSeanceExo(this.$el, sens); },
       basculerEchauffement: function (s) {
         s.type = s.type === "echauffement" ? "" : "echauffement";
         // Un échauffement ne prend pas la place d'une série de travail : le
@@ -953,6 +965,20 @@
       var comp = window.Alpine && window.Alpine.$data(list);
       if (comp && comp.persistOrder) comp.persistOrder();
     } catch (e) {}
+  };
+
+  // ── « Nouvel exercice » (_seance_ajout_exercice.html) ─────────────
+  window.ajoutExoSeance = function () {
+    return {
+      newName: "", newMuscle: "Pecs", newSets: 3,
+      showLib: false, libFilter: "Tous", libSearch: "",
+      choisirDansBiblio: function (ex, groupe) {
+        this.newName = ex.name;
+        this.newMuscle = this.$biblio.muscleDe(groupe, "Autre");
+        this.newSets = ex.defaultSets;
+        this.showLib = false;
+      },
+    };
   };
 
   // ── Bloc cardio inline ───────────────────────────────────────────

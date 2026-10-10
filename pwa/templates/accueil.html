@@ -23,7 +23,7 @@
     {# x-show pilote `display` du wrapper ; le flex reste sur la carte interne
        pour qu'Alpine ne l'écrase pas (sinon le bandeau retombe en block et le
        bouton « Reprendre » déborde sur le contenu du dessous). #}
-    <div class="s-da12f2" x-data="{ show: true }" x-show="show" x-init="if (sessionStorage.getItem('reac_hidden')) show = false">
+    <div class="s-da12f2" x-data="bandeauRetour" x-show="show">
       <div class="card s-59ad76">
         <span class="s-90b8e7">👋</span>
         <div class="s-7f784d">
@@ -31,7 +31,7 @@
           <div class="s-b93cfb">Ça fait {{ days_inactive }} jours — on reprend en douceur&nbsp;?</div>
         </div>
         <a href="/seance" class="btn primary s-b190ca" data-haptic="1">Reprendre</a>
-        <button class="s-ceb723" type="button" @click="show = false; sessionStorage.setItem('reac_hidden','1')" aria-label="Masquer">×</button>
+        <button class="s-ceb723" type="button" @click="masquer()" aria-label="Masquer">×</button>
       </div>
     </div>
   {% endif %}
@@ -220,7 +220,7 @@
     "tonnage": vol_week, "exos": exos_count
   }|tojson }}</script>
   <button type="button" class="btn label-icon s-c37024" data-haptic="1"
-          onclick="shareProgress(this)">
+          data-partage-progres>
     <svg class="icon icon-sm"><use href="/static/img/icons.svg#sparkle"/></svg>Partager ma progression
   </button>
   <script src="/static/js/share-card.js" defer></script>
@@ -338,7 +338,7 @@
   {# ── Upsell post-win (free, une seule fois après le 3ᵉ entraînement) ── #}
   {% if show_upsell %}
   <div class="s-33fced" x-data="{ open: true }" x-show="open"
-       @click="if($event.target===$el) open=false">
+       @click.self="open=false">
     <div class="s-acf69f">
       <div class="s-feab50">🔥</div>
       <h3 class="s-748a7b">{{ upsell_sessions }} séances au compteur !</h3>
@@ -358,7 +358,21 @@
   <div id="pack-horsligne" class="pack-horsligne" hidden>✓ Séances de la semaine prêtes hors-ligne</div>
   <script type="application/json" id="precache-urls">{{ precache_urls|default([])|tojson }}</script>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
+    // Bandeau de retour après une pause : masqué pour le reste de la visite.
+    function bandeauRetour() {
+      return {
+        show: true,
+        init() {
+          try { if (sessionStorage.getItem('reac_hidden')) this.show = false; } catch (e) {}
+        },
+        masquer() {
+          this.show = false;
+          try { sessionStorage.setItem('reac_hidden', '1'); } catch (e) {}
+        },
+      };
+    }
+
     // Debrief : appelé une seule fois, juste après une séance terminée.
     function debriefCard(info) {
       return {

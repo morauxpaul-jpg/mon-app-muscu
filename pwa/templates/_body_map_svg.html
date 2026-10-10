@@ -1,6 +1,7 @@
 {# Carte anatomique — polygones extraits de react-body-highlighter (MIT © GV79).
    ViewBox 100×200. Chaque groupe musculaire FR est une collection de <polygon>
-   enveloppée dans un <g class="zone" onclick="sel('…')">.
+   enveloppée dans un <g class="zone" data-muscle="…"> ; le clic est branché
+   par le script de progres.html (la CSP refuse les onclick).
 
    - `svg_ctx[m]` (préparé par routes/progres.py) fournit `col`, `active`,
      `sid`, fills et opacité.
@@ -53,7 +54,7 @@
 
   {# Muscles trackés — un <g> cliquable par muscle #}
   {% for m, polys in body_polygons.anterior.items() %}
-    <g class="zone{% if m in svg_ctx and svg_ctx[m].active %} active{% endif %}" onclick="sel('{{ m }}')" filter="{% if m in svg_ctx and svg_ctx[m].active %}url(#body-glow-f){% endif %}">
+    <g class="zone{% if m in svg_ctx and svg_ctx[m].active %} active{% endif %}" data-muscle="{{ m }}" filter="{% if m in svg_ctx and svg_ctx[m].active %}url(#body-glow-f){% endif %}">
       <title>{{ m }}{% if m in svg_ctx and svg_ctx[m].active %} · {{ svg_ctx[m].col }}{% endif %}</title>
       {% for pts in polys %}
         <polygon points="{{ pts }}" fill="{{ polygon_fill(m, 'f') }}" stroke="var(--body-stroke, #2a4466)" stroke-width="0.3"/>
@@ -81,7 +82,7 @@
   </g>
 
   {% for m, polys in body_polygons.posterior.items() %}
-    <g class="zone{% if m in svg_ctx and svg_ctx[m].active %} active{% endif %}" onclick="sel('{{ m }}')" filter="{% if m in svg_ctx and svg_ctx[m].active %}url(#body-glow-b){% endif %}">
+    <g class="zone{% if m in svg_ctx and svg_ctx[m].active %} active{% endif %}" data-muscle="{{ m }}" filter="{% if m in svg_ctx and svg_ctx[m].active %}url(#body-glow-b){% endif %}">
       <title>{{ m }}{% if m in svg_ctx and svg_ctx[m].active %} · {{ svg_ctx[m].col }}{% endif %}</title>
       {% for pts in polys %}
         <polygon points="{{ pts }}" fill="{{ polygon_fill(m, 'b') }}" stroke="var(--body-stroke, #2a4466)" stroke-width="0.3"/>

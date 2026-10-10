@@ -49,8 +49,8 @@
   <div class="card s-da12f2">
     <div class="label-icon s-30701f"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#bell"/></svg>Relance des inactifs</div>
     <p class="s-6c8ea5">Envoie un push aux abonnés inactifs depuis 3 à 30 jours.</p>
-    <button type="button" id="reac-btn" class="btn s-046678" onclick="adminSendReactivation(this)">Envoyer la relance</button>
-    <button type="button" class="btn s-a4a5b8" onclick="adminSendTestPush(this)">M'envoyer une notif de test</button>
+    <button type="button" id="reac-btn" class="btn s-046678">Envoyer la relance</button>
+    <button type="button" id="test-push-btn" class="btn s-a4a5b8">M'envoyer une notif de test</button>
     <div class="s-7566f6" id="reac-result" style="display:none;"></div>
   </div>
 
@@ -97,12 +97,12 @@
   </div>
 
   {# ── Modal fiche user ── #}
-  <div class="s-1e20da" id="admin-user-modal" style="display:none;" onclick="if(event.target===this){this.style.display='none'}">
+  <div class="s-1e20da" id="admin-user-modal" style="display:none;">
     <div class="s-c1734a">
       <h3 class="s-9117e2" id="admin-u-title"></h3>
       <div class="s-e54640" id="admin-u-body">Chargement…</div>
       <div class="s-80a892">
-        <button type="button" class="btn btn-cancel s-97445a" onclick="document.getElementById('admin-user-modal').style.display='none'">Fermer</button>
+        <button type="button" class="btn btn-cancel s-97445a" id="admin-user-close">Fermer</button>
       </div>
     </div>
   </div>
@@ -134,7 +134,7 @@
     .mrow-admin b { color:var(--text-1); }
   </style>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Recherche live
     (function() {
       var input = document.getElementById('admin-search');
@@ -284,5 +284,12 @@
         })
         .catch(function() { btn.disabled = false; btn.textContent = 'Erreur — réessayer'; });
     }
+
+    // Branchés ici : la CSP refuse les onclick écrits dans le HTML.
+    document.getElementById('reac-btn').addEventListener('click', function () { adminSendReactivation(this); });
+    document.getElementById('test-push-btn').addEventListener('click', function () { adminSendTestPush(this); });
+    var modaleUser = document.getElementById('admin-user-modal');
+    modaleUser.addEventListener('click', function (e) { if (e.target === modaleUser) modaleUser.style.display = 'none'; });
+    document.getElementById('admin-user-close').addEventListener('click', function () { modaleUser.style.display = 'none'; });
   </script>
 {% endblock %}

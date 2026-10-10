@@ -1,9 +1,19 @@
 // Éditeur de programme (composant Alpine `programmeApp`).
-// Données posées par templates/programme.html avant ce script : BORNES,
-// PROG_IS_VIP, et les blocs JSON #prog-initial / #catalog-data.
+// Données posées par templates/programme.html, en blocs JSON (la CSP refuse
+// les <script> écrits dans la page) : #prog-bornes, #prog-vip,
+// #prog-initial et #catalog-data.
+function lireDonneesPage(id, defaut) {
+  var el = document.getElementById(id);
+  try { return el ? JSON.parse(el.textContent) : defaut; } catch (e) { return defaut; }
+}
+var BORNES = lireDonneesPage('prog-bornes', { series: 20, exos: 30, seances: 30 });
+
 function programmeApp() {
   return {
-    isVip: !!window.PROG_IS_VIP,
+    isVip: !!lireDonneesPage('prog-vip', false),
+    // Copie pour les attributs (:max="BORNES.series") : Alpine CSP refuse
+    // de lire un objet posé sur `window`.
+    BORNES: Object.assign({}, BORNES),
     prog: {},
     planning: {},
     rotation: [],
@@ -480,5 +490,124 @@ function programmeApp() {
       this.cardio.splice(i, 1);
       this.scheduleSave();
     },
+
+    // ── Gestes appelés depuis les gabarits ──
+    // Alpine CSP n'accepte qu'une expression par attribut : « renommer puis
+    // fermer » devient une méthode. Appelée depuis une carte, `this` voit
+    // aussi l'état de la carte (sname, newName, confirmDel…) : Alpine
+    // fusionne les portées imbriquées.
+    commencerRenommage() {
+      this.renaming = true;
+      this.newName = this.sname;
+      var carte = this.$el.closest('.card');
+      this.$nextTick(function () {
+        var champ = carte && carte.querySelector('.rn-input');
+        if (champ) champ.focus();
+      });
+    },
+    validerRenommage() {
+      this.renameSeance(this.sname, this.newName);
+      this.renaming = false;
+    },
+    supprimerSeance() {
+      this.deleteSeance(this.sname);
+      this.confirmDel = false;
+    },
+    deplacerSeance(ev) {
+      this.moveSeanceToProg(this.sname, ev.target.value);
+      this.showMove = false;
+      ev.target.value = '';
+    },
+    bornerEtSauver(ex) {
+      ex.sets = this.bornerSeries(ex.sets);
+      this.scheduleSave();
+    },
+    aLeMuscle(ex, muscle) {
+      return (ex.muscle || '').split(',').map(function (m) { return m.trim(); }).indexOf(muscle) >= 0;
+    },
+    supprimerExo() {
+      this.deleteExo(this.sname, this.exIdx);
+      this.confirmExoDel = false;
+    },
+    choisirDansBiblio(ex, groupe) {
+      this.newExo.name = ex.name;
+      this.newExo.sets = ex.defaultSets;
+      this.newExo.muscles = [this.$biblio.muscleDe(groupe, groupe)];
+      this.showLibrary = false;
+    },
+    saisieManuelle() {
+      this.showLibrary = false;
+      this.newExo = { name: '', sets: 3, muscles: [] };
+    },
+    ajouterNouvelExo() {
+      this.addExo(this.sname, this.newExo);
+      this.newExo = { name: '', sets: 3, muscles: [] };
+    },
+    creerProgramme() {
+      var nom = (this.newProgName || '').trim();
+      if (!nom || !this.canAddProgramme()) return;
+      this.addProgramme(nom);
+      this.newProgName = '';
+    },
+    supprimerProgramme(id) {
+      this.deleteProgramme(id);
+      this.c = false;
+    },
+    creerSeance(progId) {
+      var nom = (this.newSname || '').trim();
+      if (!nom) return;
+      this.addSeance(nom, progId);
+      this.newSname = '';
+    },
+    ajouterDuCatalogue() {
+      this.addSeanceFromCatalog(this.catalogPick, this.catalogSeance, this.destProg);
+      this.catalogSeance = '';
+    },
+    // Import : dit ce que contient le fichier avant de remplacer quoi que ce soit.
+    lireFichierProgramme(ev) {
+      var fichier = ev.target.files[0];
+      if (!fichier) return;
+      var self = this;
+      var lecteur = new FileReader();
+      lecteur.onload = function (e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          if (data && data._format === 'muscutracker_program_v1') {
+            var nb = Object.keys(data.seances || {}).length;
+            self.detected = 'Programme « ' + (data.name || '?') + ' » — ' + nb + ' séance(s) détectée(s).';
+          } else {
+            self.detected = 'Format non reconnu.';
+          }
+        } catch (_) { self.detected = 'Fichier illisible.'; }
+      };
+      lecteur.readAsText(fichier);
+    },
   };
 }
+
+// « Changer de programme » : ouvert d'office, et le programme suggéré mis
+// en avant, quand le coach envoie ici avec ?apply=<id>.
+function changeProgramme() {
+  return {
+    open: false,
+    mode: 'replace',
+    applyId: '',
+    init() {
+      var id = (new URLSearchParams(window.location.search).get('apply') || '').trim();
+      if (!id) return;
+      this.applyId = id;
+      this.open = true;
+      var bloc = this.$el;
+      var details = bloc.closest('details');
+      if (details) details.open = true;
+      this.$nextTick(function () {
+        var carte = document.getElementById('catalog-' + id);
+        (carte || bloc).scrollIntoView({ behavior: 'smooth', block: carte ? 'center' : 'start' });
+      });
+    },
+  };
+}
+
+document.addEventListener('alpine:init', function () {
+  window.Alpine.data('changeProgramme', changeProgramme);
+});

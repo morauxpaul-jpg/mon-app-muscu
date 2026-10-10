@@ -25,9 +25,9 @@
     <div class="card-label">Ton lien d'invitation</div>
     <div class="s-f12844">
       <input id="ref-link" type="text" class="field s-77df1c" readonly value="">
-      <button type="button" class="btn s-6ee066" id="ref-copy" data-haptic="1" onclick="copyRefLink(this)">Copier</button>
+      <button type="button" class="btn s-6ee066" id="ref-copy" data-haptic="1">Copier</button>
     </div>
-    <button type="button" class="btn primary label-icon s-d5b41c" data-haptic="1" onclick="shareRefLink(this)">
+    <button type="button" class="btn primary label-icon s-d5b41c" id="ref-share" data-haptic="1">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>Partager mon lien
     </button>
   </div>
@@ -48,7 +48,7 @@
     Crédité quand ton ami termine son inscription. L'essai donne accès à la nutrition et aux stats détaillées.
   </p>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function () {
       var code = {{ referral_code|tojson }};
       var link = location.origin + '/?ref=' + encodeURIComponent(code);
@@ -82,6 +82,12 @@
         }
         window.copyRefLink();
       };
+
+      // Branchés ici : la CSP refuse les onclick écrits dans le HTML.
+      var copier = document.getElementById('ref-copy');
+      if (copier) copier.addEventListener('click', function () { window.copyRefLink(); });
+      var partager = document.getElementById('ref-share');
+      if (partager) partager.addEventListener('click', function () { window.shareRefLink(); });
     })();
   </script>
 {% endblock %}

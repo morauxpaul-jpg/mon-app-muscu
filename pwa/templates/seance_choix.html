@@ -10,7 +10,7 @@
   {# ── Auto-reprise : si séance active pour aujourd'hui, redirige direct ──
      Ne se déclenche que si on arrive sans ?date= (= depuis onglet Séance),
      pour que « ← Changer de séance » reste utilisable. #}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function () {
       try {
         var params = new URLSearchParams(window.location.search);
@@ -41,7 +41,7 @@
   </div>
 
   {# ── Banner séance en cours ─────────────────────── #}
-  <div id="active-session-banner" style="display:none;" class="card" onclick="window.location.href=this.dataset.href;">
+  <div id="active-session-banner" style="display:none;" class="card">
     <div class="label-icon s-dc610b">
       <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clock"/></svg>SÉANCE EN COURS
     </div>
@@ -50,7 +50,7 @@
       <span class="s-8d7d00">Reprendre &rarr;</span>
     </div>
   </div>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function() {
       try {
         var data = JSON.parse(localStorage.getItem('active_session') || '{}');
@@ -66,6 +66,7 @@
         banner.style.display = 'block';
         banner.style.borderColor = 'var(--accent)';
         banner.style.cursor = 'pointer';
+        banner.addEventListener('click', function () { window.location.href = banner.dataset.href; });
       } catch(e) {}
     })();
   </script>
@@ -173,7 +174,7 @@
     </a>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     document.getElementById('page-loader').style.display = 'none';
     document.addEventListener('submit', function(e) {
       var btn = e.target.querySelector('button[type="submit"]');

@@ -22,6 +22,7 @@ const APP_SHELL = [
   "/static/img/icons.svg",
   "/static/js/sw-register.js",
   "/static/js/offline.js",
+  "/static/js/alpine-composants.js",
   "/static/js/alpine-sort.min.js",
   "/static/js/alpine.min.js",
   "/static/js/tuto-engine.js",

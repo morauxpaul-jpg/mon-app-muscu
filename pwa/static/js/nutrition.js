@@ -22,11 +22,32 @@ function mealForm() {
     q: '',
     results: [],
     basket: [],
-    recents: RECENTS,
+    // Copie : Alpine CSP refuse de lire un tableau posé sur `window`.
+    recents: RECENTS.slice(),
     offResults: [],
     offBusy: false,
     offError: '',
     offFor: '',
+    // Ouvre (ou referme) un repas, formulaire remis à neuf.
+    basculerRepas(mt) {
+      this.stopScan();
+      this.open_meal = this.open_meal === mt ? '' : mt;
+      this.mode = 'aliments';
+      this.items = []; this.basket = []; this.q = ''; this.results = [];
+      this.offResults = []; this.offError = ''; this.scanError = '';
+    },
+    choisirMode(mode, mt) {
+      this.stopScan();
+      this.mode = mode;
+      if (mode !== 'aliments') return;
+      var refs = this.$refs;
+      this.$nextTick(function () {
+        var champ = refs['food-q-' + mt];
+        if (champ) champ.focus();
+      });
+    },
+    arrondi(x) { return Math.round(x); },
+    nomsDesItems() { return this.items.map(function (i) { return i.name; }).join(', '); },
     search() {
       this.offResults = []; this.offError = ''; this.offFor = '';
       var words = foodNorm(this.q).split(/\s+/).filter(Boolean);
@@ -175,3 +196,14 @@ function mealForm() {
     },
   };
 }
+
+// Objectif nutrition : la carte cochée s'allume. Branché ici, la CSP refuse
+// les onchange écrits dans le HTML.
+document.querySelectorAll('input[name="objectif_nutrition"]').forEach(function (radio) {
+  radio.addEventListener('change', function () {
+    radio.parentElement.parentElement.querySelectorAll('label').forEach(function (l) {
+      l.classList.remove('selected');
+    });
+    radio.parentElement.classList.add('selected');
+  });
+});

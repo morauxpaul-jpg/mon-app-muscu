@@ -2,7 +2,7 @@
 {% block title %}Programme · Muscu Tracker{% endblock %}
 
 {% block content %}
-<div x-data="programmeApp()" x-init="init()">
+<div x-data="programmeApp">
   <div class="s-a2cd8b">
     <h1 class="label-icon s-ef0b7a"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Programme</h1>
     <span class="save-pill s-89a599" x-show="saveState" x-text="saveState" x-transition></span>
@@ -101,11 +101,11 @@
       <input type="text" x-model="newProgName" class="field s-5d50d5"
              :disabled="!canAddProgramme()"
              :placeholder="canAddProgramme() ? 'Nouveau programme (ex: Force, Hypertrophie…)' : '1 programme max en gratuit'" maxlength="80"
-             @keydown.enter.prevent="if(canAddProgramme() && newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
+             @keydown.enter.prevent="creerProgramme()">
       <button type="button" class="btn violet label-icon"
               :class="{ locked: !canAddProgramme() }"
               :disabled="!canAddProgramme()"
-              @click="if(canAddProgramme() && newProgName.trim()){ addProgramme(newProgName.trim()); newProgName=''; }">
+              @click="creerProgramme()">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Créer
       </button>
     </div>
@@ -143,7 +143,7 @@
                 <span class="inline-confirm s-c6af6d">
                   <span class="confirm-label">Supprimer ce programme ?</span>
                   <button type="button" class="btn mini" @click="c=false">Annuler</button>
-                  <button type="button" class="btn mini btn-danger" @click="deleteProgramme(pg.id); c=false">Confirmer</button>
+                  <button type="button" class="btn mini btn-danger" @click="supprimerProgramme(pg.id)">Confirmer</button>
                 </span>
               </template>
             </div>
@@ -163,9 +163,9 @@
         <div class="s-cc0019">
           <input type="text" x-model="newSname" class="field s-5d50d5"
                  placeholder="Nouvelle séance (ex: Push)" maxlength="60"
-                 @keydown.enter.prevent="if(newSname.trim()){ addSeance(newSname.trim(), pg.id); newSname=''; }">
+                 @keydown.enter.prevent="creerSeance(pg.id)">
           <button type="button" class="btn primary label-icon"
-                  @click="if(newSname.trim()){ addSeance(newSname.trim(), pg.id); newSname=''; }">
+                  @click="creerSeance(pg.id)">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter
           </button>
         </div>
@@ -231,7 +231,7 @@
     </select>
     <button type="button" class="btn primary label-icon s-d5b41c"
             :disabled="!catalogPick || !catalogSeance"
-            @click="addSeanceFromCatalog(catalogPick, catalogSeance, destProg); catalogSeance=''">
+            @click="ajouterDuCatalogue()">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter cette séance
     </button>
   </div>
@@ -263,24 +263,7 @@
     <form method="post" action="/programme/import" enctype="multipart/form-data" x-data="{ c:false }">
       <label class="field-label" for="import-programme">Fichier du programme (.json)</label>
       <input type="file" id="import-programme" name="file" accept="application/json,.json" class="field" required
-             @change="
-               const f = $event.target.files[0];
-               if (f) {
-                 const reader = new FileReader();
-                 reader.onload = (e) => {
-                   try {
-                     const data = JSON.parse(e.target.result);
-                     if (data && data._format === 'muscutracker_program_v1') {
-                       const nb = Object.keys(data.seances || {}).length;
-                       detected = 'Programme « ' + (data.name || '?') + ' » — ' + nb + ' séance(s) détectée(s).';
-                     } else {
-                       detected = 'Format non reconnu.';
-                     }
-                   } catch(_) { detected = 'Fichier illisible.'; }
-                 };
-                 reader.readAsText(f);
-               }
-             ">
+             @change="lireFichierProgramme($event)">
       <div class="s-737546" x-show="detected" x-text="detected"></div>
       <input type="hidden" name="confirm" value="yes">
       <button type="button" class="btn primary label-icon s-ac0370" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer et remplacer</button>
@@ -295,35 +278,13 @@
   </details>
 
   {# ── Changer de programme (catalogue) ────────────── #}
-  {# x-init évalue une EXPRESSION, pas un bloc : un `try { ... }` ici lève
-     SyntaxError et le panneau ne s'ouvrait jamais après un « Appliquer ». #}
-  <details class="card s-eaaf71"
-           x-init="(new URLSearchParams(location.search).get('apply') || '').trim() && $el.setAttribute('open', '')">
+  {# Ouvert d'office quand on arrive avec ?apply=<id> (suggestion du coach) :
+     voir changeProgramme dans static/js/programme.js. #}
+  <details class="card s-eaaf71">
     <summary class="s-b52505">
       <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme (catalogue)
     </summary>
-  <div id="change-program" class="card s-64b672"
-       x-data="{
-         open: false,
-         mode: 'replace',
-         applyId: '',
-         init() {
-           try {
-             var sp = new URLSearchParams(window.location.search);
-             var id = (sp.get('apply') || '').trim();
-             if (id) {
-               this.applyId = id;
-               this.open = true;
-               var self = this;
-               this.$nextTick(function () {
-                 var el = document.getElementById('catalog-' + id);
-                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                 else document.getElementById('change-program').scrollIntoView({ behavior: 'smooth' });
-               });
-             }
-           } catch (e) {}
-         }
-       }">
+  <div id="change-program" class="card s-64b672" x-data="changeProgramme">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Changer de programme</h3>
     {% if current_program_meta %}
       <p class="s-ef3b7e">Programme actuel : <strong class="s-a80552">{{ current_program_meta.title }}</strong> — {{ current_program_meta.subtitle }}</p>
@@ -442,7 +403,7 @@
 
   {# ── Modal renommer un programme ─────────────────────────── #}
   <div class="s-40258d" x-show="renameModal.open" x-transition.opacity
-       x-init="$watch('renameModal.open', v => { if(v) document.body.appendChild($el); })"
+       x-au-corps="renameModal.open"
        @click.self="closeRenameModal()"
        @keydown.escape.window="closeRenameModal()">
     <div class="s-73d1cf"
@@ -470,10 +431,9 @@
 <script id="prog-initial" type="application/json">{{ ui_state|tojson }}</script>
 <script id="catalog-data" type="application/json">{{ catalog_programs|tojson }}</script>
 
-<script>
-  // Bornes de l'éditeur, données par le serveur (routes/programme.py).
-  var BORNES = {{ bornes|tojson }};
-  window.PROG_IS_VIP = {{ 'true' if is_vip else 'false' }};
-</script>
+{# Bornes de l'éditeur (routes/programme.py) et statut PRO : des données, pas
+   du code — la CSP refuse les <script> écrits dans la page. #}
+<script id="prog-bornes" type="application/json">{{ bornes|tojson }}</script>
+<script id="prog-vip" type="application/json">{{ 'true' if is_vip else 'false' }}</script>
 <script src="/static/js/programme.js"></script>
 {% endblock %}

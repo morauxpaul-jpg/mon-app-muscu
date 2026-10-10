@@ -7,27 +7,27 @@
          x-data='exoBlock({{ exo_index }}, {{ exo|sans_prive|tojson }})'>
       <div class="exo-head">
         <div class="exo-reorder">
-          <button type="button" class="exo-move-btn" onclick="moveSeanceExo(this,-1)" aria-label="Monter l'exercice" title="Monter">
+          <button type="button" class="exo-move-btn" @click="deplacer(-1)" aria-label="Monter l'exercice" title="Monter">
             <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-up"/></svg>
           </button>
           <button type="button" class="exo-drag-handle" aria-label="Déplacer l'exercice" title="Maintenir pour glisser">
             <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg>
           </button>
-          <button type="button" class="exo-move-btn" onclick="moveSeanceExo(this,1)" aria-label="Descendre l'exercice" title="Descendre">
+          <button type="button" class="exo-move-btn" @click="deplacer(1)" aria-label="Descendre l'exercice" title="Descendre">
             <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-down"/></svg>
           </button>
         </div>
         {# L'illustration à côté du nom, pas cachée derrière le « ? » : on
            reconnaît un mouvement d'un coup d'œil, on ne le cherche pas. #}
         {% if exo.info and exo.info.illustration %}
-          <button type="button" class="exo-vignette" @click.stop="showExoInfo(exoInfo)"
+          <button type="button" class="exo-vignette" @click.stop="ouvrirFiche()"
                   aria-label="Agrandir l'illustration de {{ exo.base }}">
             <img src="/static/img/exercises/{{ exo.info.image }}" alt="" loading="lazy" decoding="async">
           </button>
         {% endif %}
         <div class="s-7f784d">
           <div class="exo-title"><span class="exo-bullet"></span>{{ exo.base|upper }}
-              <button type="button" class="exo-info-btn" @click.stop="showExoInfo(exoInfo)"
+              <button type="button" class="exo-info-btn" @click.stop="ouvrirFiche()"
                       title="Info exercice" aria-label="Fiche technique de l'exercice {{ exo.base }}">?</button>
               <button type="button" class="exo-info-btn exo-chrono-btn" data-tuto-seance="chrono"
                       @click.stop="manualRestTimer()" title="Lancer le chrono de repos"
@@ -178,15 +178,15 @@
             </div>
             <ul class="iso-sets-done">
               <template x-for="(s, i) in sets" :key="i">
-                <li :class="{ done: Number(s.reps) > 0 }">
+                <li :class="{ done: aDuTemps(s) }">
                   <span>Série <span x-text="i+1"></span></span>
-                  <span x-text="Number(s.reps) > 0 ? s.reps + ' s' : '—'"></span>
+                  <span x-text="aDuTemps(s) ? s.reps + ' s' : '—'"></span>
                 </li>
               </template>
             </ul>
             <div class="iso-chrono-row-actions">
               <button type="button" class="btn label-icon" @click="addSet()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter une série</button>
-              <button type="button" class="btn" @click="isoClearLast()" x-show="sets.some(s => Number(s.reps) > 0)">Effacer la dernière</button>
+              <button type="button" class="btn" @click="isoClearLast()" x-show="aUneSerieFaite()">Effacer la dernière</button>
             </div>
           </div>
         </template>
@@ -227,7 +227,7 @@
                     <label class="serie-champ">
                       <span class="serie-etiq">Reps</span>
                       <input type="number" inputmode="numeric" min="0" x-model.number="s.reps"
-                             :placeholder="suggestion && suggestion.reps ? String(suggestion.reps) : (targetReps || '0')"
+                             :placeholder="placeholderReps()"
                              :aria-label="'Répétitions série ' + (i + 1)" @input.once="aSaisi()">
                     </label>
                     <label class="serie-champ" x-show="showWeight">

@@ -38,13 +38,13 @@
   <p class="s-eb503d">Combien de disques mettre de chaque côté pour atteindre ton poids cible.</p>
 
   <div class="card plaque-tool"
-       x-data="plaqueCalc()" x-init="init()">
+       x-data="plaqueCalc()">
 
     <div>
       <label class="field-label">Poids de la barre</label>
       <div class="bar-btns">
         <template x-for="b in barOptions" :key="b">
-          <button type="button" class="bar-btn" :class="{ active: bar === b }" @click="bar = b" x-text="String(b).replace('.', ',') + ' kg'"></button>
+          <button type="button" class="bar-btn" :class="{ active: bar === b }" @click="bar = b" x-text="kg(b)"></button>
         </template>
       </div>
     </div>
@@ -60,7 +60,7 @@
       <div class="plaque-grid">
         <template x-for="p in allPlates" :key="p">
           <button type="button" class="plaque-chip" :class="{ on: enabled.includes(p) }"
-                  @click="toggle(p)" x-text="String(p).replace('.', ',') + ' kg'"></button>
+                  @click="toggle(p)" x-text="kg(p)"></button>
         </template>
       </div>
     </div>
@@ -72,11 +72,11 @@
       </label>
       <div x-show="limitMode" x-transition.duration.150ms class="flex-show s-bfae15">
         <div class="s-2f4568">Combien de disques de chaque tu possèdes <b>par côté</b> (vide = illimité) :</div>
-        <template x-for="p in allPlates.filter(x => enabled.includes(x))" :key="'q'+p">
+        <template x-for="p in disquesActifs()" :key="'q'+p">
           <div class="s-a2cd8b">
-            <span class="s-f5701a"><span class="plaque-swatch" :style="`background:${colors[p] || '#888'}`"></span><span x-text="String(p).replace('.', ',') + ' kg'"></span></span>
+            <span class="s-f5701a"><span class="plaque-swatch" :style="fond(colors[p])"></span><span x-text="kg(p)"></span></span>
             <input type="number" inputmode="numeric" min="0" step="1" placeholder="∞" class="field s-0ae5f0"
-                   :value="counts[p] ?? ''" @input="setCount(p, $event.target.value)">
+                   :value="valeurCompte(p)" @input="setCount(p, $event.target.value)">
           </div>
         </template>
       </div>
@@ -87,7 +87,7 @@
       <div class="bar-rod"></div>
       <template x-for="(d, i) in discs" :key="i">
         <div class="disc"
-             :style="`width:${d.w}px; height:${d.h}px; background:${d.color};`"
+             :style="styleDisque(d)"
              x-text="d.label"></div>
       </template>
       <div class="bar-rod"></div>
@@ -95,20 +95,20 @@
 
     <div class="plaque-result">
       <div class="plaque-total" x-text="resultText"></div>
-      <div class="plaque-sub" x-show="perSide >= 0" x-text="`${perSide.toFixed(2).replace(/\.00$/,'')} kg par côté`"></div>
+      <div class="plaque-sub" x-show="perSide >= 0" x-text="poids(perSide) + ' kg par côté'"></div>
     </div>
 
     <div class="plaque-rows" x-show="breakdown.length">
       <template x-for="row in breakdown" :key="row.plate">
         <div class="plaque-row">
-          <span><span class="plaque-swatch" :style="`background:${row.color}`"></span><span x-text="String(row.plate).replace('.', ',') + ' kg'"></span></span>
+          <span><span class="plaque-swatch" :style="fond(row.color)"></span><span x-text="kg(row.plate)"></span></span>
           <b x-text="'× ' + row.count"></b>
         </div>
       </template>
     </div>
 
     <div class="plaque-warn" x-show="remainder > 0.001"
-         x-text="`Pas atteignable exactement avec ces disques — reste ${remainder.toFixed(2).replace(/\.00$/,'')} kg par côté.`"></div>
+         x-text="'Pas atteignable exactement avec ces disques — reste ' + poids(remainder) + ' kg par côté.'"></div>
     <div class="plaque-warn" x-show="perSide < 0">La cible est inférieure au poids de la barre.</div>
   </div>
 
@@ -118,7 +118,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce() }}">
   function plaqueCalc() {
     return {
       barOptions: [20, 15, 10, 0],
@@ -132,6 +132,17 @@
       enabled: [25, 20, 15, 10, 5, 2.5, 1.25],
       limitMode: false,
       counts: {},  // { plate: nombre dispo par côté } ; absent/null = illimité
+      // Lectures pour les gabarits (Alpine CSP : ni gabarits `${}`, ni
+      // fonctions fléchées, ni `??`).
+      kg(p) { return String(p).replace('.', ',') + ' kg'; },
+      poids(x) { return x.toFixed(2).replace(/\.00$/, ''); },
+      fond(couleur) { return 'background:' + (couleur || '#888'); },
+      styleDisque(d) { return 'width:' + d.w + 'px; height:' + d.h + 'px; background:' + d.color + ';'; },
+      disquesActifs() {
+        var actifs = this.enabled;
+        return this.allPlates.filter(function (x) { return actifs.includes(x); });
+      },
+      valeurCompte(p) { var c = this.counts[p]; return c == null ? '' : c; },
       init() {
         try {
           var saved = JSON.parse(localStorage.getItem('plaque_prefs') || '{}');

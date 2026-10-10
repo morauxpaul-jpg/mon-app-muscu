@@ -732,7 +732,8 @@ def test_accueil_has_share_button(fake_db, logged_in):
     _seed_prog(fake_db, planning={"Lundi": "Push"})
     _hist_row(fake_db, MONDAY_W52, poids=80.0, reps=8)
     html = logged_in.get("/accueil").data.decode("utf-8")
-    assert "shareProgress(this)" in html and "share-card.js" in html
+    # Branché par share-card.js (la CSP refuse les onclick écrits dans le HTML).
+    assert "data-partage-progres" in html and "share-card.js" in html
 
 
 # ── Parrainage + VIP à durée limitée ─────────────────────────────

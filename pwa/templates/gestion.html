@@ -199,9 +199,8 @@
   {% endif %}
 
   {% if hist_exercises %}
-  <script>window.HIST_EXERCISES = {{ hist_exercises|tojson }};</script>
-  <div class="card" x-data="{ open: false, oldName: '', newName: '', confirm: false,
-        count() { const e = (window.HIST_EXERCISES || []).find(x => x.name === this.oldName); return e ? e.count : 0; } }">
+  <script type="application/json" id="hist-exercises">{{ hist_exercises|tojson }}</script>
+  <div class="card" x-data="renommageExo">
     <h3 class="s-a0dcef" @click="open = !open">
       <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#refresh"/></svg>Renommer un exercice (historique)</span>
       <span x-text="open ? '−' : '+'"></span>
@@ -246,11 +245,11 @@
     <p class="s-7e1751">Relance les tutoriels pour revoir les explications pas à pas.</p>
     <div class="s-525f63">
       <button type="button" class="btn label-icon s-9f1047"
-              onclick="try{localStorage.removeItem('tutoSeen')}catch(e){} this.textContent='Se lancera à la prochaine page'; this.disabled=true;">
+              data-relancer-tuto="tutoSeen" data-message="Se lancera à la prochaine page">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Revoir le tutoriel principal
       </button>
       <button type="button" class="btn label-icon s-9f1047"
-              onclick="try{localStorage.removeItem('tutoSeanceSeen')}catch(e){} this.textContent='Se lancera à ta prochaine séance'; this.disabled=true;">
+              data-relancer-tuto="tutoSeanceSeen" data-message="Se lancera à ta prochaine séance">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Revoir le tuto séance
       </button>
     </div>
@@ -279,7 +278,7 @@
         <span>Pré-remplir les poids de la dernière séance</span>
       </label>
       <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %} onchange="handleNotifToggle(this); var r=document.getElementById('reminder-hour-row'); if(r) r.hidden = !this.checked;">
+        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %}>
         <span>Notifications de rappel &amp; relances (même app fermée)</span>
       </label>
       <p class="s-da7920">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
@@ -318,7 +317,7 @@
         <div class="detail-value s-f15bdb" id="sw-version">—</div>
       </div>
     </div>
-    <button type="button" class="btn primary label-icon s-9f1047" id="btn-check-update" onclick="checkForUpdate()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
+    <button type="button" class="btn primary label-icon s-9f1047" id="btn-check-update"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
     <p class="s-33a3e1" id="update-status"></p>
   </div>
 
@@ -407,7 +406,7 @@
     <p class="s-eea1b2"><a class="s-ab23bb" href="/confidentialite">Politique de confidentialité</a> · <a class="s-ab23bb" href="/faq">FAQ</a> · <a class="s-ab23bb" href="/mentions-legales">Mentions légales</a> · <a class="s-ab23bb" href="/cgv">CGV</a></p>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Show current SW cache version
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       fetch('/service-worker.js')
@@ -501,5 +500,38 @@
         if (perm !== 'granted') cb.checked = false;
       });
     }
+
+    // Branchements : la CSP refuse les onclick="…" écrits dans le HTML.
+    document.querySelectorAll('[data-relancer-tuto]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        try { localStorage.removeItem(btn.dataset.relancerTuto); } catch (e) {}
+        btn.textContent = btn.dataset.message;
+        btn.disabled = true;
+      });
+    });
+    var notifToggle = document.getElementById('notif-toggle');
+    if (notifToggle) notifToggle.addEventListener('change', function () {
+      handleNotifToggle(notifToggle);
+      var ligne = document.getElementById('reminder-hour-row');
+      if (ligne) ligne.hidden = !notifToggle.checked;
+    });
+    var btnMaj = document.getElementById('btn-check-update');
+    if (btnMaj) btnMaj.addEventListener('click', checkForUpdate);
+
+    // « Renommer un exercice » : combien de séries vont suivre.
+    document.addEventListener('alpine:init', function () {
+      window.Alpine.data('renommageExo', function () {
+        var bloc = document.getElementById('hist-exercises');
+        var exos = bloc ? JSON.parse(bloc.textContent) : [];
+        return {
+          open: false, oldName: '', newName: '', confirm: false,
+          count() {
+            var nom = this.oldName;
+            var e = exos.filter(function (x) { return x.name === nom; })[0];
+            return e ? e.count : 0;
+          },
+        };
+      });
+    });
   </script>
 {% endblock %}

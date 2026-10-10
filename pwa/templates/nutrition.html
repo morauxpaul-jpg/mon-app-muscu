@@ -97,7 +97,7 @@
       <div class="rpe-row s-e48e62">
         {% for val, label, sub in objectifs %}
           <label class="obj-btn s-ee88a1">
-            <input type="radio" name="objectif_nutrition" value="{{ val }}" {% if (profile.objectif_nutrition or 'maintien') == val %}checked{% endif %} style="display:none;" onchange="this.parentElement.parentElement.querySelectorAll('label').forEach(l=>l.classList.remove('selected'));this.parentElement.classList.add('selected');">
+            <input type="radio" name="objectif_nutrition" value="{{ val }}" {% if (profile.objectif_nutrition or 'maintien') == val %}checked{% endif %} style="display:none;">
             <div class="s-5db75d">{{ label }}</div>
             <div class="s-828914">{{ sub }}</div>
           </label>
@@ -242,7 +242,7 @@
 
     <div class="meal-grid">
       {% for mt_val, mt_label in meal_types %}
-        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="stopScan(); open_meal = open_meal === '{{ mt_val }}' ? '' : '{{ mt_val }}'; mode = 'aliments'; items = []; basket = []; q = ''; results = []; offResults = []; offError = ''; scanError = '';">
+        <button type="button" class="meal-btn" :class="open_meal === '{{ mt_val }}' ? 'selected' : ''" @click="basculerRepas('{{ mt_val }}')">
           <div class="meal-count">{{ meals_by_type.get(mt_val, []) | length }}</div>
           <div>{{ mt_label }}</div>
         </button>
@@ -253,11 +253,11 @@
       <div class="s-4bb900" x-show="open_meal === mt" x-cloak>
         {# Mode toggle #}
         <div class="mode-toggle">
-          <button type="button" class="mode-btn" :class="mode === 'aliments' ? 'active' : ''" @click="stopScan(); mode = 'aliments'; $nextTick(() => $refs['food-q-' + mt] && $refs['food-q-' + mt].focus())">Aliments</button>
+          <button type="button" class="mode-btn" :class="mode === 'aliments' ? 'active' : ''" @click="choisirMode('aliments', mt)">Aliments</button>
           <button type="button" class="mode-btn" :class="mode === 'scan' ? 'active' : ''" @click="openScan(mt)">Scanner</button>
-          {% if meal_plan.plats %}<button type="button" class="mode-btn" :class="mode === 'plats' ? 'active' : ''" @click="stopScan(); mode = 'plats'">Mes plats</button>{% endif %}
-          <button type="button" class="mode-btn" :class="mode === 'quick' ? 'active' : ''" @click="stopScan(); mode = 'quick'">Saisie rapide</button>
-          <button type="button" class="mode-btn" :class="mode === 'compose' ? 'active' : ''" @click="stopScan(); mode = 'compose'">Composition</button>
+          {% if meal_plan.plats %}<button type="button" class="mode-btn" :class="mode === 'plats' ? 'active' : ''" @click="choisirMode('plats', mt)">Mes plats</button>{% endif %}
+          <button type="button" class="mode-btn" :class="mode === 'quick' ? 'active' : ''" @click="choisirMode('quick', mt)">Saisie rapide</button>
+          <button type="button" class="mode-btn" :class="mode === 'compose' ? 'active' : ''" @click="choisirMode('compose', mt)">Composition</button>
         </div>
 
         {% if meal_plan.plats %}
@@ -358,7 +358,7 @@
               <template x-for="(r, ri) in offResults" :key="ri">
                 <button type="button" class="food-row" @click="pickFood(r)">
                   <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g + (r.quantity ? ' · ' + r.quantity : '')"></span></span>
-                  <span class="food-kcal"><span x-text="Math.round(r.k)"></span> kcal · 100 g</span>
+                  <span class="food-kcal"><span x-text="arrondi(r.k)"></span> kcal · 100 g</span>
                 </button>
               </template>
             </div>
@@ -370,7 +370,7 @@
                 <div class="food-item">
                   <div class="food-item-head">
                     <span class="food-name"><span x-text="b.food.n"></span><template x-if="b.food.brand"><span class="food-cat" x-text="b.food.brand"></span></template></span>
-                    <span class="food-item-kcal"><b x-text="Math.round(macro(b, 'k'))"></b> kcal</span>
+                    <span class="food-item-kcal"><b x-text="arrondi(macro(b, 'k'))"></b> kcal</span>
                     <button type="button" class="mini-btn" @click="basket.splice(idx, 1)" title="Retirer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
                   </div>
                   <div class="food-item-ctrl">
@@ -378,7 +378,7 @@
                     <select class="field s-0935c1" x-model.number="b.u" aria-label="Portion">
                       <template x-for="(u, ui) in b.food.u" :key="ui"><option :value="ui" x-text="u[0] + ' (' + u[1] + ' g)'"></option></template>
                     </select>
-                    <span class="food-item-macros">P<span x-text="Math.round(macro(b, 'p'))"></span> · G<span x-text="Math.round(macro(b, 'c'))"></span> · L<span x-text="Math.round(macro(b, 'f'))"></span></span>
+                    <span class="food-item-macros">P<span x-text="arrondi(macro(b, 'p'))"></span> · G<span x-text="arrondi(macro(b, 'c'))"></span> · L<span x-text="arrondi(macro(b, 'f'))"></span></span>
                   </div>
                 </div>
               </template>
@@ -497,7 +497,7 @@
                 <input type="hidden" name="protein" :value="sumItems('protein')">
                 <input type="hidden" name="carbs" :value="sumItems('carbs')">
                 <input type="hidden" name="fat" :value="sumItems('fat')">
-                <input type="hidden" name="note" :value="items.map(i => i.name).join(', ')">
+                <input type="hidden" name="note" :value="nomsDesItems()">
                 <button type="submit" class="btn primary label-icon s-9f1047" data-haptic="1">
                   <svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Valider le repas
                 </button>
@@ -572,7 +572,7 @@
   {% endif %}
 
   <script src="/static/js/barcode.js"></script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Données de la page, lues par static/js/nutrition.js.
     var FOODS = {{ foods|tojson }};
     var MEAL_LABELS = {{ meal_types_map|tojson }};

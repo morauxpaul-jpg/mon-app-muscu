@@ -176,8 +176,8 @@
 
     <div class="bm-wrap">
       <div class="bm-views">
-        <button class="vbtn active" id="vbtn-front" onclick="switchView('front')">FACE</button>
-        <button class="vbtn" id="vbtn-back" onclick="switchView('back')">DOS</button>
+        <button class="vbtn active" id="vbtn-front" data-vue="front">FACE</button>
+        <button class="vbtn" id="vbtn-back" data-vue="back">DOS</button>
       </div>
       <div id="bm-svg-container">
         {% include "_body_map_svg.html" %}
@@ -204,7 +204,7 @@
 
   {# ── Détail muscle sélectionné ──────────────────────── #}
   <div class="card mdetail" id="mdetail">
-    <button class="back label-icon" onclick="closeDetail()"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
+    <button class="back label-icon" id="md-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
     <h3 id="md-title">—</h3>
     <div id="md-content"></div>
     <div class="s-3dcc32" id="md-chart"></div>
@@ -291,7 +291,7 @@
     {% if all_exos %}
       <form method="get" action="/progres/exercice">
         <label class="field-label" for="exo-pick">Exercice</label>
-        <select name="exo" id="exo-pick" class="field" onchange="this.form.submit()">
+        <select name="exo" id="exo-pick" class="field">
           {% for e in all_exos %}
             <option value="{{ e }}" {% if e == sel_exo %}selected{% endif %}>{{ e }}</option>
           {% endfor %}
@@ -315,7 +315,7 @@
   </div>
 
   {% if is_vip %}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     const MDATA = {{ muscle_data|tojson }};
     const VMAP = {{ volume_map|tojson }};
 
@@ -375,6 +375,16 @@
     function closeDetail() {
       document.getElementById('mdetail').classList.remove('on');
     }
+
+    // Clics branchés ici : la CSP refuse les onclick écrits dans le HTML.
+    document.querySelectorAll('[data-vue]').forEach(function (btn) {
+      btn.addEventListener('click', function () { switchView(btn.dataset.vue); });
+    });
+    document.querySelectorAll('.zone[data-muscle]').forEach(function (zone) {
+      zone.addEventListener('click', function () { sel(zone.dataset.muscle); });
+    });
+    var retour = document.getElementById('md-retour');
+    if (retour) retour.addEventListener('click', closeDetail);
 
     // Petite courbe SVG : évolution du 1RM estimé par semaine.
     function miniLine(evo) {
@@ -556,5 +566,10 @@
 
   <style>
   </style>
-  <script>document.getElementById('page-loader').style.display = 'none';</script>
+  <script nonce="{{ csp_nonce() }}">
+    // Choisir un exercice ouvre sa page (branché ici : la CSP refuse les onchange).
+    var choixExo = document.getElementById('exo-pick');
+    if (choixExo) choixExo.addEventListener('change', function () { choixExo.form.submit(); });
+    document.getElementById('page-loader').style.display = 'none';
+  </script>
 {% endblock %}
