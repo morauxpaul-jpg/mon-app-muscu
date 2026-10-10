@@ -27,9 +27,10 @@
   <link rel="stylesheet" href="/static/css/styles-extraits.css">
   {# a11y.css en dernier : il corrige des tailles posées plus haut, sans !important. #}
   <link rel="stylesheet" href="/static/css/a11y.css">
+  <script src="/static/js/alpine-composants.js"></script>
   <script defer src="/static/js/alpine-sort.min.js"></script>
   <script defer src="/static/js/alpine.min.js"></script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   // ── Protection CSRF côté client (s'exécute avant offline.js / Alpine) ──
   // Injecte le token dans tous les form POST + l'en-tête X-CSRFToken sur les
   // fetch same-origin mutants. Aucun template à modifier individuellement.
@@ -69,7 +70,7 @@
   })();
   </script>
   {% if is_authenticated and not is_vip %}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   // Réserve l'espace du bandeau AdMob AVANT le rendu (évite tout saut de layout
   // au chargement). App native + pages à bandeau uniquement. Le bandeau réel est
   // affiché/caché par ads.js ; ici on ne fait que poser la place côté CSS.
@@ -85,7 +86,7 @@
   </script>
   {% endif %}
   {% if is_authenticated %}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   // ── Reprise de séance au démarrage à froid ──────────────────────────
   // Quand on quitte l'app (TikTok, appel…), Android peut détruire la webview :
   // au retour, l'app recharge son URL de départ et on atterrit sur l'accueil,
@@ -124,12 +125,11 @@
 <body>
   <a href="#main-content" class="skip-link">Aller au contenu</a>
   {% if is_authenticated %}
-  <div class="topbar">
-    <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg><span class="topbar-email">{{ current_user_email }}</span>{% if is_vip_full %}<span class="badge-pro topbar-badge">PRO</span>{% elif is_trial %}<span class="badge-pro topbar-badge">ESSAI</span>{% endif %}</span>
-    <form class="s-116966" method="post" action="/logout">
-      <button type="submit" class="btn topbar-logout label-icon" title="Déconnexion" aria-label="Déconnexion"><svg class="icon icon-sm"><use href="/static/img/icons.svg#log-out"/></svg><span class="topbar-logout-txt">Déconnexion</span></button>
-    </form>
-  </div>
+  {# L'e-mail et « Déconnexion » occupaient le haut de chaque page, à un
+     pouce d'une déconnexion par erreur (audit du 30/09, M9 ; 06/10, m12).
+     Ils sont dans Gestion → Compte. Reste ce qui protège le contenu : la
+     barre d'état du téléphone et le bandeau de pub du haut. #}
+  <div class="haut-page" aria-hidden="true"></div>
   {% endif %}
 
   <main id="main-content" class="app page-fade">
@@ -146,7 +146,7 @@
   {# Statut annoncé à la coquille native : la pub « App Open » est en Java,
      elle ne peut pas lire la session. Sans cet appel, un membre PRO voyait
      une pub plein écran au retour dans l'app. No-op sur le web. #}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
   (function () {
     try {
       if (window.MTAds && typeof window.MTAds.setTier === "function") {
@@ -164,7 +164,7 @@
   </script>
   {% if is_authenticated and not is_vip %}
   {# Pubs AdMob — uniquement dans l'app native Capacitor (no-op sur web/PWA). #}
-  <script>window.__ADS__ = {{ {"banner": admob_banner_id, "interstitial": admob_interstitial_id} | tojson }};</script>
+  <script nonce="{{ csp_nonce() }}">window.__ADS__ = {{ {"banner": admob_banner_id, "interstitial": admob_interstitial_id} | tojson }};</script>
   <script src="/static/js/ads.js" defer></script>
   {% endif %}
   <script src="/static/js/sw-register.js"></script>
@@ -175,7 +175,7 @@
   <script src="/static/js/tutorial.js"></script>
   <script src="/static/js/ui-fx.js"></script>
   <script src="/static/js/prefetch.js" defer></script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Alpine.js fallback: if Alpine not loaded after 3s, show fallback message
     (function() {
       var fallbacks = document.querySelectorAll('.alpine-fallback');
@@ -190,8 +190,8 @@
     })();
   </script>
   {% if is_authenticated %}
-  <script>initTutorial();</script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">initTutorial();</script>
+  <script nonce="{{ csp_nonce() }}">
     // Nouveautés (patch notes) + proposition de notifications.
     //  • Nouvel utilisateur (aucun lastSeenVersion) : on NE montre PAS l'historique
     //    des nouveautés — tout est neuf pour lui. On lui propose plutôt d'activer
@@ -239,7 +239,7 @@
           return title + date + '<ul style="padding-left:18px;margin:0 0 4px;font-size:0.88rem;line-height:1.7;color:var(--text-2);">' + items + '</ul>';
         }).join('');
         var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.50);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" id="patchnotes-modal">' +
-          '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:18px;max-width:360px;width:calc(100vw - 32px);color:var(--text-1);max-height:80vh;overflow-y:auto;box-shadow:0 8px 48px rgba(0,0,0,0.6);" onclick="event.stopPropagation()">' +
+          '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:18px;max-width:360px;width:calc(100vw - 32px);color:var(--text-1);max-height:80vh;overflow-y:auto;box-shadow:0 8px 48px rgba(0,0,0,0.6);"">' +
           sections +
           '<button id="patchnotes-ok" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:500;font-size:0.9rem;cursor:pointer;margin-top:10px;">OK, compris</button>' +
           '</div></div>';
@@ -298,7 +298,7 @@
       function showNotifOffer() {
         try { if (localStorage.getItem('notifPrompted') === '1') return; } catch(e) {}
         var html = '<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.50);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" id="notif-offer-modal">' +
-          '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:20px;max-width:340px;width:calc(100vw - 32px);color:var(--text-1);box-shadow:0 8px 48px rgba(0,0,0,0.6);text-align:center;" onclick="event.stopPropagation()">' +
+          '<div style="background:rgba(16,18,28,0.80);backdrop-filter:blur(48px) saturate(200%);-webkit-backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.15);border-radius:22px;padding:20px;max-width:340px;width:calc(100vw - 32px);color:var(--text-1);box-shadow:0 8px 48px rgba(0,0,0,0.6);text-align:center;"">' +
           '<div style="font-size:2rem;margin-bottom:6px;">🔔</div>' +
           '<h3 style="color:var(--text-1);margin:0 0 8px;font-weight:600;">Reste régulier 💪</h3>' +
           '<p style="font-size:0.88rem;line-height:1.5;color:var(--text-2);margin:0 0 16px;">Active les notifications pour recevoir tes rappels de séance et tes relances — même quand l\'app est fermée.</p>' +

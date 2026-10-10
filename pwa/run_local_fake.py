@@ -71,6 +71,9 @@ def test_login():
     session["is_vip"] = (request.args.get("vip") == "1")
     session["is_vip_full"] = session["is_vip"]      # PRO payant (générateur, coach)
     session["is_vip_ts"] = time.time()
+    if request.args.get("admin") == "1":
+        # Admin = adresse dans ADMIN_EMAILS ET connexion Google (core/admin_acces.py).
+        session["fournisseurs"] = ["google"]
     if request.args.get("essai") == "1":
         # Essai PRO de 20 h (parrainage) : profil free + vip_until, statut
         # relu en base par le before_request.

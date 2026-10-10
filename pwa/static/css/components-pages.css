@@ -391,12 +391,10 @@ button.btn-danger:hover {
    ads.js pose la classe has-ad-banner et la hauteur réelle dans --ad-banner-h.
    On remonte la bottom-nav AU-DESSUS du bandeau, et on réserve nav + bandeau
    pour le contenu, pour que rien ne soit masqué. */
-/* Bandeau en HAUT : on descend la barre de titre (et donc tout le contenu qui
-   la suit dans le flux) de la hauteur du bandeau. La safe-area du haut est
-   absorbée par le margin, donc on retire son doublon du padding de la topbar. */
-html.has-ad-banner .topbar {
-  margin-top: calc(var(--ad-banner-h, 0px) + env(safe-area-inset-top));
-  padding-top: var(--sp-md);
+/* Bandeau en HAUT : l'écart du haut de page (et donc tout le contenu qui le
+   suit dans le flux) descend de la hauteur du bandeau, safe-area comprise. */
+html.has-ad-banner .haut-page {
+  height: calc(var(--sp-sm) + var(--ad-banner-h, 0px) + env(safe-area-inset-top));
 }
 
 /* ── Séance : record battu, cible du programme, retours ─────────────
@@ -721,3 +719,8 @@ html.has-ad-banner .topbar {
 .duree-champs { display: flex; align-items: center; gap: 6px; }
 .duree-champs input { flex: 1 1 0; min-width: 0; width: auto; }
 .duree-champs span { color: var(--text-3); font-size: 0.85em; }
+
+/* ── Gestion → Compte (audit du 06/10, m12) ── */
+.compte-qui { color: var(--text-2); font-size: var(--text-sm); margin: 0; }
+.compte-email { color: var(--text-1); overflow-wrap: anywhere; margin: 4px 0 var(--sp-md); }
+.compte-deconnexion { width: 100%; justify-content: center; }

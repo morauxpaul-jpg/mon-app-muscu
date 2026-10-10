@@ -4,6 +4,9 @@
      - prog, seanceOrder, seanceProg, programmes, originSeanceNames
      - moveSeanceInProg, renameSeance, deleteSeance, moveSeanceToProg
      - addExo, moveExo, deleteExo, toggleMuscle, scheduleSave
+   Les gestes en plusieurs temps (renommer puis fermer, choisir dans la
+   bibliothèque…) sont des méthodes de programmeApp : la version CSP
+   d'Alpine n'accepte qu'une expression par attribut (static/js/programme.js).
 #}
 <div class="card" x-data="{ open: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
   <div class="exo-head" @click="open = !open">
@@ -18,7 +21,7 @@
     <div class="s-a38f82">
       <button type="button" class="btn label-icon" @click="moveSeanceInProg(sname, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
       <button type="button" class="btn label-icon" @click="moveSeanceInProg(sname, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
-      <button type="button" class="btn label-icon" @click="renaming = true; newName = sname; $nextTick(() => { var el = $el.closest('.card').querySelector('.rn-input'); if (el) el.focus(); })">
+      <button type="button" class="btn label-icon" @click="commencerRenommage()">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
       </button>
       <button type="button" class="btn label-icon" @click="showMove = !showMove">
@@ -31,7 +34,7 @@
         <span class="inline-confirm s-c6af6d">
           <span class="confirm-label">Supprimer <span x-text="sname"></span> ?</span>
           <button type="button" class="btn" @click="confirmDel=false">Annuler</button>
-          <button type="button" class="btn btn-danger" @click="deleteSeance(sname); confirmDel=false">Confirmer</button>
+          <button type="button" class="btn btn-danger" @click="supprimerSeance()">Confirmer</button>
         </span>
       </template>
       <template x-if="originSeanceNames.includes(sname)">
@@ -52,7 +55,7 @@
     <div x-show="showMove" x-transition class="flex-show s-0bef99">
       <label class="field-label s-f63375">Déplacer vers</label>
       <select class="field s-5d50d5"
-              @change="moveSeanceToProg(sname, $event.target.value); showMove=false; $event.target.value=''">
+              @change="deplacerSeance($event)">
         <option value="">— Choisir —</option>
         <template x-for="pg in programmes" :key="pg.id">
           <option :value="pg.id" :disabled="seanceProg[sname] === pg.id" x-text="pg.name"></option>
@@ -64,9 +67,9 @@
     <div x-show="renaming" x-transition class="flex-show s-fd2aab">
       <input type="text" class="rn-input field s-97445a" x-model="newName" maxlength="60"
              :aria-label="'Nouveau nom pour ' + sname"
-             @keydown.enter.prevent="renameSeance(sname, newName); renaming=false"
+             @keydown.enter.prevent="validerRenommage()"
              @keydown.escape="renaming=false">
-      <button type="button" class="btn primary" @click="renameSeance(sname, newName); renaming=false">OK</button>
+      <button type="button" class="btn primary" @click="validerRenommage()">OK</button>
     </div>
 
     <div x-sort="reorderExo(sname, $item, $position)"
@@ -87,7 +90,7 @@
           </div>
           <div class="prog-exo-fields">
             <label class="field-label s-96ad60">Séries</label>
-            <input type="number" min="1" :max="BORNES.series" x-model.number="ex.sets" class="field" @change="ex.sets = bornerSeries(ex.sets); scheduleSave()"
+            <input type="number" min="1" :max="BORNES.series" x-model.number="ex.sets" class="field" @change="bornerEtSauver(ex)"
                    aria-label="Nombre de séries">
             <label class="prog-superset" x-show="exIdx < prog[sname].length - 1">
               <input type="checkbox" x-model="ex.superset" @change="scheduleSave()">
@@ -105,7 +108,7 @@
                   {% for m in muscle_list %}
                     <label class="muscle-check">
                       <input type="checkbox" value="{{ m }}"
-                             :checked="(ex.muscle || '').split(',').map(s => s.trim()).includes('{{ m }}')"
+                             :checked="aLeMuscle(ex, '{{ m }}')"
                              @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
                       <span>{{ m }}</span>
                     </label>
@@ -121,7 +124,7 @@
         <div class="inline-confirm s-8a77e5" x-show="confirmExoDel" x-cloak>
           <span class="confirm-label">Supprimer <span x-text="ex.name"></span> ?</span>
           <button type="button" class="btn mini" @click="confirmExoDel=false">Annuler</button>
-          <button type="button" class="btn mini btn-danger" @click="deleteExo(sname, exIdx); confirmExoDel=false">Confirmer</button>
+          <button type="button" class="btn mini btn-danger" @click="supprimerExo()">Confirmer</button>
         </div>
       </div>
     </template>
@@ -138,29 +141,29 @@
 
       {# Modale bibliothèque #}
       <div class="s-40258d" x-show="showLibrary" x-transition
-           x-init="$watch('showLibrary', v => { if(v) document.body.appendChild($el); })" @click.self="showLibrary = false">
+           x-au-corps="showLibrary" @click.self="showLibrary = false">
         <div class="s-e39eee" @click.stop>
           <h4 class="s-7480f0">Bibliothèque d'exercices</h4>
           <input type="text" x-model="libSearch" class="field s-fdf33f" placeholder="Rechercher un exercice...">
           <select class="field s-761d3a" x-model="libFilter">
             <option value="Tous">Tous les groupes</option>
-            <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="grp">
+            <template x-for="grp in $biblio.groupes()" :key="grp">
               <option :value="grp" x-text="grp"></option>
             </template>
           </select>
           <div class="s-bcf450">
-            <template x-for="grp in (typeof EXERCISE_MUSCLE_GROUPS !== 'undefined' ? EXERCISE_MUSCLE_GROUPS : [])" :key="'lib-'+grp">
+            <template x-for="grp in $biblio.groupes()" :key="'lib-'+grp">
               <template x-if="libFilter === 'Tous' || libFilter === grp">
                 <div>
                   <div class="s-f44142" x-text="grp"></div>
-                  <template x-for="ex in (typeof EXERCISE_LIBRARY !== 'undefined' ? (EXERCISE_LIBRARY[grp] || []) : [])" :key="grp+'-'+ex.name">
-                    <div class="s-11323b" x-show="typeof exerciseMatches === 'undefined' ? (!libSearch || ex.name.toLowerCase().indexOf(libSearch.toLowerCase()) >= 0) : exerciseMatches(ex, libSearch)">
+                  <template x-for="ex in $biblio.exos(grp)" :key="grp+'-'+ex.name">
+                    <div class="s-11323b" x-show="$biblio.correspond(ex, libSearch)">
                       <div>
                         <div class="s-bf49e3" x-text="ex.name"></div>
                         <div class="s-8b4f4a" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
                       </div>
                       <button type="button" class="btn mini s-86abda"
-                              @click="newExo.name = ex.name; newExo.sets = ex.defaultSets; newExo.muscles = [(typeof LIBRARY_TO_MUSCLE !== 'undefined' ? LIBRARY_TO_MUSCLE[grp] : grp)]; showLibrary = false;">Choisir</button>
+                              @click="choisirDansBiblio(ex, grp)">Choisir</button>
                     </div>
                   </template>
                 </div>
@@ -169,7 +172,7 @@
           </div>
           <hr class="s-cb5c54">
           <div class="s-15bff6">Exercice personnalisé</div>
-          <button type="button" class="btn label-icon s-9f1047" @click="showLibrary = false; newExo.name = ''; newExo.sets = 3; newExo.muscles = [];">
+          <button type="button" class="btn label-icon s-9f1047" @click="saisieManuelle()">
             <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Saisir manuellement
           </button>
         </div>
@@ -204,7 +207,7 @@
         </div>
       </div>
       <button type="button" class="btn primary label-icon s-ac0370"
-              @click="addExo(sname, newExo); newExo = { name: '', sets: 3, muscles: [] }">
+              @click="ajouterNouvelExo()">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
       </button>
     </div>

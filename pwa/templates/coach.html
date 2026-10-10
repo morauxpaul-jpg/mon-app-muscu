@@ -2,7 +2,7 @@
 {% block title %}Coach IA · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     window.__coachInit = {
       quotaRemaining: {{ quota_remaining }},
       quotaLimit: {{ quota_limit }},
@@ -15,7 +15,7 @@
     };
   </script>
 
-  <div class="coach-chat" x-data="coachChat()" x-init="init()">
+  <div class="coach-chat" x-data="coachChat()">
 
     {# ── Sidebar conversations (drawer) ─────────────────────────── #}
     <div class="coach-drawer-overlay" x-show="drawerOpen" x-transition.opacity.200ms
@@ -123,8 +123,8 @@
           maxlength="1500"
           autocomplete="off"
           rows="1"
-          @input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight, 120)+'px'"
-          @keydown.enter.exact.prevent="if(draft.trim() && !typing && quotaLeft > 0) send(draft)"
+          @input="ajusterHauteur($el)"
+          @keydown.enter.exact.prevent="envoyerSiPret()"
         ></textarea>
         <button type="submit" class="btn primary coach-send-btn" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>
@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     function coachChat() {
       var cfg = window.__coachInit || {};
       return {
@@ -161,6 +161,15 @@
           setTimeout(() => this.scrollDown(), 120);
           setTimeout(() => this.scrollDown(), 400);
           window.addEventListener('load', () => this.scrollDown(), { once: true });
+        },
+        // La zone de saisie grandit avec le texte, jusqu'à 120 px.
+        ajusterHauteur(el) {
+          el.style.height = 'auto';
+          el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        },
+        // Entrée envoie, sauf message vide, réponse en cours ou quota épuisé.
+        envoyerSiPret() {
+          if (this.draft.trim() && !this.typing && this.quotaLeft > 0) this.send(this.draft);
         },
         newChat() {
           // Démarre un chat vide sans recharger (la conversation sera créée

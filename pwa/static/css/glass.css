@@ -67,17 +67,6 @@ body {
 }
 
 /* ═══════════════════════════════════════════
-   3. TOPBAR — ultra-subtil
-   ═══════════════════════════════════════════ */
-.topbar {
-  /* Fond presque opaque plutôt qu'un flou : une barre fixe floutée se
-     recompose sur tout ce qui défile dessous. */
-  background: rgba(12,12,18,0.94);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 1px 12px rgba(0,0,0,0.15);
-}
-
-/* ═══════════════════════════════════════════
    4. BOTTOM NAV — barre flottante
    ═══════════════════════════════════════════ */
 .bottom-nav {
@@ -524,7 +513,6 @@ h1, h2, h3 {
    13. GPU HINTS
    ═══════════════════════════════════════════ */
 .bottom-nav,
-.topbar,
 .rest-timer-bar {
   transform: translateZ(0);
 }

@@ -186,4 +186,10 @@
       if (btn) btn.disabled = false;
     }
   };
+
+  // Le bouton de l'accueil (data-partage-progres) : branché ici, la CSP
+  // refuse les onclick écrits dans le HTML. Script en `defer` : la page est lue.
+  document.querySelectorAll('[data-partage-progres]').forEach(function (btn) {
+    btn.addEventListener('click', function () { window.shareProgress(btn); });
+  });
 })();

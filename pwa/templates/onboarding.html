@@ -200,7 +200,7 @@
   <div class="spinner"></div>
   <span>Chargement en cours...</span>
 </div>
-<div class="onboard-wrap" x-data="onboardingFlow()" x-init="init()">
+<div class="onboard-wrap" x-data="onboardingFlow()">
 
   <div class="welcome-hero">
     <h1 class="label-icon s-03c4bb"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Bienvenue</h1>
@@ -414,7 +414,7 @@
       <input type="hidden" name="frequence"   :value="form.frequence">
       <input type="hidden" name="objectif"    :value="form.objectif">
       <input type="hidden" name="equipement"  :value="form.equipement">
-      <input type="hidden" name="equipment_details" :value="JSON.stringify(form.equipment_details)">
+      <input type="hidden" name="equipment_details" :value="detailsMaterielJson()">
       <input type="hidden" name="programme_id" :value="form.programme_id">
     </form>
 
@@ -514,7 +514,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 const CATALOG_PROGRAMS = {{ catalog_programs | tojson }};
 const EXISTING = {{ existing | tojson }};
 
@@ -554,6 +554,7 @@ function onboardingFlow() {
     previewProg: null,
 
     init() {},
+    detailsMaterielJson() { return JSON.stringify(this.form.equipment_details); },
     canNext1() {
       return this.form.prenom.trim().length >= 2
         && this.form.age >= 10

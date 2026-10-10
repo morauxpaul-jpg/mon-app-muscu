@@ -208,11 +208,19 @@ def test_aucune_police_sous_0_7rem():
     assert not fautifs, fautifs
 
 
-def test_le_badge_pro_ne_se_tronque_pas_avec_le_mail(fake_db, logged_in):
-    html = logged_in.get("/plus").get_data(as_text=True)
-    assert '<span class="topbar-email">' in html
-    assert 'class="badge-pro topbar-badge">PRO<' in html
-    assert 'aria-label="Déconnexion"' in html
+def test_le_compte_et_la_deconnexion_sont_dans_gestion_seulement(fake_db, logged_in):
+    """L'e-mail et « Déconnexion » occupaient le haut de chaque page, à un
+    pouce d'une déconnexion par erreur (audit du 30/09, M9 ; 06/10, m12)."""
+    for page in ("/accueil", "/plus", "/progres"):
+        html = logged_in.get(page).get_data(as_text=True)
+        assert 'action="/logout"' not in html, page
+        assert "test@example.com" not in html, page
+        assert 'class="haut-page"' in html, page          # l'écart sous la barre d'état reste
+    html = logged_in.get("/gestion").get_data(as_text=True)
+    compte = html.split('class="card compte"', 1)[1].split("</div>", 1)[0]
+    assert "test@example.com" in compte
+    assert '<span class="badge-pro">PRO</span>' in compte
+    assert 'action="/logout"' in compte and "Déconnexion" in compte
 
 
 def test_un_lien_bouton_nest_pas_inline():
@@ -315,3 +323,15 @@ def test_aucune_couche_http_ne_depasse_850_lignes():
     trop = [f"{p.name}: {n}" for p in (PWA / "routes").glob("*.py")
             if (n := len(p.read_text(encoding="utf-8").splitlines())) > 850]
     assert not trop, trop
+
+
+def test_la_carte_na_plus_ses_verbes_en_double(fake_db, logged_in):
+    """« Réinitialiser les poids » et « Recommencer cet exercice » doublaient
+    « Série faite », « rouvrir » et « Skip » (audit du 06/10, 4.3)."""
+    from test_rpe_suggestion import SEMAINE_1, _programme
+    _programme(fake_db)
+    html = logged_in.get(f"/seance?mode=prefaite&name=Push&date={SEMAINE_1}").get_data(as_text=True)
+    assert "Développé couché" in html
+    assert "Réinitialiser les poids" not in html
+    assert "Recommencer cet exercice" not in html
+    assert "Série faite" in html and "Skip" in html

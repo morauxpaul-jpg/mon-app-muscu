@@ -104,8 +104,8 @@
        laissait croire à une panne (audit du 03/10). #}
     <div class="gen-progres" x-show="loading" x-cloak aria-live="polite">
       <div class="gen-progres-etape" x-text="etapeTexte()"></div>
-      <div class="gen-progres-barre"><span :style="'width:' + Math.min(95, ecoule / 22 * 100) + '%'"></span></div>
-      <div class="gen-progres-temps" x-text="Math.round(ecoule) + ' s · d\'habitude 10 à 25 s'"></div>
+      <div class="gen-progres-barre"><span :style="largeurProgres()"></span></div>
+      <div class="gen-progres-temps" x-text="tempsEcoule()"></div>
       <div class="gen-progres-temps">Tu peux changer de page : la génération continue et t'attend ici à ton retour.</div>
     </div>
     <div class="s-f4cfdb" x-show="error" x-text="error"></div>
@@ -118,13 +118,13 @@
   <div x-show="program" x-cloak>
     <div class="card s-38fcbe">
       <div class="label-icon s-2f8b2e">
-        <h2 class="s-c8441f" x-text="program?.name"></h2>
+        <h2 class="s-c8441f" x-text="program && program.name"></h2>
         <span class="tier-pill s-c67092">IA</span>
       </div>
-      <p class="s-787954" x-show="program?.notes" x-text="program?.notes"></p>
+      <p class="s-787954" x-show="program && program.notes" x-text="program && program.notes"></p>
     </div>
 
-    <template x-for="(exos, sname) in program?.seances" :key="sname">
+    <template x-for="(exos, sname) in seancesDuProgramme()" :key="sname">
       <div class="card s-60bde0">
         <h3 class="label-icon s-29f736">
           <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>
@@ -160,7 +160,7 @@
     </template>
 
     {# Cardio #}
-    <template x-if="program?.cardio?.length">
+    <template x-if="cardiosDuProgramme().length">
       <div class="card s-27d354">
         <h3 class="label-icon s-29f736">
           <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>
@@ -173,7 +173,7 @@
             <span class="gen-exo-meta">
               <span x-text="c.duree + ' min'"></span>
               <span class="gen-exo-muscle s-03a49c"
-                x-text="(c.jours && c.jours.length) ? c.jours.map(j => j.slice(0,3)).join(', ') : 'flexible'"></span>
+                x-text="joursCourts(c)"></span>
             </span>
           </div>
         </template>
@@ -185,9 +185,9 @@
       <h3 class="label-icon s-1d79de"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>Planning</h3>
       <div class="gen-planning">
         <template x-for="day in days" :key="day">
-          <div class="gen-day" :class="{ 'gen-day-on': program?.planning?.[day], 'gen-day-cardio': cardioFor(day) }">
+          <div class="gen-day" :class="{ 'gen-day-on': jourPrevu(day), 'gen-day-cardio': cardioFor(day) }">
             <span class="gen-day-l" x-text="day.slice(0,3)"></span>
-            <span class="gen-day-v" x-text="program?.planning?.[day] || (cardioFor(day) ? '' : 'Repos')"></span>
+            <span class="gen-day-v" x-text="jourPrevu(day) || (cardioFor(day) ? '' : 'Repos')"></span>
             <span class="gen-day-c" x-show="cardioFor(day)" x-text="cardioFor(day)"></span>
           </div>
         </template>
@@ -198,7 +198,7 @@
     <div class="s-dc4c3f">
       <button type="button" class="btn btn-cancel s-97445a" @click="reset()">↺ Régénérer</button>
       <form class="s-d22c86" method="post" action="/generator/apply">
-        <input type="hidden" name="program" :value="JSON.stringify(program)">
+        <input type="hidden" name="program" :value="programmeJson()">
         <button type="submit" class="btn primary s-046678" data-haptic="1"
           x-ref="adopt" @click="confirmAdopt($event)">Adopter ce programme</button>
       </form>
@@ -254,7 +254,7 @@
   .gen-seg-btn.on { background:var(--warning-bg); border-color:var(--warning); color:var(--warning); }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   function gen() {
     return {
       days: {{ ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"]|tojson }},
@@ -395,6 +395,17 @@
         if (i >= 0) this.form.cardioTypes.splice(i, 1);
         else this.form.cardioTypes.push(t);
       },
+      // Lectures pour les gabarits : Alpine CSP ne connaît ni `?.`, ni les
+      // fonctions fléchées, ni Math ou JSON.
+      largeurProgres() { return 'width:' + Math.min(95, this.ecoule / 22 * 100) + '%'; },
+      tempsEcoule() { return Math.round(this.ecoule) + " s · d'habitude 10 à 25 s"; },
+      seancesDuProgramme() { return (this.program && this.program.seances) || {}; },
+      cardiosDuProgramme() { return (this.program && this.program.cardio) || []; },
+      jourPrevu(day) { return (this.program && this.program.planning && this.program.planning[day]) || ''; },
+      joursCourts(c) {
+        return (c.jours && c.jours.length) ? c.jours.map(function (j) { return j.slice(0, 3); }).join(', ') : 'flexible';
+      },
+      programmeJson() { return JSON.stringify(this.program); },
       cardioFor(day) {
         // Renvoie un libellé court des cardios planifiés ce jour (ou '').
         const list = (this.program?.cardio || []).filter(c => (c.jours || []).includes(day));

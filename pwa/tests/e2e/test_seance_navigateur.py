@@ -10,62 +10,19 @@ Ici on rejoue le geste de l'utilisateur de bout en bout, puis on lit la
 (fausse) base : en ligne, en mode avion, et quand le réseau ne répond pas
 (le sous-sol, où le téléphone se croit en ligne).
 
-Le serveur est `run_local_fake.py` lancé à part, sur un port libre.
-Sans Playwright ni Chromium installés, ces tests s'ignorent.
+Le serveur est `run_local_fake.py` lancé à part, sur un port libre
+(tests/e2e/conftest.py). Sans Playwright ni Chromium installés, ces tests
+s'ignorent.
 """
 import json
-import os
-import socket
-import subprocess
-import sys
 import time
 import urllib.request
-from pathlib import Path
 
 import pytest
 
 sync_api = pytest.importorskip("playwright.sync_api")
 
-PWA = Path(__file__).resolve().parents[2]
 EXO = "Développé couché"
-
-
-def _port_libre():
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-@pytest.fixture(scope="module")
-def serveur():
-    port = _port_libre()
-    env = dict(os.environ, PORT=str(port), FLASK_SECRET_KEY="e2e", PYTHONUTF8="1", FAUX_IA="lent",
-               SANS_LIMITE="1")
-    proc = subprocess.Popen([sys.executable, "run_local_fake.py"], cwd=PWA, env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    base = f"http://127.0.0.1:{port}"
-    for _ in range(100):
-        try:
-            urllib.request.urlopen(base + "/test-historique", timeout=1)
-            break
-        except Exception:
-            time.sleep(0.1)
-    else:
-        proc.kill()
-        pytest.fail("le serveur de test n'a pas démarré")
-    yield base
-    proc.kill()
-
-
-@pytest.fixture(scope="module")
-def navigateur():
-    with sync_api.sync_playwright() as p:
-        try:
-            b = p.chromium.launch()
-        except Exception as e:  # navigateur non installé
-            pytest.skip(f"Chromium indisponible : {e}")
-        yield b
-        b.close()
 
 
 @pytest.fixture()
@@ -139,8 +96,10 @@ def test_chaque_serie_faite_est_en_base_sans_attendre_terminer(page, serveur):
     # … et les séries pas encore faites ne sont PAS écrites en SKIP.
     lignes = [r for r in _historique(serveur) if r["exercice"] == EXO]
     assert len(lignes) == 1
+    # Une fonction, pas une expression : Playwright évalue une expression avec
+    # eval(), que la CSP de l'app refuse désormais (core/csp.py).
     page.wait_for_function(
-        "document.querySelector('#exo-anchor-0 .exo-etat').innerText === 'Enregistré'")
+        "() => document.querySelector('#exo-anchor-0 .exo-etat').innerText === 'Enregistré'")
 
 
 def test_une_serie_saisie_sans_valider_part_quand_meme_a_la_fin(page, serveur):
@@ -227,7 +186,7 @@ def test_une_page_deja_vue_souvre_meme_si_le_reseau_ne_repond_pas(page, serveur)
     réseau indéfiniment — écran blanc — alors que la page était en cache."""
     url = serveur + "/seance?mode=prefaite&name=Push"
     # Le service worker contrôle la page et l'a gardée.
-    page.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller !== null",
+    page.wait_for_function("() => navigator.serviceWorker && navigator.serviceWorker.controller !== null",
                            timeout=15000)
     page.goto(url)
     page.wait_for_selector(".serie-valider")
@@ -455,7 +414,7 @@ def test_semaine_gardee_hors_ligne(serveur, navigateur):
     pg = ctx.new_page()
     pg.goto(serveur + "/test-vierge")
     pg.goto(serveur + "/accueil")
-    pg.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller", timeout=15000)
+    pg.wait_for_function("() => navigator.serviceWorker && navigator.serviceWorker.controller", timeout=15000)
     pg.reload()                                   # le SW contrôle la page : la mise en cache part
     pg.wait_for_selector("#pack-horsligne:not([hidden])", timeout=45000)   # retente à 20 s
 

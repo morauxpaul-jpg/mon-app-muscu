@@ -184,7 +184,20 @@
     document.getElementById('exo-tab-fiche').style.display = (tab === 'fiche') ? '' : 'none';
     document.getElementById('exo-tab-rm').style.display = (tab === 'rm') ? '' : 'none';
   }
-  // Exposé pour les attributs onclick du gabarit de la modale.
+  // Clics de la modale (templates/_seance_modale_info.html) : branchés ici,
+  // la CSP refuse les onclick écrits dans le HTML.
+  function brancherModale() {
+    var modale = document.getElementById('exo-info-modal');
+    if (!modale) return;
+    modale.addEventListener('click', function (e) {
+      var onglet = e.target.closest('.exo-info-tab');
+      if (onglet) { switchExoTab(onglet.getAttribute('data-tab')); return; }
+      if (e.target === modale || e.target.closest('.exo-info-close')) modale.style.display = 'none';
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', brancherModale);
+  else brancherModale();
+
   window.showExoInfo = showExoInfo;
   window.switchExoTab = switchExoTab;
 })();

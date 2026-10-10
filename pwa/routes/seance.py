@@ -522,6 +522,8 @@ def skip_exo():
 @bp.route("/seance/reset-exo", methods=["POST"])
 @limiter.limit("10 per minute")
 def reset_exo():
+    # Plus proposé par la carte depuis le 10/10 (audit du 06/10, 4.3) ; gardé
+    # pour une page restée en cache ou un envoi en file hors-ligne.
     f = request.form
     seance = f["seance_name"]
     variant = f["variant"]

@@ -37,6 +37,7 @@ from routes.generator import bp as generator_bp
 from routes.share import bp as share_bp
 from routes.parrainage import bp as parrainage_bp
 from routes.push import bp as push_bp
+from routes.csp import bp as csp_bp
 
 from core import db as core_db
 from core.admin_acces import est_admin
@@ -153,6 +154,10 @@ app.permanent_session_lifetime = timedelta(days=30)
 #     sur un autre appareil — sans attendre la reconnexion.
 VIP_CACHE_TTL = 120       # secondes — re-check d'un VIP confirmé
 FREE_RECHECK_TTL = 15     # secondes — re-check d'un FREE (capte vite l'upgrade)
+# Existence du compte auth (session d'un compte supprimé, sur un autre
+# appareil) : un appel à l'API auth. Toutes les 2 min, il tombait sur presque
+# chaque « Série faite » d'une séance (audit du 06/10, I-2).
+AUTH_CHECK_TTL = 600      # secondes
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -181,6 +186,7 @@ app.register_blueprint(generator_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(parrainage_bp)
 app.register_blueprint(push_bp)
+app.register_blueprint(csp_bp)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -190,7 +196,7 @@ app.register_blueprint(push_bp)
 # une URL de politique de confidentialité consultable sans compte.
 # /billing/webhook : appelé par Stripe (pas de session) → public, sécurisé par
 # la signature Stripe et exempté de CSRF (cf. _CSRF_EXEMPT_PATHS).
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/mentions-legales", "/cgv", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders"}
+_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/mentions-legales", "/cgv", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders", "/csp/rapport"}
 
 
 @app.before_request
@@ -227,7 +233,7 @@ def _require_login():
         # FREE_RECHECK_TTL s. Elle invalide les sessions d'un compte supprimé
         # (un cookie encore valide sur un AUTRE appareil pourrait sinon recréer
         # des données orphelines via l'onboarding).
-        if (time.time() - session.get("auth_check_ts", 0)) > VIP_CACHE_TTL:
+        if (time.time() - session.get("auth_check_ts", 0)) > AUTH_CHECK_TTL:
             try:
                 if not core_db.auth_user_exists(user_id):
                     session.clear()
@@ -303,7 +309,9 @@ def _require_login():
 _CSRF_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # /auth/session = handshake de login (pas encore de session Flask, déjà protégé
 # par la vérification du JWT Supabase). Exempté.
-_CSRF_EXEMPT_PATHS = {"/auth/session", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders"}
+# /csp/rapport : posté par le navigateur lui-même (routes/csp.py).
+_CSRF_EXEMPT_PATHS = {"/auth/session", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders",
+                      "/csp/rapport"}
 
 
 def _csrf_enabled() -> bool:
@@ -344,53 +352,11 @@ def _csrf_protect():
     return None
 
 
-# Content-Security-Policy — stratégie en deux couches (décidée après audit du
-# code : ~700 styles inline, handlers onclick, scripts inline, + dépendances
-# externes Google Fonts, jsDelivr/Supabase sur le login).
-#
-# Couche 1 — TOUJOURS bloquante (_CSP_ENFORCED) : uniquement les directives
-#   prouvées sans impact sur les ressources réellement chargées. Elles ne
-#   gouvernent ni les scripts, ni les styles, ni les CDN → impossible de casser
-#   l'app, tout en bloquant clickjacking, injection de <base>, exfiltration de
-#   formulaire vers un tiers, et plugins.
-# Couche 2 — Report-Only (_CSP_REPORT) : politique complète, corrigée avec les
-#   vraies dépendances (jsDelivr pour supabase-js, Google Fonts, le domaine
-#   Supabase pour connect-src). Ne bloque rien ; sert de base pour un
-#   futur durcissement total via CSP_ENFORCE=1. CSP_DISABLED=1 retire tout.
-# form-action liste TOUTES les cibles vers lesquelles un <form> peut partir,
-# y compris APRÈS une redirection 3xx. Le paiement Stripe POST /billing/checkout
-# (self) puis redirige vers checkout.stripe.com → ce domaine DOIT y figurer,
-# sinon le navigateur bloque silencieusement la redirection (paiement qui
-# « charge sans aboutir »). billing.stripe.com = portail de gestion.
-_STRIPE_FORM_ACTION = "https://checkout.stripe.com https://billing.stripe.com"
-_CSP_ENFORCED = (
-    "frame-ancestors 'self'; "
-    "base-uri 'self'; "
-    f"form-action 'self' https://accounts.google.com {_STRIPE_FORM_ACTION}; "
-    "object-src 'none'"
-)
+# Content-Security-Policy : voir core/csp.py (bloquante depuis l'audit du
+# 06/10, m6). Les gabarits marquent leurs <script> avec {{ csp_nonce() }}.
+from core import csp as core_csp  # noqa: E402
 
-
-def _csp_report_policy() -> str:
-    # Domaine Supabase autorisé en connect-src (auth/OAuth) — lu depuis l'env.
-    supa = ""
-    try:
-        supa = core_db._env("SUPABASE_URL")
-    except Exception:
-        supa = ""
-    connect_extra = f" {supa}" if supa else ""
-    return (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "img-src 'self' data: blob:; "
-        "font-src 'self' data: https://fonts.gstatic.com; "
-        f"connect-src 'self'{connect_extra}; "
-        "frame-ancestors 'self'; "
-        "base-uri 'self'; "
-        f"form-action 'self' https://accounts.google.com {_STRIPE_FORM_ACTION}; "
-        "object-src 'none'"
-    )
+app.jinja_env.globals["csp_nonce"] = core_csp.jeton
 
 
 # Déclaré AVANT les autres : Flask exécute les after_request dans l'ordre
@@ -415,7 +381,7 @@ def _chronometrer(response):
 @app.after_request
 def _security_headers(response):
     """Durcissement défensif. Anti-clickjacking, anti-MIME-sniffing, referrer,
-    permissions, et CSP (couche bloquante sûre + couche report-only complète)."""
+    permissions, et CSP (core/csp.py)."""
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -425,17 +391,12 @@ def _security_headers(response):
     # la question. Les iframes tierces restent bloquées, comme le micro.
     response.headers.setdefault("Permissions-Policy", "geolocation=(self), camera=(self), microphone=()")
 
-    if os.getenv("CSP_DISABLED", "").strip().lower() in ("1", "true", "yes", "on"):
-        return response
-
-    if os.getenv("CSP_ENFORCE", "").strip().lower() in ("1", "true", "yes", "on"):
-        # Durcissement total demandé explicitement : politique complète bloquante.
-        response.headers.setdefault("Content-Security-Policy", _csp_report_policy())
-    else:
-        # Par défaut : couche sûre bloquante + politique complète en observation.
-        response.headers.setdefault("Content-Security-Policy", _CSP_ENFORCED)
-        response.headers.setdefault("Content-Security-Policy-Report-Only", _csp_report_policy())
-    return response
+    # Domaine Supabase autorisé en connect-src (auth/OAuth) — lu depuis l'env.
+    try:
+        supa = core_db._env("SUPABASE_URL")
+    except Exception:
+        supa = ""
+    return core_csp.poser_entetes(response, supa)
 
 
 # Marqueur ajouté au User-Agent par la coquille Capacitor

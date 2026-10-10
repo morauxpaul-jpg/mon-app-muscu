@@ -55,7 +55,7 @@
      exécutée sur la page de connexion (audit du 30/09, M1). Mise à jour :
      remplacer le fichier et le nom ici. #}
   <script src="/static/vendor/supabase-js-2.117.2.umd.js"></script>
-  <script type="module">
+  <script type="module" nonce="{{ csp_nonce() }}">
     const { createClient } = window.supabase;
     const SUPABASE_URL = {{ supabase_url|tojson }};
     const SUPABASE_ANON = {{ supabase_anon|tojson }};

@@ -38,6 +38,31 @@ function blocInscrit(env, sets) {
 
 module.exports = ({ test, assert }) => {
 
+  // ── Le refus de « Série faite » reste dans la carte (m7) ─────
+
+  test('un refus s\'écrit sous la série, sans toast par-dessus les boutons', () => {
+    const env = createEnv({ scripts: ['seance.js'] });
+    const toasts = [];
+    env.window.showToast = (m) => toasts.push(m);
+    const { b } = bloc([S(), S()], env);
+    b.suggestion = null;
+    b.serieFaite(0);
+    assert.equal(b.estFait(0), false);
+    assert.equal(b.etat, 'vide');
+    assert.ok(/Indique tes répétitions/.test(b.etatTexte()), b.etatTexte());
+    assert.deepEqual(toasts, []);
+  });
+
+  test('le refus d\'un échauffement dit pourquoi, dans la carte', () => {
+    const env = createEnv({ scripts: ['seance.js'] });
+    const toasts = [];
+    env.window.showToast = (m) => toasts.push(m);
+    const { b } = bloc([S('', '', 'echauffement'), S()], env);
+    b.serieFaite(0);
+    assert.equal(b.etatTexte(), 'Indique les répétitions et la charge de ton échauffement.');
+    assert.deepEqual(toasts, []);
+  });
+
   // ── La charge passe à la série suivante ──────────────────────
 
   test('« Série faite » recopie la charge dans la série suivante vide', () => {

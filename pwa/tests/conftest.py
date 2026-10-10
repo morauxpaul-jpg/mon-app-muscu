@@ -382,6 +382,10 @@ def partage_neuf():
     else:
         partage.utiliser(None)
     partage.reinitialiser()
+    # Un manque de colonne signalé par un test (base en retard simulée) ne
+    # doit pas allumer l'alerte de /admin du test suivant.
+    from core import schema
+    schema.reinitialiser()
     yield
 
 

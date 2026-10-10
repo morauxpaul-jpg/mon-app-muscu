@@ -14,7 +14,7 @@
     <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#upload"/></svg>Importer mon historique Strava
   </a>
 
-  <form method="post" action="/cardio/save" x-data="cardioForm()" x-init="init()">
+  <form method="post" action="/cardio/save" x-data="cardioForm()">
     <input type="hidden" name="date" value="{{ date_iso }}">
     <input type="hidden" name="poids_kg" value="{{ poids_kg }}">
 
@@ -140,11 +140,11 @@
           <div class="summary-value" x-text="dureeTexte()"></div>
         </div>
         <div class="summary-item" x-show="distanceKm || autoDistance()">
-          <div class="summary-label" x-text="unites().dist.replace(/ *\(.*/, '')"></div>
+          <div class="summary-label" x-text="libelleCourt(unites().dist)"></div>
           <div class="summary-value" x-text="(distanceKm || autoDistance())"></div>
         </div>
         <div class="summary-item" x-show="unites().vit && (vitesse || autoVitesse())">
-          <div class="summary-label" x-text="unites().vit.replace(/ *\(.*/, '')"></div>
+          <div class="summary-label" x-text="libelleCourt(unites().vit)"></div>
           <div class="summary-value" x-text="(vitesse || autoVitesse())"></div>
         </div>
         <div class="summary-item" x-show="incline > 0 && (activite === 'Course' || activite === 'Marche')">
@@ -293,7 +293,7 @@
   {# `gps-track.js` accumule la distance et compte ce qu'il a perdu. Sans
      `defer` : le composant Alpine ci-dessous s'en sert dès son démarrage. #}
   <script src="/static/js/gps-track.js"></script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // MET par activité (synchro avec routes/cardio.py)
     const MET = {
       "Course": 10.0, "Vélo": 7.5, "Rameur": 7.0, "Natation": 8.0,
@@ -432,6 +432,8 @@
           return base + (this.incline * bonus);
         },
         unites() { return UNITES[this.activite] || UNITES["Autre"]; },
+        // « Distance (km) » → « Distance », pour le résumé.
+        libelleCourt(libelle) { return (libelle || "").replace(/ *\(.*/, ""); },
 
         // ── Suivi GPS ─────────────────────────────────────────────
         // Le navigateur ne donne des positions que tant que la page est

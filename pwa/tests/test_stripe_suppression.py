@@ -103,3 +103,24 @@ def test_lannulation_dun_compte_supprime_ne_recree_pas_de_profil(fake_db, client
         "customer": "cus_1", "metadata": {"user_id": USER_ID, "account_deleted": "1"}}}})
     assert r.status_code == 200
     assert not any(p.get("id") == USER_ID for p in fake_db.tables.get("profiles", []))
+
+
+def test_un_paiement_sans_compte_ne_passe_pas_en_silence(fake_db, client, monkeypatch, caplog):
+    """Audit du 06/10 (4.1-5) : un paiement abouti qui n'active personne."""
+    import logging
+    caplog.set_level(logging.ERROR, logger="routes.billing")
+    r = _webhook(client, monkeypatch, {"type": "checkout.session.completed", "data": {"object": {
+        "id": "cs_1", "customer": "cus_9", "metadata": {}}}})
+    assert r.status_code == 200
+    assert any("paiement sans compte" in m for m in caplog.messages)
+    ev = [e for e in fake_db.tables.get("events", []) if e["event"] == "paiement_sans_compte"]
+    assert len(ev) == 1 and ev[0]["props"]["client"] == "cus_9"
+
+
+def test_une_resiliation_laisse_une_trace(fake_db, client, monkeypatch):
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    r = _webhook(client, monkeypatch, {"type": "customer.subscription.deleted", "data": {"object": {
+        "customer": "cus_1", "status": "canceled", "metadata": {"user_id": USER_ID}}}})
+    assert r.status_code == 200
+    ev = [e for e in fake_db.tables.get("events", []) if e["event"] == "vip_resilie"]
+    assert len(ev) == 1 and ev[0]["user_id"] == USER_ID

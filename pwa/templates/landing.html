@@ -11,7 +11,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/static/icon-512.png">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Capture l'événement d'installation le plus tôt possible : Chrome le
     // déclenche dès le chargement, souvent avant install.js. On le stocke pour
     // que le bouton « Installer » puisse le réutiliser au clic.
@@ -239,7 +239,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Enregistre le service worker : requis pour que Chrome considère le site
     // « installable » et émette beforeinstallprompt (le bouton d'install natif).
     if ('serviceWorker' in navigator) {

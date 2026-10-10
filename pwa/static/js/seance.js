@@ -240,6 +240,7 @@
       _revServeur: 0,
       // "" | "envoi" | "ok" | "attente" | "erreur" — affiché sous les séries.
       etat: "",
+      etatRefus: "",              // pourquoi « Série faite » a été refusée (état « vide »)
       _enCours: null,
       _suite: null,
       skipArme: false,
@@ -265,6 +266,18 @@
       // Case « échauffement » proposée seulement si la base sait la garder à
       // part (migration v43) : sinon la série compterait comme du travail.
       echauffOk: !!CONFIG.echauffements,
+      // Lectures et gestes pour le gabarit : Alpine CSP ne connaît ni
+      // Number(), ni String(), ni les fonctions fléchées, ni les globales.
+      aDuTemps: function (s) { return Number(s.reps) > 0; },
+      aUneSerieFaite: function () {
+        return this.sets.some(function (s) { return Number(s.reps) > 0; });
+      },
+      placeholderReps: function () {
+        var sg = this.suggestion;
+        return sg && sg.reps ? String(sg.reps) : (this.targetReps || "0");
+      },
+      ouvrirFiche: function () { if (window.showExoInfo) window.showExoInfo(this.exoInfo); },
+      deplacer: function (sens) { window.moveSeanceExo(this.$el, sens); },
       basculerEchauffement: function (s) {
         s.type = s.type === "echauffement" ? "" : "echauffement";
         // Un échauffement ne prend pas la place d'une série de travail : le
@@ -491,8 +504,7 @@
         if (s && !this._estRemplie(s) && s.type === "echauffement") {
           // La valeur grisée est celle d'une série de TRAVAIL : la proposer
           // pour un échauffement inventerait une charge qu'on n'a pas faite.
-          this.etat = "vide";
-          toast("Indique les répétitions et la charge de ton échauffement.", "error");
+          this._refuser("Indique les répétitions et la charge de ton échauffement.");
           return;
         }
         if (s && !this._estRemplie(s)) {
@@ -503,9 +515,8 @@
           // Une charge qu'on n'a ni tapée ni vue proposée ne s'invente pas :
           // « 5 × 0 kg » au développé couché fausserait records et suggestion.
           if (!(reps > 0) || (sansPoids && !poidsPropose)) {
-            this.etat = "vide";
-            toast(sansPoids ? "Indique tes répétitions et ta charge avant de valider."
-                            : "Indique tes répétitions avant de valider la série.", "error");
+            this._refuser(sansPoids ? "Indique tes répétitions et ta charge avant de valider."
+                                    : "Indique tes répétitions avant de valider la série.");
             return;
           }
           s.reps = reps;
@@ -563,9 +574,6 @@
         if (s.remarque) bouts.push(s.remarque);
         return bouts.length ? bouts.join(" · ") : "—";
       },
-      clearWeights: function () {
-        this.sets.forEach(function (s) { s.poids = ""; });
-      },
 
       onSetFilled: function (i) {
         markSessionActive();
@@ -620,7 +628,15 @@
       _aEnvoyer: function () {
         return this._rev !== this._revServeur && this._aDesSeries();
       },
+      // Le refus s'affiche SOUS la série, dans la carte. Il partait aussi en
+      // toast en bas d'écran, par-dessus « Enregistrer » et « Skip » (audit
+      // du 06/10, m7) — pour redire ce que la carte disait déjà.
+      _refuser: function (message) {
+        this.etatRefus = message;
+        this.etat = "vide";
+      },
       etatTexte: function () {
+        if (this.etat === "vide" && this.etatRefus) return this.etatRefus;
         return {
           envoi: "Enregistrement…",
           ok: "Enregistré",
@@ -949,6 +965,20 @@
       var comp = window.Alpine && window.Alpine.$data(list);
       if (comp && comp.persistOrder) comp.persistOrder();
     } catch (e) {}
+  };
+
+  // ── « Nouvel exercice » (_seance_ajout_exercice.html) ─────────────
+  window.ajoutExoSeance = function () {
+    return {
+      newName: "", newMuscle: "Pecs", newSets: 3,
+      showLib: false, libFilter: "Tous", libSearch: "",
+      choisirDansBiblio: function (ex, groupe) {
+        this.newName = ex.name;
+        this.newMuscle = this.$biblio.muscleDe(groupe, "Autre");
+        this.newSets = ex.defaultSets;
+        this.showLib = false;
+      },
+    };
   };
 
   // ── Bloc cardio inline ───────────────────────────────────────────

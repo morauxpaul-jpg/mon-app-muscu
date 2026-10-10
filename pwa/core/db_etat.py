@@ -52,6 +52,8 @@ def _vide() -> dict:
 
 def _marquer_absente():
     global _absente_depuis
+    from core.schema import signaler_absence
+    signaler_absence("etat_compte")
     _absente_depuis = time.monotonic()
     logger.warning("etat_compte: table absente (v47 non appliquée) — état gardé dans le programme")
 

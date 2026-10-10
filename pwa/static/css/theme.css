@@ -75,39 +75,10 @@ h3 { font-size: var(--text-lg);  font-weight: 500; margin: 0.3rem 0; }
 a { color: var(--accent); text-decoration: none; transition: color var(--ease-fast); }
 a:hover { color: var(--accent-hover); }
 
-/* ── Topbar ── */
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: var(--sp-md) var(--sp-lg);
-  padding-top: calc(var(--sp-md) + env(safe-area-inset-top));
-  background: transparent;
-  border-bottom: 1px solid var(--border-default);
-  font-size: var(--text-sm);
-}
-/* L'e-mail se tronque, le badge PRO jamais : sur 375 px, e-mail et bouton
-   « Déconnexion » coupaient le badge (audit du 30/09, M9). */
-.topbar-user {
-  color: var(--text-2);
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  white-space: nowrap;
-}
-.topbar-email { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.topbar-badge { margin-left: 8px; flex-shrink: 0; }
-.topbar-logout { flex-shrink: 0; }
-@media (max-width: 420px) {
-  .topbar-logout-txt { display: none; }
-  .topbar-logout { padding: 6px 10px; }
-}
-.topbar-logout {
-  padding: 6px 14px;
-  font-size: var(--text-xs);
-  border-radius: var(--radius-pill);
-}
+/* ── Haut de page ── la barre e-mail + « Déconnexion » est partie dans
+   Gestion → Compte (audit du 06/10, m12) ; reste l'écart sous la barre
+   d'état du téléphone. */
+.haut-page { height: calc(var(--sp-sm) + env(safe-area-inset-top)); }
 .topbar-title { font-size: var(--text-xl); font-weight: 600; color: var(--text-1); }
 .topbar-sub   { font-size: var(--text-sm); color: var(--text-3); margin-top: 2px; }
 .avatar {

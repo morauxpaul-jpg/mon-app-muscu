@@ -40,6 +40,8 @@ def marquer_series(user_id: str, ancien: str, exo_id: str) -> int | None:
     except Exception as e:
         if "exercise_id" not in str(e).lower():
             raise
+        from core.schema import signaler
+        signaler(e, "history")
         logger.warning("history: colonne exercise_id absente (v42) — renommage par le nom")
         db_historique._COLONNES["exercise_id"] = False
         return None

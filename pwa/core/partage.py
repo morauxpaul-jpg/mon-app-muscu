@@ -37,7 +37,7 @@ PREFIXE = "mt:"
 PAUSE_PANNE = 10.0          # secondes sans retenter Redis après une erreur
 VERROU_TTL = 15.0           # un verrou abandonné (instance tuée) tombe seul
 VERROU_ATTENTE = 20.0       # > VERROU_TTL : un verrou orphelin expire avant qu'on abandonne
-GENERATION_TTL = 3600       # bien plus long que le cache (60 s) : voir generations()
+GENERATION_TTL = 3600       # bien plus long que le cache (10 min) : voir generations()
 
 # Libère le verrou seulement s'il porte encore notre jeton : un verrou expiré
 # puis repris par une autre instance ne doit pas être effacé par l'ancienne.
@@ -348,7 +348,7 @@ def generations(cles: list):
 
     Une clé jamais incrémentée, ou expirée, vaut 0. L'expiration est sûre : elle
     survient au moins `GENERATION_TTL` après la dernière écriture, quand toute
-    entrée lue avant celle-ci a dépassé depuis longtemps les 60 s du cache."""
+    entrée lue avant celle-ci a dépassé depuis longtemps les 10 min du cache."""
     noms = [_cle("gen", c) for c in cles]
     r = _actif()
     if r is not None:

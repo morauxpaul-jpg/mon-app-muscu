@@ -235,6 +235,8 @@ def test_sans_la_colonne_v42_lapp_fonctionne_comme_avant(fake_db, logged_in, mon
     eid = db.get_prog(USER_ID)["Push"][0]["id"]
     assert _save(logged_in, "Curl", [{"reps": 10, "poids": 12}], exo_id=eid).get_json()["ok"]
     assert dh._COLONNES["exercise_id"] is False
+    from core import schema
+    assert "history.exercise_id" in schema.etat()["alerte"]    # signalé, plus caché
     assert _lignes(fake_db) == [(LUNDI.isoformat(), "Curl", 1, None)]
     d = _historique(logged_in, ancien="Curl", nouveau="Curl marteau", suivre=True, id=eid).get_json()
     assert d == {"ok": True, "deplacees": 1}

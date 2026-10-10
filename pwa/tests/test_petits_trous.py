@@ -6,6 +6,7 @@
   séances (M11) ;
 * vider l'historique ne demandait aucune confirmation au serveur (M10).
 """
+import os
 import json
 import time
 
@@ -133,7 +134,11 @@ def test_la_page_donne_ses_bornes_a_lediteur(fake_db, logged_in):
     _prog(fake_db)
     html = logged_in.get("/programme").get_data(as_text=True)
     assert f'"series": {rp.MAX_SERIES}' in html
-    assert ':max="BORNES.series"' in html and "bornerSeries" in html
+    assert ':max="BORNES.series"' in html and 'bornerEtSauver(ex)' in html
+    # Le geste borne puis sauvegarde (static/js/programme.js, version CSP).
+    js = open(os.path.join(os.path.dirname(__file__), "..", "static", "js", "programme.js"),
+              encoding="utf-8").read()
+    assert "ex.sets = this.bornerSeries(ex.sets);" in js
 
 
 # ── Vider l'historique (M10) ─────────────────────────────────────

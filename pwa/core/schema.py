@@ -18,6 +18,7 @@ Ce module ferme les deux trous :
   ERREUR et affiché sur /admin, au lieu de désactiver une fonction en silence.
 """
 import logging
+import re
 import threading
 import time
 
@@ -82,13 +83,56 @@ _verrou = threading.Lock()
 
 
 def _code_erreur(e) -> str:
-    texte = str(e)
+    texte = str(e).upper()
     for code in ("42703", "PGRST204", "42P01", "PGRST205"):
         if code in texte:
             return code
-    if "does not exist" in texte:
+    if "DOES NOT EXIST" in texte:
         return "42703"
     return ""
+
+
+_MOTIFS = (
+    (re.compile(r'column [\\"]*(?:(\w+)[\\"]*\.)?[\\"]*(\w+)[\\"]* does not exist', re.I),
+     lambda m: (m.group(1), m.group(2))),
+    (re.compile(r"could not find the '(\w+)' column of '(\w+)'", re.I), lambda m: (m.group(2), m.group(1))),
+    (re.compile(r'relation [\\"]*(?:\w+\.)?(\w+)[\\"]* does not exist', re.I), lambda m: (m.group(1), "(table)")),
+    (re.compile(r"could not find the table '(?:\w+\.)?(\w+)'", re.I), lambda m: (m.group(1), "(table)")),
+)
+
+
+def signaler_absence(table: str, colonne: str = "(table)") -> None:
+    """Ajoute un manque constaté EN COURS DE ROUTE à l'alerte de /admin, et le
+    journalise une fois (ERREUR). Les replis « base en retard » le cachaient :
+    la v29 a manqué des mois sans que rien ne s'affiche (audit du 06/10, 4.3)."""
+    with _verrou:
+        deja = colonne in _etat["absentes"].get(table, [])
+        if not deja:
+            _etat["absentes"] = {**_etat["absentes"],
+                                 table: [*_etat["absentes"].get(table, []), colonne]}
+    if not deja:
+        logger.error("schéma : %s absente en base, constaté en cours de route. "
+                     "Migration oubliée : la fonction qui en dépend ne marche pas.",
+                     f"table {table}" if colonne == "(table)" else f"{table}.{colonne}")
+
+
+def signaler(e, table: str | None = None) -> bool:
+    """Vrai si l'erreur est un nom inconnu de la base (colonne ou table) ; le
+    manque est alors signalé. Ne lève jamais : appelée depuis des replis."""
+    try:
+        if not _code_erreur(e):
+            return False
+        texte = str(e)
+        for motif, extraire in _MOTIFS:
+            m = motif.search(texte)
+            if m:
+                t, c = extraire(m)
+                signaler_absence(t or table or "?", c)
+                return True
+        signaler_absence(table or "?", "?")
+        return True
+    except Exception:  # pragma: no cover - filet
+        return False
 
 
 def verifier(client) -> dict:

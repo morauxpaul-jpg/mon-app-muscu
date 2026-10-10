@@ -49,10 +49,10 @@ def test_lessai_voit_quand_il_finit(essai):
     assert "Membre PRO" not in plus
 
 
-def test_la_barre_dit_essai_et_non_pro(essai):
-    html = essai.get("/plus").get_data(as_text=True)
-    barre = html.split("topbar-user", 1)[1].split("</span></span>", 1)[0]
-    assert "ESSAI" in barre and ">PRO<" not in barre
+def test_le_compte_dit_essai_et_non_pro(essai):
+    html = essai.get("/gestion").get_data(as_text=True)
+    compte = html.split('class="card compte"', 1)[1].split("</div>", 1)[0]
+    assert ">ESSAI<" in compte and ">PRO<" not in compte
 
 
 def test_le_payant_garde_son_statut(fake_db, logged_in):
