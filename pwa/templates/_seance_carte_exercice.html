@@ -369,26 +369,9 @@
           </div>
         </template>
 
-        <button class="s-b4e066" type="button" @click="clearWeights()"
-                title="Efface les poids pré-remplis de la dernière séance">
-          Réinitialiser les poids
-        </button>
-        <form class="s-fe7b49" method="post" action="/seance/reset-exo" x-data="{ c:false }">
-          <input type="hidden" name="mode" value="{{ mode }}">
-          <input type="hidden" name="name" value="{{ seance_name }}">
-          <input type="hidden" name="date" value="{{ date_iso }}">
-          <input type="hidden" name="semaine" value="{{ s_act }}">
-          <input type="hidden" name="seance_name" value="{{ seance_name }}">
-          <input type="hidden" name="exo_base" value="{{ exo.base }}">
-            <input type="hidden" name="exo_id" value="{{ exo.exo_id }}">
-          <input type="hidden" name="variant" :value="variant">
-          <button type="button" class="btn label-icon s-9f1047" x-show="!c" @click="c=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Recommencer cet exercice</button>
-          <div class="inline-confirm" x-show="c" x-cloak>
-            <span class="confirm-label">Effacer les séries de {{ exo.base }} ?</span>
-            <button type="button" class="btn" @click="c=false">Annuler</button>
-            <button type="submit" class="btn btn-danger">Confirmer</button>
-          </div>
-        </form>
+        {# « Réinitialiser les poids » et « Recommencer cet exercice » sont
+           partis (audit du 06/10, 4.3) : une série se corrige en la
+           rouvrant d'un tap, et « Skip » efface, après confirmation. #}
 
         {% if exo.is_extra %}
           <form class="s-fe7b49" method="post" action="/seance/remove-extra">

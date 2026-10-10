@@ -124,12 +124,11 @@
 <body>
   <a href="#main-content" class="skip-link">Aller au contenu</a>
   {% if is_authenticated %}
-  <div class="topbar">
-    <span class="topbar-user label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#user"/></svg><span class="topbar-email">{{ current_user_email }}</span>{% if is_vip_full %}<span class="badge-pro topbar-badge">PRO</span>{% elif is_trial %}<span class="badge-pro topbar-badge">ESSAI</span>{% endif %}</span>
-    <form class="s-116966" method="post" action="/logout">
-      <button type="submit" class="btn topbar-logout label-icon" title="Déconnexion" aria-label="Déconnexion"><svg class="icon icon-sm"><use href="/static/img/icons.svg#log-out"/></svg><span class="topbar-logout-txt">Déconnexion</span></button>
-    </form>
-  </div>
+  {# L'e-mail et « Déconnexion » occupaient le haut de chaque page, à un
+     pouce d'une déconnexion par erreur (audit du 30/09, M9 ; 06/10, m12).
+     Ils sont dans Gestion → Compte. Reste ce qui protège le contenu : la
+     barre d'état du téléphone et le bandeau de pub du haut. #}
+  <div class="haut-page" aria-hidden="true"></div>
   {% endif %}
 
   <main id="main-content" class="app page-fade">

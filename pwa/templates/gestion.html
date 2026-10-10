@@ -17,6 +17,19 @@
     <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Erreur : fichier JSON invalide ou manquant.</div>
   {% endif %}
 
+  {# ── Section : Compte ────────────────────── #}
+  {# Était en tête de chaque page (audit du 06/10, m12). #}
+  <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>COMPTE</h2>
+
+  <div class="card compte">
+    <p class="compte-qui">Connecté avec Google
+      {%- if is_vip_full %} <span class="badge-pro">PRO</span>{% elif is_trial %} <span class="badge-pro">ESSAI</span>{% endif %}</p>
+    <p class="compte-email">{{ current_user_email }}</p>
+    <form method="post" action="/logout">
+      <button type="submit" class="btn label-icon compte-deconnexion"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#log-out"/></svg>Déconnexion</button>
+    </form>
+  </div>
+
   {# ── Section : Profil ────────────────────── #}
   <h2 class="label-icon s-8f96e5"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#user"/></svg>PROFIL</h2>
 

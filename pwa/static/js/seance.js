@@ -240,6 +240,7 @@
       _revServeur: 0,
       // "" | "envoi" | "ok" | "attente" | "erreur" — affiché sous les séries.
       etat: "",
+      etatRefus: "",              // pourquoi « Série faite » a été refusée (état « vide »)
       _enCours: null,
       _suite: null,
       skipArme: false,
@@ -491,8 +492,7 @@
         if (s && !this._estRemplie(s) && s.type === "echauffement") {
           // La valeur grisée est celle d'une série de TRAVAIL : la proposer
           // pour un échauffement inventerait une charge qu'on n'a pas faite.
-          this.etat = "vide";
-          toast("Indique les répétitions et la charge de ton échauffement.", "error");
+          this._refuser("Indique les répétitions et la charge de ton échauffement.");
           return;
         }
         if (s && !this._estRemplie(s)) {
@@ -503,9 +503,8 @@
           // Une charge qu'on n'a ni tapée ni vue proposée ne s'invente pas :
           // « 5 × 0 kg » au développé couché fausserait records et suggestion.
           if (!(reps > 0) || (sansPoids && !poidsPropose)) {
-            this.etat = "vide";
-            toast(sansPoids ? "Indique tes répétitions et ta charge avant de valider."
-                            : "Indique tes répétitions avant de valider la série.", "error");
+            this._refuser(sansPoids ? "Indique tes répétitions et ta charge avant de valider."
+                                    : "Indique tes répétitions avant de valider la série.");
             return;
           }
           s.reps = reps;
@@ -563,9 +562,6 @@
         if (s.remarque) bouts.push(s.remarque);
         return bouts.length ? bouts.join(" · ") : "—";
       },
-      clearWeights: function () {
-        this.sets.forEach(function (s) { s.poids = ""; });
-      },
 
       onSetFilled: function (i) {
         markSessionActive();
@@ -620,7 +616,15 @@
       _aEnvoyer: function () {
         return this._rev !== this._revServeur && this._aDesSeries();
       },
+      // Le refus s'affiche SOUS la série, dans la carte. Il partait aussi en
+      // toast en bas d'écran, par-dessus « Enregistrer » et « Skip » (audit
+      // du 06/10, m7) — pour redire ce que la carte disait déjà.
+      _refuser: function (message) {
+        this.etatRefus = message;
+        this.etat = "vide";
+      },
       etatTexte: function () {
+        if (this.etat === "vide" && this.etatRefus) return this.etatRefus;
         return {
           envoi: "Enregistrement…",
           ok: "Enregistré",

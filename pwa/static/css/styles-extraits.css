@@ -343,7 +343,6 @@
 .s-b362be:not(#_s):not(#_s) { background: rgba(255,69,58,0.1); border-color: rgba(255,69,58,0.35); color: var(--danger); }
 .s-b3842e:not(#_s):not(#_s) { color:var(--text-2); }
 .s-b4238c:not(#_s):not(#_s) { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; font-size:0.85rem; color: var(--text-2); }
-.s-b4e066:not(#_s):not(#_s) { background:none; border:none; color:var(--text-mute); font-size:0.78rem; padding:10px 0; margin-top:2px; min-height:32px; cursor:pointer; text-decoration:underline; }
 .s-b52505:not(#_s):not(#_s) { cursor:pointer; font-weight:500; color:var(--text-1); display:flex; align-items:center; gap:8px; }
 .s-b54762:not(#_s):not(#_s) { margin:0; display:flex; align-items:center; gap:6px; }
 .s-b577c8:not(#_s):not(#_s) { text-align:center; font-size:.7rem; color:var(--text-3); margin-top:4px; }

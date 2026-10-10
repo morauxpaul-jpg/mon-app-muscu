@@ -44,3 +44,28 @@ def test_warning_et_erreur_vont_sur_la_sortie_d_erreur_seulement():
     finally:
         appmod._journal_sortie.setStream(anciens[0])
         appmod._journal_erreurs.setStream(anciens[1])
+
+
+def test_gunicorn_aussi_info_sur_la_sortie_standard(monkeypatch):
+    """« Starting gunicorn », « Booting worker » sortaient en « error »."""
+    import importlib.util
+    import pathlib
+    import sys
+    from gunicorn.config import Config
+    sortie, erreurs = io.StringIO(), io.StringIO()
+    monkeypatch.setattr(sys, "stdout", sortie)
+    monkeypatch.setattr(sys, "stderr", erreurs)
+    chemin = pathlib.Path(__file__).resolve().parents[1] / "gunicorn.conf.py"
+    spec = importlib.util.spec_from_file_location("conf_gunicorn", chemin)
+    conf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(conf)
+    cfg = Config()
+    cfg.set("errorlog", "-")
+    cfg.set("logger_class", conf.logger_class)
+    log = cfg.logger_class(cfg)
+    log.info("Starting gunicorn 23.0.0")
+    log.warning("Worker timeout")
+    assert "Starting gunicorn" in sortie.getvalue()
+    assert "Starting gunicorn" not in erreurs.getvalue()
+    assert "Worker timeout" in erreurs.getvalue()
+    assert "Worker timeout" not in sortie.getvalue()
