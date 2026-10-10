@@ -153,6 +153,10 @@ app.permanent_session_lifetime = timedelta(days=30)
 #     sur un autre appareil — sans attendre la reconnexion.
 VIP_CACHE_TTL = 120       # secondes — re-check d'un VIP confirmé
 FREE_RECHECK_TTL = 15     # secondes — re-check d'un FREE (capte vite l'upgrade)
+# Existence du compte auth (session d'un compte supprimé, sur un autre
+# appareil) : un appel à l'API auth. Toutes les 2 min, il tombait sur presque
+# chaque « Série faite » d'une séance (audit du 06/10, I-2).
+AUTH_CHECK_TTL = 600      # secondes
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -227,7 +231,7 @@ def _require_login():
         # FREE_RECHECK_TTL s. Elle invalide les sessions d'un compte supprimé
         # (un cookie encore valide sur un AUTRE appareil pourrait sinon recréer
         # des données orphelines via l'onboarding).
-        if (time.time() - session.get("auth_check_ts", 0)) > VIP_CACHE_TTL:
+        if (time.time() - session.get("auth_check_ts", 0)) > AUTH_CHECK_TTL:
             try:
                 if not core_db.auth_user_exists(user_id):
                     session.clear()

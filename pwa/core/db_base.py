@@ -104,7 +104,7 @@ def get_client() -> Client:
     return _client
 
 
-# ── Cache mémoire (TTL 60 s), clé par user_id, cohérent entre instances ──
+# ── Cache mémoire (TTL 10 min), clé par user_id, cohérent entre instances ──
 # Borné (LRU) : sans plafond, chaque user actif laisserait son historique
 # complet en RAM du worker jusqu'à expiration.
 #
@@ -122,10 +122,18 @@ def get_client() -> Client:
 _CACHE_MAX = 200
 _data_cache: "OrderedDict[str, dict]" = OrderedDict()
 _cache_lock = threading.RLock()
-_TTL = 60.0
-# Le profil porte le tier VIP : TTL court pour qu'un passage PRO (Stripe,
-# admin) se propage vite à toutes les requêtes (cf. FREE_RECHECK_TTL app.py).
-_PROFILE_TTL = 15.0
+# 10 min et non plus 60 s (audit du 06/10, I-2) : un repos entre deux séries
+# dépasse presque toujours la minute, donc chaque « Série faite » relisait
+# l'historique, le programme et l'état du compte (3 allers-retours de plus).
+# La justesse ne tient pas à la durée : toute écriture de l'app avance le
+# numéro de génération (partagé par Redis) et l'entrée n'est plus servie.
+# Seule une modification faite HORS de l'app (éditeur SQL) attend la fin de
+# la durée. Doit rester bien en dessous de partage.GENERATION_TTL.
+_TTL = 600.0
+# Le profil porte le tier VIP. Un passage PRO (webhook Stripe, admin) passe
+# par _profile_upsert, qui invalide : il se voit à la revérification suivante
+# (FREE_RECHECK_TTL, app.py), quelle que soit cette durée.
+_PROFILE_TTL = _TTL
 _TOUT = "*"                    # génération de « tout le cache » (vider_cache)
 _lectures = threading.local()
 

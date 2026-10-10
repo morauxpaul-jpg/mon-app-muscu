@@ -276,21 +276,22 @@ def replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, ne
 
 def _ids_cibles(client, user_id, date_str, seance, exercice, exo_id) -> list:
     """Les séries de l'exercice ce jour-là : par nom, et par identifiant — une
-    série faite avant un renommage porte l'ancien nom (core/exercice_ids.py)."""
-    def ids(col, val):
-        return [r["id"] for r in (
-            client.table("history").select("id").eq("user_id", user_id)
-            .eq("date", date_str).eq("seance", seance).eq(col, val).execute()
-        ).data or [] if r.get("id") is not None]
-    out = ids("exercice", exercice)
-    if exo_id and _COLONNES["exercise_id"]:
-        try:
-            out += [i for i in ids("exercise_id", exo_id) if i not in out]
-        except Exception as e:                    # v42 absente : par le nom seul
-            if "exercise_id" not in str(e).lower():
-                raise
-            _COLONNES["exercise_id"] = False
-    return out
+    série faite avant un renommage porte l'ancien nom (core/exercice_ids.py).
+    Une requête sur la séance du jour, triée ici : deux (nom, identifiant)
+    coûtaient un aller-retour par « Série faite » (audit du 06/10, I-2)."""
+    def lire(colonnes):
+        return (client.table("history").select(colonnes).eq("user_id", user_id)
+                .eq("date", date_str).eq("seance", seance).execute()).data or []
+    par_id = bool(exo_id) and _COLONNES["exercise_id"]
+    try:
+        lignes = lire("id,exercice,exercise_id" if par_id else "id,exercice")
+    except Exception as e:                        # v42 absente : par le nom seul
+        if not par_id or "exercise_id" not in str(e).lower():
+            raise
+        _COLONNES["exercise_id"] = par_id = False
+        lignes = lire("id,exercice")
+    return [r["id"] for r in lignes if r.get("id") is not None
+            and (r.get("exercice") == exercice or (par_id and r.get("exercise_id") == exo_id))]
 
 
 def _replace_exo_rows(user_id: str, date_str: str, seance: str, exercice: str, new_rows: list[dict],
