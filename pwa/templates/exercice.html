@@ -2,6 +2,10 @@
 {% block title %}{{ exo_name }} · Muscu Tracker{% endblock %}
 
 {% block content %}
+  {%- macro jour(d) -%}{{ d[8:10] }}/{{ d[5:7] }}/{{ d[:4] }}{%- endmacro -%}
+  {%- macro lien(m=metric, p=periode) -%}
+    /progres/exercice?exo={{ exo_name|urlencode }}{% if variant %}&variante={{ variant|urlencode }}{% endif %}&m={{ m }}&p={{ p }}
+  {%- endmacro -%}
   <a href="/progres#zoom" class="btn label-icon s-7dc027">
     <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-left"/></svg>Progrès
   </a>
@@ -27,6 +31,20 @@
   {% else %}
 
   {# ── Records ─────────────────────────────────────────────── #}
+  {% if summary.poids_du_corps %}
+  <div class="pr-grid">
+    <div class="pr-card">
+      <div class="pr-label">Meilleure série</div>
+      <div class="pr-value">{{ summary.best_reps }} <span>reps</span></div>
+      <div class="pr-sub">{{ jour(summary.best_reps_date) }}</div>
+    </div>
+    <div class="pr-card">
+      <div class="pr-label">Répétitions au total</div>
+      <div class="pr-value">{{ summary.reps_total|fr }}</div>
+      <div class="pr-sub">en {{ summary.sessions }} séance{{ 's' if summary.sessions > 1 }}</div>
+    </div>
+  </div>
+  {% else %}
   <div class="pr-grid">
     <div class="pr-card">
       <div class="pr-label">Charge max</div>
@@ -49,8 +67,9 @@
       <div class="pr-sub">{{ '{:,}'.format(summary.reps_total).replace(',', ' ') }} répétitions</div>
     </div>
   </div>
+  {% endif %}
 
-  {% if summary.delta_pct is not none %}
+  {% if summary.delta_pct is not none and not summary.poids_du_corps %}
     <div class="exo-delta {{ 'up' if summary.delta_pct >= 0 else 'down' }}">
       <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#{{ 'arrow-up' if summary.delta_pct >= 0 else 'arrow-down' }}"/></svg>
       <span>{{ '+' if summary.delta_pct > 0 }}{{ summary.delta_pct }} % de force estimée depuis ta première séance</span>
@@ -63,39 +82,133 @@
       {% for key, label, unit in metrics %}
         <a role="tab" aria-selected="{{ 'true' if metric == key else 'false' }}"
            class="metric-tab {% if metric == key %}on{% endif %}"
-           href="/progres/exercice?exo={{ exo_name|urlencode }}{% if variant %}&variante={{ variant|urlencode }}{% endif %}&m={{ key }}">{{ label }}</a>
+           href="{{ lien(m=key) }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+    <div class="periode-row" role="tablist" aria-label="Période">
+      {% for key, label, _jours in periodes %}
+        <a role="tab" aria-selected="{{ 'true' if periode == key else 'false' }}"
+           class="periode-chip {% if periode == key %}on{% endif %}"
+           href="{{ lien(p=key) }}">{{ label }}</a>
       {% endfor %}
     </div>
 
     {% if chart and chart.points|length > 1 %}
-      <svg class="exo-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}"
-           preserveAspectRatio="none" role="img"
-           aria-label="Évolution : de {{ chart.min }} à {{ chart.max }} {{ metric_unit }}">
-        <defs>
-          <linearGradient id="exoFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
-            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-          </linearGradient>
-        </defs>
-        <polygon points="{{ chart.area }}" fill="url(#exoFill)"/>
-        <polyline points="{{ chart.polyline }}" fill="none" stroke="var(--accent)"
-                  stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-        {% for p in chart.points %}
-          <circle cx="{{ p.x }}" cy="{{ p.y }}" r="{{ 5 if loop.last else 3 }}"
-                  fill="var(--accent)"><title>{{ p.date }} — {{ p.value }} {{ metric_unit }}</title></circle>
-        {% endfor %}
-      </svg>
+      <div class="exo-chart-wrap">
+        {% if chart.etiquettes %}<span class="exo-y exo-y-max">{{ chart.etiquettes.haut|fr }}</span>{% endif %}
+        <svg class="exo-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}"
+             preserveAspectRatio="none" role="img"
+             aria-label="Évolution du {{ jour(chart.points[0].date) }} au {{ jour(chart.last.date) }} : de {{ chart.min|fr }} à {{ chart.max|fr }} {{ metric_unit }}{% if tendance %}, tendance {{ tendance.par_mois|fr(true) }} {{ metric_unit }} par mois{% endif %}">
+          <defs>
+            <linearGradient id="exoFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon points="{{ chart.area }}" fill="url(#exoFill)"/>
+          <polyline class="exo-line" points="{{ chart.polyline }}"/>
+          {% if chart.tendance %}
+            <line class="exo-trend" x1="{{ chart.tendance.x1 }}" y1="{{ chart.tendance.y1 }}"
+                  x2="{{ chart.tendance.x2 }}" y2="{{ chart.tendance.y2 }}"/>
+          {% endif %}
+          {# Un trait de longueur nulle aux bouts ronds : un point qui reste rond
+             quand le graphique est étiré à la largeur de l'écran (un <circle>
+             devenait une ellipse). #}
+          {% for p in chart.points %}
+            <path class="exo-pt{% if p.record %} rec{% endif %}{% if loop.last %} last{% endif %}"
+                  d="M{{ p.x }} {{ p.y }}h0"><title>{{ jour(p.date) }} — {{ p.value|fr }} {{ metric_unit }}{% if p.record %} · record{% endif %}</title></path>
+          {% endfor %}
+        </svg>
+        {% if chart.etiquettes %}<span class="exo-y exo-y-min">{{ chart.etiquettes.bas|fr }}</span>{% endif %}
+      </div>
       <div class="exo-chart-legend">
         <span>{{ chart.points[0].date[8:10] }}/{{ chart.points[0].date[5:7] }}</span>
-        <span class="exo-chart-last">{{ chart.last.value }} {{ metric_unit }}</span>
-        <span>{{ chart.points[-1].date[8:10] }}/{{ chart.points[-1].date[5:7] }}</span>
+        <span class="exo-chart-last">{{ chart.last.value|fr }} {{ metric_unit }}</span>
+        <span>{{ chart.last.date[8:10] }}/{{ chart.last.date[5:7] }}</span>
       </div>
+      {% if chart.records or chart.tendance %}
+        <div class="exo-chart-key">
+          {% if chart.records %}<span><i class="cle-rec" aria-hidden="true"></i>Record battu ({{ chart.records }})</span>{% endif %}
+          {% if chart.tendance %}<span><i class="cle-trend" aria-hidden="true"></i>Tendance</span>{% endif %}
+        </div>
+      {% endif %}
+
+      {% if tendance %}
+        <p class="exo-trend-text {{ tendance.sens }}">
+          {% if tendance.sens == 'stable' %}
+            <strong>Stable</strong> du {{ jour(tendance.debut.date) }} au {{ jour(tendance.fin.date) }} :
+            {{ tendance.par_mois|fr(true) }} {{ metric_unit }} par mois, rien de plus que l'écart normal d'une séance à l'autre.
+          {% else %}
+            <strong>{{ 'En hausse' if tendance.sens == 'hausse' else 'En baisse' }} :
+            {{ tendance.par_mois|fr(true) }} {{ metric_unit }} par mois</strong>
+            du {{ jour(tendance.debut.date) }} au {{ jour(tendance.fin.date) }}{% if tendance.variation_pct is not none %}
+            ({{ tendance.variation_pct|fr(true) }} % sur la période){% endif %}.
+          {% endif %}
+        </p>
+        <p class="note exo-trend-note">La tendance suit la direction générale. Une valeur 3 fois plus grande ou plus petite que d'habitude, comme une faute de frappe, est mise de côté.</p>
+      {% else %}
+        <p class="note exo-trend-note">La tendance apparaît à partir de 4 séances étalées sur au moins 3 semaines.</p>
+      {% endif %}
+    {% elif periode != 'tout' and summary.sessions > 1 %}
+      <p class="note s-19dc2c">
+        Pas assez de séances sur {{ periode_libelle }} pour tracer une courbe.
+        <a href="{{ lien(p='tout') }}">Voir tout l'historique</a>
+      </p>
     {% else %}
       <p class="note s-19dc2c">
         Une seule séance pour l'instant — la courbe apparaît dès la deuxième.
       </p>
     {% endif %}
   </div>
+
+  {# ── Comparaison avec la période d'avant ─────────────────── #}
+  {% if comparaison %}
+    <div class="card">
+      <div class="card-label">{{ comparaison.titre|capitalize }} contre les {{ comparaison.titre_avant }}</div>
+      <table class="ltable compare-table">
+        <thead>
+          <tr><th></th><th>{{ comparaison.titre|capitalize }}</th><th>Avant</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for l in comparaison.lignes %}
+            <tr>
+              <td>{{ l.libelle }}</td>
+              <td><strong>{{ l.actuel|fr }}</strong>{% if l.unite and l.actuel is not none %} {{ l.unite }}{% endif %}</td>
+              <td>{{ l.avant|fr }}{% if l.unite and l.avant is not none %} {{ l.unite }}{% endif %}</td>
+              <td class="delta {% if l.delta_pct is not none %}{{ 'up' if l.delta_pct > 0 else ('down' if l.delta_pct < 0 else '') }}{% endif %}">
+                {% if l.delta_pct is not none %}{{ l.delta_pct|fr(true) }} %{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if comparaison.avant_vide %}
+        <p class="note compare-note">Aucune séance les {{ comparaison.titre_avant }} : rien à comparer pour l'instant.</p>
+      {% elif comparaison.actuel_vide %}
+        <p class="note compare-note">Aucune séance de cet exercice ces {{ comparaison.titre }}.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {# ── Records par répétitions ─────────────────────────────── #}
+  {% if records_reps %}
+    <div class="card">
+      <div class="card-label">Tes records par répétitions</div>
+      <p class="note rec-note">Le plus lourd soulevé pour au moins ce nombre de reps, et le jour où tu l'as fait.</p>
+      <table class="ltable rec-table">
+        <thead><tr><th>Reps</th><th>Charge</th><th>Le</th></tr></thead>
+        <tbody>
+          {% for r in records_reps %}
+            <tr>
+              <td><strong>{{ r.de }}{% if r.a != r.de %} à {{ r.a }}{% endif %}</strong></td>
+              <td>{{ r.poids|fr }} kg{% if r.reps_faites != r.a %} <span class="rec-faites">× {{ r.reps_faites }}</span>{% endif %}</td>
+              <td>{{ jour(r.date) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 
   {# ── Table des maxima (PRO) ──────────────────────────────── #}
   {% if rep_table %}
@@ -135,10 +248,10 @@
       <div class="card-label">Variantes utilisées</div>
       <div class="variant-row">
         <a class="variant-chip {% if not variant %}on{% endif %}"
-           href="/progres/exercice?exo={{ exo_name|urlencode }}&m={{ metric }}">Toutes</a>
+           href="/progres/exercice?exo={{ exo_name|urlencode }}&m={{ metric }}&p={{ periode }}">Toutes</a>
         {% for v in variants %}
           <a class="variant-chip {% if variant == v %}on{% endif %}"
-             href="/progres/exercice?exo={{ exo_name|urlencode }}&variante={{ v|urlencode }}&m={{ metric }}">{{ v }}</a>
+             href="/progres/exercice?exo={{ exo_name|urlencode }}&variante={{ v|urlencode }}&m={{ metric }}&p={{ periode }}">{{ v }}</a>
         {% endfor %}
       </div>
     </div>
@@ -157,8 +270,12 @@
           {% if s.seance %}<div class="session-name">{{ s.seance }}</div>{% endif %}
         </div>
         <div class="session-totals">
-          <span><strong>{{ '{:,}'.format(s.volume).replace(',', ' ') }}</strong> kg</span>
-          <span>1RM <strong>{{ s.e1rm }}</strong></span>
+          {% if s.volume %}
+            <span><strong>{{ '{:,}'.format(s.volume).replace(',', ' ') }}</strong> kg</span>
+            <span>1RM <strong>{{ s.e1rm }}</strong></span>
+          {% else %}
+            <span><strong>{{ s.reps_total }}</strong> reps</span>
+          {% endif %}
         </div>
       </div>
       <table class="ltable session-sets">
@@ -242,7 +359,89 @@
   }
   .metric-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+  .periode-row { display: flex; gap: 4px; margin: -4px 0 12px; }
+  .periode-chip {
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-2);
+    font-size: 0.76rem;
+    text-decoration: none;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+  }
+  .periode-chip.on { color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+
+  .exo-chart-wrap { position: relative; }
+  .exo-y {
+    position: absolute;
+    left: 0;
+    font-size: 0.7rem;
+    color: var(--text-3, var(--text-2));
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  /* Hauteur du graphique = celle du viewBox (160) : haut et bas de la zone
+     tracée à 14 px et 140 px (cf. sparkline()). */
+  .exo-y-max { top: 7px; }
+  .exo-y-min { top: 133px; }
   .exo-chart { width: 100%; height: 160px; display: block; overflow: visible; }
+  .exo-line {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .exo-trend {
+    stroke: var(--text-1);
+    stroke-opacity: 0.55;
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+    vector-effect: non-scaling-stroke;
+  }
+  .exo-pt {
+    stroke: var(--accent);
+    stroke-width: 6;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .exo-pt.last { stroke-width: 10; }
+  .exo-pt.rec { stroke: var(--gold, #f5b301); stroke-width: 9; }
+  .exo-chart-key {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    color: var(--text-2);
+    margin-top: 6px;
+  }
+  .exo-chart-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .cle-rec { width: 9px; height: 9px; border-radius: 50%; background: var(--gold, #f5b301); }
+  .cle-trend { width: 16px; border-top: 1.5px dashed var(--text-1); opacity: 0.55; }
+  .exo-trend-text { margin: 12px 0 2px; font-size: 0.86rem; color: var(--text-1); line-height: 1.4; }
+  .exo-trend-text.hausse strong { color: var(--success); }
+  .exo-trend-text.baisse strong { color: var(--warning); }
+  .exo-trend-note { margin: 4px 0 0; font-size: 0.74rem; }
+
+  .compare-table th, .compare-table td { padding: 6px 4px; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  .compare-table th { font-weight: 500; color: var(--text-2); font-size: 0.72rem; }
+  .compare-table td:nth-child(n+2), .compare-table th:nth-child(n+2) { text-align: right; }
+  .compare-table .delta { font-size: 0.76rem; white-space: nowrap; color: var(--text-2); }
+  .compare-table .delta.up { color: var(--success); }
+  .compare-table .delta.down { color: var(--warning); }
+  .compare-note, .rec-note { margin: 8px 0 0; font-size: 0.74rem; }
+  .rec-note { margin: 0 0 8px; }
+  .rec-table, .compare-table { width: 100%; }
+  .rec-table td, .rec-table th { padding: 6px; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+  .rec-table td:nth-child(2), .rec-table th:nth-child(2) { text-align: right; }
+  .rec-table td:last-child, .rec-table th:last-child { text-align: right; color: var(--text-2); }
+  .rec-faites { font-size: 0.74rem; color: var(--text-2); }
   .exo-chart-legend {
     display: flex;
     justify-content: space-between;

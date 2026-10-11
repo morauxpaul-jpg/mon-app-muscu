@@ -1,8 +1,21 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 11/10/2026 (2) — courbe de force avec tendance (axe 4, idée 4.2-4) · note inchangée : **6,6 / 10**
+
+Sur une branche, **ni fusionné ni déployé**. Le « pour 8 » de l'axe 4 demande une « courbe e1RM par exercice avec tendance et records datés, vérifiée sur un vrai historique de plus de 3 mois ».
+
+| Constat | Correction | Preuve |
+|---|---|---|
+| La courbe montrait les 20 dernières séances à intervalles égaux, sans période, sans tendance ni comparaison | Période au choix (1 mois → tout), points placés à leur date, droite de tendance et phrase (« En hausse : +2,3 kg par mois du 12/05 au 22/09 »), période contre celle d'avant | `tests/test_progres_exercice.py` ; calcul et rendu sur un extrait du **vrai historique** (10 exercices, 393 séries du 06/04 au 05/10, total vérifié contre la base : 3 872 reps, 121 938 kg) |
+| Records datés : seulement le meilleur 1RM, la charge max et le volume | Records battus marqués sur la courbe ; records par répétitions (1 → 12 reps, « au moins »), datés du premier jour | idem |
+| **Trouvé : au poids du corps, la courbe était inutilisable** | Ancienne page, rejouée : dips « Charge max 0 kg », « Force estimée 0.0 kg », courbe plate à 0 ; tractions avec une séance lestée, courbe en kg qui tombe à 0 à chaque séance sans lest. Désormais mesurés en répétitions (meilleure série, total) dès que la moitié des séances est sans charge. Une première version de cette PR (« jamais chargé ») laissait les tractions en kg : 1 point sur 22 | vrai historique : tractions 22 points, +0,6 rep par mois sur 6 mois ; test `test_poids_du_corps_a_la_majorite_des_seances`, vu échouer avec la règle « jamais chargé » |
+| **Trouvé : la première méthode de tendance disait « stable » à tort** | La médiane des pentes (Theil-Sen) tombe sur 0 dès que les valeurs se répètent : dips de 10 à 24 reps → « stable, 0 par mois ». Remplacée par les moindres carrés, fautes de frappe écartées (valeur ×3 ou ÷3 de la médiane) | vrai historique : dips +4,8 reps par mois sur 3 mois ; une faute 420 au lieu de 42 **sur la dernière séance** ne change pas la tendance (avant cette règle : +195 kg par mois). Tests vus échouer avec l'ancienne méthode |
+
+La note attend la mise en production et une lecture de la page sur le vrai compte.
+
 ## Suivi du 11/10/2026 — « Série faite » : le téléphone d'abord (axe 12, idée 4.2-2) · note inchangée : **6,6 / 10**
 
-Sur une branche, **ni fusionné ni déployé**.
+**Fusionné (PR #39) et déployé** le 11/10 à 00:00 UTC (déploiement Railway `b2878690`, commit `f859ef5`) : démarrage propre (« 16 tables et vues vérifiées, rien ne manque »), aucune erreur ni blocage CSP dans les journaux.
 
 | Constat | Correction | Preuve |
 |---|---|---|

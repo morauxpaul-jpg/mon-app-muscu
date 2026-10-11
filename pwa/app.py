@@ -439,6 +439,13 @@ def _duree_cardio(minutes):
     return format_duree(minutes)
 
 
+@app.template_filter("fr")
+def _nombre_fr(x, signe=False):
+    """« 1 234,5 », « +1,4 » (core/exercise_stats.py)."""
+    from core.exercise_stats import nombre_fr
+    return nombre_fr(x, signe)
+
+
 @app.template_filter("sans_prive")
 def _sans_prive(dictionnaire):
     """Retire les clés préfixées `_` avant de sérialiser pour le navigateur.
