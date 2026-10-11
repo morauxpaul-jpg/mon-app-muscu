@@ -574,6 +574,15 @@ html.has-ad-banner .haut-page {
   border-bottom-color: var(--accent);
   background: rgba(255, 255, 255, 0.04);
 }
+/* Équipement par défaut de l'exercice (core/noms_exercices.py). */
+.prog-exo-materiel {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 0.72rem;
+}
 
 /* Rotation des séances, sous le planning de la page programme. */
 .rotation-bloc {

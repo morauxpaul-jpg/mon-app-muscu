@@ -22,6 +22,20 @@
     {% endif %}
   </div>
 
+  {# ── Équipement : un à la fois (records et courbe), ou tous ── #}
+  {% if materiels|length > 1 %}
+    <div class="variant-row materiel-row" role="tablist" aria-label="Équipement">
+      {% for m in materiels %}
+        <a role="tab" aria-selected="{{ 'true' if variant == m.nom else 'false' }}"
+           class="variant-chip {% if variant == m.nom %}on{% endif %}"
+           href="/progres/exercice?exo={{ exo_name|urlencode }}&variante={{ m.nom|urlencode }}&m={{ metric }}&p={{ periode }}">{{ m.label }} <small>{{ m.seances }}</small></a>
+      {% endfor %}
+      <a role="tab" aria-selected="{{ 'true' if variant == 'tous' else 'false' }}"
+         class="variant-chip {% if variant == 'tous' %}on{% endif %}"
+         href="/progres/exercice?exo={{ exo_name|urlencode }}&variante=tous&m={{ metric }}&p={{ periode }}">Tous</a>
+    </div>
+  {% endif %}
+
   {% if not sessions %}
     <div class="card s-88bb7b">
       <svg class="icon icon-xl icon-mute" aria-hidden="true"><use href="/static/img/icons.svg#dumbbell"/></svg>
@@ -242,21 +256,6 @@
     </a>
   {% endif %}
 
-  {# ── Variantes ───────────────────────────────────────────── #}
-  {% if variants|length > 1 %}
-    <div class="card">
-      <div class="card-label">Variantes utilisées</div>
-      <div class="variant-row">
-        <a class="variant-chip {% if not variant %}on{% endif %}"
-           href="/progres/exercice?exo={{ exo_name|urlencode }}&m={{ metric }}&p={{ periode }}">Toutes</a>
-        {% for v in variants %}
-          <a class="variant-chip {% if variant == v %}on{% endif %}"
-             href="/progres/exercice?exo={{ exo_name|urlencode }}&variante={{ v|urlencode }}&m={{ metric }}&p={{ periode }}">{{ v }}</a>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-
   {# ── Historique complet ──────────────────────────────────── #}
   <h3 class="label-icon s-a26bda">
     <svg class="icon icon-md icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#history"/></svg>Toutes tes séances
@@ -453,6 +452,8 @@
   .exo-chart-last { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
 
   .variant-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .materiel-row { margin: 0 0 12px; }
+  .variant-chip small { margin-left: 4px; opacity: 0.7; font-size: 0.72rem; }
   .variant-chip {
     padding: 6px 12px;
     border-radius: 999px;

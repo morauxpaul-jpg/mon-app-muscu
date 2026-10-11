@@ -1468,15 +1468,11 @@ _SUFFIXES = ("halteres", "haltere", "barre", "poulie", "machine",
              "elastique", "elastiques", "sol", "smith", "ez", "corde")
 
 
-# Du plus sûr au plus large. Le niveau compte : afficher une fiche est
-# réversible d'un rechargement, RENOMMER un historique ne l'est pas. La
-# migration ne coche d'office que les quatre premiers.
-NIVEAUX_SURS = ("exact", "orthographe", "parenthese", "materiel")
-
-# Les rattrapages larges, dans l'ordre où ils sont tentés. Aucun n'est
-# sûr : ils servent à afficher une fiche, jamais à renommer tout seul.
-NIVEAUX_APPROXIMATIFS = ("surnom", "anglais", "mots", "sous_ensemble",
-                         "nom_court", "faute_de_frappe")
+# Le niveau de reconnaissance (exact, orthographe, parenthese, materiel,
+# surnom, anglais, mots, sous_ensemble, nom_court, faute_de_frappe, prise),
+# du plus sûr au plus large. Afficher une fiche se corrige d'un rechargement ;
+# RENOMMER un historique, non : core/noms_exercices.py décide de ce qu'un
+# rangement peut proposer, et de ce qu'il coche d'office.
 
 
 def resoudre(name):
@@ -1628,54 +1624,6 @@ def _plus_proche(jetons):
         else:
             return nom_cat
     return None
-
-
-def _absorbe_connu(nom):
-    """(base, matériel) si ce nom désignait une entrée absorbée, sinon None."""
-    return _PAR_CLE_ABSORBES.get(_cle(nom))
-
-
-def canoniser(nom):
-    """Le nom que ce nom d'historique devrait porter, et à quel point c'est sûr.
-
-    « TRICEPS EXTENSION (Poulie) » → (« Extensions triceps (Poulie) », « mots »).
-
-    La variante entre parenthèses dit avec quel matériel la série a été
-    faite : c'est une donnée, pas une faute d'orthographe. Elle traverse la
-    migration intacte.
-
-    Renvoie (None, "") quand il n'y a rien à changer — nom déjà canonique,
-    ou exercice inconnu du catalogue. La migration n'a ainsi à proposer que
-    de vrais renommages.
-    """
-    from core.muscu import separer_variante
-    base, variante = separer_variante(nom)
-
-    # Un nom qui portait le matériel DANS le nom le porte désormais à côté :
-    # « Élévations latérales haltères » → « Élévations latérales (Haltères) ».
-    # Sans ça la fusion perdrait l'information au lieu de la déplacer.
-    absorbe = _absorbe_connu(base)
-    if absorbe:
-        cle, materiel = absorbe
-        nouveau = f"{cle} ({variante or materiel})"
-        return (None, "") if nouveau == (nom or "").strip() else (nouveau, "orthographe")
-
-    cle, niveau = resoudre(base)
-    if not cle:
-        return None, ""
-    # La prise partage la fiche mais PAS l'historique : « prise neutre » et
-    # « prise large » ne se chargent pas pareil, donc chacune mène sa
-    # progression. Proposer de les renommer vers le même nom fusionnerait
-    # deux passés en un, sans retour possible, et le seul indice serait une
-    # courbe devenue incohérente. C'est une distinction voulue, pas une faute.
-    #
-    # Le test porte sur le MOT, pas sur l'étape qui a résolu : « développé
-    # couché prise inversée » trouve sa fiche bien avant d'arriver à l'étape
-    # de la prise.
-    if "prise" in _cle(base).split() and "prise" not in _cle(cle).split():
-        return None, ""
-    nouveau = f"{cle} ({variante})" if variante else cle
-    return (None, "") if nouveau == (nom or "").strip() else (nouveau, niveau)
 
 
 def get_exercise_info(name):

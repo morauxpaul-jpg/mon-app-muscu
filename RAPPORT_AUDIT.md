@@ -1,8 +1,22 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 11/10/2026 (3) — un mouvement, un nom ; l'équipement à côté (retour d'usage) · note inchangée : **6,6 / 10**
+
+Sur une branche, **ni fusionné ni déployé**. Retour du propriétaire : Progrès liste « plein d'exercices qui ont le même nom mais écrits différemment ».
+
+| Constat | Correction | Preuve |
+|---|---|---|
+| La liste « Suivre un exercice » donnait une ligne par **équipement** (« Curl marteau », « … (Haltères) », « … (Poulie) ») | Un mouvement par ligne ; l'équipement se choisit sur la fiche | rejoué sur `main` : 7 lignes pour 4 mouvements ; vrais noms : **57 → 38** lignes sans rien faire |
+| La fiche mélangeait barre et haltères dans la même courbe et les mêmes records | Elle s'ouvre sur l'équipement le plus pratiqué (« Tous » à côté), comme Hevy et Strong | rejoué sur `main` : « 4 séances » (3 haltères + 1 barre) ; désormais 3 |
+| Noms en double : équipement écrit dans le nom (« Développé décliné barre (Barre) », « Développé incliné haltères »), fautes (« Développer décliné »), accents | Règle unique (`core/noms_exercices.py`) ; Gestion → **« Ranger mes exercices »** range l'historique ET le programme ; tout nouveau nom est rangé à la saisie | vrais noms : 8 rangements sûrs cochés, 3 laissés au choix ; **38 → 34** mouvements, 61 séries regroupées (serveur local) |
+| **Trouvé : l'ancien outil proposait de fusionner « Machine adducteurs » et « Machine abducteurs »** (deux muscles) | Deux mots connus ne sont jamais une faute de frappe ; deux fiches différentes jamais le même mouvement | rejoué sur `main` ; test `test_adducteurs_et_abducteurs_ne_sont_jamais_le_meme` |
+| **Trouvé : le renommage ne touchait que l'historique** | Le programme et les exercices perso suivent ; sinon la séance suivante réécrivait l'ancien nom | `test_ranger_regroupe_l_historique_et_le_programme_suit` |
+
+Aucune donnée n'est modifiée par le déploiement : le rangement de l'historique se fait d'un tap, par l'utilisateur, dans Gestion.
+
 ## Suivi du 11/10/2026 (2) — courbe de force avec tendance (axe 4, idée 4.2-4) · note inchangée : **6,6 / 10**
 
-Sur une branche, **ni fusionné ni déployé**. Le « pour 8 » de l'axe 4 demande une « courbe e1RM par exercice avec tendance et records datés, vérifiée sur un vrai historique de plus de 3 mois ».
+**Fusionné (PR #40) et déployé** le 11/10 à 13:23 UTC (déploiement Railway `3e4c27d0`, commit `3d8f07e`) : démarrage propre, aucune erreur dans les journaux. Le « pour 8 » de l'axe 4 demande une « courbe e1RM par exercice avec tendance et records datés, vérifiée sur un vrai historique de plus de 3 mois ».
 
 | Constat | Correction | Preuve |
 |---|---|---|

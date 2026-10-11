@@ -130,6 +130,7 @@ function programmeApp() {
         });
         if (resp.ok) {
           this._dirty = false;
+          this.appliquerNomsRanges(await resp.json().catch(function () { return null; }));
           this.saveState = '\u2713 Sauvegard\u00e9';
           var self = this;
           setTimeout(function () { if (self.saveState === '\u2713 Sauvegard\u00e9') self.saveState = ''; }, 1500);
@@ -139,6 +140,23 @@ function programmeApp() {
       } catch (e) {
         this.saveState = '\u26a0 Hors ligne';
       }
+    },
+
+    // Le serveur range le nom d'un exercice qui entre au programme
+    // (core/noms_exercices.py) : « Développé incliné haltères » devient
+    // « Développé incliné », équipement Haltères. On l'affiche aussitôt —
+    // seulement sur les exercices encore sans identifiant, les nouveaux.
+    appliquerNomsRanges(d) {
+      if (!d || !d.noms) return;
+      var self = this;
+      d.noms.forEach(function (n) {
+        (self.prog[n[0]] || []).forEach(function (e) {
+          if (e && !e.id && e.name === n[1]) {
+            e.name = n[2];
+            if (n[3]) e.materiel = n[3];
+          }
+        });
+      });
     },
 
     _genProgId() {

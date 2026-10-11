@@ -117,77 +117,53 @@
   </div>
   {% endif %}
 
-  {% if dup_groups %}
-  <div class="card s-070e82" id="doublons" x-data="{ open: true }">
-    <h3 class="s-a0dcef" @click="open = !open">
-      <span class="label-icon"><svg class="icon icon-md s-839aae"><use href="/static/img/icons.svg#alert-triangle"/></svg>Doublons détectés ({{ dup_groups|length }})</span>
-      <span x-text="open ? '−' : '+'"></span>
-    </h3>
-    <div x-show="open" x-transition.duration.200ms>
-      <p class="s-7e1751">Ces exercices semblent être les mêmes écrits différemment. Choisis le bon nom dans chaque groupe : toutes les séries des autres seront regroupées dessus. <b>Vérifie bien</b> — ne fusionne pas deux variantes réellement différentes (ex. barre vs haltères).</p>
-      {% for grp in dup_groups %}
-        <form class="s-3274ce" method="post" action="/gestion/exercice/fusionner"
-              x-data='{ keep: {{ grp.suggested|tojson }}, confirm: false }'>
-          {% for m in grp.members %}
-            <input type="hidden" name="member" value="{{ m.name }}">
-            <label style="display:flex; align-items:center; gap:8px; padding:6px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %} cursor:pointer;">
-              <input class="s-6ee066" type="radio" name="keep" value="{{ m.name }}" x-model="keep">
-              <span class="s-7f784d">
-                <span class="s-198075">{{ m.name }}</span>
-                <span class="s-7e514b"> · {{ m.count }} série{{ 's' if m.count > 1 else '' }}</span>
-              </span>
-            </label>
-          {% endfor %}
-          <p class="s-d3a1c1">
-            Tout sera regroupé sous « <span class="s-38f301" x-text="keep"></span> ».
-          </p>
-          <button type="button" class="btn primary label-icon s-ac0370"
-                  x-show="!confirm" @click="confirm = true">
-            <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Fusionner ce groupe
-          </button>
-          <div x-show="confirm" x-cloak class="flex-show s-7e81fa">
-            <button type="button" class="btn s-69eb87" @click="confirm = false">Annuler</button>
-            <button type="submit" class="btn primary s-69eb87">Confirmer</button>
-          </div>
-        </form>
-      {% endfor %}
-    </div>
-  </div>
+  {% set _rang = request.args.get('align') %}
+  {% if _rang == 'ok' %}
+    <div class="card rang-retour" role="status">✓ {{ request.args.get('n', 0)|int }} séries rangées. Ton programme a suivi.</div>
+  {% elif _rang == 'error' %}
+    <div class="card rang-retour rang-erreur" role="alert">Le rangement a échoué. Rien n'a été modifié, réessaie dans un instant.</div>
   {% endif %}
 
-  {% if alignements %}
+  {% if rangements %}
+  {# Un mouvement, un nom ; l'équipement à côté (core/noms_exercices.py).
+     Remplace « Doublons détectés » et « Aligner sur les noms de l'app » :
+     les deux rataient l'équipement écrit dans le nom, et le premier
+     rapprochait « adducteurs » et « abducteurs ». #}
   <div class="card s-0e1618" id="aligner" x-data="{ open: true, confirm: false }">
     <h3 class="s-a0dcef" @click="open = !open">
-      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Aligner sur les noms de l'app ({{ alignements|length }})</span>
+      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Ranger mes exercices ({{ rangements|length }})</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
       <p class="s-7e1751">
-        Ces exercices sont enregistrés sous un nom que l'app ne reconnaît pas :
-        ils n'ont ni fiche, ni illustration, et leur historique est séparé de
-        celui du même exercice écrit autrement. Les renommer les rebranche.
-        <b>C'est définitif</b> — décoche ce dont tu n'es pas sûr.
+        Un mouvement, un seul nom, et l'équipement à côté entre parenthèses,
+        comme dans Hevy et Strong : « Développé incliné (Haltères) ». Les
+        séries d'un même mouvement se retrouvent ensemble, ton programme suit.
+        <b>C'est définitif</b> : décoche ce que tu veux garder à part.
       </p>
       <form method="post" action="/gestion/exercice/aligner">
-        {% for p in alignements %}
-        <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %} cursor:pointer;">
-          <input class="s-7dda2a" type="checkbox" name="aligner" value="{{ p.depuis }}"
-                 {% if p.sur %}checked{% endif %}>
-          <span class="s-7f784d">
-            <span class="s-198075">{{ p.depuis }}</span>
-            <span class="s-73e788"> → </span>
-            <span class="s-4fe8aa">{{ p.vers }}</span>
-            <span class="s-563c67">
-              {{ p.count }} série{{ 's' if p.count > 1 else '' }}
-              {%- if not p.sur %} · <b class="s-839aae">à vérifier</b>, rapprochement approximatif{% endif %}
-              {%- if p.fusion %} · <b class="s-839aae">fusionne</b> avec un historique existant{% endif %}
+        {% for mouvement, props in rangements|groupby('mouvement') %}
+        <div class="rang-groupe">
+          <div class="rang-titre">{{ mouvement }}</div>
+          {% for p in props %}
+          <label class="rang-ligne">
+            <input class="s-7dda2a" type="checkbox" name="aligner" value="{{ p.depuis }}" {% if p.sur %}checked{% endif %}>
+            <span class="s-7f784d">
+              <span class="s-198075">{{ p.depuis }}</span>
+              <span class="s-73e788"> → </span>
+              <span class="s-4fe8aa">{{ p.vers }}</span>
+              <span class="s-563c67">
+                {{ p.series }} série{{ 's' if p.series > 1 }} · {{ p.raisons|join(', ') }}
+                {%- if p.fusion %} · <b class="s-839aae">fusionne</b> avec un historique existant{% endif %}
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+          {% endfor %}
+        </div>
         {% endfor %}
         <button type="button" class="btn primary label-icon s-d5b41c"
                 x-show="!confirm" @click="confirm = true">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Renommer les exercices cochés
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#check-circle"/></svg>Ranger les exercices cochés
         </button>
         <div x-show="confirm" x-cloak class="flex-show s-f6c3b0">
           <button type="button" class="btn s-69eb87" @click="confirm = false">Annuler</button>
@@ -196,6 +172,18 @@
       </form>
     </div>
   </div>
+  <style>
+    .rang-groupe { padding: 8px 0; border-bottom: 1px solid var(--border-default); }
+    .rang-groupe:last-of-type { border-bottom: 0; }
+    .rang-titre { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); margin-bottom: 4px; }
+    .rang-ligne { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; cursor: pointer; }
+  </style>
+  {% endif %}
+  {% if _rang %}
+  <style>
+    .rang-retour { color: var(--success); font-size: 0.9rem; }
+    .rang-erreur { color: var(--warning); }
+  </style>
   {% endif %}
 
   {% if hist_exercises %}

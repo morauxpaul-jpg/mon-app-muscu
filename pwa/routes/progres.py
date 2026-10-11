@@ -17,10 +17,10 @@ from core.data import (
 from core.dates import today_paris, today_paris_str
 from core.limiter import limiter
 from core.rotation import seance_prevue
-from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_table
+from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_table, separer_variante
 from core.body_map import get_body_polygons
 from core import strength, exercise_stats
-from core.exercises_data import get_exercise_info
+from core.exercises_data import _cle, get_exercise_info
 from core.hist import is_cardio, is_muscu_perf, is_perf, tonnage
 
 logger = logging.getLogger(__name__)
@@ -540,7 +540,10 @@ def progres():
         podium = []
 
     # ── Accès aux fiches exercice ───────────────────────────────
-    all_exos = sorted({r["Exercice"] for r in df_p})
+    # Un mouvement par ligne : « Curl marteau », « Curl marteau (Haltères) » et
+    # « Curl marteau (Poulie) » ouvraient la même fiche depuis trois lignes
+    # (retour d'usage du 11/10). Le matériel se choisit sur la fiche.
+    all_exos = sorted({get_base_name(r["Exercice"]) for r in df_p}, key=_cle)     # « Écarté » avec les E
     sel_exo = request.args.get("exo") or (all_exos[0] if all_exos else None)
 
     # Raccourcis vers les mouvements les plus travaillés (nb de séances
@@ -766,12 +769,20 @@ def exercice():
         ), 503
     hist = _normalize(hist, prog)
 
-    # Regroupe les variantes du même mouvement par défaut : un « Développé
-    # couché » fait tantôt à la barre tantôt aux haltères reste le même
-    # mouvement à suivre. Un onglet permet d'isoler une variante.
+    # Un mouvement, un équipement à la fois : 40 kg aux haltères ne sont pas
+    # 40 kg à la barre, et une courbe qui mélange les deux saute d'une séance
+    # à l'autre. Comme Hevy et Strong, la fiche suit chaque matériel à part
+    # et s'ouvre sur le plus pratiqué ; « Tous » les remet ensemble.
+    base = get_base_name(name)
+    materiels = [{"nom": v, "label": separer_variante(v)[1] or "Non précisé",
+                  "seances": len(exercise_stats.sessions_for(hist, v))}
+                 for v in exercise_stats.variants_of(hist, base)]
+    materiels.sort(key=lambda m: -m["seances"])           # stable : le plus récent à égalité
     variant = (request.args.get("variante") or "").strip()
-    by_base = not variant
-    sessions = exercise_stats.sessions_for(hist, variant or name, by_base=by_base)
+    if not variant:
+        variant = materiels[0]["nom"] if len(materiels) > 1 else ""
+    by_base = variant in ("", "tous")
+    sessions = exercise_stats.sessions_for(hist, name if by_base else variant, by_base=by_base)
     if not sessions:
         sessions = exercise_stats.sessions_for(hist, name, by_base=True)
 
@@ -795,14 +806,13 @@ def exercice():
         periode, points = "tout", tous
     tendance = exercise_stats.tendance(points)
 
-    base = get_base_name(name)
     is_vip = bool(getattr(g, "is_vip", False))
     return render_template(
         "exercice.html",
         active="progres",
         exo_name=base,
         variant=variant,
-        variants=exercise_stats.variants_of(hist, base),
+        materiels=materiels,
         sessions=sessions[:60],
         summary=summ,
         is_vip_stats=is_vip,

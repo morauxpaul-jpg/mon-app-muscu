@@ -6,9 +6,6 @@ reset total (le « reset soft » et son archive ont été retirés en v47).
 """
 import json
 import logging
-import re
-import unicodedata
-from difflib import SequenceMatcher
 from datetime import date
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, Response, g
@@ -16,13 +13,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from core.data import (
     get_hist, get_prog, save_prog, save_prog_body, save_hist, get_profile,
     get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
-    upsert_body_weight, rename_exercise_rows, list_session_notes,
+    upsert_body_weight, rename_exercise_rows, donner_materiel, list_session_notes,
     list_all_nutrition, export_coach, get_reglages, save_reglages, effacer_tous_calques,
 )
 
 logger = logging.getLogger(__name__)
-from core.muscu import MUSCLE_LIST, auto_muscles, get_base_name
-from core.exercises_data import canoniser, NIVEAUX_SURS
+from core.muscu import MUSCLE_LIST, auto_muscles, get_base_name, separer_variante
+from core.exercises_data import _cle
+from core.noms_exercices import MOTS_MATERIEL, connus_de, nom_pour_saisie, ranger
 from core.limiter import limiter
 from core import stripe_client
 from core.analytics import paywall
@@ -41,122 +39,6 @@ def _enregistrer_reglages(prog, s):
     if not save_reglages(s):
         prog["_settings"] = s
         save_prog(prog)
-
-
-def _norm_tokens(name):
-    """Découpe un nom d'exercice en mots normalisés (sans accents, minuscule,
-    sans ponctuation). « Développé couché (Barre) » → ['developpe','couche','barre']."""
-    s = unicodedata.normalize("NFKD", name or "")
-    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
-    return [t for t in re.split(r"[^a-z0-9]+", s) if t]
-
-
-def _tokens_match(a, b):
-    """Deux mots = le même à une faute de frappe près. Match exact pour les mots
-    courts (< 4 lettres) où le flou n'est pas fiable, sinon similarité ≥ 0.82."""
-    if a == b:
-        return True
-    if len(a) < 4 or len(b) < 4:
-        return False
-    return SequenceMatcher(None, a, b).ratio() >= 0.82
-
-
-def _same_exercise(a, b):
-    """Vrai seulement si a et b sont le même exercice écrit différemment (casse,
-    accents, ponctuation, petite faute de frappe). Exige le MÊME nombre de mots :
-    un mot en plus (« rowing machine » vs « rowing machine banc », « triceps
-    extension » vs « triceps extension barre ») = exercice différent, pas un
-    doublon. Chaque mot doit avoir un correspondant proche dans l'autre nom."""
-    ta, tb = _norm_tokens(a), _norm_tokens(b)
-    if not ta or not tb or len(ta) != len(tb):
-        return False
-    remaining = list(tb)
-    for t in ta:
-        idx = next((i for i, u in enumerate(remaining) if _tokens_match(t, u)), None)
-        if idx is None:
-            return False
-        remaining.pop(idx)
-    return True
-
-
-def _duplicate_groups(exo_counts):
-    """Regroupe les noms d'exercices de l'historique qui sont vraisemblablement
-    le même exercice écrit différemment (accents, casse, ponctuation, petite
-    faute de frappe). Union-find sur _same_exercise.
-
-    Rien n'est modifié ici : on ne fait que PROPOSER des groupes à fusionner,
-    la fusion reste validée manuellement par l'utilisateur (l'app ne peut pas
-    deviner sans risque que « developper » = « développé »)."""
-    names = list(exo_counts.keys())
-    parent = {n: n for n in names}
-
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    def union(a, b):
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[rb] = ra
-
-    for i in range(len(names)):
-        for j in range(i + 1, len(names)):
-            if _same_exercise(names[i], names[j]):
-                union(names[i], names[j])
-
-    groups = {}
-    for n in names:
-        groups.setdefault(find(n), []).append(n)
-
-    out = []
-    for members in groups.values():
-        if len(members) < 2:
-            continue
-        members_sorted = sorted(members, key=lambda n: (-exo_counts[n], n.lower()))
-        out.append({
-            "members": [{"name": n, "count": exo_counts[n]} for n in members_sorted],
-            "suggested": members_sorted[0],  # le plus utilisé = candidat canonique
-            "total": sum(exo_counts[n] for n in members),
-        })
-    # Les gros doublons (le plus de séries en jeu) d'abord.
-    out.sort(key=lambda g: -g["total"])
-    return out
-
-
-def _alignements(exo_counts):
-    """Ce que la migration PROPOSE de renommer, avec de quoi juger.
-
-    Rien n'est modifié ici. Chaque ligne porte le nombre de séries en jeu,
-    le niveau de certitude du rapprochement, et surtout si le renommage
-    FUSIONNERAIT deux historiques — c'est là que ça devient irrattrapable,
-    donc c'est écrit noir sur blanc.
-    """
-    propositions = []
-    deja = {_cle_exo(n) for n in exo_counts}
-    for nom, count in exo_counts.items():
-        vers, niveau = canoniser(nom)
-        if not vers:
-            continue
-        propositions.append({
-            "depuis": nom,
-            "vers": vers,
-            "count": count,
-            "niveau": niveau,
-            "sur": niveau in NIVEAUX_SURS,
-            # Le nom d'arrivée existe déjà : les deux historiques n'en
-            # feront plus qu'un. Souvent voulu (deux orthographes du même
-            # exercice), mais jamais anodin.
-            "fusion": _cle_exo(vers) in deja,
-        })
-    # Les plus sûrs d'abord, puis le plus de séries en jeu.
-    propositions.sort(key=lambda p: (not p["sur"], -p["count"], p["depuis"].lower()))
-    return propositions
-
-
-def _cle_exo(nom):
-    return (nom or "").strip().casefold()
 
 
 @bp.route("/gestion")
@@ -195,8 +77,7 @@ def gestion():
         nb_hist=nb_hist,
         custom_exercises=custom_exercises,
         hist_exercises=hist_exercises,
-        dup_groups=_duplicate_groups(exo_counts),
-        alignements=_alignements(exo_counts),
+        rangements=ranger(exo_counts),
         muscle_list=MUSCLE_LIST,
         profil_options=PROFIL_OPTIONS,
         newsletter_opt_in=newsletter_opt_in,
@@ -217,13 +98,17 @@ def add_custom_exercise():
     name = (request.form.get("name") or "").strip()
     if not name:
         return redirect(url_for("gestion.gestion"))
+    prog = get_prog()
+    # Le matériel n'appartient pas au nom (core/noms_exercices.py) : l'exercice
+    # perso « Hip thrust machine » est « Hip thrust », la carte de séance
+    # choisit l'équipement.
+    name, _materiel = nom_pour_saisie(name, connus_de(get_hist(), prog))
     muscle = (request.form.get("muscle") or "").strip()
     if not muscle:
         muscle = auto_muscles(name) or "Autre"
     profil = request.form.get("profil") or "Les deux"
     if profil not in PROFIL_OPTIONS:
         profil = "Les deux"
-    prog = get_prog()
     customs = prog.setdefault("_custom_exercises", [])
     if any(e["name"].lower() == name.lower() for e in customs):
         return redirect(url_for("gestion.gestion") + "?exo=duplicate")
@@ -278,14 +163,60 @@ def rename_exercise_history():
     return redirect(url_for("gestion.gestion") + "?rename=none")
 
 
+def _ranger_programme(propositions):
+    """Le programme suit l'historique : renommer « Développé décliné barre »
+    dans les séries sans le renommer au programme, et la prochaine séance
+    réécrivait l'ancien nom (la carte cherche ses séries par le nom).
+
+    Un exercice du programme change de nom seulement si toutes les
+    propositions cochées pour ce nom vont au même mouvement. Le matériel
+    retiré du nom devient son équipement par défaut (`materiel`), et ses
+    séries identifiées sans matériel le reçoivent (core/db_identite.py)."""
+    vers = {}
+    for p in propositions:
+        ancien, _m = separer_variante(p["depuis"])
+        nouveau, materiel = separer_variante(p["vers"])
+        mots = ancien.split()
+        sorti = materiel if mots and _cle(mots[-1]) in MOTS_MATERIEL and ancien != nouveau else None
+        vers.setdefault(ancien, set()).add((nouveau, sorti))
+    vers = {a: next(iter(v)) for a, v in vers.items() if len(v) == 1}
+    if not vers:
+        return 0
+    prog = get_prog()
+    touches = 0
+    for cle, exos in prog.items():
+        if cle.startswith("_") or not isinstance(exos, list):
+            continue
+        for e in exos:
+            if not isinstance(e, dict) or e.get("name") not in vers:
+                continue
+            nouveau, sorti = vers[e["name"]]
+            if nouveau == e["name"]:
+                continue
+            e["name"] = nouveau
+            touches += 1
+            if sorti:
+                e.setdefault("materiel", sorti)
+                if e.get("id"):
+                    donner_materiel(e["id"], sorti)
+    for e in prog.get("_custom_exercises") or []:
+        if isinstance(e, dict) and e.get("name") in vers and vers[e["name"]][0] != e["name"]:
+            e["name"] = vers[e["name"]][0]
+            touches += 1
+    if touches:
+        save_prog(prog)
+    return touches
+
+
 @bp.route("/gestion/exercice/aligner", methods=["POST"])
 @limiter.limit("10 per minute")
 def aligner_exercices():
-    """Applique les renommages COCHÉS, et eux seuls.
+    """« Ranger mes exercices » : applique les renommages COCHÉS, et eux seuls.
 
     On recalcule la proposition côté serveur au lieu de faire confiance au
-    formulaire : sinon un champ trafiqué pourrait renommer un exercice vers
-    n'importe quoi, et l'historique ne se rattrape pas.
+    formulaire : le formulaire dit QUOI appliquer, jamais VERS QUOI. Sinon un
+    champ trafiqué pourrait renommer un exercice vers n'importe quoi, et
+    l'historique ne se rattrape pas.
     """
     choisis = {n.strip() for n in request.form.getlist("aligner") if n.strip()}
     if not choisis:
@@ -299,13 +230,13 @@ def aligner_exercices():
             continue
         exo_counts[ex] = exo_counts.get(ex, 0) + 1
 
+    propositions = [p for p in ranger(exo_counts) if p["depuis"] in choisis]
     total = 0
     try:
-        for p in _alignements(exo_counts):
-            if p["depuis"] not in choisis:
-                continue
+        for p in propositions:
             total += rename_exercise_rows([p["depuis"]], p["vers"],
                                           auto_muscles(get_base_name(p["vers"])))
+        _ranger_programme(propositions)
     except Exception as e:
         logger.error("aligner_exercices FAILED user=%s: %s",
                      getattr(g, "user_id", "?"), e)
@@ -313,32 +244,6 @@ def aligner_exercices():
     if not total:
         return redirect(url_for("gestion.gestion") + "?align=none#aligner")
     return redirect(url_for("gestion.gestion") + f"?align=ok&n={total}#aligner")
-
-
-@bp.route("/gestion/exercice/fusionner", methods=["POST"])
-@limiter.limit("10 per minute")
-def merge_exercise_history():
-    """Fusionne un groupe de doublons : renomme toutes les séries des noms
-    du groupe vers le nom canonique choisi par l'utilisateur. Match exact sur
-    chaque nom → aucune autre variante n'est touchée."""
-    keep = (request.form.get("keep") or "").strip()
-    members = [m.strip() for m in request.form.getlist("member") if m.strip()]
-    if not keep or len(members) < 2:
-        return redirect(url_for("gestion.gestion") + "?merge=noop#doublons")
-
-    to_merge = {m for m in members if m != keep}
-    if not to_merge:
-        return redirect(url_for("gestion.gestion") + "?merge=noop#doublons")
-
-    try:
-        count = rename_exercise_rows(sorted(to_merge), keep,
-                                     auto_muscles(get_base_name(keep)))
-    except Exception as e:
-        logger.error("merge_exercise FAILED user=%s: %s", getattr(g, "user_id", "?"), e)
-        return redirect(url_for("gestion.gestion") + "?merge=error#doublons")
-    if count:
-        return redirect(url_for("gestion.gestion") + f"?merge=ok&n={count}#doublons")
-    return redirect(url_for("gestion.gestion") + "?merge=none#doublons")
 
 
 @bp.route("/gestion/settings", methods=["POST"])

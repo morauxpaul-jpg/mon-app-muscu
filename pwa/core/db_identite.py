@@ -60,3 +60,23 @@ def marquer_series(user_id: str, ancien: str, exo_id: str) -> int | None:
             q.in_("id", ids[i:i + 200]).execute()
     _cache_invalidate(f"hist:{user_id}")
     return suivent
+
+
+def donner_materiel(user_id: str, exo_id: str, materiel: str) -> int:
+    """Le matériel sort du nom de l'exercice (« Développé décliné barre » →
+    « Développé décliné », matériel Barre) : ses séries identifiées SANS
+    matériel le reçoivent, sinon elles s'afficheraient sous le nouveau nom
+    sans « (Barre) » et perdraient l'information (Gestion → Ranger).
+    Rend le nombre de séries touchées ; 0 sans la colonne (v42)."""
+    valeur = pour_serie(exo_id, materiel)
+    if not valeur or valeur == exo_id or not db_historique._COLONNES["exercise_id"]:
+        return 0
+    try:
+        resp = (get_client().table("history").update({"exercise_id": valeur})
+                .eq("user_id", user_id).eq("exercise_id", exo_id).execute())
+    except Exception as e:
+        if "exercise_id" not in str(e).lower():
+            raise
+        return 0
+    _cache_invalidate(f"hist:{user_id}")
+    return len(resp.data or [])
