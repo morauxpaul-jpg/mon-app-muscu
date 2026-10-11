@@ -740,6 +740,12 @@ _METRICS = [
     ("volume", "Volume", "kg"),
     ("reps", "Répétitions", "reps"),
 ]
+# Au poids du corps (dips, tractions), la force estimée et la charge valent
+# 0 kg : on suit la meilleure série et le total de répétitions.
+_METRICS_POIDS_DU_CORPS = [
+    ("best_reps", "Meilleure série", "reps"),
+    ("reps", "Répétitions", "reps"),
+]
 
 
 @bp.route("/progres/exercice")
@@ -769,13 +775,27 @@ def exercice():
     if not sessions:
         sessions = exercise_stats.sessions_for(hist, name, by_base=True)
 
-    metric = (request.args.get("m") or "e1rm").strip()
-    if metric not in {k for k, _l, _u in _METRICS}:
-        metric = "e1rm"
-
-    points = exercise_stats.series(sessions, metric)
-    base = get_base_name(name)
     summ = exercise_stats.summary(sessions)
+    poids_du_corps = bool(summ.get("poids_du_corps"))
+    metrics = _METRICS_POIDS_DU_CORPS if poids_du_corps else _METRICS
+    metric = (request.args.get("m") or "").strip()
+    if metric not in {k for k, _l, _u in metrics}:
+        metric = metrics[0][0]
+
+    periode = (request.args.get("p") or "").strip()
+    choisie = periode in {k for k, _l, _j in exercise_stats.PERIODES}
+    if not choisie:
+        periode = exercise_stats.PERIODE_DEFAUT
+    aujourdhui = today_paris()
+    tous = exercise_stats.series(sessions, metric)
+    points = exercise_stats.dans_periode(tous, exercise_stats.debut_periode(periode, aujourdhui))
+    if not choisie and len(points) < 2 <= len(tous):
+        # Exercice laissé de côté depuis des mois : sans choix explicite, on
+        # montre son histoire plutôt qu'un graphique vide.
+        periode, points = "tout", tous
+    tendance = exercise_stats.tendance(points)
+
+    base = get_base_name(name)
     is_vip = bool(getattr(g, "is_vip", False))
     return render_template(
         "exercice.html",
@@ -786,10 +806,16 @@ def exercice():
         sessions=sessions[:60],
         summary=summ,
         is_vip_stats=is_vip,
-        chart=exercise_stats.sparkline(points),
+        chart=exercise_stats.sparkline(points, tendance=tendance),
+        tendance=tendance,
+        periode=periode,
+        periode_libelle=exercise_stats.libelle_periode(periode),
+        periodes=exercise_stats.PERIODES,
+        comparaison=exercise_stats.comparaison(sessions, periode, aujourdhui, poids_du_corps),
+        records_reps=[] if poids_du_corps else exercise_stats.records_par_reps(sessions),
         metric=metric,
-        metrics=_METRICS,
-        metric_unit=next((u for k, _l, u in _METRICS if k == metric), ""),
+        metrics=metrics,
+        metric_unit=next((u for k, _l, u in metrics if k == metric), ""),
         info=get_exercise_info(base),
         # Table des maxima : réservée PRO (elle l'était déjà dans Progrès).
         rep_table=get_rep_table(summ.get("best_e1rm", 0)) if is_vip else None,
