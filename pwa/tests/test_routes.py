@@ -950,57 +950,7 @@ def test_get_inactive_user_ids(fake_db):
     assert "u-old" in inactive and "u-recent" not in inactive
 
 
-# ── Fusion des doublons d'exercices (historique) ─────────────────
-
-def test_gestion_detecte_les_doublons(fake_db, logged_in):
-    """La page Gestion propose de fusionner les noms quasi identiques
-    (casse/accents/faute de frappe), sans toucher aux vraies variantes."""
-    _seed_prog(fake_db)
-    _hist_row(fake_db, MONDAY_W52, exercice="Développé couché", reps=8)
-    _hist_row(fake_db, MONDAY_W52, exercice="developpé couche", reps=8)  # faute
-    _hist_row(fake_db, MONDAY_W52, exercice="Squat", reps=5, muscle="Quadriceps")
-
-    r = logged_in.get("/gestion")
-    assert r.status_code == 200
-    html = r.data.decode("utf-8")
-    # Le groupe de fautes de frappe est proposé à la fusion.
-    assert "developpé couche" in html
-    assert "Doublons détectés" in html
-
-
-def test_gestion_ne_confond_pas_les_vraies_variantes(fake_db, logged_in):
-    """Un mot en plus (matériel/variante) = exercice différent, PAS un doublon.
-    Régression : « rowing machine » vs « rowing machine banc » étaient fusionnés."""
-    _seed_prog(fake_db)
-    _hist_row(fake_db, MONDAY_W52, exercice="Rowing machine", reps=10, muscle="Dos")
-    _hist_row(fake_db, MONDAY_W52, exercice="Rowing machine banc", reps=10, muscle="Dos")
-    _hist_row(fake_db, MONDAY_W52, exercice="Triceps extension", reps=12, muscle="Triceps")
-    _hist_row(fake_db, MONDAY_W52, exercice="Triceps extension barre", reps=12, muscle="Triceps")
-
-    r = logged_in.get("/gestion")
-    assert r.status_code == 200
-    html = r.data.decode("utf-8")
-    # Aucun de ces couples ne doit être proposé à la fusion.
-    assert "Doublons détectés" not in html
-
-
-def test_fusionner_regroupe_les_series_sous_le_nom_canonique(fake_db, logged_in):
-    _seed_prog(fake_db)
-    _hist_row(fake_db, MONDAY_W52, exercice="Curl biceps", serie=1, muscle="Biceps")
-    _hist_row(fake_db, MONDAY_W52, exercice="Curl biceps", serie=2, muscle="Biceps")
-    _hist_row(fake_db, MONDAY_W52, exercice="curl biceps", serie=1, muscle="Biceps")
-
-    r = logged_in.post("/gestion/exercice/fusionner", data={
-        "_csrf": CSRF,
-        "keep": "Curl biceps",
-        "member": ["Curl biceps", "curl biceps"],
-    })
-    assert r.status_code == 302
-
-    rows = [row for row in fake_db.tables["history"] if row["user_id"] == USER_ID]
-    noms = {row["exercice"] for row in rows}
-    assert noms == {"Curl biceps"}
-    assert len(rows) == 3
+# Fusion des doublons d'exercices : tests/test_ranger_exercices.py.
 
 
 # ── Plats de la semaine (import + log en un tap) ─────────────────

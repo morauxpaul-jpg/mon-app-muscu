@@ -75,7 +75,7 @@ from core.db_reglages import (
     DEFAUTS, REESSAI, ecrire_reglages, lire_reglages, reglages_pour,
     _completer, _disponible, _lignes, _marquer_absente, _oublier_absence, _table_absente
 )
-from core.db_identite import marquer_series, _variante
+from core.db_identite import donner_materiel, marquer_series, _variante
 from core.db_renommage import (
     count_exercise_rows, list_history_shape, rename_exercise_rows, rename_seance_rows,
     _collision, _deplacer_ligne_a_ligne, _renommer

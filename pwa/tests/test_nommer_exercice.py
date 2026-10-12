@@ -107,9 +107,9 @@ def test_une_prise_proposee_trouve_sa_fiche(prise):
 def test_les_deux_prises_restent_deux_exercices():
     """Même fiche, mais pas le même historique : les charges n'ont rien à
     voir. Les confondre rendrait la progression illisible."""
-    from core.exercises_data import canoniser
-    assert canoniser("Tirage horizontal prise neutre") == (None, "")
-    assert canoniser("Tirage horizontal prise large") == (None, "")
+    from core.noms_exercices import ranger
+    assert ranger({"Tirage horizontal prise neutre": 6, "Tirage horizontal prise large": 4,
+                   "Tirage horizontal poulie": 9}) == []
 
 
 # ── Le leg curl : deux machines, deux fiches ─────────────────────

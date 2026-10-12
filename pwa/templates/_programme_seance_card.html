@@ -87,6 +87,8 @@
                    :value="ex.name"
                    @change="renommerExo(sname, exIdx, $event.target.value)"
                    :aria-label="'Nom de cet exercice : ' + ex.name">
+            {# Équipement par défaut en séance, sorti du nom quand on l'y avait tapé. #}
+            <span class="prog-exo-materiel" x-show="ex.materiel" x-text="ex.materiel"></span>
           </div>
           <div class="prog-exo-fields">
             <label class="field-label s-96ad60">Séries</label>

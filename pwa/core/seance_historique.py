@@ -60,12 +60,13 @@ def _extract_variant(exercice):
     return "Standard"
 
 
-def _last_variant(hist, seance, exo_base):
-    """Dernière variante utilisée pour cet exo dans cette séance."""
+def _last_variant(hist, seance, exo_base, defaut="Standard"):
+    """Dernière variante utilisée pour cet exo dans cette séance ; à défaut,
+    `defaut` (l'équipement du programme, tapé dans le nom à la création)."""
     matches = [r for r in hist
                if _norm(r["Séance"]) == _norm(seance) and _match_base_variant(r["Exercice"], exo_base)]
     if not matches:
-        return "Standard"
+        return defaut or "Standard"
     return _extract_variant(matches[-1]["Exercice"])
 
 

@@ -13,14 +13,14 @@ from flask import (
     Blueprint, render_template, request, redirect, url_for, send_file, jsonify, g
 )
 
-from core.data import (get_prog, save_prog, save_prog_body, get_onboarding,
+from core.data import (get_hist, get_prog, save_prog, save_prog_body, get_onboarding,
                        rename_seance_rows, rename_exercise_rows, count_exercise_rows,
                        marquer_series, renommer_seance_calques)
-from core.exercice_ids import valide as valide_exo_id
 from core.dates import DAYS_FR
 from core.limiter import limiter
 from core.rotation import rotation_de, rotation_nettoyee
 from core.muscu import MUSCLE_LIST, auto_muscles
+from core.noms_exercices import connus_de, ranger_nouveaux
 from core import catalog
 from core.programmes_dossiers import (ensure_programmes, fusionner_dans_le_programme_en_cours,
                                       gen_prog_id, remplacer_programme_en_cours)
@@ -34,53 +34,10 @@ bp = Blueprint("programme", __name__)
 EXPORT_FORMAT = "muscutracker_program_v1"
 
 
-# Bornes de l'éditeur. Sans elles, une séance à 10 000 séries rendait la
-# page de séance inutilisable et gonflait le blob du programme (audit du
-# 03/10, M11). Mêmes bornes qu'à l'import (`routes/gestion.py`).
-MAX_SERIES = 20
-MAX_EXOS_PAR_SEANCE = 30
-MAX_SEANCES = 40
-NOM_EXO_MAX = 80
-NOM_SEANCE_MAX = 60
+# Bornes de l'éditeur et entrée d'exercice : core/programme_entrees.py.
+from core.programme_entrees import (MAX_EXOS_PAR_SEANCE, MAX_SEANCES, MAX_SERIES,  # noqa: E402,F401
+                                    NOM_EXO_MAX, NOM_SEANCE_MAX, _exo_entry, _series)
 
-
-def _series(valeur, defaut=3) -> int:
-    """Nombre de séries borné à [1, MAX_SERIES]."""
-    try:
-        n = int(float(valeur))
-    except (TypeError, ValueError):
-        return defaut
-    return max(1, min(MAX_SERIES, n))
-
-
-def _exo_entry(name, sets, muscle, src=None):
-    """Entrée d'exercice normalisée. `reps` (fourchette cible, ex. « 8-12 ») et
-    `rest_seconds` viennent du catalogue / du générateur / de l'éditeur ; ils
-    sont conservés à chaque réécriture (sans eux, un programme n'est plus une
-    prescription mais une simple liste de noms). Toutes les écritures passent
-    ici : c'est ici que les bornes s'appliquent."""
-    src = src or {}
-    name = str(name or "").strip()[:NOM_EXO_MAX]
-    sets = _series(sets)
-    muscle = (str(muscle or "").strip() or "Autre")[:NOM_EXO_MAX]
-    reps = str(src.get("reps") or "").strip()[:20]
-    try:
-        rest = int(src.get("rest_seconds") or 90)
-    except (TypeError, ValueError):
-        rest = 90
-    out = {"name": name, "sets": sets, "muscle": muscle,
-           "rest_seconds": max(30, min(300, rest))}
-    if reps:
-        out["reps"] = reps
-    # Superset : cet exercice s'enchaîne avec le suivant, sans repos entre
-    # les deux (le chrono part après le second).
-    if src.get("superset") is True:
-        out["superset"] = True
-    # Identifiant stable (core/exercice_ids.py) : il survit aux renommages.
-    # Absent ou illisible, save_prog en recalcule un.
-    if valide_exo_id(src.get("id")):
-        out["id"] = src["id"]
-    return out
 
 
 def _ensure_planning(prog):
@@ -275,6 +232,7 @@ def save_state():
             muscle = (e.get("muscle") or "Autre").strip() or "Autre"
             cleaned.append(_exo_entry(ex_name, sets, muscle, e))
         new_prog[sname] = cleaned
+    renommes = ranger_nouveaux(new_prog, lambda: connus_de(get_hist(), old))
 
     # Planning nettoyé
     new_prog["_planning"] = {
@@ -355,7 +313,8 @@ def save_state():
     # Fusion : le corps remplace les séances/planning/dossiers, TOUT le reste
     # (badges, record de streak, bilans, exos perso, défis, plats…) survit.
     save_prog_body(new_prog)
-    return jsonify({"ok": True})
+    # L'éditeur affiche le nom rangé sans attendre un rechargement.
+    return jsonify({"ok": True, "noms": renommes})
 
 
 # ── Planning ─────────────────────────────────────────────────────
@@ -744,8 +703,9 @@ def add_exo():
     if seance in prog and len(prog[seance]) >= MAX_EXOS_PAR_SEANCE:
         return redirect(url_for("programme.programme") + "?exo=trop" + f"#s-{seance}")
     if seance in prog:
-        prog[seance].append(_exo_entry(name, sets, muscle,
-                                       {"reps": reps, "rest_seconds": rest}))
+        entree = _exo_entry(name, sets, muscle, {"reps": reps, "rest_seconds": rest})
+        ranger_nouveaux({seance: [entree]}, lambda: connus_de(get_hist(), prog))
+        prog[seance].append(entree)
         save_prog(prog)
     return redirect(url_for("programme.programme") + f"#s-{seance}")
 

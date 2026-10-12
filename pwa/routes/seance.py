@@ -20,6 +20,7 @@ from core.rotation import planning_semaine, seance_prevue
 from core.muscu import BW_EXOS, MUSCLE_LIST, VARIANTS, auto_muscles
 from core.exercises_data import filter_exos_by_equipment, detect_isometric
 from core.exercice_ids import pour_serie
+from core.noms_exercices import connus_de, nom_pour_saisie
 from core.body_map import get_body_polygons
 from core.hist import est_echauffement, is_logged as _is_real_perf
 
@@ -552,9 +553,15 @@ def add_extra():
     name = (f.get("exo_name") or "").strip()
     if not name:
         return _back_to_editor(f)
+    # Nom rangé (core/noms_exercices.py) : « developpe incline halteres »
+    # rejoint « Développé incliné », équipement Haltères, au lieu de créer un
+    # mouvement de plus dans Progrès.
+    name, materiel = nom_pour_saisie(name, connus_de(get_hist(), get_prog()))
     muscle = f.get("muscle") or auto_muscles(name) or "Autre"
     sets = int(f.get("sets_count") or 3)
     item = {"name": name, "muscle": muscle, "sets": sets}
+    if materiel:
+        item["materiel"] = materiel
     try:
         modifier_calque(seance_name, date_str, "brouillon" if mode == "libre" else "extras",
                         lambda lst: lst + [item])

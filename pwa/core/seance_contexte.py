@@ -46,7 +46,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
     # dans les cases reps. Sans elle, un programme n'est qu'une liste de noms.
     target_reps = str(exo_obj.get("reps") or "").strip()[:20]
 
-    var = forced_variant if forced_variant is not None else _last_variant(hist, seance, base)
+    var = _last_variant(hist, seance, base, exo_obj.get("materiel")) if forced_variant is None else forced_variant
     exo_final = f"{base} ({var})" if var != "Standard" else base
     is_bw = base in BW_EXOS and var != "Lesté"
 

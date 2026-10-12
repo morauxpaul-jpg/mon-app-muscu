@@ -292,6 +292,10 @@ def marquer_series(ancien, exo_id):
     return db.marquer_series(_uid(), ancien, exo_id)
 
 
+def donner_materiel(exo_id, materiel):
+    return db.donner_materiel(_uid(), exo_id, materiel)
+
+
 # ── Suppression de compte (exigence stores) ─────────────────────────────
 def delete_user_account():
     return db.delete_user_account(_uid())
