@@ -1,18 +1,12 @@
 // Page Nutrition — formulaire d'ajout de repas (composant Alpine `mealForm`).
-// Les données (FOODS, MEAL_LABELS, RECENTS) sont posées par le gabarit
-// juste avant ce script.
-// Base d'aliments (core/foods_data.py) — hors composant Alpine : pas besoin
-// de réactivité sur 400 entrées. Index normalisé (sans accents) pour la recherche.
-function foodNorm(s) {
-  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-FOODS.forEach(function (f) { f._n = foodNorm(f.n); });
-// Aliments déjà notés (60 derniers jours) : en tête de la recherche, et
-// proposés tels quels quand le champ est vide.
-RECENTS.forEach(function (f) { f._n = foodNorm(f.n); });
-var RECENT_NOMS = {};
-RECENTS.forEach(function (f) { RECENT_NOMS[f._n] = true; });
-var FOOD_POOL = RECENTS.concat(FOODS.filter(function (f) { return !RECENT_NOMS[f._n]; }));
+// Les données (FOODS, MEAL_LABELS, RECENTS, PERSO) sont posées par le gabarit
+// juste avant ce script ; la recherche vient de aliments-recherche.js.
+// Aliments déjà notés (60 derniers jours) en tête, puis mes recettes et
+// aliments, puis la base d'aliments courants (core/foods_data.py).
+var MES_ALIMENTS = typeof PERSO === 'undefined' ? [] : PERSO;
+var FOOD_POOL = poolAliments([RECENTS, MES_ALIMENTS, FOODS]);
+var NOMS_RECENTS = {};
+RECENTS.forEach(function (f) { NOMS_RECENTS[f._n] = true; });
 
 function mealForm() {
   return {
@@ -24,6 +18,8 @@ function mealForm() {
     basket: [],
     // Copie : Alpine CSP refuse de lire un tableau posé sur `window`.
     recents: RECENTS.slice(),
+    // Mes recettes et aliments pas encore mangés ces 60 derniers jours.
+    perso: MES_ALIMENTS.filter(function (f) { return !NOMS_RECENTS[f._n]; }).slice(0, 6),
     offResults: [],
     offBusy: false,
     offError: '',
@@ -50,27 +46,7 @@ function mealForm() {
     nomsDesItems() { return this.items.map(function (i) { return i.name; }).join(', '); },
     search() {
       this.offResults = []; this.offError = ''; this.offFor = '';
-      var words = foodNorm(this.q).split(/\s+/).filter(Boolean);
-      if (!words.length) { this.results = []; return; }
-      var scored = [];
-      for (var i = 0; i < FOOD_POOL.length; i++) {
-        var f = FOOD_POOL[i], ok = true, score = 0;
-        for (var w = 0; w < words.length; w++) {
-          var pos = f._n.indexOf(words[w]);
-          if (pos < 0) { ok = false; break; }
-          // Début de mot (nom ou mot interne) = 0, milieu de mot = 3.
-          score += (pos === 0 || f._n[pos - 1] === ' ' ? 0 : 3) + pos / 100;
-        }
-        // « riz » → le riz cuit avant le riz cru (pesé cru, c'est l'exception).
-        if (ok && / crue?s?\b/.test(f._n) && !/\bcru/.test(foodNorm(this.q))) score += 0.5;
-        if (ok) scored.push([score, f]);
-      }
-      // Début de mot > milieu de mot ; aliments simples (r=0) avant plats/snacks ; puis nom court.
-      scored.sort(function (a, b) {
-        return Math.floor(a[0]) - Math.floor(b[0]) || a[1].r - b[1].r || a[0] - b[0]
-          || a[1].n.length - b[1].n.length || a[1].n.localeCompare(b[1].n);
-      });
-      this.results = scored.slice(0, 8).map(function (x) { return x[1]; });
+      this.results = chercherAliments(FOOD_POOL, this.q, 8);
     },
     kcalFor(f, grams) { return Math.round(f.k * grams / 100); },
     pickFood(f) {

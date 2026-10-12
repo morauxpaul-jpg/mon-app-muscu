@@ -332,6 +332,7 @@ def delete_user_account(user_id: str) -> None:
         ("coach_conversations", "user_id"),
         ("coach_messages", "user_id"),
         ("nutrition", "user_id"),
+        ("aliments_perso", "user_id"),
         ("body_weight", "user_id"),
         ("session_notes", "user_id"),
         ("push_subscriptions", "user_id"),

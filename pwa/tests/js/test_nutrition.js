@@ -19,15 +19,19 @@ const FOODS = [
   { n: 'Blanc de poulet cuit', k: 165, p: 31, c: 0, f: 3.6, g: 'Viandes', r: 0, u: [['1 filet', 150], ['100 g', 100]] },
   { n: 'Poulet curry coco', k: 150, p: 12, c: 6, f: 9, g: 'Plats', r: 1, u: [['1 assiette', 350], ['100 g', 100]] },
   { n: 'Banane', k: 89, p: 1.1, c: 20, f: 0.3, g: 'Fruits', r: 0, u: [['1 banane', 120], ['100 g', 100]] },
+  { n: 'Œuf entier', k: 145, p: 12.6, c: 0.7, f: 10, g: 'Œufs', r: 0, u: [['1 œuf', 50], ['100 g', 100]] },
 ];
 
-function form(recents) {
+function form(recents, perso) {
   const env = createEnv({ scripts: [] });
   vm.runInContext(
     'var FOODS = ' + JSON.stringify(FOODS) + '; var MEAL_LABELS = {dejeuner: "Déjeuner"};' +
-    'var RECENTS = ' + JSON.stringify(recents || []) + ';', env.sandbox);
-  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'static', 'js', 'nutrition.js'), 'utf8');
-  vm.runInContext(src, env.sandbox, { filename: 'nutrition.js' });
+    'var RECENTS = ' + JSON.stringify(recents || []) + ';' +
+    (perso ? 'var PERSO = ' + JSON.stringify(perso) + ';' : ''), env.sandbox);
+  for (const fichier of ['aliments-recherche.js', 'nutrition.js']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'static', 'js', fichier), 'utf8');
+    vm.runInContext(src, env.sandbox, { filename: fichier });
+  }
   return { env, f: vm.runInContext('mealForm()', env.sandbox) };
 }
 
@@ -42,6 +46,25 @@ module.exports = ({ test, assert }) => {
     const { f } = form();
     assert.deepEqual(chercher(f, 'riz').slice(0, 2), ['Riz blanc cuit', 'Riz blanc cru']);
     assert.equal(chercher(f, 'riz cru')[0], 'Riz blanc cru');
+  });
+
+  test('« oeuf » tapé sans œ trouve l\'œuf', () => {
+    const { f } = form();
+    assert.deepEqual(chercher(f, 'oeuf'), ['Œuf entier']);
+    assert.deepEqual(chercher(f, 'œuf'), ['Œuf entier']);
+  });
+
+  test('mes recettes passent avant l\'aliment moyen, un récent garde sa place', () => {
+    const recette = { n: 'Poulet curry maison', k: 120, p: 14, c: 5, f: 5, g: 'Ma recette', r: -2, perso: 3,
+                      u: [['1 part', 380]] };
+    const { f } = form([], [recette]);
+    assert.deepEqual(chercher(f, 'poulet curry'), ['Poulet curry maison', 'Poulet curry coco']);
+    assert.equal(f.perso.length, 1);
+    const recent = { ...recette, recent: true, u: [['comme la dernière fois', 400], ['1 part', 380]] };
+    const deux = form([recent], [recette]);
+    assert.equal(chercher(deux.f, 'curry maison').length, 1);
+    assert.equal(deux.f.results[0].u[0][0], 'comme la dernière fois');
+    assert.equal(deux.f.perso.length, 0);   // déjà dans « Tes aliments habituels »
   });
 
   test('un aliment simple passe avant un plat', () => {

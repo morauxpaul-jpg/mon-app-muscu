@@ -1,6 +1,6 @@
 """Couche d'accès Supabase — la carte, et l'API publique de la couche données.
 
-Ce module ne contient plus de code : il réunit sous un seul nom les dix
+Ce module ne contient plus de code : il réunit sous un seul nom les
 modules qui se partagent le travail. Les routes continuent donc à écrire
 `from core import db as core_db` sans rien savoir du découpage.
 
@@ -16,6 +16,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_programme    le programme, son planning et ses calques (blob JSON)
     db_profil       profil, onboarding, poids de corps
     db_nutrition    les repas et les sommes de macros
+    db_aliments     mes aliments et mes recettes (table `aliments_perso`, v49)
     db_bilans       les bilans de séance
     db_abonnement   tier PRO, Stripe, parrainage
     db_push         notifications, newsletter, relance des inactifs
@@ -99,6 +100,11 @@ from core.db_nutrition import (
     delete_nutrition, insert_nutrition, list_all_nutrition, list_nutrition, sum_nutrition_day,
     sum_nutrition_range, insert_nutrition_rows, get_nutrition, update_nutrition,
     list_nutrition_recents, COLONNES_V40, _colonne_absente, _sans_v40
+)
+from core.db_aliments import (
+    AlimentsIndisponibles, enregistrer_aliment_perso, get_aliment_perso,
+    list_aliments_perso, list_all_aliments_perso, supprimer_aliment_perso,
+    COLONNES_ALIMENTS, LIMITE_ALIMENTS, TABLE_ALIMENTS, _aliments_absents
 )
 
 # ── tier PRO, Stripe, parrainage ────────────────────────────────

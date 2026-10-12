@@ -733,3 +733,25 @@ html.has-ad-banner .haut-page {
 .compte-qui { color: var(--text-2); font-size: var(--text-sm); margin: 0; }
 .compte-email { color: var(--text-1); overflow-wrap: anywhere; margin: 4px 0 var(--sp-md); }
 .compte-deconnexion { width: 100%; justify-content: center; }
+
+/* Recherche d'aliments et panier : page Nutrition et éditeur de recettes
+   (nutrition.html, nutrition_aliments.html). */
+.food-results { margin-top: 6px; border: 0.5px solid var(--border-subtle); border-radius: 10px; overflow: hidden; }
+.food-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 10px; border: none; border-bottom: 0.5px solid var(--border-subtle);
+  background: var(--bg-elevated); color: var(--text-1); font-size: 0.85rem; text-align: left; cursor: pointer; min-height: 40px;
+}
+.food-row:last-child { border-bottom: none; }
+.food-row:active { background: var(--accent-bg); }
+.food-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.food-kcal { font-size: 0.72rem; color: var(--text-3); white-space: nowrap; }
+.food-cat { display: block; font-size: 0.7rem; color: var(--text-3); letter-spacing: 0.3px; }
+.food-item { padding: 8px 0; border-bottom: 0.5px solid var(--border-subtle); }
+.food-item-head { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-1); }
+.food-item-head .food-name { flex: 1; min-width: 0; }
+.food-item-kcal { font-size: 0.78rem; color: var(--accent); white-space: nowrap; }
+.food-item-ctrl { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.food-item-ctrl .field { font-size: 0.8rem; padding: 6px 8px; min-width: 0; }
+.food-item-macros { font-size: 0.7rem; color: var(--text-3); white-space: nowrap; }
+.food-off-btn { width: 100%; margin-top: 8px; font-size: 0.8rem; }

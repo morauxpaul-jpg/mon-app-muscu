@@ -1,8 +1,22 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 12/10/2026 — nutrition : recettes, aliments perso, cible qui suit la balance (axe 7) · note inchangée : **6,6 / 10**
+
+Sur une branche, **ni fusionné ni déployé** ; la migration **v49** (table `aliments_perso`) n'est pas appliquée. Le « pour 8 » de l'axe 7 demande « aliments perso, recettes, cible adaptative, 2 semaines de saisie réelle ». Relevé en lecture seule sur le compte du propriétaire : 19 repas sur 7 jours, dont 17 saisis en bloc ; « Pâtes carbonara » notées trois fois en septembre, à 1 150, 897 puis 880 kcal ; 20 pesées depuis janvier.
+
+| Constat | Correction | Preuve |
+|---|---|---|
+| Un plat fait maison se ressaisissait de mémoire à chaque repas | **Recettes** : ingrédients pesés, nombre de parts, poids cuit facultatif ; la recette s'ajoute ensuite comme un aliment (une part, ou au poids). Valeurs recalculées par le serveur | carbonara (500 g de pâtes, 200 g de lardons, 4 œufs, parmesan, crème, 4 parts) : **807 kcal la part** ; `tests/test_recettes.py` (28 tests) ; parcours complet dans Chromium : créée, retrouvée en tapant « carbo », notée au déjeuner, 375 g en base |
+| Un produit absent des bases ne pouvait pas être gardé | **Aliments perso** : l'étiquette, pour 100 g ou pour une portion ; calories déduites des macros si vides ; valeurs impossibles refusées avec la raison | `test_un_aliment_se_saisit_comme_sur_l_etiquette`, `test_une_etiquette_impossible_est_refusee` |
+| La cible restait un calcul théorique (Mifflin-St Jeor) : rien ne la confrontait à la balance | **Ton rythme réel** : pente des pesées sur 6 semaines contre la fourchette de l'objectif ; hors fourchette, une cible proposée (pas de 50 à 300 kcal, jamais sous le métabolisme de base), appliquée d'un tap seulement, puis deux semaines de recul | vraies pesées du propriétaire : **−0,33 kg par semaine** pour une sèche conseillée à −0,46 / −0,92 → proposition **2 250 kcal au lieu de 2 400** ; `tests/test_rythme.py` (21 tests) |
+| **Trouvé : « boeuf » et « oeuf » ne trouvaient rien** | La recherche ignorait les accents mais pas les ligatures : 9 aliments sur 429 (tous les « bœuf », tous les « œuf ») ne sortaient qu’en tapant « œ ». Corrigé dans la recherche partagée (repas et recettes) | rejoué sur `main` : `foodNorm("Œuf entier")` = « œuf entier », « oeuf » introuvable ; test JS `« oeuf » tapé sans œ trouve l'œuf` |
+| **Trouvé : un nom tapé pendant le démarrage de la page était effacé** | L'éditeur de recette reprend ce qui est déjà tapé (réseau lent) | vu dans Chromium pendant les captures |
+
+Reste pour l'axe 7 : deux semaines de saisie réelle, dont des recettes, et une proposition de cible vécue sur le vrai compte. La note attend la mise en production.
+
 ## Suivi du 11/10/2026 (3) — un mouvement, un nom ; l'équipement à côté (retour d'usage) · note inchangée : **6,6 / 10**
 
-Sur une branche, **ni fusionné ni déployé**. Retour du propriétaire : Progrès liste « plein d'exercices qui ont le même nom mais écrits différemment ».
+**Fusionné (PR #41) et déployé** le 12/10 vers 11:54 UTC (déploiement Railway `11292894`, commit `85038ac`), démarrage sans erreur. Le propriétaire a lancé « Ranger mes exercices » à 11:55 UTC ; relu en base (lecture seule) : **52 noms complets pour 32 mouvements**, 822 séries, « Développé décliné » (15 séries sans équipement, 16 en Barre), « Écartés poulie » (79 séries, rapprochement laissé au choix accepté). Retour du propriétaire à l'origine : Progrès liste « plein d'exercices qui ont le même nom mais écrits différemment ».
 
 | Constat | Correction | Preuve |
 |---|---|---|

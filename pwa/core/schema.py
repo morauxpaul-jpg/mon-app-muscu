@@ -70,6 +70,8 @@ ATTENDU = {
                     "upsell_vu", "debrief_gratuit", "decharge_semaine",
                     "decharge_ignoree", "plats_semaine", "nutrition_perso",
                     "updated_at"),                             # v47
+    "aliments_perso": ("id", "user_id", "nom", "food", "recette",
+                       "created_at", "updated_at"),            # v49
     # Vues (lecture seule, côté serveur)
     "user_last_activity": ("user_id", "last_date"),            # v37, v44
     "admin_history_stats": ("total_rows", "total_tonnage", "total_seances",

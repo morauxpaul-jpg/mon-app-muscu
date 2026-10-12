@@ -14,7 +14,8 @@ from core.data import (
     get_hist, get_prog, save_prog, save_prog_body, save_hist, get_profile,
     get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
     upsert_body_weight, rename_exercise_rows, donner_materiel, list_session_notes,
-    list_all_nutrition, export_coach, get_reglages, save_reglages, effacer_tous_calques,
+    list_all_nutrition, list_all_aliments_perso, export_coach, get_reglages, save_reglages,
+    effacer_tous_calques,
 )
 
 logger = logging.getLogger(__name__)
@@ -407,12 +408,13 @@ def export_data():
         logger.error("export list_session_notes FAILED: %s", e)
         bilans = []
     optionnels = {}
-    for nom, lire in (("nutrition", list_all_nutrition), ("coach", export_coach)):
+    for nom, lire in (("nutrition", list_all_nutrition), ("coach", export_coach),
+                      ("aliments_perso", list_all_aliments_perso)):
         try:
             optionnels[nom] = lire()
         except Exception as e:  # table absente : export sans elle
             logger.error("export %s FAILED: %s", nom, e)
-            optionnels[nom] = [] if nom == "nutrition" else {}
+            optionnels[nom] = {} if nom == "coach" else []
     payload = {
         "version": 3,
         "exported_at": date.today().isoformat(),
@@ -425,6 +427,7 @@ def export_data():
         "nutrition": [{k: v for k, v in r.items() if k != "user_id"}
                       for r in optionnels["nutrition"]],
         "coach": optionnels["coach"],
+        "aliments_perso": optionnels["aliments_perso"],
     }
     filename = f"muscu-tracker-backup-{date.today().isoformat()}.json"
     return Response(
