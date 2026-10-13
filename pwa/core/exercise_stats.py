@@ -87,6 +87,42 @@ def sessions_for(hist, exercice: str, *, by_base: bool = False) -> list[dict]:
     return out
 
 
+MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin",
+               "juil.", "août", "sept.", "oct.", "nov.", "déc."]
+
+
+def resume_mouvement(hist, base: str, n: int = 6) -> dict | None:
+    """Une ligne de « Mes exercices » (page Progrès, style « Instrument ») :
+    séances, date de la dernière, la force estimée de la dernière séance (les
+    répétitions au poids du corps) et les `n` dernières valeurs en hauteurs
+    relatives pour une mini-courbe. `nouveau_haut` : la dernière bat toutes
+    celles d'avant dans la fenêtre.
+
+    La courbe ne compare que des séances du même genre que la dernière : des
+    dips au poids du corps entre deux séances lestées donnaient « 0 » (la
+    force estimée d'une série sans charge) au lieu des répétitions (relu sur
+    le vrai compte le 13/10)."""
+    s = sessions_for(hist, base, by_base=True)
+    if not s:
+        return None
+    au_pdc = s[0]["e1rm"] <= 0
+    meme_genre = [x for x in s if (x["e1rm"] <= 0) == au_pdc]
+    recentes = list(reversed(meme_genre[:n]))   # de la plus ancienne à la plus récente
+    valeurs = [max(d["reps"] for d in x["sets"]) if au_pdc else x["e1rm"] for x in recentes]
+    bas, haut = min(valeurs), max(valeurs)
+    barres = [round(35 + 65 * (v - bas) / (haut - bas)) if haut > bas else 70 for v in valeurs]
+    j = date.fromisoformat(s[0]["date"])
+    return {
+        "name": base,
+        "sessions": len(s),
+        "derniere": f"{j.day} {MOIS_COURTS[j.month - 1]}",
+        "valeur": valeurs[-1],
+        "au_pdc": au_pdc,
+        "barres": barres,
+        "nouveau_haut": len(valeurs) > 1 and valeurs[-1] > max(valeurs[:-1]),
+    }
+
+
 def summary(sessions: list[dict]) -> dict:
     """Chiffres d'en-tête : records, totaux, et progression sur la période."""
     if not sessions:

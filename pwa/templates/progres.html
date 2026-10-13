@@ -62,7 +62,7 @@
     .cal-nav { background: var(--bg-elevated); border: 0.5px solid var(--border-default); color: var(--text-2); border-radius:var(--radius-sm); padding:4px 10px; cursor:pointer; font-size:.85rem; }
     .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; }
     .cal-day-hdr { font-size:.65rem; color:var(--text-3); padding:4px 0; font-weight:500; }
-    .cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); font-size:.75rem; font-weight:500; }
+    .cal-cell { height:34px; display:flex; align-items:center; justify-content:center; border-radius:2px; font-size:.75rem; font-weight:500; font-family:var(--font-display); }
     .cal-cell.empty { background:none; }
     /* Fait = vert plein ; manqué = pointillés orange (jamais du rouge :
        manquer une séance n'est pas une faute) ; à venir = gris clair. */
@@ -96,6 +96,33 @@
 
     /* Cardio chart plus compact que le volume muscu. */
     .cardio-chart { max-width: 100%; height: 120px; display:block; }
+
+    /* ── Style « Instrument » (maquette du 13/10) ── */
+    .prg-bloc { margin-bottom: 24px; }
+    .prg-surtitre {
+      margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1rem;
+      text-transform: uppercase; color: var(--text-2); letter-spacing: 0;
+    }
+    .prg-cal-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .prg-cal-nav { display: flex; flex-shrink: 0; }
+    .prg-cal-nav .cal-nav { background: none !important; border: none !important; color: var(--text-1); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .prg-cal-nav .cal-nav .icon { width: 20px; height: 20px; }
+    .prg-exos { display: flex; flex-direction: column; margin: 8px 0 14px; }
+    .prg-exo {
+      display: grid; grid-template-columns: minmax(0, 1fr) 64px 76px; gap: 10px; align-items: center;
+      min-height: 58px; border-top: 1px solid #262626; color: var(--text-1); text-decoration: none;
+    }
+    .prg-exo:last-child { border-bottom: 1px solid #262626; }
+    .prg-exo-txt { display: flex; flex-direction: column; min-width: 0; }
+    .prg-exo-nom { font-weight: 500; overflow-wrap: anywhere; }
+    .prg-exo-sous { font-size: 0.8rem; color: var(--text-2); }
+    .prg-barres { display: flex; align-items: flex-end; gap: 3px; height: 26px; }
+    .prg-barre { width: 7px; background: #333333; }
+    .prg-barre--der { background: var(--text-1); }
+    .prg-barre--haut { background: var(--accent); }
+    .prg-exo-val { text-align: right; font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; }
+    .prg-exo-val small { font-size: 0.85rem; color: var(--text-2); }
+    .prg-autre { margin-bottom: 6px; }
   </style>
 {% endblock %}
 
@@ -108,11 +135,15 @@
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Progrès</h1>
 
   {# ── Calendrier mensuel ────────────────────────────── #}
-  <div class="card">
-    <div class="cal-header">
-      <a href="/progres?cy={{ prev_y }}&cm={{ prev_m }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}" class="cal-nav" aria-label="Mois précédent"><svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-left"/></svg></a>
-      <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>{{ cal_month_name }} {{ cal_year }}</h3>
-      <a href="/progres?cy={{ next_y }}&cm={{ next_m }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}" class="cal-nav" aria-label="Mois suivant"><svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
+  {# Style « Instrument » : le mois et le compte en titre, flèches nues,
+     cases basses ; fait = vert plein, manqué = pointillés orange. #}
+  <section class="prg-bloc" aria-label="Calendrier">
+    <div class="prg-cal-tete">
+      <h2 class="prg-surtitre">{{ cal_month_name }} {{ cal_year }} · {{ cal_faites }} séance{{ 's' if cal_faites > 1 }} sur {{ cal_prevues }} prévue{{ 's' if cal_prevues > 1 }}</h2>
+      <span class="prg-cal-nav">
+        <a href="/progres?cy={{ prev_y }}&cm={{ prev_m }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}" class="cal-nav" aria-label="Mois précédent"><svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-left"/></svg></a>
+        <a href="/progres?cy={{ next_y }}&cm={{ next_m }}{% if sel_exo %}&exo={{ sel_exo }}{% endif %}{% for m in selected_muscles %}&m={{ m }}{% endfor %}" class="cal-nav" aria-label="Mois suivant"><svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
+      </span>
     </div>
     <div class="cal-grid">
       <div class="cal-day-hdr">L</div><div class="cal-day-hdr">M</div><div class="cal-day-hdr">M</div>
@@ -127,15 +158,14 @@
         {% endfor %}
       {% endfor %}
     </div>
-    <div class="cal-rate">Assiduité : <b>{{ cal_rate }}%</b> des séances prévues</div>
     <div class="cal-legend s-3c2204">
       <span><span class="s-4c0bb1"></span>Faite</span>
       <span><span class="s-e7295c"></span>Manquée</span>
       <span><span class="s-d53781"></span>Rattrapée</span>
-      <span><span class="s-00a7ee"></span>À venir</span>
+      <span><span class="s-00a7ee"></span>Prévue</span>
     </div>
-    <div class="s-b577c8">Touche un jour pour voir la séance.</div>
-  </div>
+    <div class="s-b577c8">Touche un jour pour voir la séance. Assiduité : {{ cal_rate }} %.</div>
+  </section>
 
   {% if not has_data %}
     <div class="card stub"><p>Aucune donnée. Enregistre une séance pour voir tes progrès.</p></div>
@@ -283,16 +313,29 @@
   </div>
   {% endif %}
 
-  {# ── Zoom mouvement ─────────────────────────────────── #}
-  <div class="card" id="zoom">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#search"/></svg>Suivre un exercice</h3>
-    <p class="note s-b7cffc">
-      Toutes tes séances sur un mouvement : charge, volume, force estimée et
-      historique série par série.
-    </p>
+  {# ── Mes exercices ──────────────────────────────────── #}
+  {# Les mouvements les plus travaillés, chacun avec sa force estimée
+     récente et ses dernières séances en mini-barres (la dernière en vert
+     quand elle bat les précédentes). #}
+  <section class="prg-bloc" id="zoom" aria-label="Mes exercices">
+    <h2 class="prg-surtitre">Mes exercices · force estimée</h2>
+    {% if top_exos %}
+      <div class="prg-exos">
+        {% for e in top_exos %}
+          <a class="prg-exo" href="/progres/exercice?exo={{ e.name|urlencode }}">
+            <span class="prg-exo-txt">
+              <span class="prg-exo-nom">{{ e.name }}</span>
+              <span class="prg-exo-sous">{{ e.sessions }} séance{{ 's' if e.sessions > 1 }} · {{ e.derniere }}</span>
+            </span>
+            <span class="prg-barres" aria-hidden="true">{% for h in e.barres %}<span class="prg-barre{% if loop.last %} prg-barre--der{% if e.nouveau_haut %} prg-barre--haut{% endif %}{% endif %}" style="height: {{ h }}%;"></span>{% endfor %}</span>
+            <span class="prg-exo-val">{% if e.au_pdc %}{{ e.valeur }}<small> REPS</small>{% else %}{{ e.valeur|fr }}{% endif %}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
     {% if all_exos %}
-      <form method="get" action="/progres/exercice">
-        <label class="field-label" for="exo-pick">Exercice</label>
+      <form method="get" action="/progres/exercice" class="prg-autre">
+        <label class="field-label" for="exo-pick">Un autre exercice</label>
         <select name="exo" id="exo-pick" class="field">
           {% for e in all_exos %}
             <option value="{{ e }}" {% if e == sel_exo %}selected{% endif %}>{{ e }}</option>
@@ -300,21 +343,11 @@
         </select>
         <noscript><button type="submit" class="btn primary s-a4a5b8">Voir</button></noscript>
       </form>
-      {% if top_exos %}
-        <div class="field-label s-56f435">Tes mouvements les plus travaillés</div>
-        <div class="exo-quick">
-          {% for e in top_exos %}
-            <a class="exo-quick-chip" href="/progres/exercice?exo={{ e.name|urlencode }}">
-              <span>{{ e.name }}</span>
-              <small>{{ e.sessions }} séance{{ 's' if e.sessions > 1 }}</small>
-            </a>
-          {% endfor %}
-        </div>
-      {% endif %}
+      <p class="note s-b7cffc">Toutes tes séances sur un mouvement : charge, volume, force estimée et historique série par série.</p>
     {% else %}
       <p class="note s-ab23bb">Fais une première séance pour voir tes exercices ici.</p>
     {% endif %}
-  </div>
+  </section>
 
   {% if is_vip %}
   <script nonce="{{ csp_nonce() }}">
@@ -473,16 +506,9 @@
 
       {% if weight.points|length > 1 %}
         <svg class="weight-chart" viewBox="0 0 {{ weight.chart_w }} {{ weight.chart_h }}" preserveAspectRatio="none" aria-label="Courbe de poids">
-          <defs>
-            <linearGradient id="weight-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#c8f031" stop-opacity="0.25"/>
-              <stop offset="1" stop-color="#c8f031" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <polygon points="{{ weight.points[0].x }},{{ weight.chart_h - 24 }} {{ weight.polyline }} {{ weight.points[-1].x }},{{ weight.chart_h - 24 }}" fill="url(#weight-fill)"/>
           <polyline points="{{ weight.polyline }}" fill="none" stroke="#c8f031" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
           {% for pt in weight.points %}
-            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111318" stroke="#c8f031" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
+            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111111" stroke="#c8f031" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
           {% endfor %}
         </svg>
         <div class="weight-axis"><span>{{ weight.first_label }}</span><span>{{ weight.last_label }}</span></div>

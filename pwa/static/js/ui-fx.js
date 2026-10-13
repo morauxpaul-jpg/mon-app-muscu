@@ -26,7 +26,7 @@
   // API publique : confetti CSS-only (fin séance)
   window.fireConfetti = function (count) {
     count = count || 60;
-    var colors = ['#58CCFF', '#00FF7F', '#FFD700', '#FF9F0A', '#FF453A'];
+    var colors = ['#c8f031', '#f2f2f2', '#9cbb26', '#ff9f43', '#6e841b'];
     var wrap = document.createElement('div');
     wrap.className = 'confetti-wrap';
     for (var i = 0; i < count; i++) {

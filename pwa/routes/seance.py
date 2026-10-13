@@ -102,15 +102,15 @@ def seance():
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
         elif done_name:
             titre = f"Séance réalisée · {done_name}"
-            subtitle_text, subtitle_color = "RÉALISÉE", "#00FF7F"
+            subtitle_text, subtitle_color = "RÉALISÉE", "#c8f031"
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
         elif target_date < today:
             titre = "Séance manquée"
-            subtitle_text, subtitle_color = "MANQUÉE", "#FF453A"
+            subtitle_text, subtitle_color = "MANQUÉE", "#ff9f43"
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
         else:
             titre = "Séance à faire"
-            subtitle_text, subtitle_color = "À FAIRE", "#58CCFF"
+            subtitle_text, subtitle_color = "À FAIRE", "#f2f2f2"
             label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
 
         # Regroupe les séances par programme pour un affichage clair.

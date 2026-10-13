@@ -29,6 +29,10 @@
     </div>
   {% endif %}
 
+  {# Le profil passe en bas une fois rempli : ce qu'on ouvre chaque jour,
+     c'est le compte du jour et les repas. Tant qu'il manque, il reste en
+     tête (le formulaire est la première chose à faire). #}
+  {% set bloc_profil %}
   {# ══════════════════════ Section 1 — Profil nutritionnel ══════════════════════ #}
   <div class="card" x-data="{ open: {{ 'false' if targets else 'true' }} }">
     <div class="label-icon s-0fef38">
@@ -124,6 +128,9 @@
     </form>
   </div>
 
+  {% endset %}
+  {% if not targets %}{{ bloc_profil }}{% endif %}
+
   {# ════════════════��═════ Section 1b — Semaine ════════════════════��═ #}
   {% if week_days %}
   <div class="card">
@@ -148,48 +155,40 @@
   {% endif %}
 
   {# ═══════════════��══════ Section 2 — Objectif du jour ══════════��═══════════ #}
+  {# Style « Instrument » (maquette du 13/10) : le chiffre du jour en grand,
+     une jauge, ce qui reste ; les macros en trois colonnes, barres blanches.
+     Plus d'anneau ni de couleur par macro. #}
   {% if targets %}
-  <div class="card">
-    <div class="label-icon s-a901d4"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#target"/></svg>OBJECTIF DU JOUR</div>
+  {% macro mille(n) %}{{ '{:,}'.format(n|int).replace(',', ' ') }}{% endmacro %}
+  <section class="nut-jour" aria-label="Objectif du jour">
+    <div class="nut-surtitre">OBJECTIF DU JOUR</div>
+    <div class="nut-kcal">
+      <div class="nut-kcal-val">{{ mille(totals.calories) }}</div>
+      <div class="nut-kcal-cible">
+        <span>/ {{ mille(jour.calories) }} kcal</span>
+        {% set reste = jour.calories - totals.calories %}
+        <span class="nut-reste">{% if reste >= 0 %}reste {{ mille(reste) }}{% else %}{{ mille(-reste) }} au-dessus{% endif %}</span>
+      </div>
+    </div>
+    <div class="nut-jauge" role="img" aria-label="{{ cal_pct }} % de l'objectif"><span style="width: {{ cal_pct }}%;"></span></div>
     {% if jour and jour.jour and jour.ecart %}
       <div class="nutri-jour {{ jour.jour }}">
         {% if jour.jour == 'entrainement' %}Jour d'entraînement : +{{ jour.ecart }} kcal, en glucides
         {% else %}Jour de repos : −{{ -jour.ecart }} kcal, sur les glucides{% endif %}
       </div>
     {% endif %}
+  </section>
 
-    <div class="kcal-donut-wrap">
-      {% set radius = 70 %}
-      {% set circ = (2 * 3.14159 * radius) | round(1) %}
-      {% set offset = (circ * (100 - cal_pct) / 100) | round(1) %}
-      <svg width="180" height="180" viewBox="0 0 180 180">
-        <circle cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--border-default)" stroke-width="14"/>
-        <circle class="s-3774a1" cx="90" cy="90" r="{{ radius }}" fill="none" stroke="var(--accent)" stroke-width="14"
-                stroke-linecap="round" stroke-dasharray="{{ circ }}" stroke-dashoffset="{{ offset }}"
-                transform="rotate(-90 90 90)"/>
-      </svg>
-      <div class="kcal-donut-center">
-        <div class="kcal-big">{{ totals.calories }}</div>
-        <div class="kcal-sub">/ {{ jour.calories }} kcal</div>
-        <div class="kcal-pct">{{ cal_pct }}%</div>
+  <section class="nut-macros" aria-label="Macronutriments">
+    {% for key, label in [('protein', 'Protéines'), ('carbs', 'Glucides'), ('fat', 'Lipides')] %}
+      {% set mp = macros_progress[key] %}
+      <div class="nut-macro">
+        <div class="nut-surtitre">{{ label }}</div>
+        <div class="nut-macro-val">{{ mp.val }}<small> / {{ mp.goal }} g</small></div>
+        <div class="nut-macro-jauge"><span style="width: {{ mp.pct }}%;"></span></div>
       </div>
-    </div>
-
-    <div class="macro-bars">
-      {% for key, label, color in [('protein', 'Protéines', 'var(--accent)'), ('carbs', 'Glucides', 'var(--warning)'), ('fat', 'Lipides', 'var(--success)')] %}
-        {% set mp = macros_progress[key] %}
-        <div class="macro-bar">
-          <div class="macro-label">
-            <span style="color:{{ color }}; font-weight:600;">{{ label }}</span>
-            <span class="s-fbcbcc">{{ mp.val }}/{{ mp.goal }} g</span>
-          </div>
-          <div class="macro-track">
-            <div class="macro-fill" style="width: {{ mp.pct }}%; background: {{ color }};"></div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </div>
+    {% endfor %}
+  </section>
   {% else %}
     <div class="card s-b31618">
       Renseigne ton profil ci-dessus pour débloquer ton objectif calorique quotidien.
@@ -227,48 +226,6 @@
     {% endif %}
   </div>
   {% endif %}
-
-  {# ══════════════════════ Section 2b — Mes plats de la semaine ══════════════════════ #}
-  <div class="card" x-data="{ open: {{ 'false' if meal_plan.plats else 'true' }}, showImport: {{ 'false' if meal_plan.plats else 'true' }} }">
-    <div class="label-icon s-0fef38">
-      <span class="s-b8f199"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>MES PLATS DE LA SEMAINE</span>
-      <button type="button" class="btn s-dae33e" @click="open = !open"><span x-text="open ? 'Replier' : (({{ meal_plan.plats|length }}) ? '{{ meal_plan.plats|length }} plats' : 'Ajouter')"></span></button>
-    </div>
-
-    <div class="s-d2c171" x-show="open" x-transition.duration.200ms>
-      {% if meal_plan.label %}<div class="s-07ab64">{{ meal_plan.label }}</div>{% endif %}
-
-      {% if meal_plan.plats %}
-        {% for p in meal_plan.plats %}
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %}">
-            <div class="s-3922d3">
-              <div class="s-8c5809">{{ p.name }}{% if p.portion %} <span class="s-071d82">· {{ p.portion }}</span>{% endif %}</div>
-              <div class="s-2f4568">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</div>
-            </div>
-          </div>
-        {% endfor %}
-        <form class="s-8a77e5" method="post" action="/nutrition/plats/clear" x-data="{ c:false }">
-          <button type="button" class="btn s-4efb8e" x-show="!c" @click="c=true">Vider la liste</button>
-          <div x-show="c" x-cloak class="flex-show s-33fcd4">
-            <button type="button" class="btn s-69eb87" @click="c=false">Annuler</button>
-            <button type="submit" class="btn btn-danger s-69eb87">Vider</button>
-          </div>
-        </form>
-      {% endif %}
-
-      <button type="button" class="btn label-icon s-b6dafd" @click="showImport = !showImport">
-        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg><span x-text="showImport ? 'Fermer' : ({{ meal_plan.plats|length }} ? 'Remplacer la liste' : 'Importer une liste')"></span>
-      </button>
-
-      <div class="s-8a77e5" x-show="showImport" x-cloak>
-        <p class="s-ec50f6">Colle ici le fichier de plats (JSON) fourni pour ta semaine, puis Importer. Ça remplace la liste actuelle.</p>
-        <form method="post" action="/nutrition/plats/import">
-          <textarea name="data" class="field s-4fe56e" rows="5" placeholder='{"_format":"muscu-plats-v1", "plats":[ ... ]}'></textarea>
-          <button type="submit" class="btn primary label-icon s-ac0370"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Importer les plats</button>
-        </form>
-      </div>
-    </div>
-  </div>
 
   {# ══════════════════════ Section 3 — Suivi rapide ══════════════════════ #}
   <div class="card" x-data="mealForm()">
@@ -619,6 +576,50 @@
     </div>
   {% endif %}
 
+  {# ══════════════════════ Section 2b — Mes plats de la semaine ══════════════════════ #}
+  <div class="card" x-data="{ open: {{ 'false' if meal_plan.plats else 'true' }}, showImport: {{ 'false' if meal_plan.plats else 'true' }} }">
+    <div class="label-icon s-0fef38">
+      <span class="s-b8f199"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>MES PLATS DE LA SEMAINE</span>
+      <button type="button" class="btn s-dae33e" @click="open = !open"><span x-text="open ? 'Replier' : (({{ meal_plan.plats|length }}) ? '{{ meal_plan.plats|length }} plats' : 'Ajouter')"></span></button>
+    </div>
+
+    <div class="s-d2c171" x-show="open" x-transition.duration.200ms>
+      {% if meal_plan.label %}<div class="s-07ab64">{{ meal_plan.label }}</div>{% endif %}
+
+      {% if meal_plan.plats %}
+        {% for p in meal_plan.plats %}
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; {% if not loop.last %}border-bottom:1px solid var(--border-default);{% endif %}">
+            <div class="s-3922d3">
+              <div class="s-8c5809">{{ p.name }}{% if p.portion %} <span class="s-071d82">· {{ p.portion }}</span>{% endif %}</div>
+              <div class="s-2f4568">{{ p.calories }} kcal · P{{ p.protein }} · G{{ p.carbs }} · L{{ p.fat }}</div>
+            </div>
+          </div>
+        {% endfor %}
+        <form class="s-8a77e5" method="post" action="/nutrition/plats/clear" x-data="{ c:false }">
+          <button type="button" class="btn s-4efb8e" x-show="!c" @click="c=true">Vider la liste</button>
+          <div x-show="c" x-cloak class="flex-show s-33fcd4">
+            <button type="button" class="btn s-69eb87" @click="c=false">Annuler</button>
+            <button type="submit" class="btn btn-danger s-69eb87">Vider</button>
+          </div>
+        </form>
+      {% endif %}
+
+      <button type="button" class="btn label-icon s-b6dafd" @click="showImport = !showImport">
+        <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#plus-circle"/></svg><span x-text="showImport ? 'Fermer' : ({{ meal_plan.plats|length }} ? 'Remplacer la liste' : 'Importer une liste')"></span>
+      </button>
+
+      <div class="s-8a77e5" x-show="showImport" x-cloak>
+        <p class="s-ec50f6">Colle ici le fichier de plats (JSON) fourni pour ta semaine, puis Importer. Ça remplace la liste actuelle.</p>
+        <form method="post" action="/nutrition/plats/import">
+          <textarea name="data" class="field s-4fe56e" rows="5" placeholder='{"_format":"muscu-plats-v1", "plats":[ ... ]}'></textarea>
+          <button type="submit" class="btn primary label-icon s-ac0370"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Importer les plats</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% if targets %}{{ bloc_profil }}{% endif %}
+
   <script src="/static/js/barcode.js"></script>
   <script nonce="{{ csp_nonce() }}">
     // Données de la page, lues par static/js/nutrition.js.
@@ -677,61 +678,23 @@
       border-color: var(--text-1) !important;
       color: var(--text-1) !important;
     }
-    .kcal-donut-wrap {
-      position: relative;
-      width: 180px;
-      height: 180px;
-      margin: 0 auto 18px;
-    }
-    .kcal-donut-center {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-    .kcal-big {
-      font-variant-numeric: tabular-nums;
-      font-size: 2rem;
-      font-weight: 600;
-      color: var(--text-1);
-      line-height: 1;
-    }
-    .kcal-sub {
-      font-size: 0.72rem;
-      color: var(--text-3);
-      margin-top: 4px;
-    }
-    .kcal-pct {
-      font-size: 0.85rem;
-      color: var(--success);
-      font-weight: 600;
-      margin-top: 4px;
-    }
-    .macro-bars {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .macro-label {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 4px;
-      font-size: 0.82rem;
-    }
-    .macro-track {
-      height: 8px;
-      background: var(--bg-elevated);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .macro-fill {
-      height: 100%;
-      border-radius: 10px;
-      transition: width 0.6s ease-out;
-    }
+    /* ── Objectif du jour, style « Instrument » ── */
+    .nut-surtitre { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; text-transform: uppercase; color: var(--text-2); }
+    .nut-jour { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .nut-kcal { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .nut-kcal-val { font-family: var(--font-display); font-weight: 700; font-size: 4rem; line-height: 0.9; }
+    .nut-kcal-cible { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+    .nut-kcal-cible > span:first-child { font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; color: var(--text-2); text-transform: uppercase; }
+    .nut-reste { font-size: 0.82rem; color: var(--text-2); }
+    .nut-jauge { height: 8px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; }
+    .nut-jauge > span { display: block; height: 100%; background: var(--accent); }
+    .nut-macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .nut-macro { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .nut-macro-val { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1; }
+    .nut-macro-val small { font-size: 0.85rem; color: var(--text-2); }
+    .nut-macro-jauge { height: 4px; background: var(--bg-elevated); overflow: hidden; }
+    .nut-macro-jauge > span { display: block; height: 100%; background: var(--text-1); }
+    .nut-jour .nutri-jour { text-align: left; font-size: 0.85rem; color: var(--text-2); margin: 0; }
     .meal-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);

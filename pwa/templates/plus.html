@@ -4,141 +4,128 @@
 {% block content %}
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#grid"/></svg>Plus</h1>
 
-  {# ── Bandeau Premium ───────────────────────────────────────── #}
+  {# Style « Instrument » (maquette du 13/10) : un bloc PRO, puis des listes
+     à filets, sans cartes. Une ligne = une icône blanche, un nom, à droite
+     une flèche, un cadenas ou une précision. #}
+
+  {# ── PRO ───────────────────────────────────────────────────── #}
+  {% macro fleche() %}<svg class="icon icon-md plus-fleche" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>{% endmacro %}
   {% if is_trial %}
-    <a href="/premium" class="card plus-link plus-promo s-fac33a">
-      <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
-      <div class="s-97445a">
-        <div class="s-3d3074">Essai PRO{% if trial_left %} · {{ trial_left }}{% endif %}</div>
-        <div class="s-71a611">Coach IA et debrief compris pendant l'essai. Passe en PRO pour les garder.</div>
-      </div>
-      <span class="plus-promo-cta">Voir</span>
+    <a href="/premium" class="plus-pro">
+      <span class="plus-pro-badge">ESSAI</span>
+      <span class="plus-pro-txt"><span class="plus-pro-titre">Essai PRO{% if trial_left %} · {{ trial_left }}{% endif %}</span><span class="plus-pro-sous">Coach IA et debrief compris. Passe en PRO pour les garder.</span></span>
+      {{ fleche() }}
     </a>
   {% elif is_vip_full %}
-    <a href="/premium" class="card plus-link s-da0cdf">
-      <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
-      <div class="s-97445a">
-        <div class="s-80ae8b">Membre PRO</div>
-        <div class="s-15f704">Merci de ton soutien — gérer mon abonnement.</div>
-      </div>
-      <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    <a href="/premium" class="plus-pro">
+      <span class="plus-pro-badge">PRO</span>
+      <span class="plus-pro-txt"><span class="plus-pro-titre">Membre PRO</span><span class="plus-pro-sous">Gérer mon abonnement</span></span>
+      {{ fleche() }}
     </a>
     {# Ce que PRO a apporté sur 30 jours (core/bilan_pro.py). #}
     {% if bilan and not bilan.vide %}
-    <div class="card bilan-pro">
-      <div class="card-label">Ce mois-ci avec PRO</div>
-      <div class="bilan-pro-grille">
+    <section class="plus-bilan">
+      <div class="plus-section">Ce mois-ci avec PRO</div>
+      <div class="plus-bilan-grille">
         {% for n, un, plusieurs in [(bilan.debriefs, 'debrief', 'debriefs'),
                                     (bilan.coach, 'message au coach', 'messages au coach'),
                                     (bilan.programmes, 'programme généré', 'programmes générés'),
                                     (bilan.seances_refaites, 'séance refaite', 'séances refaites'),
                                     (bilan.records, 'record battu', 'records battus')] if n %}
-        <div class="bilan-pro-case"><b>{{ n }}</b><span>{{ plusieurs if n > 1 else un }}</span></div>
+        <div class="plus-bilan-case"><b>{{ n }}</b><span>{{ plusieurs if n > 1 else un }}</span></div>
         {% endfor %}
       </div>
-    </div>
+    </section>
     {% endif %}
   {% else %}
-    <a href="/premium" class="card plus-link plus-promo s-fac33a">
-      <svg class="icon icon-lg s-e5af14"><use href="/static/img/icons.svg#gem"/></svg>
-      <div class="s-97445a">
-        <div class="s-3d3074">Passe en PRO</div>
-        <div class="s-71a611">Coach IA, nutrition, stats détaillées & programmes avancés.</div>
-      </div>
-      <span class="plus-promo-cta">Voir</span>
+    <a href="/premium" class="plus-pro">
+      <span class="plus-pro-badge">PRO</span>
+      <span class="plus-pro-txt"><span class="plus-pro-titre">Passe en PRO</span><span class="plus-pro-sous">Coach IA, nutrition, stats détaillées et programmes avancés.</span></span>
+      {{ fleche() }}
     </a>
   {% endif %}
 
-  <a href="/parrainage" class="card plus-link plus-row s-2b6f80">
-    <svg class="icon icon-lg s-e65ba6"><use href="/static/img/icons.svg#party"/></svg>
-    <div class="plus-row-txt"><h3>Inviter des amis</h3><p>Gagnez des jours PRO à deux.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
+  {% macro ligne(href, icone, nom, droite='', verrou=False, badge='') -%}
+    <a href="{{ href }}" class="plus-ligne{% if verrou %} plus-ligne--verrou{% endif %}">
+      <svg class="icon icon-lg plus-icone" aria-hidden="true"><use href="/static/img/icons.svg#{{ icone }}"/></svg>
+      <span class="plus-nom">{{ nom }}{% if badge %} <span class="badge-pro">{{ badge }}</span>{% endif %}</span>
+      {% if droite %}<span class="plus-droite">{{ droite }}</span>{% endif %}
+      {% if verrou %}<svg class="icon icon-md plus-fleche" aria-label="Réservé PRO"><use href="/static/img/icons.svg#lock"/></svg>{% elif not droite %}{{ fleche() }}{% endif %}
+    </a>
+  {%- endmacro %}
 
   {# ── Entraînement ──────────────────────────────────────────── #}
-  <div class="plus-section">Entraînement</div>
+  <section class="plus-groupe" aria-label="Entraînement">
+    <div class="plus-section">Entraînement</div>
+    {{ ligne('/programme', 'clipboard-list', 'Programme') }}
+    {{ ligne('/cardio', 'heart', 'Cardio') }}
+    {{ ligne('/plaques', 'dumbbell', 'Disques à charger') }}
+    {{ ligne('/nutrition', 'utensils', 'Nutrition', verrou=not is_vip, badge='' if is_vip else 'PRO') }}
+  </section>
 
-  <a href="/programme" class="card plus-link plus-row">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>
-    <div class="plus-row-txt"><h3>Programme</h3><p>Séances, exercices et planning.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
+  {# ── Coach (fonctions avancées, verrouillées en gratuit) ────── #}
+  <section class="plus-groupe" aria-label="Coach">
+    <div class="plus-section">Coach{% if not is_vip %} · inclus avec PRO{% endif %}</div>
+    {{ ligne('/coach', 'message-circle', 'Coach IA',
+             droite='15 messages / jour' if is_vip_full else '',
+             verrou=not is_vip_full and not is_trial,
+             badge='' if is_vip_full else ('ESSAI' if is_trial else 'PRO')) }}
+    {{ ligne('/generator', 'sparkle', 'Générer un programme', verrou=not is_vip_full, badge='' if is_vip_full else 'PRO') }}
+  </section>
 
-  <a href="/cardio" class="card plus-link plus-row">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#heart"/></svg>
-    <div class="plus-row-txt"><h3>Cardio</h3><p>Course, vélo, rameur… durée &amp; calories.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
-
-  <a href="/plaques" class="card plus-link plus-row">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>
-    <div class="plus-row-txt"><h3>Calcul de plaques</h3><p>Quels disques charger sur la barre.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
-
-  {# ── Premium (fonctions avancées, verrouillées en gratuit) ──── #}
-  <div class="plus-section">Premium{% if not is_vip %} <span class="s-3c6a21">· inclus avec PRO</span>{% endif %}</div>
-
-  <a href="/coach" class="card plus-link plus-row{% if not is_vip_full and not is_trial %} plus-locked{% endif %}">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>
-    <div class="plus-row-txt"><h3>Coach IA{% if not is_vip_full %} <span class="badge-pro">{{ 'ESSAI' if is_trial else 'PRO' }}</span>{% endif %}</h3><p>Ton coach perso, alimenté par l'IA.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip_full %}chevron-right{% else %}lock{% endif %}"/></svg>
-  </a>
-
-  <a href="/generator" class="card plus-link plus-row{% if not is_vip_full %} plus-locked{% endif %}">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>
-    <div class="plus-row-txt"><h3>Générateur IA{% if not is_vip_full %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Un programme sur-mesure généré par l'IA.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip_full %}chevron-right{% else %}lock{% endif %}"/></svg>
-  </a>
-
-  <a href="/nutrition" class="card plus-link plus-row{% if not is_vip %} plus-locked{% endif %}">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>
-    <div class="plus-row-txt"><h3>Nutrition{% if not is_vip %} <span class="badge-pro">PRO</span>{% endif %}</h3><p>Calories, macros et suivi des repas.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#{% if is_vip %}chevron-right{% else %}lock{% endif %}"/></svg>
-  </a>
-
-  {# ── Réglages ──────────────────────────────────────────────── #}
-  <div class="plus-section">Réglages</div>
-
-  <a href="/gestion" class="card plus-link plus-row">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#settings"/></svg>
-    <div class="plus-row-txt"><h3>Gestion</h3><p>Paramètres, export, réinitialisation.</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
-
-  <a href="/faq" class="card plus-link plus-row">
-    <svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>
-    <div class="plus-row-txt"><h3>FAQ &amp; confidentialité</h3><p>Données, sécurité, compte…</p></div>
-    <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-  </a>
+  {# ── Compte ────────────────────────────────────────────────── #}
+  <section class="plus-groupe" aria-label="Compte">
+    <div class="plus-section">Compte</div>
+    {{ ligne('/gestion', 'settings', 'Réglages et données') }}
+    <a href="/parrainage" class="plus-ligne">
+      <svg class="icon icon-lg plus-icone" aria-hidden="true"><use href="/static/img/icons.svg#party"/></svg>
+      <span class="plus-nom">Inviter des amis</span>
+      <span class="plus-droite plus-droite--vert">+3 jours PRO</span>
+    </a>
+    {{ ligne('/faq', 'help-circle', 'FAQ et confidentialité') }}
+  </section>
 
   {% if is_admin %}
-  <div class="plus-section">Admin</div>
-    <a href="/admin" class="card plus-link plus-row">
-      <svg class="icon icon-lg s-5a4529"><use href="/static/img/icons.svg#shield-check"/></svg>
-      <div class="plus-row-txt"><h3 class="s-5a4529">Admin</h3><p>Utilisateurs &amp; attribution PRO.</p></div>
-      <svg class="icon icon-md icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-    </a>
+  <section class="plus-groupe" aria-label="Admin">
+    <div class="plus-section">Admin</div>
+    {{ ligne('/admin', 'shield-check', 'Utilisateurs et attribution PRO') }}
+  </section>
   {% endif %}
 
   <style>
     .plus-section {
-      font-size:0.72rem; font-weight:600; letter-spacing: 0; font-family: var(--font-display); text-transform:uppercase;
-      color:var(--text-3); margin:18px 4px 8px;
+      font-family: var(--font-display); font-weight: 600; font-size: 1rem;
+      text-transform: uppercase; color: var(--text-2); padding-bottom: 4px;
     }
-    .plus-row { display:flex; align-items:center; gap:14px; padding:13px 14px; }
-    .plus-row-txt { flex:1; min-width:0; }
-    .plus-row-txt h3 { margin:0 0 1px; font-size:0.92rem; font-weight:500; }
-    .plus-row-txt p { margin:0; font-size:0.78rem; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .plus-locked .plus-row-txt h3 { color:var(--text-1); }
-    .plus-locked { opacity:0.92; }
-    .plus-promo {
-      border-color:rgba(255,215,0,0.3);
-      background:var(--bg-surface);
+    .plus-pro {
+      display: flex; align-items: center; gap: 12px; padding: 14px;
+      border-radius: var(--radius-sm); background: var(--bg-surface);
+      color: var(--text-1); text-decoration: none; margin-bottom: 18px;
     }
-    .plus-promo-cta {
-      flex-shrink:0; font-size:0.8rem; font-weight:600; color:var(--gold, #FFD700);
-      border:0.5px solid rgba(255,215,0,0.4); border-radius:var(--radius-sm); padding:6px 14px;
+    .plus-pro-badge {
+      flex-shrink: 0; padding: 4px 8px; border-radius: 2px;
+      background: var(--accent); color: var(--on-accent);
+      font-family: var(--font-display); font-weight: 700; font-size: 1rem;
     }
+    .plus-pro-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .plus-pro-titre { font-weight: 500; }
+    .plus-pro-sous { font-size: 0.82rem; color: var(--text-2); }
+    .plus-bilan { margin-bottom: 18px; }
+    .plus-bilan-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+    .plus-bilan-case { display: flex; flex-direction: column; padding: 10px 12px; background: var(--bg-surface); border-radius: var(--radius-sm); }
+    .plus-bilan-case b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; line-height: 1; }
+    .plus-bilan-case span { font-size: 0.8rem; color: var(--text-2); }
+    .plus-groupe { display: flex; flex-direction: column; margin-bottom: 18px; }
+    .plus-ligne {
+      display: flex; align-items: center; gap: 14px; min-height: 52px;
+      border-top: 1px solid #262626; color: var(--text-1); text-decoration: none;
+    }
+    .plus-ligne:last-child { border-bottom: 1px solid #262626; }
+    .plus-icone { flex-shrink: 0; color: var(--text-1); }
+    .plus-nom { flex: 1; min-width: 0; }
+    .plus-droite { flex-shrink: 0; font-size: 0.82rem; color: var(--text-2); }
+    .plus-droite--vert { color: var(--accent); }
+    .plus-fleche { flex-shrink: 0; color: var(--text-3); }
+    .plus-ligne--verrou .plus-icone, .plus-ligne--verrou .plus-nom { color: var(--text-2); }
   </style>
 {% endblock %}

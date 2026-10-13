@@ -110,7 +110,8 @@ def test_un_jour_de_seance_relève_la_cible_de_la_page(fake_db, logged_in):
     t = nc.compute_targets(PROFIL)
     attendu = nc.cible_du_jour(t, 1, True)
     assert "Jour d'entraînement : +" in html
-    assert f"/ {attendu['calories']} kcal" in html
+    # « / 2 650 kcal » : la cible du jour, au format français.
+    assert f"/ {attendu['calories']:,} kcal".replace(",", " ") in html
     assert "week-day-seance" in html
     assert "par kilo de poids de corps" in html
 

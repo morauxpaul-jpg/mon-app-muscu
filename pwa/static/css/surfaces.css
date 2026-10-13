@@ -244,6 +244,9 @@ input[type="url"], textarea, select,
   border-color: var(--text-1);
   color: var(--bg-base);
 }
+/* La puce entière dit déjà « choisi » (blanche) : la case suit en noir,
+   pas en vert. */
+.muscle-check input[type="checkbox"]:not(.sr-only) { accent-color: var(--bg-base); }
 
 .rest-timer-presets button,
 .rest-timer-bar-presets button {
@@ -326,9 +329,8 @@ input[type="url"], textarea, select,
 .cal-cell.missed   { background: transparent; color: var(--warning); box-shadow: inset 0 0 0 1.5px var(--warning); }
 .cal-cell.upcoming { background: #333333; }
 .cal-cell.rest     { background: var(--bg-elevated); }
-.podium-gold   { background: rgba(255,214,10,0.08) !important; border-color: rgba(255,214,10,0.25) !important; }
-.podium-silver { background: rgba(192,197,206,0.06) !important; border-color: rgba(192,197,206,0.20) !important; }
-.podium-bronze { background: rgba(205,127,50,0.06) !important;  border-color: rgba(205,127,50,0.20) !important; }
+/* Podium : blocs plats ; seule la médaille garde sa couleur. */
+.podium-gold, .podium-silver, .podium-bronze { background: var(--bg-elevated) !important; border-color: transparent !important; }
 
 /* Coach */
 .coach-textarea {
@@ -397,6 +399,20 @@ a.btn.lien-retour {
   font-weight: 500;
 }
 a.btn.lien-retour:hover { background: none; color: var(--accent); }
+
+/* Titre de section dans un bloc (« Carte musculaire », « Poids corporel »…) :
+   un libellé gris en capitales étroites, comme sur la maquette ; l'icône
+   décorative qui le précédait disparaît. */
+.card > h3.label-icon,
+.card > div > h3.label-icon {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.card > h3.label-icon > .icon,
+.card > div > h3.label-icon > .icon { display: none; }
 
 /* Libellés de section et de statistique : capitales étroites, sans
    l'espacement exagéré de l'ancien habillage (« S É A N C E »). */
