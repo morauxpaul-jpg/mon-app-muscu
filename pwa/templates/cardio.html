@@ -2,7 +2,7 @@
 {% block title %}Cardio · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/seance?date={{ date_iso }}" class="btn label-icon s-364572"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/seance?date={{ date_iso }}" class="btn label-icon s-364572 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <div class="choix-hero">
     <div class="choix-date">{{ date_label|upper }}</div>
@@ -182,11 +182,11 @@
       transition: all 0.15s ease;
       text-align: center;
     }
-    .cardio-activite:hover { border-color: var(--accent); }
+    .cardio-activite:hover { border-color: var(--border-hover); }
     .cardio-activite:has(input:checked) {
-      background: var(--accent-bg);
-      border-color: var(--accent);
-      color: var(--accent);
+      background: rgba(255,255,255,0.08);
+      border-color: var(--text-1);
+      color: var(--text-1);
     }
     /* Le radio est masqué mais focusable : l'anneau doit apparaître sur la
        tuile qui le porte, sinon la navigation au clavier est invisible. */
@@ -234,9 +234,9 @@
       transition: all 0.15s ease;
     }
     .rpe-btn:has(input:checked) {
-      background: var(--accent-bg);
-      border-color: var(--accent);
-      color: var(--accent);
+      background: rgba(255,255,255,0.08);
+      border-color: var(--text-1);
+      color: var(--text-1);
       font-weight: 600;
     }
     .cardio-summary {
@@ -254,11 +254,11 @@
     .summary-label {
       font-size: 0.7rem;
       color: var(--text-3);
-      letter-spacing: 1px;
+      letter-spacing: 0; font-family: var(--font-display);
       text-transform: uppercase;
     }
     .gps-actif {
-      border: 1px solid rgba(120,200,255,0.30);
+      border: 1px solid var(--border-glass-bright);
       background: var(--accent-bg);
       border-radius: var(--radius-sm);
       padding: 10px 12px;

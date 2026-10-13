@@ -17,9 +17,7 @@
 #tuto-mask {
   position: absolute;
   inset: 0;
-  background: rgba(5, 8, 16, 0.82);
-  -webkit-backdrop-filter: blur(1.5px);
-  backdrop-filter: blur(1.5px);
+  background: rgba(0,0,0,0.82);
   transition: clip-path 0.3s ease;
   pointer-events: auto;
 }
@@ -29,8 +27,8 @@
   position: absolute;
   border: 2px solid var(--accent);
   border-radius: var(--radius-md, 12px);
-  box-shadow: 0 0 0 3px rgba(120, 200, 255, 0.18),
-              0 0 22px rgba(120, 200, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(200,240,49, 0.18),
+              0 0 22px rgba(200,240,49, 0.45);
   pointer-events: none;
   transition: all 0.3s ease;
 }
@@ -54,10 +52,7 @@
   position: absolute;
   max-width: 340px;
   width: calc(100vw - 24px);
-  background: var(--bg-surface, rgba(16, 18, 28, 0.92));
-  background-image: linear-gradient(180deg, rgba(120,200,255,0.06), transparent 60%);
-  -webkit-backdrop-filter: saturate(160%) blur(20px);
-  backdrop-filter: saturate(160%) blur(20px);
+  background: var(--bg-surface, #111111);
   border: 1px solid var(--border-default, rgba(255,255,255,0.12));
   border-top: 2px solid var(--accent);
   border-radius: var(--radius-lg, 18px);
@@ -145,7 +140,7 @@
 .tuto-btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .tuto-btn.primary:hover { filter: brightness(1.08); }
 

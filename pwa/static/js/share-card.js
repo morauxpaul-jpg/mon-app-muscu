@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var ACCENT = '#78c8ff';
+  var ACCENT = '#c8f031';
   var GOLD = '#FFD700';
   var TEXT = '#ffffff';
   var DIM = '#8b93a1';
@@ -47,8 +47,8 @@
     g.addColorStop(0, '#14181f'); g.addColorStop(1, '#0c0e12');
     ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
     var glow = ctx.createRadialGradient(S / 2, 120, 40, S / 2, 120, 620);
-    glow.addColorStop(0, 'rgba(120,200,255,0.16)');
-    glow.addColorStop(1, 'rgba(120,200,255,0)');
+    glow.addColorStop(0, 'rgba(200,240,49,0.16)');
+    glow.addColorStop(1, 'rgba(200,240,49,0)');
     ctx.fillStyle = glow; ctx.fillRect(0, 0, S, S);
 
     var P = 90;
@@ -93,7 +93,7 @@
     var ty = 660, th = 200, gap = 30;
     var tw = (S - 2 * P - 2 * gap) / 3;
     tile(ctx, P, ty, tw, th, 'SÉANCES', d.sessions + '/' + d.total, ACCENT);
-    tile(ctx, P + tw + gap, ty, tw, th, 'VOLUME', d.tonnage, '#34c759');
+    tile(ctx, P + tw + gap, ty, tw, th, 'VOLUME', d.tonnage, '#c8f031');
     tile(ctx, P + 2 * (tw + gap), ty, tw, th, 'EXOS', String(d.exos), GOLD);
 
     // Pied : tagline + lien

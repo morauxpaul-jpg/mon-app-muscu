@@ -1,0 +1,441 @@
+/* ═══════════════════════════════════════════════════════
+   MUSCU — Surfaces · style « Instrument » (13/10/2026)
+   Chargé APRÈS components.css. Remplace l'ancien habillage « verre »
+   (glass.css : fond en dégradés, cartes translucides à reflet, flous,
+   pilules lumineuses), jugé « app générée par IA » par le propriétaire.
+   Tout est plat : noir, blocs #111111, filets #262626, une seule couleur
+   vive (tokens.css).
+   ═══════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════
+   1. FOND — noir uni
+   ═══════════════════════════════════════════ */
+body {
+  background: var(--bg-base);
+  background-image: none;
+}
+
+/* ═══════════════════════════════════════════
+   2. BLOCS — plats, sans reflet ni ombre
+   ═══════════════════════════════════════════ */
+.glass,
+.card,
+.stat-card,
+.prog-card,
+.prog-exo-row,
+.vol-container,
+.detail-metric,
+.seance-progress,
+.finish-celebration .finish-stat,
+.rest-timer,
+.iso-chrono,
+.next-session-card,
+.prog-section,
+.podium-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-glass);
+  box-shadow: none;
+}
+
+.exo-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-glass);
+  box-shadow: none;
+}
+
+/* ═══════════════════════════════════════════
+   3. BARRE DU BAS — noire, l'onglet actif en vert
+   ═══════════════════════════════════════════ */
+.bottom-nav {
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-subtle);
+  box-shadow: none;
+}
+.bottom-nav a.active,
+.nav-item.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+.bottom-nav a.active .nav-icon,
+.bottom-nav a.active .icon {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* ═══════════════════════════════════════════
+   4. BOUTONS — rectangles, l'action principale en vert plein
+   ═══════════════════════════════════════════ */
+button, .btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  transition: background var(--ease-fast), border-color var(--ease-fast);
+}
+button:hover, .btn:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+}
+button:active, .btn:active {
+  transform: scale(0.98);
+  transition: transform 80ms ease;
+}
+
+button.primary, .btn.primary,
+.btn-primary,
+button.violet, .btn.violet {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: none;
+}
+button.primary:hover, .btn.primary:hover,
+.btn-primary:hover,
+button.violet:hover, .btn.violet:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--on-accent);
+}
+/* Les icônes d'un bouton plein prennent la couleur du texte (noir). */
+button.primary .icon, .btn.primary .icon, .btn-primary .icon { color: var(--on-accent); }
+
+.btn-success {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: none;
+}
+.btn-success:hover { background: var(--accent-hover); }
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.btn-ghost:hover { background: var(--bg-elevated); }
+
+.btn-icon,
+.icon-btn {
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  box-shadow: none;
+}
+
+.btn.btn-danger,
+button.btn-danger {
+  background: var(--danger-bg);
+  border: 1px solid rgba(255,90,78,0.35);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.mini-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+}
+
+/* ═══════════════════════════════════════════
+   5. CHAMPS — noirs, filet gris, contour vert au focus
+   ═══════════════════════════════════════════ */
+.input, input[type="text"], input[type="number"], input[type="email"],
+input[type="password"], input[type="search"], input[type="tel"],
+input[type="url"], textarea, select,
+.cell-input, .field {
+  background: var(--bg-base);
+  border: 1px solid var(--border-glass-bright);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  transition: border-color var(--ease-fast);
+}
+.input:focus, input:focus, textarea:focus, select:focus,
+.cell-input:focus, .field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--bg-base);
+}
+
+/* ═══════════════════════════════════════════
+   6. FENÊTRES — blocs pleins sur fond assombri
+   ═══════════════════════════════════════════ */
+.modal-box, .modal,
+.exo-info-box,
+.preview-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: none;
+}
+.modal-overlay, .modal-backdrop,
+.exo-info-modal,
+.preview-overlay,
+.rest-timer-overlay {
+  background: var(--bg-overlay);
+}
+.exo-info-close {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+/* ═══════════════════════════════════════════
+   7. PASTILLES
+   ═══════════════════════════════════════════ */
+.badge {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  background: var(--bg-elevated);
+}
+.badge-success, .badge-info {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.badge-warning {
+  background: var(--warning-bg);
+  border-color: rgba(255,159,67,0.35);
+  color: var(--warning);
+}
+.badge-danger {
+  background: var(--danger-bg);
+  border-color: rgba(255,90,78,0.35);
+  color: var(--danger);
+}
+.badge-neutral {
+  background: var(--bg-elevated);
+  border-color: var(--border-default);
+  color: var(--text-2);
+}
+
+.stub .tag {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+/* ═══════════════════════════════════════════
+   8. COMPOSANTS DIVERS
+   ═══════════════════════════════════════════ */
+.muscle-check {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+}
+.muscle-check:has(input:checked) {
+  background: var(--text-1);
+  border-color: var(--text-1);
+  color: var(--bg-base);
+}
+
+.rest-timer-presets button,
+.rest-timer-bar-presets button {
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+}
+.rest-timer-presets button.active,
+.rest-timer-bar-presets button.active {
+  background: var(--text-1);
+  border-color: var(--text-1);
+  color: var(--bg-base);
+}
+
+.app-logo .pro {
+  background: var(--accent);
+  border: none;
+  color: var(--on-accent);
+}
+
+.save-pill {
+  background: var(--accent-bg) !important;
+  border: 1px solid rgba(200,240,49,0.30) !important;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #111111 25%, #1a1a1a 50%, #111111 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  border-radius: var(--radius-glass);
+}
+
+.xp-bar-bg {
+  background: var(--bg-elevated);
+  box-shadow: none;
+}
+
+.settings-item {
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* Jours : fait = vert, manqué = orange (jamais du rouge : manquer une
+   séance n'est pas une faute), aujourd'hui = cadre blanc. */
+.day-done   { background: var(--accent); color: var(--on-accent); }
+.day-missed { background: transparent; color: var(--warning); border: 1.5px dashed var(--warning); }
+.day-today  { background: transparent; color: var(--text-1); border: 2px solid var(--text-1); }
+.day-future { background: var(--bg-elevated); color: var(--text-3); }
+.day-makeup { background: var(--bg-elevated); color: var(--text-2); }
+
+.prev-table th,
+.prev-table td {
+  border-bottom: 1px solid var(--border-default);
+}
+
+.series-check.done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.locked::after {
+  background: rgba(0,0,0,0.55);
+}
+
+/* Progrès */
+.vbtn {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+}
+.vbtn.active {
+  border-color: var(--text-1) !important;
+  background: var(--text-1) !important;
+  color: var(--bg-base) !important;
+}
+.cal-nav {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+}
+.cal-cell.done     { background: var(--accent); color: var(--on-accent); }
+.cal-cell.missed   { background: transparent; color: var(--warning); box-shadow: inset 0 0 0 1.5px var(--warning); }
+.cal-cell.upcoming { background: #333333; }
+.cal-cell.rest     { background: var(--bg-elevated); }
+.podium-gold   { background: rgba(255,214,10,0.08) !important; border-color: rgba(255,214,10,0.25) !important; }
+.podium-silver { background: rgba(192,197,206,0.06) !important; border-color: rgba(192,197,206,0.20) !important; }
+.podium-bronze { background: rgba(205,127,50,0.06) !important;  border-color: rgba(205,127,50,0.20) !important; }
+
+/* Coach */
+.coach-textarea {
+  background: var(--bg-base) !important;
+  border: 1px solid var(--border-glass-bright) !important;
+  box-shadow: none;
+}
+.coach-textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
+}
+
+.rest-timer-bar {
+  /* Redessinée chaque seconde : pleine, jamais floutée. */
+  background: var(--bg-base) !important;
+  border-top: 1px solid var(--border-default) !important;
+  box-shadow: none !important;
+}
+
+.exo-info-btn {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+.exo-info-tab {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   9. TYPOGRAPHIE — titres étroits en capitales, chiffres d'abord
+   ═══════════════════════════════════════════ */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+h1 {
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+/* Titre de page : grand, étroit, en capitales, aligné à gauche. L'icône
+   décorative qui le précédait disparaît (le titre suffit). */
+h1.label-icon,
+.accueil-titre {
+  display: flex;          /* .label-icon le mettait en ligne, à côté de « Retour » */
+  font-size: 2.25rem;
+  line-height: 0.95;
+  margin: var(--sp-md) 0 var(--sp-md);
+  color: var(--text-1);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+h1.label-icon > .icon { display: none; }
+
+/* « Retour » : un lien texte avec sa flèche, pas un bouton encadré. */
+a.btn.lien-retour {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0 4px 0 0;
+  min-height: 44px;
+  color: var(--text-1);
+  font-weight: 500;
+}
+a.btn.lien-retour:hover { background: none; color: var(--accent); }
+
+/* Libellés de section et de statistique : capitales étroites, sans
+   l'espacement exagéré de l'ancien habillage (« S É A N C E »). */
+.stat-label,
+.card-label,
+.seance-label,
+.detail-label,
+.rest-timer-label,
+.settings-group-title {
+  color: var(--text-2);
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+/* Les grands chiffres en étroit. */
+.stat-value,
+.detail-value,
+.kcal-big,
+.date-hero .date-str {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* ═══════════════════════════════════════════
+   10. ANIMATIONS — sobres
+   ═══════════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ═══════════════════════════════════════════
+   11. GPU HINTS
+   ═══════════════════════════════════════════ */
+.bottom-nav,
+.rest-timer-bar {
+  transform: translateZ(0);
+}

@@ -62,7 +62,7 @@ def test_enregistrer_avec_un_echauffement(fake_db, logged_in):
     assert d["volume"] == 0 and d["volume_echauffement"] == 200
     d = _save(logged_in, [ECH, {"reps": 8, "poids": 60}]).get_json()
     assert d["completed"] is True
-    assert d["last_summary"] == "60kg × 8"
+    assert d["last_summary"] == "60\u00a0kg × 8"
     assert d["pr"] and d["pr"]["value"] == 60
     assert d["volume"] == 480 and d["volume_echauffement"] == 200
 

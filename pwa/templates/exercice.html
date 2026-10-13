@@ -6,7 +6,7 @@
   {%- macro lien(m=metric, p=periode) -%}
     /progres/exercice?exo={{ exo_name|urlencode }}{% if variant %}&variante={{ variant|urlencode }}{% endif %}&m={{ m }}&p={{ p }}
   {%- endmacro -%}
-  <a href="/progres#zoom" class="btn label-icon s-7dc027">
+  <a href="/progres#zoom" class="btn label-icon s-7dc027 lien-retour">
     <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-left"/></svg>Progrès
   </a>
 
@@ -62,12 +62,12 @@
   <div class="pr-grid">
     <div class="pr-card">
       <div class="pr-label">Charge max</div>
-      <div class="pr-value">{{ summary.best_weight|round(1)|int if summary.best_weight == summary.best_weight|round(0) else summary.best_weight }} <span>kg</span></div>
+      <div class="pr-value">{{ '%g'|format(summary.best_weight)|replace('.', ',') }} <span>kg</span></div>
       <div class="pr-sub">× {{ summary.best_weight_reps }} reps · {{ summary.best_weight_date[8:10] }}/{{ summary.best_weight_date[5:7] }}</div>
     </div>
     <div class="pr-card">
       <div class="pr-label">Force estimée</div>
-      <div class="pr-value">{{ summary.best_e1rm }} <span>kg</span></div>
+      <div class="pr-value">{{ summary.best_e1rm|fr }} <span>kg</span></div>
       <div class="pr-sub">1RM · {{ summary.best_e1rm_date[8:10] }}/{{ summary.best_e1rm_date[5:7] }}</div>
     </div>
     <div class="pr-card">
@@ -316,7 +316,7 @@
   }
   .pr-label {
     font-size: 0.7rem;
-    letter-spacing: 0.08em;
+    letter-spacing: 0; font-family: var(--font-display);
     text-transform: uppercase;
     color: var(--text-2);
     margin-bottom: 4px;
@@ -340,13 +340,13 @@
     font-size: 0.86rem;
     margin-bottom: 12px;
   }
-  .exo-delta.up { background: var(--success-bg, rgba(52,199,89,0.1)); color: var(--success); }
+  .exo-delta.up { background: var(--success-bg, rgba(200,240,49,0.1)); color: var(--success); }
   .exo-delta.down { background: var(--warning-bg); color: var(--warning); }
 
   .metric-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .metric-tab {
     padding: 7px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     border: 0.5px solid var(--border-default);
     background: var(--bg-elevated);
     color: var(--text-2);
@@ -356,7 +356,7 @@
     display: inline-flex;
     align-items: center;
   }
-  .metric-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .metric-tab.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
   .periode-row { display: flex; gap: 4px; margin: -4px 0 12px; }
   .periode-chip {
@@ -373,7 +373,7 @@
     justify-content: center;
     background: var(--bg-elevated);
   }
-  .periode-chip.on { color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+  .periode-chip.on { color: var(--text-1); background: rgba(255,255,255,0.08); font-weight: 600; }
 
   .exo-chart-wrap { position: relative; }
   .exo-y {
@@ -456,7 +456,7 @@
   .variant-chip small { margin-left: 4px; opacity: 0.7; font-size: 0.72rem; }
   .variant-chip {
     padding: 6px 12px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     border: 0.5px solid var(--border-default);
     background: var(--bg-elevated);
     color: var(--text-2);
@@ -466,7 +466,7 @@
     display: inline-flex;
     align-items: center;
   }
-  .variant-chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .variant-chip.on { border-color: var(--text-1); color: var(--text-1); background: rgba(255,255,255,0.08); }
 
   .session-card { padding: 12px 14px; margin-bottom: 8px; }
   .session-head {

@@ -52,12 +52,12 @@
 /* Carte repliée une fois l'exercice fait : la vignette cède la place aux
    chiffres, qui sont alors ce qu'on vient relire. */
 .exo-card.done .exo-vignette { width: 40px; height: 40px; }
-.exo-chrono-btn { color: var(--accent); }
+.exo-chrono-btn { color: var(--text-1); }
 .exo-swap-btn { color: var(--text-2); font-size: 1rem; line-height: 1; }
 .exo-remplace {
   display: block;
   font-size: 0.7rem;
-  color: var(--accent);
+  color: var(--text-2);
   margin-bottom: 2px;
 }
 /* Superset : les deux cartes se touchent et partagent un liseré, pour
@@ -65,10 +65,10 @@
 .exo-superset {
   display: block;
   font-size: 0.7rem;
-  color: var(--accent);
+  color: var(--text-2);
   margin-bottom: 2px;
 }
-.exo-card--ss-debut, .exo-card--ss-fin { box-shadow: inset 3px 0 0 var(--accent); }
+.exo-card--ss-debut, .exo-card--ss-fin { box-shadow: inset 3px 0 0 var(--text-3); }
 .exo-card--ss-debut { margin-bottom: 2px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
 .exo-card--ss-fin { margin-top: 0; border-top-left-radius: 6px; border-top-right-radius: 6px; }
 .exo-variantes {
@@ -78,7 +78,7 @@
 }
 .exo-variantes-titre {
   font-size: 0.7rem;
-  letter-spacing: 0.8px;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 8px;
@@ -157,7 +157,7 @@
 }
 .exo-info-box h4 { color: var(--text-1); margin: 0 0 6px; font-size: 0.95rem; font-weight: 500; }
 .exo-info-box .info-section { margin-bottom: 6px; }
-.exo-info-box .info-label { font-size: 0.7rem; color: var(--text-3); letter-spacing: 0.8px; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
+.exo-info-box .info-label { font-size: 0.7rem; color: var(--text-3); letter-spacing: 0; font-weight: 500; text-transform: uppercase; margin-bottom: 2px; }
 .exo-info-box .info-text { font-size: 0.82rem; line-height: 1.35; color: var(--text-2); }
 /* Deux tailles, deux plafonds. Le dessin au trait reste petit ;
    l'illustration rendue mérite sa place. Un plafond unique à 90 px
@@ -176,7 +176,7 @@
   cursor: pointer; border-bottom: 2px solid transparent;
   font-weight: 500;
 }
-.exo-info-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.exo-info-tab.active { color: var(--text-1); border-bottom-color: var(--text-1); }
 .exo-info-box .rm-table td, .exo-info-box .rm-table th { text-align: center; font-variant-numeric: tabular-nums; padding: 4px 6px; color: var(--text-2); }
 .exo-info-box .rm-row-max td { color: var(--accent); background: var(--accent-bg); }
 .exo-info-close {
@@ -184,13 +184,13 @@
   width: 100%; margin-top: 10px;
   padding: 10px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: var(--radius-md);
 }
 
 /* Écran de séance allégé (audit du 03/10, Q3) : le premier champ de saisie
    doit tenir dans le premier écran d'un téléphone de 375 × 812. */
-.seance-retour { color: var(--accent); text-decoration: none; font-weight: 600; }
+.seance-retour { color: var(--text-1); text-decoration: none; font-weight: 600; }
 .seance-retour:hover { text-decoration: underline; }
 details.exo-plus, details.seance-options { margin-top: 12px; border-top: 1px solid var(--border-default, rgba(255,255,255,0.08)); padding-top: 8px; }
 details.exo-plus > summary, details.seance-options > summary {
@@ -212,7 +212,7 @@ details.seance-options { margin: 18px 0 8px; }
 details.exo-echauffement { font-size: 12px; color: var(--text-2); }
 details.exo-echauffement summary { cursor: pointer; list-style: none; padding: 2px 0; }
 details.exo-echauffement summary::-webkit-details-marker { display: none; }
-details.exo-echauffement summary::before { content: "▸ "; color: var(--accent); }
+details.exo-echauffement summary::before { content: "▸ "; color: var(--text-2); }
 details.exo-echauffement[open] summary::before { content: "▾ "; }
 details.exo-echauffement ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; padding: 0; list-style: none; }
 details.exo-echauffement li { padding: 3px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); color: var(--text-1); font-variant-numeric: tabular-nums; }
@@ -229,8 +229,8 @@ details.exo-echauffement small { color: var(--text-3); }
 .serie-echauff { margin: 4px 0 8px; }
 .vol-echauff { color: var(--text-3); font-weight: 400; font-size: 0.8em; }
 /* Séance d'un jour à venir faite aujourd'hui (audit du 06/10, I-1). */
-.bandeau-avance { background: var(--accent-bg); border: 1px solid rgba(120,200,255,0.4); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
-.bandeau-avance-titre { font-size: 0.7rem; color: var(--accent); letter-spacing: 2px; }
+.bandeau-avance { background: var(--bg-elevated); border: 1px solid var(--border-glass-bright); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
+.bandeau-avance-titre { font-size: 0.7rem; color: var(--text-2); letter-spacing: 0; font-family: var(--font-display); }
 .bandeau-avance-texte { font-size: 0.8125rem; color: var(--text-1); font-weight: 700; }
 /* Fin de séance sans aucune série enregistrée (audit du 06/10, profil 1). */
 .finish-vide { color: var(--text-2); font-size: 0.85rem; margin: 4px 0 10px; }

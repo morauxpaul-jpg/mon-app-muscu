@@ -55,7 +55,7 @@ def test_save_exo_repond_en_json_sans_redirection(fake_db, logged_in):
     assert d["completed"] is True
     assert d["volume"] == 640
     assert d["sets_done"] == 1
-    assert d["last_summary"] == "80kg × 8"
+    assert d["last_summary"] == "80\u00a0kg × 8"
 
 
 def test_save_exo_sans_json_redirige_comme_avant(fake_db, logged_in):

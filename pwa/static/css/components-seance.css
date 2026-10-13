@@ -27,7 +27,7 @@
   font-size: var(--text-xs);
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0; font-family: var(--font-display);
   font-weight: 500;
 }
 .seance-title {
@@ -67,8 +67,8 @@
   transition: border-color var(--ease-fast), box-shadow var(--ease-fast);
 }
 .cell-input:focus {
-  border-color: rgba(120,200,255,0.4);
-  box-shadow: 0 0 0 2px rgba(120,200,255,0.08);
+  border-color: rgba(200,240,49,0.4);
+  box-shadow: 0 0 0 2px rgba(200,240,49,0.08);
   outline: none;
 }
 
@@ -76,14 +76,13 @@
 .exo-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-glass) var(--radius-glass) 0;
+  border-radius: var(--radius-glass);
   margin-bottom: var(--sp-md);
   overflow: hidden;
   transition: opacity var(--ease-fast), transform var(--ease-spring);
 }
 .exo-card.done { opacity: 0.55; }
-.exo-card.upcoming { opacity: 0.45; border-left-color: rgba(120,200,255,0.25); }
+.exo-card.upcoming { opacity: 0.45; }
 .exo-head {
   display: flex;
   align-items: center;
@@ -195,7 +194,7 @@
   margin-bottom: 4px;
   border-radius: var(--radius-sm);
   background: var(--success-bg);
-  border: 1px solid rgba(52,199,89,0.18);
+  border: 1px solid var(--border-glass-bright);
   color: var(--text-1);
   font: inherit;
   font-size: 0.86rem;
@@ -223,9 +222,11 @@
   min-height: 36px;
 }
 
+/* La série en cours : cadre blanc (« maintenant »), comme le jour
+   d'aujourd'hui. Le vert reste aux séries faites. */
 .serie-encours {
-  border: 1px solid rgba(120,200,255,0.30);
-  background: var(--accent-bg);
+  border: 1px solid var(--text-1);
+  background: var(--bg-elevated);
   border-radius: var(--radius-md);
   padding: var(--sp-md);
   margin-bottom: 6px;
@@ -251,15 +252,15 @@
   text-align: center;
 }
 .serie-champ:focus-within {
-  border-color: rgba(120,200,255,0.4);
-  box-shadow: 0 0 0 2px rgba(120,200,255,0.08);
+  border-color: rgba(200,240,49,0.4);
+  box-shadow: 0 0 0 2px rgba(200,240,49,0.08);
 }
 .serie-etiq {
   display: block;
   color: var(--text-3);
   font-size: var(--text-xs);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0; font-family: var(--font-display);
   margin-bottom: 2px;
 }
 .serie-champ input {
@@ -293,9 +294,9 @@
   min-height: 34px;
 }
 .serie-puce.on {
-  background: var(--accent-bg);
-  border-color: rgba(120,200,255,0.35);
-  color: var(--accent);
+  background: rgba(255,255,255,0.08);
+  border-color: var(--text-1);
+  color: var(--text-1);
 }
 .serie-puce.danger { color: var(--danger); border-color: rgba(255,69,58,0.22); }
 

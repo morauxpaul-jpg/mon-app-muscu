@@ -3,7 +3,7 @@
 // valeur avec le SHA du commit déployé (RAILWAY_GIT_COMMIT_SHA) → chaque
 // déploiement invalide le cache automatiquement. Ne bumper la base que pour
 // forcer un refresh en local (pas de SHA) ou changer l'APP_SHELL.
-const CACHE_VERSION = "v134";
+const CACHE_VERSION = "v135";
 const CACHE = "muscu-pwa-" + CACHE_VERSION;
 // Au-delà, une page déjà gardée est servie depuis le cache (réseau faible).
 const NAV_DELAI = 3500;
@@ -11,15 +11,22 @@ const NAV_DELAI = 3500;
 const APP_SHELL = [
   "/accueil",
   "/seance",
+  "/static/css/fonts.css",
   "/static/css/tokens.css",
   "/static/css/theme.css",
   "/static/css/components.css",
   "/static/css/components-seance.css",
   "/static/css/components-pages.css",
   "/static/css/icons.css",
-  "/static/css/glass.css",
+  "/static/css/surfaces.css",
   "/static/css/tutorial.css",
   "/static/img/icons.svg",
+  "/static/fonts/barlow-latin-400-normal.woff2",
+  "/static/fonts/barlow-latin-500-normal.woff2",
+  "/static/fonts/barlow-latin-600-normal.woff2",
+  "/static/fonts/barlow-condensed-latin-500-normal.woff2",
+  "/static/fonts/barlow-condensed-latin-600-normal.woff2",
+  "/static/fonts/barlow-condensed-latin-700-normal.woff2",
   "/static/js/sw-register.js",
   "/static/js/offline.js",
   "/static/js/alpine-composants.js",

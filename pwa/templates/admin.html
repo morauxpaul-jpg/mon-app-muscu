@@ -2,7 +2,7 @@
 {% block title %}Admin · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/plus" class="btn label-icon s-86c142 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#shield-check"/></svg>Admin</h1>
 
@@ -119,14 +119,14 @@
       margin-bottom:6px;
     }
     .admin-user:hover { border-color:var(--accent); background:var(--accent-bg); }
-    .tier-pill { font-size:0.7rem; font-weight:600; letter-spacing:1px; padding:3px 8px; border-radius:6px; }
+    .tier-pill { font-size:0.7rem; font-weight:600; letter-spacing: 0; font-family: var(--font-display); padding:3px 8px; border-radius:6px; }
     .tier-free { color:var(--text-3); background:var(--bg-elevated); }
     .tier-vip { color:var(--gold); background:var(--warning-bg); border:0.5px solid var(--warning); }
 
     .admin-stats .stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:8px; margin-top:8px; }
     .admin-stats .stat { padding:8px; border-radius:8px; background:var(--bg-elevated); text-align:center; }
     .admin-stats .stat-v { font-size:1.05rem; font-weight:600; color:var(--accent); }
-    .admin-stats .stat-l { font-size:0.7rem; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+    .admin-stats .stat-l { font-size:0.7rem; color:var(--text-3); text-transform:uppercase; letter-spacing: 0; font-family: var(--font-display); margin-top:2px; }
 
     .mrow-admin { display:flex; justify-content:space-between; padding:4px 0; border-bottom:0.5px solid var(--border-subtle); }
     .mrow-admin:last-child { border-bottom:none; }

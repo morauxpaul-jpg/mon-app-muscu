@@ -12,7 +12,7 @@
       padding: 6px 14px; font-size: 0.8rem; cursor:pointer;
       letter-spacing:0;
     }
-    .vbtn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    .vbtn.active { border-color: var(--text-1); color: var(--text-1); background: rgba(255,255,255,0.08); }
 
     /* Body map */
     .body-svg {
@@ -33,7 +33,7 @@
     .mdetail { display:none; }
     .mdetail.on { display:block; animation: fadeIn var(--ease-normal); }
     .back {
-      background: none; border:0; color: var(--accent); cursor:pointer;
+      background: none; border:0; color: var(--text-1); cursor:pointer;
       font-size: 0.85rem; padding: 0; margin-bottom: 8px;
     }
     .mrow { display:flex; justify-content:space-between; padding: 6px 0; border-bottom:0.5px solid var(--border-default); font-size:0.85rem; }
@@ -64,16 +64,18 @@
     .cal-day-hdr { font-size:.65rem; color:var(--text-3); padding:4px 0; font-weight:500; }
     .cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); font-size:.75rem; font-weight:500; }
     .cal-cell.empty { background:none; }
-    .cal-cell.done { background: var(--success-bg); color: var(--success); }
-    .cal-cell.missed { background: var(--danger-bg); color: var(--danger); }
-    .cal-cell.upcoming { background: var(--accent-bg); color: var(--accent); }
+    /* Fait = vert plein ; manqué = pointillés orange (jamais du rouge :
+       manquer une séance n'est pas une faute) ; à venir = gris clair. */
+    .cal-cell.done { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+    .cal-cell.missed { background: transparent; color: var(--warning); box-shadow: none; outline: 1.5px dashed var(--warning); outline-offset: -1.5px; }
+    .cal-cell.upcoming { background: #333333; color: var(--text-1); }
     .cal-cell.rest { background: var(--bg-elevated); color:var(--text-disabled); }
     .cal-cell.makeup { background: var(--bg-elevated); color: var(--text-3); }
-    .cal-cell.is-today { border: 1px solid var(--accent); }
+    .cal-cell.is-today { border: 1px solid var(--text-1); }
     a.cal-cell { text-decoration:none; cursor:pointer; }
     a.cal-cell:active { transform: scale(0.94); }
     .cal-rate { text-align:center; font-size:.85rem; margin-top:8px; color: var(--text-2); }
-    .cal-rate b { color: var(--accent); }
+    .cal-rate b { color: var(--text-1); }
 
     /* ── Volume chart SVG ── */
     .vol-chart { width:100%; max-height: 160px; }
@@ -434,7 +436,7 @@
       {% for v in vol_values %}
         {% set bar_h = (v / vol_max * 110) if vol_max > 0 else 0 %}
         {% set x = loop.index0 * 50 + 8 %}
-        <rect class="vol-bar" x="{{ x }}" y="{{ 130 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#78c8ff" opacity="0.7"/>
+        <rect class="vol-bar" x="{{ x }}" y="{{ 130 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#c8f031" opacity="0.7"/>
         <text x="{{ x + 17 }}" y="{{ 125 - bar_h }}" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="9" font-weight="500">{{ (v / 1000)|round(1) }}k</text>
         <text x="{{ x + 17 }}" y="148" text-anchor="middle" fill="rgba(255,255,255,0.30)" font-size="9">{{ vol_labels[loop.index0] }}</text>
       {% endfor %}
@@ -473,14 +475,14 @@
         <svg class="weight-chart" viewBox="0 0 {{ weight.chart_w }} {{ weight.chart_h }}" preserveAspectRatio="none" aria-label="Courbe de poids">
           <defs>
             <linearGradient id="weight-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#78c8ff" stop-opacity="0.25"/>
-              <stop offset="1" stop-color="#78c8ff" stop-opacity="0"/>
+              <stop offset="0" stop-color="#c8f031" stop-opacity="0.25"/>
+              <stop offset="1" stop-color="#c8f031" stop-opacity="0"/>
             </linearGradient>
           </defs>
           <polygon points="{{ weight.points[0].x }},{{ weight.chart_h - 24 }} {{ weight.polyline }} {{ weight.points[-1].x }},{{ weight.chart_h - 24 }}" fill="url(#weight-fill)"/>
-          <polyline points="{{ weight.polyline }}" fill="none" stroke="#78c8ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polyline points="{{ weight.polyline }}" fill="none" stroke="#c8f031" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
           {% for pt in weight.points %}
-            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111318" stroke="#78c8ff" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
+            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111318" stroke="#c8f031" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
           {% endfor %}
         </svg>
         <div class="weight-axis"><span>{{ weight.first_label }}</span><span>{{ weight.last_label }}</span></div>

@@ -1,0 +1,16 @@
+/* Barlow et Barlow Condensed (SIL Open Font License 1.1, voir
+   static/fonts/OFL-Barlow.txt), sous-ensemble latin : français compris
+   (accents, « », œ, espace fine, signe moins). Servies par l'app : la page
+   s'affiche pareil hors ligne et n'appelle pas Google Fonts. */
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url(/static/fonts/barlow-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url(/static/fonts/barlow-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url(/static/fonts/barlow-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url(/static/fonts/barlow-condensed-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url(/static/fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url(/static/fonts/barlow-condensed-latin-700-normal.woff2) format('woff2'); }

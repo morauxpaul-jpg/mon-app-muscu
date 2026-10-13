@@ -88,7 +88,7 @@
 .save-pill {
   background: var(--accent-bg) !important;
   color: var(--accent) !important;
-  border: 1px solid rgba(120,200,255,0.2);
+  border: 1px solid var(--border-glass-bright);
 }
 
 /* ── XP / volume bars ── */
@@ -158,7 +158,7 @@
   color: var(--text-3);
   margin-bottom: var(--sp-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   font-weight: 500;
 }
 .stat-card .stat-value {
@@ -175,7 +175,7 @@
   color: var(--text-3);
   font-weight: 400;
 }
-.stat-blue   .stat-value { color: var(--accent); }
+.stat-blue   .stat-value { color: var(--text-1); }
 .stat-green  .stat-value { color: var(--success); }
 .stat-gold   .stat-value { color: var(--warning); font-size: var(--text-xl); }
 .stat-orange .stat-value { color: var(--warning); font-size: var(--text-xl); }
@@ -201,7 +201,7 @@
 .day-cell:active { transform: scale(0.92); }
 .day-done   { background: var(--success-bg); color: var(--success); }
 .day-missed { background: var(--danger-bg);  color: var(--danger); }
-.day-today  { background: var(--accent-bg);  color: var(--accent); border: 1px solid rgba(120,200,255,0.2); }
+.day-today  { background: var(--accent-bg);  color: var(--accent); border: 1px solid var(--border-glass-bright); }
 .day-future { background: rgba(255,255,255,0.03); color: var(--text-disabled); }
 .day-makeup { background: var(--bg-elevated); color: var(--text-3); }
 
@@ -211,10 +211,10 @@
   text-decoration: none;
   color: inherit;
   margin-top: var(--sp-md);
-  border-color: rgba(120,200,255,0.2);
+  border-color: var(--border-glass-bright);
   transition: transform var(--ease-spring), border-color var(--ease-fast);
 }
-.next-session-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.next-session-card:hover { border-color: var(--border-hover); }
 .next-session-card:active { transform: scale(0.98); }
 .next-session-row {
   display: flex;
@@ -258,7 +258,7 @@
   font-size: var(--text-xs);
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   font-weight: 500;
 }
 .detail-metric .detail-value {

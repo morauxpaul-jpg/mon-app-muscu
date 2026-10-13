@@ -22,7 +22,7 @@ from core.muscu import (BW_EXOS, auto_muscles, charge_de_depart, conseil_depart,
 from core.seance_historique import (_all_used_variants, _best_record, _exo_completed,
                                     _exo_curr_rows, _extract_variant, _last_session_sets,
                                     _last_variant, _norm, _previous_weeks_data,
-                                    _suggestion_for)
+                                    _suggestion_for, resume_series)
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +107,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
             (s["poids"] for s in last_sets), default=0)
         echauffement = series_echauffement(travail, barre=est_a_la_barre(base))
 
-    # Résumé inline : "80kg × 8, 85kg × 6"
-    if last_sets:
-        last_summary = ", ".join(
-            f"{s['poids']:g}kg × {s['reps']}" for s in last_sets
-        )
-    else:
-        last_summary = ""
+    # Résumé inline : « 80 kg × 8, 82,5 kg × 6 »
+    last_summary = resume_series((s["poids"], s["reps"]) for s in last_sets)
 
     info = get_exercise_info(base)
     if not info:

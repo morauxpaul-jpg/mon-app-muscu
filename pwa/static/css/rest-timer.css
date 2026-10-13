@@ -48,7 +48,7 @@
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--text-3);
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -74,8 +74,8 @@
   cursor: pointer;
 }
 .rest-timer-bar-presets button.active {
-  background: var(--accent);
-  color: #fff;
+  background: var(--text-1);
+  color: var(--bg-base);
   border-color: transparent;
 }
 .rest-timer-sound,
@@ -115,9 +115,7 @@
   border: 0.5px solid var(--border-default);
   border-top: 0.5px solid var(--border-default);
   border-radius: var(--radius-pill, 9999px);
-  background: rgba(16, 18, 28, 0.88);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  background: #111111;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.42);
   cursor: pointer;
 }

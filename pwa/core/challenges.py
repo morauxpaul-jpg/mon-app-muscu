@@ -167,6 +167,10 @@ def current_week_index(today=None):
     return continuous_week(today or logical_today_paris())
 
 
+# Emoji du défi → icône de static/img/icons.svg.
+ICONES = {"💪": "dumbbell", "🏋️": "dumbbell", "🏃": "activity", "✨": "sparkle", "📈": "chart-line"}
+
+
 def weekly_challenge(hist, today=None, prog=None):
     """Défi de la semaine + progression de l'utilisateur (dict pour le template)."""
     w = current_week_index(today)
@@ -186,6 +190,8 @@ def weekly_challenge(hist, today=None, prog=None):
         "week": w,
         "title": title,
         "emoji": emoji,
+        # Style « Instrument » : l'accueil dessine une icône, pas un emoji.
+        "icone": ICONES.get(emoji, "target"),
         "desc": desc,
         "current": current,
         "target": target,

@@ -2,7 +2,7 @@
 {% block title %}Premium · Muscu Tracker{% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon s-86c142"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/plus" class="btn label-icon s-86c142 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <div class="premium-hero">
     <svg class="icon s-3a385d"><use href="/static/img/icons.svg#gem"/></svg>
@@ -31,7 +31,7 @@
       box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 0 60px rgba(255,215,0,0.08);
     }
     .promo-video {
-      display:block; width:100%; height:100%; object-fit:cover; background:#0a0a0f;
+      display:block; width:100%; height:100%; object-fit:cover; background:#000000;
     }
   </style>
   {% endif %}
@@ -230,7 +230,7 @@
       padding:18px 16px;
     }
     .tier-highlight {
-      border-color:var(--accent);
+      border-color: var(--border-glass-bright);
       background:var(--bg-surface);
     }
     .tier-lifetime {
@@ -242,10 +242,10 @@
       top:-10px;
       right:14px;
       background:var(--accent);
-      color:#fff;
+      color: var(--on-accent);
       font-size:0.7rem;
       font-weight:600;
-      letter-spacing:2px;
+      letter-spacing: 0; font-family: var(--font-display);
       padding:4px 10px;
       border-radius:8px;
     }
@@ -257,7 +257,7 @@
     .tier-header { margin-bottom:12px; }
     .tier-name {
       font-size:0.72rem;
-      letter-spacing:3px;
+      letter-spacing: 0; font-family: var(--font-display);
       color:var(--text-3);
       font-weight:600;
       margin-bottom:4px;
