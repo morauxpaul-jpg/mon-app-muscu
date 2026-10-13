@@ -4,7 +4,7 @@
  * - « Série faite » recopie la charge dans la série suivante encore vide :
  *   on retapait son poids à chaque série.
  * - « Terminer » sur une séance où rien n'est saisi ne dit plus
- *   « Séance terminée 💪 » : `seanceVide()` le détecte.
+ *   « Séance terminée » : `seanceVide()` le détecte.
  */
 'use strict';
 

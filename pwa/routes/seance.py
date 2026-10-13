@@ -96,22 +96,17 @@ def seance():
 
     # ── Vue choix (pas de mode choisi) ────────────────────────────
     if not mode:
+        # L'état du jour se lit sur la ligne de date (« VENDREDI 12 JUIN ·
+        # MANQUÉE », en orange) ; le titre ne le répète pas.
         if date_iso == logical_today_str and not done_name:
-            titre = "Quelle séance aujourd'hui ?"
-            subtitle_text, subtitle_color = "", ""
-            label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
+            titre, etat_texte, etat = "Quelle séance aujourd'hui ?", "", ""
         elif done_name:
-            titre = f"Séance réalisée · {done_name}"
-            subtitle_text, subtitle_color = "RÉALISÉE", "#c8f031"
-            label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
+            titre, etat_texte, etat = done_name, "Réalisée", "faite"
         elif target_date < today:
-            titre = "Séance manquée"
-            subtitle_text, subtitle_color = "MANQUÉE", "#ff9f43"
-            label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
+            titre, etat_texte, etat = "Quelle séance ?", "Manquée", "manquee"
         else:
-            titre = "Séance à faire"
-            subtitle_text, subtitle_color = "À FAIRE", "#f2f2f2"
-            label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
+            titre, etat_texte, etat = "Quelle séance ?", "À faire", ""
+        label = f"{DAYS_FR[target_date.weekday()]} {target_date.day} {MONTHS_FR[target_date.month-1]}"
 
         # Regroupe les séances par programme pour un affichage clair.
         programmes = prog.get("_programmes") or []
@@ -213,8 +208,8 @@ def seance():
             date_iso=date_iso,
             date_label=label,
             titre=titre,
-            subtitle_text=subtitle_text,
-            subtitle_color=subtitle_color,
+            etat_texte=etat_texte,
+            etat=etat,
             done_name=done_name,
             seance_names=sorted(prog_seances.keys(), key=_sort_key),
             prog_seances=prog_seances,

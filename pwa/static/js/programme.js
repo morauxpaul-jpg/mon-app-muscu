@@ -543,6 +543,24 @@ function programmeApp() {
     aLeMuscle(ex, muscle) {
       return (ex.muscle || '').split(',').map(function (m) { return m.trim(); }).indexOf(muscle) >= 0;
     },
+    // Sous le nom d'une séance : « 3 exercices · 10 séries · pecs, épaules ».
+    // Trois muscles au plus ; « Autre » (muscle non choisi) n'en est pas un.
+    resumeSeance(sname) {
+      var exos = this.prog[sname] || [];
+      var series = 0;
+      var muscles = [];
+      exos.forEach(function (ex) {
+        series += Math.max(0, parseInt(ex.sets, 10) || 0);
+        (ex.muscle || '').split(',').forEach(function (m) {
+          m = m.trim().toLowerCase();
+          if (m && m !== 'autre' && muscles.indexOf(m) < 0) muscles.push(m);
+        });
+      });
+      var t = exos.length + ' exercice' + (exos.length > 1 ? 's' : '');
+      if (series) t += ' · ' + series + ' série' + (series > 1 ? 's' : '');
+      if (muscles.length) t += ' · ' + muscles.slice(0, 3).join(', ') + (muscles.length > 3 ? '…' : '');
+      return t;
+    },
     supprimerExo() {
       this.deleteExo(this.sname, this.exIdx);
       this.confirmExoDel = false;

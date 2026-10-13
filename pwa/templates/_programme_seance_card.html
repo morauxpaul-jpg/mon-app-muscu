@@ -8,13 +8,16 @@
    bibliothèque…) sont des méthodes de programmeApp : la version CSP
    d'Alpine n'accepte qu'une expression par attribut (static/js/programme.js).
 #}
-<div class="card" x-data="{ open: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
+{# Style « Instrument » : une ligne à filet, le nom en grand, dessous
+   « 3 exercices · 10 séries · pecs, épaules » (resumeSeance). La classe
+   `card` reste : commencerRenommage() retrouve la carte par elle. #}
+<div class="card prog-seance" x-data="{ open: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
   <div class="exo-head" @click="open = !open">
-    <div class="exo-title" x-text="sname"></div>
-    <div class="s-42e4ac">
-      <span class="s-0098b4" x-text="(prog[sname] || []).length + ' exos'"></span>
-      <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
+    <div class="prog-seance-txt">
+      <div class="exo-title" x-text="sname"></div>
+      <div class="prog-seance-sous" x-text="resumeSeance(sname)"></div>
     </div>
+    <svg class="icon icon-md prog-seance-fleche" :class="open ? 'prog-seance-fleche--ouverte' : ''" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </div>
 
   <div class="exo-body" x-show="open" x-transition>

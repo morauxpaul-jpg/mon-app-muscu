@@ -43,45 +43,49 @@
     <div class="card label-icon s-0f9a58"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#x"/></svg>Format non reconnu — ce fichier n'a pas été exporté depuis Muscu Tracker.</div>
   {% endif %}
 
-  <h2 class="label-icon s-378d90"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#calendar"/></svg>PLANNING</h2>
-
-  {# ── Planning hebdomadaire ───────────────────────────── #}
-  <div class="card" id="planning">
-    <div class="field-label s-d46224">Assigne une séance à chaque jour. Vide = repos.</div>
+  {# ── Ma semaine (style « Instrument », maquette du 13/10) ──────
+     Sept cases, une par jour : blanche avec le nom de la séance, ou un
+     trait pour le repos. Le menu de chaque jour couvre sa case, invisible :
+     toucher la case l'ouvre, et le menu natif reste celui du téléphone. #}
+  <section class="prog-semaine" id="planning" aria-labelledby="prog-semaine-titre">
+    <h2 class="prog-surtitre" id="prog-semaine-titre">Ma semaine · touche un jour pour changer</h2>
+    <div class="prog-jours">
     {% for day in days_fr %}
-      <label class="field-label">{{ day }}</label>
-      <select class="field" data-day="{{ day }}" x-model="planning['{{ day }}']" @change="scheduleSave()">
-        <option value="">— Repos —</option>
-        <template x-for="sname in seanceOrder" :key="sname">
-          <option :value="sname" x-text="sname"></option>
-        </template>
-      </select>
+      <label class="prog-jour" :class="planning['{{ day }}'] ? 'prog-jour--seance' : ''">
+        <span class="prog-jour-abbr" aria-hidden="true">{{ day[:3]|upper }}</span>
+        <span class="prog-jour-nom" aria-hidden="true" x-text="planning['{{ day }}'] || '—'">—</span>
+        <select class="prog-jour-menu" data-day="{{ day }}" aria-label="{{ day }}" x-model="planning['{{ day }}']" @change="scheduleSave()">
+          <option value="">— Repos —</option>
+          <template x-for="sname in seanceOrder" :key="sname">
+            <option :value="sname" x-text="sname"></option>
+          </template>
+        </select>
+      </label>
     {% endfor %}
+    </div>
     {# Rotation : sans elle, un A/B sur 3 jours faisait A-B-A chaque semaine
        et B n'ouvrait jamais la semaine (core/rotation.py). #}
     <div class="rotation-bloc" x-show="seanceOrder.length >= 2" x-cloak>
       <label class="rotation-choix">
-        <input type="checkbox" :checked="rotation.length >= 2" @change="basculerRotation($event.target.checked)">
         <span>Alterner les séances d'une semaine à l'autre</span>
+        <input type="checkbox" role="switch" :checked="rotation.length >= 2" @change="basculerRotation($event.target.checked)">
       </label>
       <p class="rotation-aide" x-show="rotation.length >= 2">
         Cycle : <b x-text="rotation.join(' → ')"></b>. Le planning fixe les jours d'entraînement ; chaque jour prend la séance suivante du cycle. L'accueil montre celle de la semaine.
       </p>
     </div>
-  </div>
+  </section>
 
   {# ── Cardio planifié (généré par l'IA) ───────────────── #}
   <template x-if="cardio && cardio.length">
-    <div class="card s-fd6601">
-      <div class="label-icon s-c1e5ec">
-        <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>CARDIO PLANIFIÉ
-      </div>
+    <section class="prog-cardio">
+      <h2 class="prog-surtitre prog-surtitre--section">Cardio planifié</h2>
       <p class="s-e50a7f">Retrouve ces séances cardio dans l'onglet Séance, le jour prévu.</p>
       <template x-for="(c, i) in cardio" :key="i">
         <div class="s-71d449">
           <div class="s-3922d3">
             <div class="s-198075" x-text="c.activite + ' · ' + c.duree + ' min'"></div>
-            <div class="s-fcf2ab"
+            <div class="prog-cardio-jours"
                  x-text="(c.jours && c.jours.length) ? c.jours.join(', ') : 'jour flexible'"></div>
           </div>
           <button type="button" class="btn mini label-icon" aria-label="Retirer ce cardio" @click="removeCardio(i)">
@@ -89,15 +93,15 @@
           </button>
         </div>
       </template>
-    </div>
+    </section>
   </template>
 
-  <h2 class="label-icon s-f128cb" id="mes-programmes"><svg class="icon icon-sm s-8b872f"><use href="/static/img/icons.svg#folder"/></svg>MES PROGRAMMES</h2>
+  <h2 class="prog-surtitre prog-surtitre--section" id="mes-programmes">Mes programmes</h2>
   <p class="s-017590">Un programme regroupe des séances. Ex : « Push Pull Legs », « Full-body maison »…</p>
 
   {# ── Nouveau programme (haut de la liste) ────────────────── #}
-  <div class="card" x-data="{ newProgName: '' }">
-    <div class="s-ab9fcd">
+  <div class="prog-creer" x-data="{ newProgName: '' }">
+    <div class="prog-ajout">
       <input type="text" x-model="newProgName" class="field s-5d50d5"
              :disabled="!canAddProgramme()"
              :placeholder="canAddProgramme() ? 'Nouveau programme (ex: Force, Hypertrophie…)' : '1 programme max en gratuit'" maxlength="80"
@@ -117,18 +121,15 @@
   </div>
 
   <template x-for="pg in programmes" :key="pg.id">
-    <div class="card prog-section" x-data="{ open: true, newSname: '' }">
-      <div class="prog-head">
-        <div class="s-31b4c8" @click="open = !open">
-          <svg class="icon icon-sm icon-violet"><use href="/static/img/icons.svg#folder"/></svg>
-          <span class="prog-name" x-text="pg.name"></span>
-          <span class="s-0098b4" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
-          <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
-        </div>
+    <section class="prog-section" x-data="{ open: true, newSname: '' }">
+      <div class="prog-head" @click="open = !open">
+        <span class="prog-name" x-text="pg.name"></span>
+        <span class="prog-compte" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
+        <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
       </div>
 
       <div x-show="open" x-transition>
-        <div class="s-8e4027">
+        <div class="prog-actions">
           <button type="button" class="btn mini label-icon" aria-label="Monter" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
           <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
           <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
@@ -160,7 +161,7 @@
 
         <p class="s-5588ac" x-show="seanceMsg" x-cloak x-text="seanceMsg"></p>
 
-        <div class="s-cc0019">
+        <div class="prog-ajout">
           <input type="text" x-model="newSname" class="field s-5d50d5"
                  placeholder="Nouvelle séance (ex: Push)" maxlength="60"
                  @keydown.enter.prevent="creerSeance(pg.id)">
@@ -170,29 +171,26 @@
           </button>
         </div>
       </div>
-    </div>
+    </section>
   </template>
 
   {# ── Non classé (séances sans programme) ───────────────── #}
   <template x-if="seancesIn(null).length > 0">
-    <div class="card prog-section" x-data="{ open: true }">
+    <section class="prog-section" x-data="{ open: true }">
       <div class="prog-head" @click="open = !open">
-        <div class="s-3faf3d">
-          <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#folder"/></svg>
-          <span class="prog-name s-73e788">Non classé</span>
-          <span class="s-0098b4" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
-          <div class="exo-toggle s-6d0006" x-text="open ? '−' : '+'"></div>
-        </div>
+        <span class="prog-name prog-name--gris">Non classé</span>
+        <span class="prog-compte" x-text="seancesIn(null).length + ' séance' + (seancesIn(null).length > 1 ? 's' : '')"></span>
+        <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
       </div>
       <div x-show="open" x-transition>
         <template x-for="sname in seancesIn(null)" :key="sname">
           {% include "_programme_seance_card.html" %}
         </template>
       </div>
-    </div>
+    </section>
   </template>
 
-  <h2 class="label-icon s-edfd6e"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#settings"/></svg>OUTILS AVANCÉS</h2>
+  <h2 class="prog-surtitre prog-surtitre--section">Outils avancés</h2>
   <p class="s-017590">Catalogue de programmes, partage, changement de programme. Replié par défaut.</p>
 
   <details class="card s-eaaf71">
@@ -305,8 +303,8 @@
         </label>
       </div>
       <p class="s-8f7368">
-        <span x-show="mode==='replace'">⚠️ Les séances du programme en cours seront remplacées. Tes autres programmes restent.</span>
-        <span x-show="mode==='merge'">✓ Les séances actuelles sont gardées ; seules les nouvelles séances sont ajoutées.</span>
+        <span x-show="mode==='replace'">Les séances du programme en cours seront remplacées. Tes autres programmes restent.</span>
+        <span x-show="mode==='merge'">Les séances actuelles sont gardées ; seules les nouvelles séances sont ajoutées.</span>
       </p>
 
       {% for p in catalog_programs %}
@@ -425,6 +423,73 @@
     </div>
   </div>
 
+
+  <style>
+    /* Style « Instrument » (maquette du 13/10) : titres de section gris en
+       capitales étroites, la semaine en sept cases, les séances en lignes à
+       filet. Blanc = choisi ; le vert reste aux actions principales. */
+    .prog-surtitre {
+      margin: 0 0 8px; font-family: var(--font-display); font-weight: 600;
+      font-size: 1rem; letter-spacing: 0; text-transform: uppercase; color: var(--text-2);
+    }
+    .prog-surtitre--section { margin-top: 28px; }
+    .prog-semaine { margin-top: var(--sp-md); }
+    .prog-jours { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .prog-jour {
+      position: relative; height: 96px; padding: 10px 0; overflow: hidden; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      border: 1px solid #262626; border-radius: var(--radius-sm);
+      background: var(--bg-base); color: var(--text-2);
+    }
+    .prog-jour--seance { background: var(--text-1); border-color: var(--text-1); color: var(--bg-base); }
+    .prog-jour:has(.prog-jour-menu:focus-visible) { outline: 2px solid var(--text-1); outline-offset: 2px; }
+    .prog-jour-abbr { font-size: 0.75rem; font-weight: 600; }
+    .prog-jour-nom { font-size: 0.75rem; }
+    .prog-jour--seance .prog-jour-nom {
+      max-height: 60px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; text-transform: uppercase;
+    }
+    /* Le vrai menu, invisible, couvre la case : c'est lui qu'on touche. */
+    .prog-jour-menu {
+      position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0;
+      margin: 0; padding: 0; opacity: 0; cursor: pointer; font-size: 16px;
+    }
+    .prog-section { background: none; border: none; padding: 0; margin: 0 0 20px; }
+    .prog-head { align-items: baseline; gap: 10px; padding: 4px 0 2px; }
+    .prog-name {
+      min-width: 0; overflow-wrap: anywhere; font-family: var(--font-display); font-weight: 700;
+      font-size: 1.9rem; line-height: 1; text-transform: uppercase; color: var(--text-1);
+    }
+    .prog-name--gris { color: var(--text-2); }
+    .prog-compte { flex-shrink: 0; font-size: 0.85rem; color: var(--text-2); }
+    .prog-head .exo-toggle { margin-left: auto; color: var(--text-2); }
+    .prog-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+    .prog-actions .btn { width: auto; }
+    .card.prog-seance {
+      margin: -1px 0 0; padding: 0; border: none; border-radius: 0;
+      border-top: 1px solid #262626; border-bottom: 1px solid #262626; background: none;
+    }
+    .prog-seance .exo-head { gap: 12px; min-height: 64px; padding: 6px 0; }
+    .prog-seance-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .prog-seance .exo-title {
+      overflow-wrap: anywhere; font-family: var(--font-display); font-weight: 700;
+      font-size: 1.5rem; line-height: 1.05; text-transform: uppercase;
+    }
+    .prog-seance-sous { font-size: 0.82rem; color: var(--text-2); }
+    .prog-seance-fleche { flex-shrink: 0; color: var(--text-2); transition: transform var(--ease-fast); }
+    .prog-seance-fleche--ouverte { transform: rotate(90deg); }
+    .prog-seance .exo-body { padding: 0 0 16px; }
+    /* Ajouter une séance, créer un programme : un cadre en pointillés. */
+    .prog-ajout {
+      display: flex; gap: 6px; margin-top: 12px; padding: 6px;
+      border: 1.5px dashed #333333; border-radius: var(--radius-sm);
+    }
+    .prog-ajout .field { border: none; background: transparent; }
+    .prog-creer { margin-bottom: 8px; }
+    .prog-creer .prog-ajout { margin-top: 0; }
+    .prog-cardio-jours { font-size: 0.74rem; color: var(--text-2); }
+  </style>
 </div>
 
 <script src="/static/js/exercise-library.js"></script>

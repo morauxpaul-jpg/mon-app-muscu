@@ -30,14 +30,11 @@
     })();
   </script>
 
-  <a href="/accueil" class="btn label-icon s-364572 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
-
+  {# Style « Instrument » (maquette du 13/10) : c'est un onglet, pas de
+     « Retour ». La date en petit, la question en grand. #}
   <div class="choix-hero">
-    <div class="choix-date">{{ date_label|upper }}</div>
-    <div class="choix-titre">{{ titre }}</div>
-    {% if subtitle_text %}
-      <div class="choix-subtitle" style="color: {{ subtitle_color }};">{{ subtitle_text }}</div>
-    {% endif %}
+    <div class="choix-date">{{ date_label|upper }}{% if etat_texte %} · <span class="choix-etat{% if etat %} choix-etat--{{ etat }}{% endif %}">{{ etat_texte|upper }}</span>{% endif %}</div>
+    <h1 class="choix-titre">{{ titre }}</h1>
   </div>
 
   {# ── Banner séance en cours ─────────────────────── #}
@@ -72,62 +69,44 @@
   </script>
 
   {% if makeup_suggestions %}
-    <div class="card s-5593be">
-      <div class="label-icon s-14bb24">
-        <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#clock"/></svg>SÉANCE À RATTRAPER
-      </div>
-      <div class="s-79be6b">
-        Tu n'as pas fait {{ 'cette séance' if makeup_suggestions|length == 1 else 'ces séances' }} récemment — clique pour {{ 'la' if makeup_suggestions|length == 1 else 'les' }} rattraper maintenant.
-      </div>
-      {% for m in makeup_suggestions %}
-        <div class="seance-choice-row s-fd6601">
-          <div>
-            <div class="seance-name">{{ m.seance }}</div>
-            <div class="seance-meta s-52df2b">Planifiée {{ m.day_label }}</div>
-          </div>
-          <a href="/seance?mode=prefaite&name={{ m.seance|urlencode }}&date={{ date_iso }}" class="btn primary label-icon s-f984c5">Rattraper<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
-        </div>
-      {% endfor %}
-    </div>
+    {% for m in makeup_suggestions %}
+      {% set exos_m = prog_seances.get(m.seance) or [] %}
+      <a href="/seance?mode=prefaite&name={{ m.seance|urlencode }}&date={{ date_iso }}" class="choix-encadre choix-encadre--orange" data-haptic="1">
+        <span class="choix-txt">
+          <span class="choix-surtitre choix-surtitre--orange">À rattraper · prévue {{ m.day_label }}</span>
+          <span class="choix-nom">{{ m.seance }}</span>
+          {% if exos_m %}<span class="choix-sous">{{ exos_m|length }} exercice{{ 's' if exos_m|length > 1 }}</span>{% endif %}
+        </span>
+        <span class="choix-faire">Faire<svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg></span>
+      </a>
+    {% endfor %}
   {% endif %}
 
   {% if done_name %}
-    <div class="card s-1f5861">
-      <div class="label-icon s-20f75a"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>SÉANCE ENREGISTRÉE</div>
-      <div class="s-35ebdf">Consulter ou modifier « {{ done_name }} ».</div>
-      {% if done_name in seance_names %}
-        <a href="/seance?mode=prefaite&name={{ done_name|urlencode }}&date={{ date_iso }}"
-           class="btn primary label-icon s-8bab96">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Consulter / Modifier cette séance
-        </a>
-      {% else %}
-        <a href="/seance?mode=libre&name={{ done_name|urlencode }}&date={{ date_iso }}"
-           class="btn primary label-icon s-8bab96">
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Consulter / Modifier cette séance
-        </a>
-      {% endif %}
-    </div>
+    <a href="/seance?mode={{ 'prefaite' if done_name in seance_names else 'libre' }}&name={{ done_name|urlencode }}&date={{ date_iso }}" class="choix-encadre">
+      <span class="choix-txt">
+        <span class="choix-nom">Voir la séance</span>
+        <span class="choix-sous">Consulter ou modifier les séries</span>
+      </span>
+      <svg class="icon icon-md choix-fleche" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
+    </a>
   {% endif %}
 
   {% if prog_groups %}
     {% for group in prog_groups %}
-      <div class="card">
-        <div class="label-icon s-f1deaf">
-          <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#folder"/></svg>{{ group.name }}
-        </div>
+      <section class="choix-groupe" aria-label="{{ group.name }}">
+        <h2 class="choix-surtitre">{{ group.name }}</h2>
         {% for sname in group.seances %}
-          <div class="seance-choice-row">
-            <div>
-              <div class="seance-name">{{ sname }}</div>
-              <div class="seance-meta">
-                {{ prog_seances[sname]|length }} exercices
-                {% if jours_map.get(sname) %} · {{ jours_map[sname] }}{% endif %}
-              </div>
-            </div>
-            <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="btn label-icon s-f984c5">Choisir<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
-          </div>
+          {% set exos_s = prog_seances[sname] %}
+          <a href="/seance?mode=prefaite&name={{ sname|urlencode }}&date={{ date_iso }}" class="choix-ligne">
+            <span class="choix-txt">
+              <span class="choix-nom">{{ sname }}{% if jours_map.get(sname) %} <span class="choix-jours">· {{ jours_map[sname] }}</span>{% endif %}</span>
+              <span class="choix-sous">{{ exos_s|length }} exercice{{ 's' if exos_s|length > 1 }}{% if exos_s %} · {{ exos_s[:3]|map(attribute='name')|join(', ') }}{% if exos_s|length > 3 %}…{% endif %}{% endif %}</span>
+            </span>
+            <svg class="icon icon-md choix-fleche" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
+          </a>
         {% endfor %}
-      </div>
+      </section>
     {% endfor %}
   {% else %}
     <div class="card s-38fcbe">
@@ -136,43 +115,59 @@
     </div>
   {% endif %}
 
-  <div class="card s-abac73">
-    <div class="label-icon s-3bfb20"><svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>SÉANCE PERSONNALISÉE</div>
-    <div class="s-ebb83a">
-      Construis ta séance exercice par exercice, en piochant dans ton programme ou en créant du nouveau.
-    </div>
-    <a href="/seance?mode=libre&date={{ date_iso }}" class="btn primary label-icon s-0723e0">
-      <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Créer ma séance
-    </a>
-  </div>
-
   {% if cardio_today %}
-    <div class="card s-5593be">
-      <div class="label-icon s-14bb24">
-        <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>CARDIO PRÉVU AUJOURD'HUI
-      </div>
+    <section class="choix-groupe" aria-label="Cardio prévu aujourd'hui">
+      <h2 class="choix-surtitre">Cardio prévu aujourd'hui</h2>
       {% for c in cardio_today %}
-        <div class="seance-choice-row s-fd6601">
-          <div>
-            <div class="seance-name">{{ c.activite }}</div>
-            <div class="seance-meta s-52df2b">{{ c.duree }} min</div>
-          </div>
-          <a href="/cardio?date={{ date_iso }}&activite={{ c.activite|urlencode }}&duree={{ c.duree }}"
-             class="btn primary label-icon s-f984c5">Lancer<svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg></a>
-        </div>
+        <a href="/cardio?date={{ date_iso }}&activite={{ c.activite|urlencode }}&duree={{ c.duree }}" class="choix-ligne">
+          <span class="choix-txt"><span class="choix-nom">{{ c.activite }}</span><span class="choix-sous">{{ c.duree }} min</span></span>
+          <span class="choix-faire">Lancer<svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg></span>
+        </a>
       {% endfor %}
-    </div>
+    </section>
   {% endif %}
 
-  <div class="card s-fd6601">
-    <div class="label-icon s-d4e047"><svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>SÉANCE CARDIO</div>
-    <div class="s-01c1ca">
-      Course, vélo, rameur, HIIT... Chrono intégré, calcul calorique automatique.
-    </div>
-    <a href="/cardio?date={{ date_iso }}" class="btn label-icon s-2f7c8e">
-      <svg class="icon icon-sm"><use href="/static/img/icons.svg#activity"/></svg>Lancer une séance cardio
+  <div class="choix-tuiles">
+    <a href="/seance?mode=libre&date={{ date_iso }}" class="choix-tuile">
+      <svg class="icon icon-lg" aria-hidden="true"><use href="/static/img/icons.svg#edit"/></svg>
+      <span class="choix-tuile-titre">Séance libre</span>
+      <span class="choix-sous">Exercice par exercice</span>
+    </a>
+    <a href="/cardio?date={{ date_iso }}" class="choix-tuile">
+      <svg class="icon icon-lg" aria-hidden="true"><use href="/static/img/icons.svg#heart"/></svg>
+      <span class="choix-tuile-titre">Cardio</span>
+      <span class="choix-sous">Course, vélo, rameur</span>
     </a>
   </div>
+
+  <style>
+    .choix-hero { margin: var(--sp-sm) 0 20px; }
+    .choix-date { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; color: var(--text-2); }
+    h1.choix-titre { margin: 2px 0 0; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; line-height: 0.95; text-transform: uppercase; }
+    .choix-surtitre { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1rem; text-transform: uppercase; color: var(--text-2); }
+    .choix-surtitre--orange { color: var(--warning); }
+    .choix-etat--faite { color: var(--accent); }
+    .choix-etat--manquee { color: var(--warning); }
+    .choix-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .choix-nom { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; text-transform: uppercase; line-height: 1.05; overflow-wrap: anywhere; }
+    .choix-jours { font-size: 1rem; color: var(--text-2); }
+    .choix-sous { font-size: 0.85rem; color: var(--text-2); }
+    .choix-encadre {
+      display: flex; align-items: center; gap: 12px; padding: 14px; margin-bottom: 20px;
+      border: 1.5px solid #333333; border-radius: var(--radius-sm);
+      color: var(--text-1); text-decoration: none;
+    }
+    .choix-encadre--orange { border-color: var(--warning); }
+    .choix-faire { display: flex; align-items: center; gap: 2px; flex-shrink: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; text-transform: uppercase; color: var(--accent); }
+    .choix-groupe { display: flex; flex-direction: column; margin-bottom: 20px; }
+    .choix-groupe .choix-surtitre { padding-bottom: 6px; }
+    .choix-ligne { display: flex; align-items: center; gap: 12px; min-height: 64px; border-top: 1px solid #262626; color: var(--text-1); text-decoration: none; }
+    .choix-ligne:last-child { border-bottom: 1px solid #262626; }
+    .choix-fleche { flex-shrink: 0; color: var(--text-2); }
+    .choix-tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
+    .choix-tuile { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-1); text-decoration: none; }
+    .choix-tuile-titre { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; text-transform: uppercase; }
+  </style>
 
   <script nonce="{{ csp_nonce() }}">
     document.getElementById('page-loader').style.display = 'none';

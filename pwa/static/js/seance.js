@@ -1086,9 +1086,10 @@
     var rating = 0;
 
     function paintStars() {
+      // Une seule case allumée : la note choisie (style « Instrument »).
       Array.prototype.forEach.call(stars, function (b, i) {
-        b.classList.toggle("on", i < rating);
-        b.setAttribute("aria-pressed", i < rating ? "true" : "false");
+        b.classList.toggle("on", i + 1 === rating);
+        b.setAttribute("aria-pressed", i + 1 === rating ? "true" : "false");
       });
       ratingLabel.textContent = LABELS[rating] || "";
     }
@@ -1175,7 +1176,7 @@
       var vide = seanceVide();
       var titre = document.getElementById("finish-titre");
       var avert = document.getElementById("finish-vide");
-      if (titre) titre.textContent = vide ? "Terminer sans série ?" : "Séance terminée 💪";
+      if (titre) titre.textContent = vide ? "Terminer sans série ?" : "Séance terminée";
       if (avert) avert.hidden = !vide;
       paintStars();
       var mins = elapsedMinutes();
