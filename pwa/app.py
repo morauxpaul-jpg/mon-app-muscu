@@ -448,6 +448,17 @@ def _nombre_fr(x, signe=False):
     return nombre_fr(x, signe)
 
 
+@app.template_filter("jour_mois")
+def _jour_mois(iso):
+    """« 2026-05-04 » → « 4 mai »."""
+    from core.accueil_resume import MOIS_COURTS
+    try:
+        a, m, j = (int(x) for x in str(iso)[:10].split("-"))
+        return f"{j} {MOIS_COURTS[m - 1]}"
+    except (ValueError, IndexError):
+        return str(iso or "")
+
+
 @app.template_filter("sans_prive")
 def _sans_prive(dictionnaire):
     """Retire les clés préfixées `_` avant de sérialiser pour le navigateur.

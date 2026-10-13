@@ -44,50 +44,64 @@
     </div>
   {% else %}
 
-  {# ── Records ─────────────────────────────────────────────── #}
+  {# ── Records (style « Instrument », maquette du 13/10) ─────────
+     Le chiffre qui compte en très grand, ce qu'il a gagné à droite, puis
+     trois cases. Au poids du corps, il se compte en répétitions. #}
   {% if summary.poids_du_corps %}
-  <div class="pr-grid">
+  <div class="exo-hero">
+    <div class="exo-hero-gauche">
+      <div class="exo-hero-label">Meilleure série</div>
+      <div class="exo-hero-valeur">{{ summary.best_reps }}<span>reps</span></div>
+    </div>
+    <div class="exo-hero-droite"><span class="exo-hero-sous">le {{ summary.best_reps_date|jour_mois }}</span></div>
+  </div>
+  <div class="pr-grid pr-grid--3">
     <div class="pr-card">
-      <div class="pr-label">Meilleure série</div>
-      <div class="pr-value">{{ summary.best_reps }} <span>reps</span></div>
-      <div class="pr-sub">{{ jour(summary.best_reps_date) }}</div>
+      <div class="pr-label">Répétitions</div>
+      <div class="pr-value">{{ summary.reps_total|fr }}</div>
+      <div class="pr-sub">au total</div>
     </div>
     <div class="pr-card">
-      <div class="pr-label">Répétitions au total</div>
-      <div class="pr-value">{{ summary.reps_total|fr }}</div>
-      <div class="pr-sub">en {{ summary.sessions }} séance{{ 's' if summary.sessions > 1 }}</div>
+      <div class="pr-label">Séances</div>
+      <div class="pr-value">{{ summary.sessions }}</div>
+      <div class="pr-sub">{{ summary.sets_total }} séries</div>
+    </div>
+    <div class="pr-card">
+      <div class="pr-label">Dernière</div>
+      <div class="pr-value">{{ summary.last_date|jour_mois }}</div>
+      <div class="pr-sub">depuis le {{ summary.first_date|jour_mois }}</div>
     </div>
   </div>
   {% else %}
-  <div class="pr-grid">
+  <div class="exo-hero">
+    <div class="exo-hero-gauche">
+      <div class="exo-hero-label">Force estimée · 1RM</div>
+      <div class="exo-hero-valeur">{{ summary.best_e1rm|fr }}<span>kg</span></div>
+    </div>
+    {% if summary.delta_pct is not none %}
+    <div class="exo-hero-droite">
+      <span class="exo-hero-delta{% if summary.delta_pct > 0 %} exo-hero-delta--gain{% endif %}">{{ summary.delta_pct|fr(true) }}&nbsp;%</span>
+      <span class="exo-hero-sous">depuis le {{ summary.first_date|jour_mois }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="pr-grid pr-grid--3">
     <div class="pr-card">
       <div class="pr-label">Charge max</div>
-      <div class="pr-value">{{ '%g'|format(summary.best_weight)|replace('.', ',') }} <span>kg</span></div>
-      <div class="pr-sub">× {{ summary.best_weight_reps }} reps · {{ summary.best_weight_date[8:10] }}/{{ summary.best_weight_date[5:7] }}</div>
+      <div class="pr-value">{{ summary.best_weight|fr }}</div>
+      <div class="pr-sub">× {{ summary.best_weight_reps }} · {{ summary.best_weight_date|jour_mois }}</div>
     </div>
     <div class="pr-card">
-      <div class="pr-label">Force estimée</div>
-      <div class="pr-value">{{ summary.best_e1rm|fr }} <span>kg</span></div>
-      <div class="pr-sub">1RM · {{ summary.best_e1rm_date[8:10] }}/{{ summary.best_e1rm_date[5:7] }}</div>
+      <div class="pr-label">Volume max</div>
+      <div class="pr-value">{{ summary.best_volume|fr }}</div>
+      <div class="pr-sub">kg · {{ summary.best_volume_date|jour_mois }}</div>
     </div>
     <div class="pr-card">
-      <div class="pr-label">Meilleur volume</div>
-      <div class="pr-value">{{ '{:,}'.format(summary.best_volume).replace(',', ' ') }} <span>kg</span></div>
-      <div class="pr-sub">en une séance · {{ summary.best_volume_date[8:10] }}/{{ summary.best_volume_date[5:7] }}</div>
-    </div>
-    <div class="pr-card">
-      <div class="pr-label">Total soulevé</div>
-      <div class="pr-value">{{ '{:,}'.format(summary.volume_total).replace(',', ' ') }} <span>kg</span></div>
-      <div class="pr-sub">{{ '{:,}'.format(summary.reps_total).replace(',', ' ') }} répétitions</div>
+      <div class="pr-label">Total</div>
+      <div class="pr-value">{{ summary.volume_total|fr }}</div>
+      <div class="pr-sub">kg · {{ summary.reps_total|fr }} reps</div>
     </div>
   </div>
-  {% endif %}
-
-  {% if summary.delta_pct is not none and not summary.poids_du_corps %}
-    <div class="exo-delta {{ 'up' if summary.delta_pct >= 0 else 'down' }}">
-      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#{{ 'arrow-up' if summary.delta_pct >= 0 else 'arrow-down' }}"/></svg>
-      <span>{{ '+' if summary.delta_pct > 0 }}{{ summary.delta_pct }} % de force estimée depuis ta première séance</span>
-    </div>
   {% endif %}
 
   {# ── Courbe ──────────────────────────────────────────────── #}
@@ -113,8 +127,9 @@
         <svg class="exo-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}"
              preserveAspectRatio="none" role="img"
              aria-label="Évolution du {{ jour(chart.points[0].date) }} au {{ jour(chart.last.date) }} : de {{ chart.min|fr }} à {{ chart.max|fr }} {{ metric_unit }}{% if tendance %}, tendance {{ tendance.par_mois|fr(true) }} {{ metric_unit }} par mois{% endif %}">
-          {# Style « Instrument » : une aire à plat, sans dégradé. #}
-          <polygon points="{{ chart.area }}" fill="var(--accent)" fill-opacity="0.08"/>
+          {# Style « Instrument » : une aire à plat, sans dégradé ; la courbe en
+             blanc, les records en vert. #}
+          <polygon points="{{ chart.area }}" fill="var(--text-1)" fill-opacity="0.05"/>
           <polyline class="exo-line" points="{{ chart.polyline }}"/>
           {% if chart.tendance %}
             <line class="exo-trend" x1="{{ chart.tendance.x1 }}" y1="{{ chart.tendance.y1 }}"
@@ -293,65 +308,55 @@
   {% endif %}
 
 <style>
-  .exo-page-head { margin-bottom: 14px; }
-  .exo-page-head h1 { font-size: 1.5rem; margin: 0; }
-  .exo-page-sub { margin: 4px 0 0; font-size: 0.82rem; color: var(--text-2); }
+  /* Style « Instrument » (maquette du 13/10) : le nom en grand, la force
+     estimée en très grand, des cases plates. Blanc = choisi, vert = record. */
+  .exo-page-head { margin-bottom: 10px; }
+  .exo-page-head h1 { margin: 0; font-size: 2.5rem; line-height: 0.95; overflow-wrap: anywhere; }
+  .exo-page-sub { margin: 6px 0 0; font-size: 0.82rem; color: var(--text-2); }
 
-  .pr-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 12px;
+  .exo-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 4px 0 14px; }
+  .exo-hero-gauche { min-width: 0; }
+  .exo-hero-label {
+    font-family: var(--font-display); font-weight: 600; font-size: 0.95rem;
+    text-transform: uppercase; color: var(--text-2);
   }
-  .pr-card {
-    background: var(--bg-surface);
-    border: 0.5px solid var(--border-default);
-    border-radius: var(--radius-md);
-    padding: 12px 14px;
+  .exo-hero-valeur {
+    font-family: var(--font-display); font-weight: 700; font-size: 5rem; line-height: 0.9;
+    font-variant-numeric: tabular-nums; color: var(--text-1);
   }
+  .exo-hero-valeur span { margin-left: 4px; font-size: 1.5rem; font-weight: 600; color: var(--text-2); }
+  .exo-hero-droite {
+    flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end;
+    gap: 2px; padding-bottom: 8px; text-align: right;
+  }
+  .exo-hero-delta { font-family: var(--font-display); font-weight: 700; font-size: 1.75rem; line-height: 1; color: var(--text-2); }
+  .exo-hero-delta--gain { color: var(--accent); }
+  .exo-hero-sous { font-size: 0.82rem; color: var(--text-2); }
+
+  .pr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
+  .pr-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pr-card { min-width: 0; padding: 12px; border-radius: var(--radius-sm); background: var(--bg-surface); }
   .pr-label {
-    font-size: 0.7rem;
-    letter-spacing: 0; font-family: var(--font-display);
-    text-transform: uppercase;
-    color: var(--text-2);
-    margin-bottom: 4px;
+    font-family: var(--font-display); font-weight: 600; font-size: 0.82rem;
+    text-transform: uppercase; color: var(--text-2);
   }
   .pr-value {
-    font-size: 1.45rem;
-    font-weight: 600;
-    color: var(--text-1);
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
+    font-family: var(--font-display); font-weight: 700; font-size: 1.65rem; line-height: 1.1;
+    font-variant-numeric: tabular-nums; color: var(--text-1); white-space: nowrap;
   }
   .pr-value span { font-size: 0.85rem; color: var(--text-2); font-weight: 400; }
-  .pr-sub { font-size: 0.72rem; color: var(--text-2); margin-top: 3px; }
+  .pr-sub { font-size: 0.74rem; color: var(--text-2); }
 
-  .exo-delta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-    font-size: 0.86rem;
-    margin-bottom: 12px;
-  }
-  .exo-delta.up { background: var(--success-bg, rgba(200,240,49,0.1)); color: var(--success); }
-  .exo-delta.down { background: var(--warning-bg); color: var(--warning); }
-
-  .metric-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  /* Mesure affichée : quatre boutons de même largeur, le choisi en blanc. */
+  .metric-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
   .metric-tab {
-    padding: 7px 12px;
-    border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border-default);
-    background: var(--bg-elevated);
-    color: var(--text-2);
-    font-size: 0.8rem;
-    text-decoration: none;
-    min-height: 34px;
-    display: inline-flex;
-    align-items: center;
+    flex: 1 1 0; min-width: 0; min-height: 40px; padding: 4px 2px;
+    display: inline-flex; align-items: center; justify-content: center; text-align: center;
+    border-radius: 2px; background: var(--bg-elevated); color: var(--text-1); text-decoration: none;
+    font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; line-height: 1.05;
+    text-transform: uppercase;
   }
-  .metric-tab.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .metric-tab.on { background: var(--text-1); color: var(--bg-base); font-weight: 700; }
 
   .periode-row { display: flex; gap: 4px; margin: -4px 0 12px; }
   .periode-chip {
@@ -368,7 +373,7 @@
     justify-content: center;
     background: var(--bg-elevated);
   }
-  .periode-chip.on { color: var(--text-1); background: rgba(255,255,255,0.08); font-weight: 600; }
+  .periode-chip.on { color: var(--text-1); background: #262626; font-weight: 600; }
 
   .exo-chart-wrap { position: relative; }
   .exo-y {
@@ -386,27 +391,27 @@
   .exo-chart { width: 100%; height: 160px; display: block; overflow: visible; }
   .exo-line {
     fill: none;
-    stroke: var(--accent);
+    stroke: var(--text-1);
     stroke-width: 2.5;
     stroke-linejoin: round;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
   }
   .exo-trend {
-    stroke: var(--text-1);
-    stroke-opacity: 0.55;
+    stroke: var(--text-2);
+    stroke-opacity: 0.8;
     stroke-width: 1.5;
     stroke-dasharray: 5 4;
     vector-effect: non-scaling-stroke;
   }
   .exo-pt {
-    stroke: var(--accent);
+    stroke: var(--text-1);
     stroke-width: 6;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
   }
   .exo-pt.last { stroke-width: 10; }
-  .exo-pt.rec { stroke: var(--gold, #f5b301); stroke-width: 9; }
+  .exo-pt.rec { stroke: var(--accent); stroke-width: 10; }
   .exo-chart-key {
     display: flex;
     gap: 14px;
@@ -416,8 +421,8 @@
     margin-top: 6px;
   }
   .exo-chart-key span { display: inline-flex; align-items: center; gap: 6px; }
-  .cle-rec { width: 9px; height: 9px; border-radius: 50%; background: var(--gold, #f5b301); }
-  .cle-trend { width: 16px; border-top: 1.5px dashed var(--text-1); opacity: 0.55; }
+  .cle-rec { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+  .cle-trend { width: 16px; border-top: 1.5px dashed var(--text-2); }
   .exo-trend-text { margin: 12px 0 2px; font-size: 0.86rem; color: var(--text-1); line-height: 1.4; }
   .exo-trend-text.hausse strong { color: var(--success); }
   .exo-trend-text.baisse strong { color: var(--warning); }
@@ -444,16 +449,16 @@
     color: var(--text-2);
     margin-top: 4px;
   }
-  .exo-chart-last { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+  .exo-chart-last { color: var(--text-1); font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
 
   .variant-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .materiel-row { margin: 0 0 12px; }
   .variant-chip small { margin-left: 4px; opacity: 0.7; font-size: 0.72rem; }
   .variant-chip {
     padding: 6px 12px;
-    border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border-default);
-    background: var(--bg-elevated);
+    border-radius: 2px;
+    border: 1px solid #333333;
+    background: var(--bg-base);
     color: var(--text-2);
     font-size: 0.8rem;
     text-decoration: none;
@@ -461,7 +466,7 @@
     display: inline-flex;
     align-items: center;
   }
-  .variant-chip.on { border-color: var(--text-1); color: var(--text-1); background: rgba(255,255,255,0.08); }
+  .variant-chip.on { border-color: var(--text-1); color: var(--bg-base); background: var(--text-1); font-weight: 600; }
 
   .session-card { padding: 12px 14px; margin-bottom: 8px; }
   .session-head {

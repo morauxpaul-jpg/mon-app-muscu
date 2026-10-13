@@ -433,4 +433,5 @@ def test_fiche_poids_du_corps_en_repetitions(fake_db, logged_in):
     assert ">Meilleure série</a>" in html and ">Force estimée</a>" not in html
     assert "Tes records par répétitions" not in html
     assert "1RM <strong>0" not in html and "0 kg" not in html.split("Toutes tes séances")[1]
-    assert "Meilleure série" in html.split("pr-grid")[1][:400]
+    # Le grand chiffre d'en-tête est la meilleure série, en répétitions.
+    assert "Meilleure série" in html.split('class="exo-hero"')[1][:400]

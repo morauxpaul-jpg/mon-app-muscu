@@ -136,27 +136,34 @@
 .rest-timer-bar.compact .rest-timer-bar-skip { padding: 2px 4px; }
 
 /* ── Modale « bilan de séance » (note + commentaire) ───────────────── */
+/* Style « Instrument » : cinq cases chiffrées, la note choisie en blanc. */
 .seance-rating-stars {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin: 4px 0 10px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 4px 0 6px;
 }
 .seance-rating-stars button {
-  background: none;
-  border: 0;
-  padding: 4px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--border-glass-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
   cursor: pointer;
-  color: var(--text-3);
-  opacity: 0.35;
-  transition: transform var(--ease-fast, 0.15s ease), opacity var(--ease-fast, 0.15s ease);
 }
-.seance-rating-stars button .icon { width: 30px; height: 30px; }
 .seance-rating-stars button.on {
-  color: #FFC93C;
-  opacity: 1;
+  background: var(--text-1);
+  border-color: var(--text-1);
+  color: var(--bg-base);
 }
-.seance-rating-stars button:active { transform: scale(0.9); }
+.seance-rating-bornes {
+  display: flex; justify-content: space-between;
+  font-size: 0.75rem; color: var(--text-2); margin-bottom: 6px;
+}
 .seance-rating-label {
   text-align: center;
   font-size: 0.8rem;
@@ -202,4 +209,14 @@
   min-width: 2.2em;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Titre de la fenêtre de fin (style « Instrument ») : capitales étroites. */
+.finish-modal-titre {
+  margin: 0 0 4px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  text-transform: uppercase;
 }

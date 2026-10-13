@@ -498,19 +498,24 @@ input[type="url"], textarea, select {
 
 /* ── Finish celebration ── */
 .finish-celebration {
-  text-align: center;
-  padding: 2.5rem 1rem;
+  text-align: left;
+  padding: 1.25rem 1rem;
   animation: fadeIn var(--ease-normal);
 }
-.finish-celebration .check-icon {
-  font-size: 3rem;
-  color: var(--success);
-}
 .finish-celebration .finish-title {
-  font-size: var(--text-xl);
+  font-family: var(--font-display);
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--text-1);
-  margin: 12px 0 6px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.finish-celebration .finish-nom {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 0.95;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 .finish-celebration .finish-stats {
   display: grid;
@@ -519,15 +524,17 @@ input[type="url"], textarea, select {
   margin: 16px 0;
 }
 .finish-celebration .finish-stat {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: 14px 10px;
-  text-align: center;
+  background: var(--bg-elevated);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: left;
 }
 .finish-celebration .finish-stat-value {
-  font-size: var(--text-xl);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
   color: var(--text-1);
   font-variant-numeric: tabular-nums;
 }
@@ -537,7 +544,7 @@ input[type="url"], textarea, select {
   margin-top: 2px;
 }
 .finish-celebration .vol-diff-pos { color: var(--success); }
-.finish-celebration .vol-diff-neg { color: var(--danger); }
+.finish-celebration .vol-diff-neg { color: var(--text-2); }   /* moins de volume n'est pas une faute */
 
 /* ── Confetti ── */
 .confetti-wrap {
