@@ -150,8 +150,9 @@ def test_laccueil_montre_la_cible_du_jour_et_les_proteines(fake_db, logged_in):
                                        "carbs": 60, "fat": 15}).execute()
     html = logged_in.get("/accueil").get_data(as_text=True)
     attendu = nc.cible_du_jour(nc.compute_targets(PROFIL), 1, True)
-    assert "CALORIES DU JOUR · SÉANCE" in html
-    assert f"/ {attendu['calories']} kcal" in html
+    assert "KCAL DU JOUR · SÉANCE" in html
+    # « 600 / 2 650 » : la cible du jour, au format français.
+    assert f" / {attendu['calories']:,}".replace(",", " ") + "</small>" in html
     assert f"Protéines : 45 / {attendu['macros_g']['protein']} g" in html
 
 

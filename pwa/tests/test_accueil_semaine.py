@@ -68,8 +68,8 @@ def _compte(fake_db, derniere_seance, semaines=4):
 def _stats(html):
     import re
     streak = re.search(r"(\d+) SEMAINE", html).group(1)
-    volume = re.search(r'<div class="stat-value">([\d\s ]+)</div>\s*<div class="stat-sub">kg cette semaine',
-                       html).group(1)
+    # Chiffres de la semaine (style « Instrument ») : VOLUME, puis la valeur en kg.
+    volume = re.search(r'VOLUME</span><b>([\d\s ]+) <small>kg', html).group(1)
     return int(streak), int(volume.replace(" ", "").replace(" ", "").replace("\xa0", ""))
 
 

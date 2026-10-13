@@ -47,24 +47,30 @@ def _dates_en_base(fake_db):
 # ── L'accueil ─────────────────────────────────────────────────────
 
 
+def _carte(html):
+    """Le bloc « Prochaine séance » de l'accueil et le lien de son bouton."""
+    bloc = re.search(r'<section class="acc-seance"[^>]*>(.*?)</section>', html, re.S).group(1)
+    lien = re.search(r'<a href="([^"]+)" class="btn primary acc-demarrer next-session-card"', bloc)
+    return lien.group(1).replace("&amp;", "&"), bloc
+
+
 def test_un_jour_de_repos_la_carte_ouvre_la_seance_daujourdhui(fake_db, logged_in):
     auj = logical_today_paris()
     demain = auj + dt.timedelta(days=1)
     _programme(fake_db, [demain])
     html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
-    carte = re.search(r'<a href="([^"]+)" class="card next-session-card">(.*?)</a>', html, re.S)
-    lien = carte.group(1).replace("&amp;", "&")
+    lien, bloc = _carte(html)
     assert f"date={auj.isoformat()}" in lien and f"prevue={demain.isoformat()}" in lien
-    assert "Faire maintenant" in carte.group(2) and "Demain" in carte.group(2)
+    assert "Faire maintenant" in bloc and "DEMAIN" in bloc
 
 
 def test_le_jour_prevu_la_carte_dit_commencer_sans_bandeau(fake_db, logged_in):
     auj = logical_today_paris()
     _programme(fake_db, [auj])
     html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
-    carte = re.search(r'<a href="([^"]+)" class="card next-session-card">(.*?)</a>', html, re.S)
-    assert f"date={auj.isoformat()}" in carte.group(1) and "prevue=" not in carte.group(1)
-    assert "Commencer" in carte.group(2)
+    lien, bloc = _carte(html)
+    assert f"date={auj.isoformat()}" in lien and "prevue=" not in lien
+    assert "Commencer" in bloc
 
 
 def test_suivre_la_carte_enregistre_aujourdhui(fake_db, logged_in):
@@ -72,7 +78,7 @@ def test_suivre_la_carte_enregistre_aujourdhui(fake_db, logged_in):
     auj = logical_today_paris()
     _programme(fake_db, [auj + dt.timedelta(days=1)])
     html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
-    lien = re.search(r'<a href="([^"]+)" class="card next-session-card"', html).group(1).replace("&amp;", "&")
+    lien, _ = _carte(html)
     page = logged_in.get(lien).get_data(as_text=True)
     date_page = re.search(r'name="date" value="([0-9-]+)"', page).group(1)
     assert date_page == auj.isoformat()

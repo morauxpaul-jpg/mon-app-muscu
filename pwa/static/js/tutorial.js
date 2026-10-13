@@ -39,8 +39,8 @@
       // l'accueil (audit du 06/10, profil 1). On montre la carte qui lance
       // vraiment la séance, même un jour où rien n'est prévu.
       target: ".next-session-card",
-      title: "C'est parti ! 💪",
-      text: "Touche « Prochaine séance » pour lancer ta première séance, dès aujourd'hui si tu veux. Bon entraînement !",
+      title: "C'est parti !",
+      text: "Touche « Commencer » pour lancer ta séance, dès aujourd'hui si tu veux. Bon entraînement !",
       finalLabel: "Compris",
     },
   ];

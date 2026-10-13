@@ -2,7 +2,7 @@
 
 ## Suivi du 13/10/2026 — nouveau style « Instrument », fondations (axe 3, design) · note inchangée : **6,6 / 10**
 
-Sur une branche, **ni fusionné ni déployé**. Aucune donnée ni migration. Le propriétaire trouvait que l'app « ressemble aux apps vibe codées » ; trois directions ont été maquettées, il a choisi la **B, « Instrument »**. Cette première étape change la base commune à toutes les pages ; l'écran de séance et les pages une par une suivront.
+**Fusionné (PR #44, commit `1c191e4`) et déployé** le 13/10 à 14:56 UTC (déploiement Railway `7ef69032`) : démarrage « 17 tables et vues vérifiées, rien ne manque », aucune réponse 5xx ensuite. Aucune donnée ni migration. Le propriétaire trouvait que l'app « ressemble aux apps vibe codées » ; trois directions ont été maquettées, il a choisi la **B, « Instrument »**. Cette première étape change la base commune à toutes les pages ; l'écran de séance et les pages une par une suivront.
 
 | Constat | Correction | Preuve |
 |---|---|---|
@@ -14,6 +14,8 @@ Sur une branche, **ni fusionné ni déployé**. Aucune donnée ni migration. Le 
 | « Dernière fois : 82.5kg × 9 », « 107.2 kg » | Format français : « 82,5 kg × 9 », « 107,2 kg » | `resume_series` ; 3 tests mis à jour |
 | BMR / TDEE affichés en sigles, avant l'objectif | L'objectif d'abord, puis « Au repos » et « Dépense du jour » (sigles en infobulle) | capture Nutrition |
 | **Trouvé : `--border-subtle` n'était défini nulle part** : 18 filets de séparation ne se dessinaient pas | Défini ; la liste « tokens manquants connus » est vide | `tests/test_variables_css.py` |
+
+**Accueil refait d'après la maquette (étape suivante, sur une branche, ni fusionné ni déployé)** : la séance du jour en très grand avec son contenu (« 3 exercices · 10 séries · Tractions en premier ») et un seul bouton ; la semaine en barres ; tuiles Poids et Kcal du jour ; dernier record. Relu sur le vrai compte (lecture seule, 13/10) : la tuile Poids affiche **91,4 kg, −0,33 kg / semaine** (20 pesées, même pente que « Ton rythme réel ») ; le dernier record est **Élévations latérales, 4,5 × 12 le 24/09** (recalculé en SQL sur les 1 029 lignes d'historique : force estimée 6,3 contre 6,0 avant). Le bandeau, la semaine allégée, le debrief, le défi, les badges et le partage restent, à plat.
 
 **Illustrations d'exercices (demande du propriétaire : les garder, compléter, corriger)** — gardées telles quelles, elles s'affichent dans le nouveau style. Inventaire (82 WebP, une par entrée du catalogue, toutes valides) : **environ 19 montrent le mauvais mouvement ou le mauvais matériel** (ex. : `tractions` debout au sol, `hip-thrust` en développé couché, `rowing-barre` debout, `shrugs` copie de `curl-biceps`, `curl-marteau` presque identique au curl, `pompes-declinees` en pompes inclinées, `squat-bulgare` assis) ; **20 noms de la bibliothèque n'ont aucune image** (Développé décliné, Écarté couché, Pull-over, T-bar row, Curl concentré, Russian twist, Farmer walk…). Aucun test ne vérifie qu'une image montre le bon geste. Les refaire passe par `pwa/tools/generate_exercise_art.py` (Gemini) : **bloqué ici, la clé `GEMINI_API_KEY` n'est pas dans l'environnement** et l'image de référence du style d'origine n'est pas dans le dépôt.
 
