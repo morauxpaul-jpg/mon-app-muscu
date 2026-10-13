@@ -226,7 +226,7 @@ def test_seance_poids_du_corps_compte_dans_le_streak(fake_db, logged_in):
 def test_seance_poids_du_corps_compte_dans_les_stats_semaine(fake_db, logged_in):
     _seed_bodyweight_session(fake_db)
     html = logged_in.get("/accueil").get_data(as_text=True)
-    assert re.search(r'stat-value">\s*1/1', html)
+    assert re.search(r'acc-semaine-compte">\s*1 / 1<', html)
 
 
 def test_seance_poids_du_corps_pas_de_streak_en_danger(fake_db, logged_in):

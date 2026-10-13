@@ -14,8 +14,14 @@
     </div>
   {% else %}
 
-  {# Style « Instrument » : un titre aligné à gauche, comme toutes les pages. #}
-  <h1 class="accueil-titre">{% if prenom %}Bonjour {{ prenom }}{% else %}Muscu Tracker{% endif %}</h1>
+  {# Style « Instrument » (maquette choisie le 13/10) : la date, puis la
+     séance du jour en très grand avec son bouton, la semaine en barres, le
+     poids et les calories, le dernier record. Le reste suit, à plat. #}
+  <h1 class="sr-only">Accueil{% if prenom %} — bonjour {{ prenom }}{% endif %}</h1>
+  <div class="acc-tete">
+    <div class="acc-date">{{ date_courte|upper }} · SEMAINE {{ s_act }}</div>
+    <a href="/gestion" class="acc-profil" aria-label="Mon compte et mes réglages"><svg class="icon icon-lg" aria-hidden="true"><use href="/static/img/icons.svg#user"/></svg></a>
+  </div>
 
   {% if show_reactivation %}
     {# x-show pilote `display` du wrapper ; le flex reste sur la carte interne
@@ -53,32 +59,6 @@
       </form>
     </div>
   {% endif %}
-
-  <div class="date-hero">
-    <div class="day-name">{{ day_name }}</div>
-    <div class="date-str">{{ date_str }}</div>
-    <div class="week-num">SEMAINE {{ s_act }}</div>
-  </div>
-
-  <div class="card">
-    <div class="card-label">Cette semaine</div>
-    <div class="week-grid">
-      {% for d in week %}
-        {% if d.status == 'done' %}
-          {% set cell_class = 'day-done' %}
-        {% elif d.status == 'missed' %}
-          {% set cell_class = 'day-missed' %}
-        {% elif d.status == 'today' %}
-          {% set cell_class = 'day-today' %}
-        {% elif d.status == 'makeup' %}
-          {% set cell_class = 'day-makeup' %}
-        {% else %}
-          {% set cell_class = 'day-future' %}
-        {% endif %}
-        <a href="/seance?date={{ d.date_iso }}" class="day-cell {{ cell_class }}" title="{{ d.day_label }} {{ d.date_short }} · {{ d.title }}">{{ d.day_label[0]|upper }}</a>
-      {% endfor %}
-    </div>
-  </div>
 
   {# ── Debrief de la séance qui vient d'être terminée ──────────── #}
   {% if last_workout %}
@@ -121,29 +101,99 @@
   {% endif %}
 
   {% if next_session %}
-    {# Directement la séance, pas la liste des séances : un tap de moins, et
-       pas de risque d'ouvrir la mauvaise (audit du 30/09, M8). #}
-    <a href="/seance?mode=prefaite&name={{ next_session.seance|urlencode }}&date={{ next_session.date_lien }}{% if not next_session.is_today %}&prevue={{ next_session.date_iso }}{% endif %}" class="card next-session-card">
-      <div class="card-label">PROCHAINE SÉANCE</div>
-      <div class="next-session-row">
-        <div class="next-session-info">
-          <div class="next-session-title">{{ next_session.seance }}</div>
-          <div class="next-session-when">{{ next_session.relative }} · {{ next_session.date_short }}</div>
+    <section class="acc-seance" aria-label="Prochaine séance">
+      <div class="acc-surtitre">PROCHAINE SÉANCE · {{ next_session.relative|upper }}{% if not next_session.is_today and next_session.relative != 'Demain' %} {{ next_session.date_short }}{% endif %}</div>
+      <div class="acc-seance-nom">{{ next_session.seance }}</div>
+      {% if next_session.exercices %}
+        <div class="acc-seance-contenu">
+          <span><b>{{ next_session.exercices }}</b> exercice{% if next_session.exercices > 1 %}s{% endif %}</span>
+          {% if next_session.series %}<span><b>{{ next_session.series }}</b> séries</span>{% endif %}
+          {% if next_session.premier %}<span>{{ next_session.premier }} en premier</span>{% endif %}
         </div>
-        <div class="next-session-cta label-icon">
-          <span>{% if next_session.is_today %}Commencer{% else %}Faire maintenant{% endif %}</span>
-          <svg class="icon icon-sm"><use href="/static/img/icons.svg#chevron-right"/></svg>
-        </div>
+      {% endif %}
+      {# Directement la séance, pas la liste des séances : un tap de moins, et
+         pas de risque d'ouvrir la mauvaise (audit du 30/09, M8). #}
+      <a href="/seance?mode=prefaite&name={{ next_session.seance|urlencode }}&date={{ next_session.date_lien }}{% if not next_session.is_today %}&prevue={{ next_session.date_iso }}{% endif %}" class="btn primary acc-demarrer next-session-card" data-haptic="1">
+        <span>{% if next_session.is_today %}Commencer{% else %}Faire maintenant{% endif %}</span>
+        <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
+      </a>
+    </section>
+  {% else %}
+    <section class="acc-seance" aria-label="Séance">
+      <div class="acc-surtitre">AUCUNE SÉANCE PRÉVUE</div>
+      <a href="/seance" class="btn primary acc-demarrer next-session-card" data-haptic="1">
+        <span>Choisir une séance</span>
+        <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
+      </a>
+    </section>
+  {% endif %}
+
+  {# La semaine en barres : faite = vert plein, aujourd'hui = cadre blanc,
+     prévue = gris avec l'initiale de la séance, manquée = pointillés orange,
+     repos = trait bas. Chaque barre ouvre le jour. #}
+  <section class="acc-semaine" aria-label="Cette semaine">
+    <div class="acc-semaine-tete"><span>CETTE SEMAINE</span><span class="acc-semaine-compte">{{ sessions_done }} / {{ total_sessions }}</span></div>
+    <div class="acc-barres">
+      {% for d in week %}
+        {% set prevu = d.status in ('done', 'missed', 'makeup', 'today') or d.seance %}
+        <a href="/seance?date={{ d.date_iso }}" class="acc-jour acc-jour--{{ d.status }}{% if d.is_today %} acc-jour--auj{% endif %}{% if not prevu %} acc-jour--repos{% endif %}"
+           aria-label="{{ d.day_label|capitalize }} {{ d.date_short }} : {{ d.seance if (d.seance and d.status in ('today', 'upcoming')) else d.title }}">
+          <span class="acc-barre">{% if d.seance and d.status in ('today', 'upcoming') %}{{ d.seance[:1]|upper }}{% endif %}</span>
+          <span class="acc-jour-lettre">{{ d.day_label[0]|upper }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="acc-tuiles">
+    <a href="/progres#poids" class="acc-tuile">
+      <span class="acc-tuile-titre">POIDS</span>
+      {% if poids %}
+        <span class="acc-tuile-valeur">{{ poids.kg }}<small> KG</small></span>
+        <span class="acc-tuile-sous">{{ poids.texte }}</span>
+      {% else %}
+        <span class="acc-tuile-valeur">—</span>
+        <span class="acc-tuile-sous">Ajouter une pesée</span>
+      {% endif %}
+    </a>
+    {% if is_premium and cal_cible > 0 %}
+      <a href="/nutrition" class="acc-tuile">
+        <span class="acc-tuile-titre">KCAL DU JOUR{% if nutri_type == 'entrainement' %} · SÉANCE{% elif nutri_type == 'repos' %} · REPOS{% endif %}</span>
+        <span class="acc-tuile-valeur">{{ '{:,}'.format(cal_today).replace(',', ' ') }}<small> / {{ '{:,}'.format(cal_cible).replace(',', ' ') }}</small></span>
+        <span class="acc-jauge" role="img" aria-label="{{ cal_pct }} % de l'objectif"><span class="acc-jauge-plein" style="width: {{ cal_pct }}%;"></span></span>
+        {% if prot_cible %}<span class="acc-tuile-sous cal-prot">Protéines : {{ prot_today }} / {{ prot_cible }} g</span>{% endif %}
+      </a>
+    {% elif is_premium %}
+      <a href="/nutrition" class="acc-tuile">
+        <span class="acc-tuile-titre">KCAL DU JOUR</span>
+        <span class="acc-tuile-valeur">—</span>
+        <span class="acc-tuile-sous">Configurer mes objectifs calories</span>
+      </a>
+    {% else %}
+      <div class="acc-tuile">
+        <span class="acc-tuile-titre">VOLUME · SEMAINE</span>
+        <span class="acc-tuile-valeur">{{ vol_week }}<small> KG</small></span>
+        <span class="acc-tuile-sous">poids × répétitions</span>
       </div>
+    {% endif %}
+  </section>
+
+  {% if record %}
+    <a href="/progres/exercice?exo={{ record.exo|urlencode }}" class="acc-record">
+      <span class="acc-record-texte">
+        <span class="acc-surtitre acc-surtitre--gris">DERNIER RECORD · {{ record.jour|upper }}</span>
+        <span class="acc-record-exo">{{ record.exo }}</span>
+      </span>
+      <span class="acc-record-valeur">{{ record.texte }}</span>
     </a>
   {% endif %}
 
   {# Ce qui a progressé ces dernières semaines (core/progression.py). #}
   {% if progres %}
-    <a href="/progres#zoom" class="card progres-carte">
-      <div class="card-label">Tes progrès</div>
+    <a href="/progres#zoom" class="acc-liste progres-carte">
+      <span class="acc-surtitre acc-surtitre--gris">Tes progrès</span>
       {% for f in progres %}
-        <div class="progres-ligne"><span class="progres-fleche">↗</span>{{ f.texte }}</div>
+        <span class="progres-ligne"><span class="progres-fleche">↗</span>{{ f.texte }}</span>
       {% endfor %}
     </a>
   {% endif %}
@@ -179,36 +229,31 @@
     </div>
   {% endif %}
 
-  <div class="stats-row">
-    <div class="stat-card stat-blue">
-      <div class="stat-label">SÉANCES</div>
-      <div class="stat-value">{{ sessions_done }}/{{ total_sessions }}</div>
-    </div>
-    <div class="stat-card stat-green">
-      <div class="stat-label">VOLUME</div>
-      <div class="stat-value">{{ vol_week }}</div>
-      <div class="stat-sub">kg cette semaine</div>
-    </div>
-  </div>
-
-  <div class="stat-card {% if streak_danger %}stat-orange{% else %}stat-gold{% endif %} s-2fad49">
-    <div class="stat-label label-icon">
-      <svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#flame"/></svg>STREAK
-      {% if streak_tier_icon %}<svg class="icon icon-sm {{ streak_tier_color }} s-46cec8"><use href="/static/img/icons.svg#{{ streak_tier_icon }}"/></svg>{% endif %}
-    </div>
-    <div class="stat-value s-8acc10">
-      {{ streak }} SEMAINE{% if streak > 1 %}S{% endif %}
+  {# Régularité : semaines d'affilée avec au moins une séance. #}
+  <section class="acc-liste" aria-label="Régularité">
+    <div class="acc-ligne">
+      <span class="acc-surtitre acc-surtitre--gris">SEMAINES D'AFFILÉE{% if streak_tier_label %} · PALIER {{ streak_tier_label|upper }}{% endif %}</span>
+      <span class="acc-ligne-valeur">{{ streak }} SEMAINE{% if streak > 1 %}S{% endif %}</span>
     </div>
     {% if streak_danger %}
-      <div class="label-icon s-d4f9bc"><svg class="icon icon-sm"><use href="/static/img/icons.svg#flag"/></svg>En danger — fais ta séance</div>
-    {% endif %}
-    {% if streak_tier_label %}
-      <div class="s-6c5e25">Palier {{ streak_tier_label }}</div>
+      <div class="acc-alerte label-icon"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#flag"/></svg>En danger — fais ta séance</div>
     {% endif %}
     {% if streak_record > 0 %}
-      <div class="s-9a40e3">Record : {{ streak_record }} semaine{% if streak_record > 1 %}s{% endif %}</div>
+      <div class="acc-ligne-sous">Record : {{ streak_record }} semaine{% if streak_record > 1 %}s{% endif %}</div>
     {% endif %}
-  </div>
+  </section>
+
+  {# Les chiffres de la semaine, à plat. #}
+  <section class="acc-chiffres" aria-label="Chiffres de la semaine">
+    <div><span class="acc-surtitre acc-surtitre--gris">VOLUME</span><b>{{ vol_week }} <small>kg</small></b></div>
+    <div><span class="acc-surtitre acc-surtitre--gris">EXERCICES</span><b>{{ exos_count }}</b></div>
+    <div><span class="acc-surtitre acc-surtitre--gris">SÉRIES</span><b>{{ sets_count }}</b></div>
+    <div><span class="acc-surtitre acc-surtitre--gris">REPS</span><b>{{ reps_count }}</b></div>
+    {% if cardio_minutes > 0 %}
+      <div><span class="acc-surtitre acc-surtitre--gris">CARDIO</span><b>{{ cardio_minutes }} <small>min</small></b></div>
+      <div><span class="acc-surtitre acc-surtitre--gris">DISTANCE</span><b>{{ cardio_km }} <small>km</small></b></div>
+    {% endif %}
+  </section>
 
   {# ── Partage de progression ── #}
   <script type="application/json" id="share-data">{{ {
@@ -223,7 +268,7 @@
   <script src="/static/js/share-card.js" defer></script>
 
   {% if badges %}
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#award"/></svg>Badges</h3>
+    <h2 class="acc-surtitre acc-surtitre--gris acc-titre-section">Badges</h2>
     <div class="badges-row">
       {% for b in badges %}
         <div class="badge-item {% if b.unlocked %}badge-on{% else %}badge-off{% endif %}" title="{{ b.label }} — {{ b.desc }}">
@@ -242,17 +287,13 @@
       .badge-item {
         text-align: center;
         padding: 10px 4px;
-        border-radius: var(--radius-md);
-        border: 0.5px solid var(--border-default);
-        background: var(--bg-elevated);
-        transition: all 0.2s ease;
+        border-radius: var(--radius-sm);
+        background: var(--bg-surface);
       }
-      .badge-on {
-        border-color: var(--accent);
-        background: var(--accent-bg);
-        color: var(--accent);
-      }
-      .badge-off { opacity: 0.35; filter: grayscale(0.7); }
+      /* Gagné : icône verte (c'est une forme de record), nom en blanc. */
+      .badge-on { color: var(--text-1); }
+      .badge-on .icon { color: var(--accent); }
+      .badge-off { color: var(--text-3); opacity: 0.5; }
       .badge-name {
         font-size: 0.7rem;
         margin-top: 4px;
@@ -266,57 +307,7 @@
     </style>
   {% endif %}
 
-  <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Détail</h3>
-  <div class="detail-row">
-    <div class="detail-metric">
-      <div class="detail-label label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#dumbbell"/></svg>Exercices</div>
-      <div class="detail-value">{{ exos_count }}</div>
-    </div>
-    <div class="detail-metric">
-      <div class="detail-label label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#grid"/></svg>Séries</div>
-      <div class="detail-value">{{ sets_count }}</div>
-    </div>
-    <div class="detail-metric">
-      <div class="detail-label label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#target"/></svg>Reps</div>
-      <div class="detail-value">{{ reps_count }}</div>
-    </div>
-  </div>
-
-  {% if cardio_minutes > 0 %}
-  <div class="detail-row s-0d69e4">
-    <div class="detail-metric s-30e323">
-      <div class="detail-label label-icon s-52df2b"><svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#heart"/></svg>Cardio semaine</div>
-      <div class="detail-value s-f0a607">{{ cardio_minutes }} <span class="s-1e8f47">min</span></div>
-    </div>
-    <div class="detail-metric s-98ae0f">
-      <div class="detail-label label-icon s-52df2b"><svg class="icon icon-sm s-52df2b"><use href="/static/img/icons.svg#footprints"/></svg>Distance</div>
-      <div class="detail-value s-f0a607">{{ cardio_km }} <span class="s-1e8f47">km</span></div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if is_premium %}
-    {% if cal_cible > 0 %}
-      <a href="/nutrition" class="card calories-widget s-5eff84">
-        <div class="s-fdfab4">
-          <div class="label-icon s-6c67ba"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>CALORIES DU JOUR{% if nutri_type == 'entrainement' %} · SÉANCE{% elif nutri_type == 'repos' %} · REPOS{% endif %}</div>
-          <div class="s-49a710">{{ cal_pct }}%</div>
-        </div>
-        <div class="s-3b14fd">
-          <div class="s-217a84">{{ cal_today }} <span class="s-218e5f">/ {{ cal_cible }} kcal</span></div>
-          <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-        </div>
-        <div class="xp-bar-bg s-49c5d1">
-          <div class="xp-bar-fill" style="width: {{ cal_pct }}%;"></div>
-        </div>
-        {% if prot_cible %}<div class="cal-prot">Protéines : {{ prot_today }} / {{ prot_cible }} g</div>{% endif %}
-      </a>
-    {% else %}
-      <a href="/nutrition" class="card calories-widget s-6f481e">
-        <div class="label-icon s-d2190f"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Configurer mes objectifs calories</div>
-      </a>
-    {% endif %}
-  {% else %}
+  {% if not is_premium %}
     {# Incitation VIP douce (gratuits) — une seule, discrète, en bas de l'accueil. #}
     <a href="/premium" class="card s-794140">
       <div class="s-3b94bc">

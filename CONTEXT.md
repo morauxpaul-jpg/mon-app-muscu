@@ -89,7 +89,7 @@ pwa/
 │   └── analytics.py               # Façade track(event,props) fire-and-forget + helper paywall() (funnel conversion)
 ├── routes/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
-│   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance"
+│   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance" (résumé : core/accueil_resume.py)
 │   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline, suggestion de surcharge)
 │   ├── programme.py               # CRUD programme + planning + import/export
 │   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement, poids corporel (/progres/poids)
@@ -180,7 +180,7 @@ pwa/
 
 ## Navigation (4 onglets)
 
-1. **🏠 Accueil** (`/accueil`) — Dashboard, planning semaine compact, streak, carte « Prochaine séance » cliquable, stats
+1. **🏠 Accueil** (`/accueil`) — style « Instrument » (13/10, `core/accueil_resume.py`) : la date ; la prochaine séance en très grand (exercices, séries, premier exercice) et son bouton « Commencer » / « Faire maintenant » ; la semaine en barres (faite = vert, aujourd'hui = cadre blanc, prévue = gris avec l'initiale, manquée = pointillés orange, repos = trait bas) ; tuiles Poids (dernière pesée, pente sur 6 semaines par moindres carrés) et Kcal du jour (PRO ; volume de la semaine pour un compte gratuit) ; dernier record (dernière série qui bat la force estimée, Epley, d'un jour précédent ; les répétitions au poids du corps). Puis, à plat : progrès, défi, semaines d'affilée, chiffres de la semaine, partage, badges
 2. **💪 Séance** (`/seance`) — Sélection séance du jour, saisie exercices, ajout cardio inline
 3. **📈 Progrès** (`/progres`) — Calendrier mensuel, volume hebdo, body map, hall of fame, zoom mouvement
 4. **📋 Plus** (`/plus`) → Premium · Coach IA · Programme · Nutrition · Cardio · Gestion · Tutoriel (l'Arcade a été retirée le 01/10/2026 : hors sujet, audit du 30/09)

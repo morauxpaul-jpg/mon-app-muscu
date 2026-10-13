@@ -26,7 +26,7 @@ def _fait(fake, d, seance):
 
 def _compteur(client):
     html = client.get("/accueil").get_data(as_text=True)
-    m = re.search(r'SÉANCES</div>\s*<div class="stat-value">(\d+)/(\d+)', html)
+    m = re.search(r'class="acc-semaine-compte">(\d+) / (\d+)<', html)
     return int(m.group(1)), int(m.group(2))
 
 

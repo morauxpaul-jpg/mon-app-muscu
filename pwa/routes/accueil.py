@@ -8,7 +8,7 @@ from flask import Blueprint, render_template, g, request, session
 
 from datetime import date as _date, datetime as _datetime
 
-from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day
+from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day, list_body_weight
 from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, continuous_week, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
 # La normalisation du muscle vivait ici EN DOUBLE, et les deux copies
@@ -17,6 +17,7 @@ from core.seance_semaine import _normalize_hist
 from core.rotation import planning_semaine, seance_prevue
 from core.hist import is_cardio as _is_cardio_row, is_perf as _is_perf, is_logged as _is_real_perf, tonnage
 from core.analytics import track
+from core.accueil_resume import contenu_seance, date_courte, dernier_record, poids_resume
 
 # Upsell post-win : un free qui vient de franchir ce cap de séances distinctes
 # voit, UNE seule fois, une invitation PRO au moment où la motivation est haute
@@ -304,6 +305,8 @@ def index():
             "date_short": f"{d.day:02d}/{d.month:02d}",
             "date_iso": d.strftime("%Y-%m-%d"),
             "is_today": d == today,
+            # La séance prévue ce jour-là : la barre de la semaine l'annonce.
+            "seance": seance_prevue(prog, d),
             **info,
         })
 
@@ -401,6 +404,8 @@ def index():
             # 06/10, I-1). Le jour prévu part en `prevue`, pour le bandeau
             # « En avance ».
             "date_lien": today.strftime("%Y-%m-%d"),
+            # Ce que la séance contient : « 3 exercices · 10 séries ».
+            **contenu_seance(prog, seance_name),
         }
         break
 
@@ -632,9 +637,21 @@ def index():
         logger.warning("faits marquants FAILED: %s", e)
         progres = []
 
+    # Tuiles du style « Instrument » : le poids (dernière pesée et pente sur
+    # six semaines) et le dernier record battu (core/accueil_resume.py).
+    try:
+        poids = poids_resume(list_body_weight(limit=60), today)
+    except Exception as e:  # table des pesées absente ou base indisponible
+        logger.warning("accueil : pesées indisponibles (%s)", type(e).__name__)
+        poids = None
+    record = dernier_record(hist)
+
     return render_template(
         "accueil.html",
         active="accueil",
+        date_courte=date_courte(today),
+        poids=poids,
+        record=record,
         decharge=decharge,
         decharge_en_cours=decharge_en_cours,
         progres=progres,
