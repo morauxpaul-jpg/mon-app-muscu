@@ -6,6 +6,7 @@ le « Dernière fois » et le remplacement de séries au passage du Nouvel An.
 """
 import datetime as dt
 import json
+import re
 import types
 
 from conftest import USER_ID, CSRF, prog_lu
@@ -100,7 +101,9 @@ def test_derniere_fois_traverse_le_nouvel_an(fake_db, logged_in):
     r = logged_in.get(f"/seance?date={MONDAY_W02.isoformat()}&mode=prefaite&name=Push")
     assert r.status_code == 200
     html = r.data.decode("utf-8")
-    assert "80kg" in html  # last_summary "80kg × 8" injecté dans le payload exo
+    # last_summary « 80 kg × 8 » injecté dans le payload exo (JSON : l'espace
+    # insécable peut y être échappée).
+    assert re.search(r"80(\u00a0|\\u00a0)kg", html), "résumé « Dernière fois » absent"
 
 
 def test_save_exo_remplace_les_lignes_du_meme_jour(fake_db, logged_in):

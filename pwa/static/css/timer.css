@@ -18,7 +18,7 @@
   font-size: 0.72rem;
   color: var(--text-2);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .iso-chrono-series { font-weight: 600; color: var(--text-1); }
@@ -79,8 +79,8 @@
 }
 
 .iso-sets-done li.done {
-  color: var(--success, #34c759);
-  background: var(--success-bg, rgba(52,199,89,0.12));
+  color: var(--success, #c8f031);
+  background: var(--success-bg, rgba(200,240,49,0.12));
 }
 
 .iso-chrono-row-actions {

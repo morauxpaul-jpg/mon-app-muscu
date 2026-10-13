@@ -5,7 +5,7 @@
 <style>
   .faq-intro { font-size:0.85rem; color:var(--text-2); line-height:1.5; margin:0 0 14px; }
   .faq-group-title {
-    font-size:0.72rem; letter-spacing:1px; font-weight:600;
+    font-size:0.72rem; letter-spacing: 0; font-family: var(--font-display); font-weight:600;
     color:var(--accent); text-transform:uppercase;
     margin:18px 0 8px; display:flex; align-items:center; gap:6px;
   }
@@ -53,7 +53,7 @@
 {% endblock %}
 
 {% block content %}
-  <a href="/plus" class="btn label-icon s-7dc027"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
+  <a href="/plus" class="btn label-icon s-7dc027 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#help-circle"/></svg>FAQ &amp; confidentialité</h1>
 

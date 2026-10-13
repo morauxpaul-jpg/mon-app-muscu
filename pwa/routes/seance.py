@@ -33,7 +33,7 @@ from core.seance_semaine import (_date_label, _display_week, _find_done_session,
                                  _iso_week, _normalize_hist, _parse_date)
 from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows,
                                     _last_session_sets, _norm, _previous_weeks_data,
-                                    _suggestion_for, _cible_du_programme)
+                                    _suggestion_for, _cible_du_programme, resume_series)
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import _appliquer_substituts, _apply_seance_order
 from core.seance_saisie import (MESSAGE_DATE_A_VENIR, _form_date, _known_exo_names,
@@ -471,9 +471,8 @@ def save_exo():
         "record": _best_record(hist, exo_final, is_bw),
         "suggestion": _suggestion_for(hist, exo_final, seance, date_str, is_bw,
                                       _cible_du_programme(get_prog(), seance, exo_base)),
-        "last_summary": ", ".join(
-            "%gkg × %d" % (r["Poids"], r["Reps"]) for r in travail if r["Reps"] > 0
-        ),
+        "last_summary": resume_series(
+            (r["Poids"], int(r["Reps"])) for r in travail if r["Reps"] > 0),
     })
 
 
@@ -683,9 +682,7 @@ def api_variant_history():
         suggestion = _suggestion_for(hist, exo_final, seance, date_str, is_bw,
                                      _cible_du_programme(prog, seance, exo_base))
 
-    last_summary = ""
-    if last_sets:
-        last_summary = ", ".join(f"{s['poids']:g}kg × {s['reps']}" for s in last_sets)
+    last_summary = resume_series((s["poids"], s["reps"]) for s in last_sets)
 
     pw_display = []
     for pw in prev_weeks:

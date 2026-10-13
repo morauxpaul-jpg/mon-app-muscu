@@ -22,8 +22,11 @@
 
 .icon-success { color: var(--success); }
 .icon-danger  { color: var(--danger); }
-.icon-accent  { color: var(--accent); }
-.icon-violet  { color: var(--accent); }
+/* Style « Instrument » : une icône décorative prend la couleur du texte
+   qui la porte (gris dans un libellé, blanc dans un titre, vert seulement
+   dans une action). */
+.icon-accent  { color: currentColor; }
+.icon-violet  { color: currentColor; }
 .icon-gold    { color: var(--gold); }
 .icon-silver  { color: var(--silver); }
 .icon-bronze  { color: var(--bronze); }
@@ -46,7 +49,7 @@
 .icon-btn:hover  { border-color: var(--border-hover); }
 
 .exo-bullet {
-  display: inline-block;
+  display: none;
   width: 3px;
   height: 1em;
   background: var(--accent);

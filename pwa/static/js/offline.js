@@ -22,7 +22,7 @@
     banner.style.cssText =
       "position:fixed;top:0;left:0;right:0;z-index:10000;padding:8px 16px;" +
       "background:rgba(255,159,10,0.95);color:#0a0a1a;text-align:center;" +
-      "font-size:0.8rem;font-weight:700;letter-spacing:0.5px;" +
+      "font-size:0.8rem;font-weight:700;letter-spacing:0;" +
       "box-shadow:0 2px 12px rgba(255,159,10,0.4);";
     document.body.appendChild(banner);
     // Décale le contenu
@@ -331,9 +331,9 @@
   }
 
   var TOAST_COLORS = {
-    ok:   ["rgba(52,199,89,0.15)", "rgba(52,199,89,0.45)", "#4FCB8E"],
+    ok:   ["rgba(200,240,49,0.15)", "rgba(200,240,49,0.45)", "#4FCB8E"],
     warn: ["rgba(255,159,10,0.15)", "rgba(255,159,10,0.45)", "#FF9F0A"],
-    info: ["rgba(120,200,255,0.12)", "rgba(120,200,255,0.40)", "#78c8ff"],
+    info: ["rgba(200,240,49,0.12)", "rgba(200,240,49,0.40)", "#c8f031"],
   };
 
   function showToast(msg, kind) {
@@ -346,7 +346,7 @@
       "margin:0 auto;max-width:420px;text-align:center;" +
       "background:" + c[0] + ";border:1px solid " + c[1] + ";color:" + c[2] + ";" +
       "padding:11px 18px;border-radius:12px;font-size:0.88rem;font-weight:500;" +
-      "z-index:9999;backdrop-filter:blur(12px);";
+      "z-index:9999;";
     document.body.appendChild(t);
     // Le texte est posé APRÈS l'insertion : un lecteur d'écran n'annonce une
     // zone live que si elle existait déjà au moment où son contenu change.

@@ -194,6 +194,13 @@ def _rpe_de(r):
         return parse_rpe(r.get("Remarque"))
 
 
+def resume_series(series):
+    """« 82,5 kg × 9, 80 kg × 8 » : séries (poids, reps) au format français.
+    Une espace insécable colle l'unité au nombre (jamais « 82,5 » en fin de
+    ligne et « kg » au début de la suivante)."""
+    return ", ".join(f"{p:g}".replace(".", ",") + f"\u00a0kg × {r}" for p, r in series)
+
+
 def _last_session_sets(hist, exo_final, seance, date_str):
     """Séries de la dernière séance où cet exo a été réalisé, sous forme de
     liste de dicts {reps, poids, rpe}. Utilisé pour le pré-remplissage des

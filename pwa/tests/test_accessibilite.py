@@ -137,7 +137,7 @@ def test_chaque_controle_a_un_nom_annoncable(fake_db, logged_in, path):
 
 
 def test_les_trois_niveaux_de_texte_passent_le_contraste_aa():
-    """4,5:1 sur le fond de carte, calculé, pas estimé à l'œil."""
+    """4,5:1 sur chaque fond, calculé, pas estimé à l'œil."""
     css = io.open("static/css/tokens.css", encoding="utf-8").read()
 
     def alpha(var):
@@ -156,14 +156,26 @@ def test_les_trois_niveaux_de_texte_passent_le_contraste_aa():
     def over(a, bg):
         return tuple(a * 255 + (1 - a) * c for c in bg)
 
-    base = (10, 10, 15)                       # --bg-base
-    carte = over(0.045, base)                 # --bg-surface par-dessus
+    def hexa(var):
+        m = re.search(rf"--{var}:\s*#([0-9a-fA-F]{{6}})\b", css)
+        assert m, f"--{var} introuvable (couleur pleine attendue)"
+        h = m.group(1)
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+    def ratio(a, b):
+        la, lb = lum(a), lum(b)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+    # Fonds pleins depuis le style « Instrument » : noir, blocs, blocs relevés.
+    fonds = [hexa(v) for v in ("bg-base", "bg-surface", "bg-elevated")]
     for var in ("text-1", "text-2", "text-3"):
         a = alpha(var)
-        for fond in (base, carte):
-            fg, lb = lum(over(a, fond)), lum(fond)
-            ratio = (max(fg, lb) + 0.05) / (min(fg, lb) + 0.05)
-            assert ratio >= 4.5, f"--{var} ({a}) tombe à {ratio:.2f}:1"
+        for fond in fonds:
+            r = ratio(over(a, fond), fond)
+            assert r >= 4.5, f"--{var} ({a}) tombe à {r:.2f}:1 sur {fond}"
+    # Le texte posé sur la couleur vive (boutons principaux, séries faites).
+    r = ratio(hexa("on-accent"), hexa("accent"))
+    assert r >= 4.5, f"--on-accent sur --accent tombe à {r:.2f}:1"
 
 
 def test_la_feuille_accessibilite_est_chargee_en_dernier(fake_db, logged_in):

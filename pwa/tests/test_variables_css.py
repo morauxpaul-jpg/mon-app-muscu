@@ -24,7 +24,7 @@ GABARITS = RACINE / "templates"
 
 # Tokens référencés sans définition ET sans repli : autant de règles mortes.
 # À vider, pas à allonger.
-MANQUANTS_CONNUS = {"--border-subtle"}
+MANQUANTS_CONNUS = set()
 
 # Posés par du JavaScript à l'exécution : introuvables dans les sources.
 POSES_EN_JS = {"--dx", "--ad-banner-h", "--vh"}

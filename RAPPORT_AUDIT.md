@@ -1,8 +1,25 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Suivi du 13/10/2026 — nouveau style « Instrument », fondations (axe 3, design) · note inchangée : **6,6 / 10**
+
+Sur une branche, **ni fusionné ni déployé**. Aucune donnée ni migration. Le propriétaire trouvait que l'app « ressemble aux apps vibe codées » ; trois directions ont été maquettées, il a choisi la **B, « Instrument »**. Cette première étape change la base commune à toutes les pages ; l'écran de séance et les pages une par une suivront.
+
+| Constat | Correction | Preuve |
+|---|---|---|
+| Fond en dégradés, cartes translucides floutées, reflets, bleu électrique partout : les marqueurs d'une interface générée | Noir uni, blocs `#111` plats, filets gris, **une seule couleur vive** (vert citron) réservée aux actions principales, séries faites et records ; sélections en blanc | captures avant/après de 8 pages (Chromium, 390 px) |
+| Libellés en capitales très espacées (« S É A N C E »), pilules partout, emojis (👋 🏋️ 🔥 🏅) | Capitales étroites sans espacement, coins à 4 px, icônes du sprite au lieu des emojis de l'accueil | `grep` : plus aucun `letter-spacing` ≥ 0,4 px, plus de `backdrop-filter` |
+| Police Inter chargée chez Google à chaque ouverture | **Barlow / Barlow Condensed** servies par l'app (licence OFL jointe), en cache hors-ligne | `service-worker.js` v135 |
+| **Trouvé : texte blanc sur le vert** (14 boutons, onglets et pastilles) — 1,3:1, illisible | Texte noir sur le vert (`--on-accent`), 16:1 ; les 2 qui étaient des sélections passent en blanc | `test_les_trois_niveaux_de_texte_passent_le_contraste_aa` (fonds et vert lus dans `tokens.css`) |
+| Manquer une séance s'affichait en **rouge** dans le calendrier | Pointillés orange : manquer n'est pas une faute ; rouge réservé à « supprimer » | capture Progrès |
+| « Dernière fois : 82.5kg × 9 », « 107.2 kg » | Format français : « 82,5 kg × 9 », « 107,2 kg » | `resume_series` ; 3 tests mis à jour |
+| BMR / TDEE affichés en sigles, avant l'objectif | L'objectif d'abord, puis « Au repos » et « Dépense du jour » (sigles en infobulle) | capture Nutrition |
+| **Trouvé : `--border-subtle` n'était défini nulle part** : 18 filets de séparation ne se dessinaient pas | Défini ; la liste « tokens manquants connus » est vide | `tests/test_variables_css.py` |
+
+**Illustrations d'exercices (demande du propriétaire : les garder, compléter, corriger)** — gardées telles quelles, elles s'affichent dans le nouveau style. Inventaire (82 WebP, une par entrée du catalogue, toutes valides) : **environ 19 montrent le mauvais mouvement ou le mauvais matériel** (ex. : `tractions` debout au sol, `hip-thrust` en développé couché, `rowing-barre` debout, `shrugs` copie de `curl-biceps`, `curl-marteau` presque identique au curl, `pompes-declinees` en pompes inclinées, `squat-bulgare` assis) ; **20 noms de la bibliothèque n'ont aucune image** (Développé décliné, Écarté couché, Pull-over, T-bar row, Curl concentré, Russian twist, Farmer walk…). Aucun test ne vérifie qu'une image montre le bon geste. Les refaire passe par `pwa/tools/generate_exercise_art.py` (Gemini) : **bloqué ici, la clé `GEMINI_API_KEY` n'est pas dans l'environnement** et l'image de référence du style d'origine n'est pas dans le dépôt.
+
 ## Suivi du 12/10/2026 — nutrition : recettes, aliments perso, cible qui suit la balance (axe 7) · note inchangée : **6,6 / 10**
 
-Sur une branche, **ni fusionné ni déployé** ; la migration **v49** (table `aliments_perso`) n'est pas appliquée. Le « pour 8 » de l'axe 7 demande « aliments perso, recettes, cible adaptative, 2 semaines de saisie réelle ». Relevé en lecture seule sur le compte du propriétaire : 19 repas sur 7 jours, dont 17 saisis en bloc ; « Pâtes carbonara » notées trois fois en septembre, à 1 150, 897 puis 880 kcal ; 20 pesées depuis janvier.
+**Fusionné (PR #42, commit `372de3c`) et déployé** le 13/10 à 13:47 UTC (déploiement Railway `b9a209f5`) ; la migration **v49** (table `aliments_perso`) a été appliquée juste avant, avec l'accord du propriétaire, et vérifiée (7 colonnes, RLS active sans politique, droits à `service_role` seul). Journal du démarrage : « 17 tables et vues vérifiées, rien ne manque ». Le « pour 8 » de l'axe 7 demande « aliments perso, recettes, cible adaptative, 2 semaines de saisie réelle ». Relevé en lecture seule sur le compte du propriétaire : 19 repas sur 7 jours, dont 17 saisis en bloc ; « Pâtes carbonara » notées trois fois en septembre, à 1 150, 897 puis 880 kcal ; 20 pesées depuis janvier.
 
 | Constat | Correction | Preuve |
 |---|---|---|

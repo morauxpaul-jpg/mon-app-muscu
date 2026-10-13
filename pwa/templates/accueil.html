@@ -14,10 +14,8 @@
     </div>
   {% else %}
 
-  <h1 class="app-logo">Muscu Tracker</h1>
-  {% if prenom %}
-    <div class="s-e0ec64">Bonjour <strong class="s-38f301">{{ prenom }}</strong></div>
-  {% endif %}
+  {# Style « Instrument » : un titre aligné à gauche, comme toutes les pages. #}
+  <h1 class="accueil-titre">{% if prenom %}Bonjour {{ prenom }}{% else %}Muscu Tracker{% endif %}</h1>
 
   {% if show_reactivation %}
     {# x-show pilote `display` du wrapper ; le flex reste sur la carte interne
@@ -25,7 +23,6 @@
        bouton « Reprendre » déborde sur le contenu du dessous). #}
     <div class="s-da12f2" x-data="bandeauRetour" x-show="show">
       <div class="card s-59ad76">
-        <span class="s-90b8e7">👋</span>
         <div class="s-7f784d">
           <div class="s-b1b6e1">Content de te revoir !</div>
           <div class="s-b93cfb">Ça fait {{ days_inactive }} jours — on reprend en douceur&nbsp;?</div>
@@ -152,15 +149,15 @@
   {% endif %}
 
   {% if challenge %}
-    <div class="card" style="margin-bottom:12px; border-color:{% if challenge.done %}var(--success){% else %}var(--accent){% endif %};">
+    <div class="card" style="margin-bottom:12px; border-color:{% if challenge.done %}var(--success){% else %}var(--border-subtle){% endif %};">
       <div class="s-a3d4bc">
         <div class="card-label s-116966">DÉFI DE LA SEMAINE</div>
         {% if challenges_won > 0 %}
-          <div class="s-2f4568">🏅 {{ challenges_won }} validé{% if challenges_won > 1 %}s{% endif %}</div>
+          <div class="s-2f4568 label-icon"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#award"/></svg>{{ challenges_won }} validé{% if challenges_won > 1 %}s{% endif %}</div>
         {% endif %}
       </div>
       <div class="flex-show s-7022cd">
-        <span class="s-ac3c18">{{ challenge.emoji }}</span>
+        <svg class="icon icon-lg s-ac3c18" aria-hidden="true"><use href="/static/img/icons.svg#{{ challenge.icone }}"/></svg>
         <div class="s-7f784d">
           <div class="s-7b148a">{{ challenge.title }}</div>
           <div class="s-71a611">{{ challenge.desc }}</div>
@@ -168,11 +165,11 @@
       </div>
       <div class="s-56f435">
         <div class="s-cc7254">
-          <div style="height:100%; width:{{ challenge.pct }}%; border-radius:999px; background:{% if challenge.done %}var(--success){% else %}linear-gradient(90deg, var(--accent), var(--accent-hover)){% endif %}; transition:width .4s ease;"></div>
+          <div style="height:100%; width:{{ challenge.pct }}%; border-radius:2px; background:{% if challenge.done %}var(--success){% else %}var(--accent){% endif %}; transition:width .4s ease;"></div>
         </div>
         <div class="s-250fa0">
           {% if challenge.done %}
-            <span class="s-7abf61">{% if challenge_just_won %}🎉 Bravo, défi validé !{% else %}✅ Défi validé !{% endif %}</span>
+            <span class="s-7abf61">{% if challenge_just_won %}Bravo, défi validé !{% else %}Défi validé{% endif %}</span>
           {% else %}
             <span class="s-b3842e">{{ challenge.current_fmt }} / {{ challenge.target_fmt }} {{ challenge.unit }}</span>
             <span class="s-8d7d00">{{ challenge.pct }}%</span>
@@ -340,10 +337,10 @@
   <div class="s-33fced" x-data="{ open: true }" x-show="open"
        @click.self="open=false">
     <div class="s-acf69f">
-      <div class="s-feab50">🔥</div>
+      <div class="s-feab50"><svg class="icon icon-lg" aria-hidden="true"><use href="/static/img/icons.svg#flame"/></svg></div>
       <h3 class="s-748a7b">{{ upsell_sessions }} séances au compteur !</h3>
       <p class="s-78c1f2">
-        Tu as pris le rythme 💪 Passe en PRO pour accélérer : <strong class="s-38f301">Coach IA</strong>, <strong class="s-38f301">générateur de programme</strong>, nutrition et stats détaillées.
+        Tu as pris le rythme. Passe en PRO pour accélérer : <strong class="s-38f301">Coach IA</strong>, <strong class="s-38f301">générateur de programme</strong>, nutrition et stats détaillées.
       </p>
       <a href="/premium" class="btn primary s-f05337" data-haptic="1">Découvrir PRO</a>
       <button type="button" class="btn btn-cancel s-a4a5b8" @click="open=false">Plus tard</button>

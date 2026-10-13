@@ -4,8 +4,6 @@
    Glass effects dans glass.css (importé après components).
    ═══════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
@@ -83,7 +81,7 @@ a:hover { color: var(--accent-hover); }
 .topbar-sub   { font-size: var(--text-sm); color: var(--text-3); margin-top: 2px; }
 .avatar {
   width: 34px; height: 34px; border-radius: 50%;
-  background: var(--accent-bg); color: var(--accent);
+  background: var(--bg-elevated); color: var(--text-1);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--text-sm); font-weight: 500;
 }
@@ -188,8 +186,8 @@ input[type="url"], textarea, select {
   transition: border-color var(--ease-fast), box-shadow var(--ease-fast);
 }
 .input:focus, input:focus, textarea:focus, select:focus {
-  border-color: rgba(120,200,255,0.4);
-  box-shadow: 0 0 0 3px rgba(120,200,255,0.08);
+  border-color: rgba(200,240,49,0.4);
+  box-shadow: 0 0 0 3px rgba(200,240,49,0.08);
 }
 .input::placeholder, input::placeholder, textarea::placeholder {
   color: var(--text-disabled);
@@ -326,7 +324,7 @@ input[type="url"], textarea, select {
 .rest-timer-label {
   font-size: var(--text-xs);
   color: var(--text-3);
-  letter-spacing: 0.08em;
+  letter-spacing: 0; font-family: var(--font-display);
   text-transform: uppercase;
   font-weight: 500;
 }
@@ -342,9 +340,9 @@ input[type="url"], textarea, select {
   border-radius: var(--radius-full);
 }
 .rest-timer-presets button.active {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-  color: var(--accent);
+  border-color: var(--text-1);
+  background: rgba(255,255,255,0.08);
+  color: var(--text-1);
 }
 .rest-timer-done {
   color: var(--success);
@@ -459,7 +457,7 @@ input[type="url"], textarea, select {
 }
 .seance-progress-label { color: var(--text-3); }
 .seance-progress-vol {
-  color: var(--accent);
+  color: var(--text-1);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
@@ -481,9 +479,9 @@ input[type="url"], textarea, select {
   gap: 6px;
   flex-wrap: wrap;
 }
-.exo-suggestion--load { color: var(--accent); }
-.exo-suggestion--load .icon { color: var(--accent); }
-.exo-suggestion--reps .icon { color: var(--accent); }
+.exo-suggestion--load { color: var(--text-1); }
+.exo-suggestion--load .icon { color: var(--text-2); }
+.exo-suggestion--reps .icon { color: var(--text-2); }
 .exo-suggestion--hold .icon { color: var(--text-3); }
 .exo-suggestion-apply {
   background: var(--accent-bg, rgba(94,158,255,0.12));
@@ -584,7 +582,7 @@ textarea:focus-visible,
   top: -48px;
   z-index: 10001;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 0.85rem;

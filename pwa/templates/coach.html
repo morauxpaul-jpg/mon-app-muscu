@@ -421,8 +421,6 @@
       inset: 0;
       z-index: 290;
       background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
     }
     .coach-drawer {
       position: fixed;
@@ -434,9 +432,7 @@
       max-width: 300px;
       display: flex;
       flex-direction: column;
-      background: rgba(16,18,28,0.92);
-      backdrop-filter: blur(36px) saturate(180%);
-      -webkit-backdrop-filter: blur(36px) saturate(180%);
+      background: #111111;
       border-right: 0.5px solid var(--border-default);
       box-shadow: 8px 0 40px rgba(0,0,0,0.5);
       transform: translateX(-105%);
@@ -450,7 +446,7 @@
       justify-content: space-between;
       font-size: 0.78rem;
       font-weight: 600;
-      letter-spacing: 1px;
+      letter-spacing: 0; font-family: var(--font-display);
       text-transform: uppercase;
       color: var(--text-3);
       padding: 0 4px 10px;
@@ -462,10 +458,10 @@
       gap: 6px;
       width: 100%;
       padding: 11px;
-      background: var(--accent-bg);
-      border: 0.5px solid var(--accent);
-      border-radius: 12px;
-      color: var(--accent);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
       font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
@@ -493,7 +489,7 @@
       border-radius: 10px;
       transition: background 0.12s;
     }
-    .coach-conv-item.active { background: var(--accent-bg); }
+    .coach-conv-item.active { background: rgba(255,255,255,0.08); }
     .coach-conv-item:not(.active):active { background: var(--bg-surface); }
     .coach-conv-link {
       flex: 1;
@@ -506,7 +502,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .coach-conv-item.active .coach-conv-link { color: var(--accent); font-weight: 500; }
+    .coach-conv-item.active .coach-conv-link { color: var(--text-1); font-weight: 500; }
     .coach-conv-del {
       display: flex;
       align-items: center;
@@ -556,7 +552,7 @@
     .msg-user .msg-bubble {
       background: var(--accent-bg);
       color: var(--text-1);
-      border: 1px solid rgba(120,200,255,0.15);
+      border: 1px solid var(--border-glass-bright);
       border-bottom-right-radius: 4px;
     }
     .msg-bot .msg-bubble {
@@ -591,7 +587,7 @@
       margin: 10px 0 4px;
       font-size: 0.7rem;
       color: var(--text-3);
-      letter-spacing: 1px;
+      letter-spacing: 0; font-family: var(--font-display);
       text-transform: uppercase;
       position: relative;
     }
@@ -608,10 +604,10 @@
       margin-top: 4px;
     }
     .coach-suggestion {
-      background: var(--accent-bg);
-      border: 0.5px solid var(--accent);
-      color: var(--accent);
-      border-radius: 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      color: var(--text-1);
+      border-radius: var(--radius-sm);
       padding: 8px 12px;
       font-size: 0.78rem;
       cursor: pointer;
@@ -659,7 +655,7 @@
     .coach-textarea:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(120,200,255,0.15);
+      box-shadow: 0 0 0 2px rgba(200,240,49,0.15);
     }
     .coach-textarea::placeholder {
       color: var(--text-3);
@@ -678,11 +674,11 @@
     /* Markdown rendu dans les bulles */
     .msg-bubble .coach-link {
       display: inline-block;
-      background: var(--accent-bg);
-      border: 0.5px solid var(--accent);
-      color: var(--accent);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      color: var(--text-1);
       padding: 2px 9px;
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       text-decoration: none;
       font-weight: 500;
       font-size: 0.86em;
@@ -693,7 +689,7 @@
     .msg-bubble em { font-style: italic; color: var(--text-1); }
     .msg-bubble code {
       background: var(--bg-elevated);
-      color: var(--accent);
+      color: var(--text-1);
       padding: 1px 5px;
       border-radius: 4px;
       font-size: 0.85em;
@@ -708,14 +704,14 @@
     .msg-bubble .md-h {
       margin: 8px 0 4px;
       color: var(--text-1);
-      letter-spacing: 0.5px;
+      letter-spacing: 0;
       text-transform: none;
       text-shadow: none;
       animation: none;
     }
     .msg-bubble h3.md-h { font-size: 1rem; }
     .msg-bubble h4.md-h { font-size: 0.95rem; color: var(--text-1); }
-    .msg-bubble h5.md-h { font-size: 0.88rem; color: var(--accent); }
+    .msg-bubble h5.md-h { font-size: 0.88rem; color: var(--text-1); }
     .msg-bubble .md-h:first-child { margin-top: 0; }
     .msg-group {
       display: flex;

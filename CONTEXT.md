@@ -138,10 +138,11 @@ pwa/
 │   └── error.html                 # Page d'erreur
 ├── static/
 │   ├── css/
-│   │   ├── tokens.css             # Design tokens (couleurs, espacements, radius…)
+│   │   ├── fonts.css              # Barlow + Barlow Condensed, servies par l'app (static/fonts, licence OFL)
+│   │   ├── tokens.css             # Design tokens (couleurs, espacements, radius…) — style « Instrument »
 │   │   ├── theme.css              # Variables, animations, composants globaux
 │   │   ├── components.css         # Cards, stats, grids, boutons
-│   │   ├── glass.css              # Liquid glass (chargé après components.css)
+│   │   ├── surfaces.css           # Habillage plat du style « Instrument » (chargé après components.css ; remplace glass.css)
 │   │   ├── icons.css              # Tailles et couleurs d'icônes (.icon, .icon-sm, .icon-accent…)
 │   │   ├── timer.css / rest-timer.css  # Chrono de repos (local à la séance / barre globale)
 │   │   ├── tutorial.css           # Overlay tutoriel
@@ -169,7 +170,7 @@ pwa/
 │   │   └── barcode.js             # Scan de code-barres via BarcodeDetector (Nutrition), repli saisie manuelle
 │   ├── img/
 │   │   ├── icons.svg              # Sprite SVG (lucide-like) référencé via <use href="…#name"/>
-│   │   └── exercises/             # SVG illustrations exercices
+│   │   └── exercises/             # Illustrations d'exercices : 82 WebP 400×400 (une par entrée du catalogue) + 18 anciens SVG plus affichés
 │   ├── promo/, promo-vip*.mp4/.png # Assets marketing (fiche store, vidéo VIP)
 │   ├── changelog.json             # Notes de version (patch notes modal)
 │   ├── service-worker.js          # SW : Network First, CACHE_VERSION = base ; le SHA du commit est ajouté par app.py
@@ -307,7 +308,7 @@ pwa/
 - Page Progrès, pour tous : séries faites cette semaine par muscle (principal 1, secondaires ½, hors cardio/SESSION/SKIP), face au repère 10-20 (6-16 pour les petits muscles), avec la semaine passée. La carte du corps PRO garde la part relative.
 
 ### Progression
-- **Calendrier mensuel** : cases colorées (vert=fait, rouge=manqué, bleu=à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
+- **Calendrier mensuel** : cases colorées (vert plein = fait, pointillés orange = manqué, gris clair = à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
 - **Volume par semaine** : graphique SVG verrouillé (8 dernières semaines)
 - **Body map** : carte musculaire SVG interactive (polygones depuis `core/body_map.py`) avec % de standard
 - **Standards de force relatifs au gabarit** (`core/strength.py`) : les paliers sont des multiples du poids de corps par muscle et par sexe (bornés 35–200 kg), pas des valeurs absolues — 60 kg au développé ne veut pas dire la même chose à 55 kg qu'à 95 kg. Repli absolu si le poids est inconnu.
@@ -457,7 +458,7 @@ pwa/
 - **v25** (`supabase_schema_v25_vip.sql`) : restée hors de la production jusqu'au 10/10 (contrainte `profiles_tier_check` et index `profiles_tier_idx` absents, vu en comparant à la base rejouée). **Appliquée le 10/10/2026** (14:31 UTC, `20261010143152 v25_vip`) et vérifiée : contrainte et index présents, 15 profils inchangés (7 `free`, 8 `vip`).
 - **Replis bruyants** (10/10) : chaque repli « colonne absente » de la couche données (profil, identité d'exercice, état, calques, réglages, nutrition, abonnement) appelle `core/schema.signaler(e, table)` : journal ERREUR une fois et carte rouge dans /admin, comme le contrôle du démarrage. Avant, ces replis ne disaient rien (audit 4.3).
 - **v48** (`supabase_schema_v48_durcissement.sql`) : retire à `anon`/`authenticated` le droit d'appeler `handle_new_user()` (alerte Supabase 0028/0029) et efface `_profiles`/`_active_profile` des programmes. Rejouée sur un PostgreSQL 16 local (inscription intacte, idempotente). **Appliquée le 10/10/2026** (11:46 UTC) et vérifiée : plus aucun rôle n'a `execute` sur `handle_new_user()`, les alertes 0028/0029 ont disparu de `get_advisors`, 0 programme avec ces clés (9 nettoyés, version +1 chacun), déclencheur `on_auth_user_created` toujours actif.
-- **v49** (`supabase_schema_v49_aliments_perso.sql`, 12/10) : table `aliments_perso` (nom, `food` pour 100 g, `recette` facultative), index `(user_id, updated_at desc)`, fermée au navigateur, effacée avec le compte (clé étrangère + `delete_user_account`). Rejouée deux fois sur un PostgreSQL 16 local : `service_role` écrit, `anon` et `authenticated` refusés, nom vide refusé, cascade à la suppression du compte. **Pas encore appliquée en production** (accord du propriétaire requis) ; le code s'en passe en attendant.
+- **v49** (`supabase_schema_v49_aliments_perso.sql`, 12/10) : table `aliments_perso` (nom, `food` pour 100 g, `recette` facultative), index `(user_id, updated_at desc)`, fermée au navigateur, effacée avec le compte (clé étrangère + `delete_user_account`). Rejouée deux fois sur un PostgreSQL 16 local : `service_role` écrit, `anon` et `authenticated` refusés, nom vide refusé, cascade à la suppression du compte. **Appliquée le 13/10/2026** (accord du propriétaire) et vérifiée : 7 colonnes, RLS active sans politique, droits à `service_role` seul, 0 ligne ; le contrôle du schéma au démarrage compte 17 tables.
 
 ### Tests (pwa/tests)
 - `cd pwa && python -m pytest tests -q` — **1 562 tests** au 12/10/2026 (dont 38 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent, et 5 sur un vrai PostgreSQL avec `PG_TEST_URL` ; la suite JS compte 136 tests). Le décor des tests navigateur (serveur, Chromium) est dans `tests/e2e/conftest.py` ; `tests/e2e` est un paquet, sinon son `conftest` masquerait celui de `tests/`. Playwright : `wait_for_function` reçoit une **fonction** (`"() => …"`), une expression passerait par `eval`, que la CSP refuse. Le serveur des tests navigateur tourne avec `SANS_LIMITE=1` : sans cela, la limite de 60 requêtes par minute répondait 429 au milieu de la suite.
@@ -695,12 +696,15 @@ pwa/
 - **Rapports** : `report-uri /csp/rapport` (`routes/csp.py`, public, hors CSRF) ; chaque blocage arrive dans les journaux « CSP bloqué : directive (ressource) sur /page — fichier:ligne extrait », une fois par processus. **Retour arrière** sans déploiement : `CSP_OBSERVER=1` sur Railway.
 - **Preuves** : `tests/test_csp.py` (en-têtes, jetons, gabarits, expressions) ; `tests/e2e/test_csp_navigateur.py` (22 pages × profils gratuit et PRO, plus admin et pages publiques, sans une erreur Alpine ni refus CSP ; un script injecté est bloqué ; bibliothèque, renommage, déplacement, fiche, repas, disques joués pour de vrai). **App native** (lu dans Capacitor Android 7.6.6, `Bridge.loadWebView` et `WebViewLocalServer.handleProxyRequest`) : le pont est injecté par `addDocumentStartJavaScript`, que la CSP de la page ne gouverne pas ; sur une WebView trop ancienne pour cela, Capacitor relaie la page en ne gardant **pas** nos en-têtes, donc sans CSP. À confirmer sur téléphone après déploiement : un blocage arriverait dans les journaux.
 
-## Thème (refonte UI dark minimal — style Strong / Hevy)
-- Background : `#0a0a0f` (`--bg-base`, repris par `theme-color` dans `base.html`)
-- Tokens dans `static/css/tokens.css` (palette, espacements, radius)
-- Accent : bleu doux ; Gold pour VIP ; rouge pour danger
-- Icônes : sprite SVG `static/img/icons.svg` consommé via `<svg><use href="/static/img/icons.svg#name"/></svg>`
-- Font : système (sans-serif)
+## Thème — style « Instrument » (13/10/2026, choisi par le propriétaire sur maquettes)
+L'ancien habillage « verre » (dégradés, flous, bleu électrique, pilules, libellés espacés) faisait « app générée par IA ». Remplacé par un style plat d'appareil de mesure :
+- **Fond** noir `#000000` (`--bg-base`, repris par `theme-color` et le manifeste) ; blocs `#111111` (`--bg-surface`), blocs relevés `#1a1a1a` ; filets `#262626` / `#333333`. Ni dégradé, ni flou, ni ombre.
+- **Une seule couleur vive** : vert citron `#c8f031` (`--accent`), texte **noir** dessus (`--on-accent`). Réservé aux actions principales, aux séries faites et aux records. Une sélection (onglet, filtre, jour choisi) est **blanche**, jamais verte. Orange `#ff9f43` pour « en retard / manqué » seulement (manquer n'est pas une faute : jamais de rouge) ; rouge `#ff5a4e` pour supprimer seulement.
+- **Polices** servies par l'app (`static/fonts`, licence OFL, plus d'appel à Google Fonts) : **Barlow** pour le texte, **Barlow Condensed** pour les titres, libellés et chiffres. Titres de page en capitales, alignés à gauche ; libellés en capitales étroites, sans espacement de lettres.
+- Coins à 4 px (`--radius-full` aussi : plus de pilules). « Retour » est un lien texte (`.lien-retour`), pas un bouton encadré. Pas d'emoji dans l'interface : icônes du sprite.
+- Icônes : sprite SVG `static/img/icons.svg` consommé via `<svg><use href="/static/img/icons.svg#name"/></svg>` ; `.icon-accent` prend la couleur du texte qui la porte.
+- Nombres au format français (« 82,5 kg », `resume_series` dans `core/seance_historique.py`, filtre `|fr`).
+- Contraste vérifié par calcul (`tests/test_accessibilite.py`) : texte sur les trois fonds, et noir sur vert.
 
 ## Intégration continue
 - `.github/workflows/tests.yml` — à chaque push sur `main` et sur chaque PR : `pytest` (dont les tests navigateur, Chromium installé par la CI) puis `node tests/js/run.js`, sur **Python 3.11** comme en production. Une étape refuse de démarrer si `runtime.txt` et le workflow ne sont plus d'accord sur la version.
