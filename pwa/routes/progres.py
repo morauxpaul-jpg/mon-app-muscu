@@ -70,29 +70,36 @@ def _was_made_up(planned, d, today, prog, done_dates_by_seance, window=MAKEUP_WI
     return False
 
 
+# Style « Instrument » : une seule teinte, du gris au vert vif. Plus il y
+# en a, plus c'est vert ; jamais de rouge (un muscle peu travaillé n'est
+# pas une faute) ni de bleu néon.
+ECHELLE_VERTE = ("#3c480f", "#6e841b", "#9cbb26", "#c8f031")
+
+
 def _get_col(pct):
+    """Couleur selon le niveau de force (% du standard)."""
     if pct == 0:
-        return "#1a2a3a"
+        return "#1a1a1a"
     if pct < 40:
-        return "#FF453A"
+        return ECHELLE_VERTE[0]
     if pct < 70:
-        return "#FF9F0A"
+        return ECHELLE_VERTE[1]
     if pct < 95:
-        return "#58CCFF"
-    return "#00FF7F"
+        return ECHELLE_VERTE[2]
+    return ECHELLE_VERTE[3]
 
 
 def _get_volume_col(vol_pct):
     """Couleur par volume relatif (pourcentage du total de la période)."""
     if vol_pct == 0:
-        return "#555555"       # gris — non travaillé
+        return "#333333"       # non travaillé
     if vol_pct <= 20:
-        return "#7EC8E3"       # bleu clair
+        return ECHELLE_VERTE[0]
     if vol_pct <= 50:
-        return "#3B82F6"       # bleu moyen
+        return ECHELLE_VERTE[1]
     if vol_pct <= 80:
-        return "#2563EB"       # bleu vif
-    return "#00FFFF"           # cyan néon — dominant
+        return ECHELLE_VERTE[2]
+    return ECHELLE_VERTE[3]    # dominant
 
 
 def _sid(m):
@@ -555,8 +562,10 @@ def progres():
         if not b or not r.get("Date"):
             continue
         _by_base.setdefault(b, set()).add(r["Date"])
-    top_exos = [{"name": b, "sessions": len(d)}
-                for b, d in sorted(_by_base.items(), key=lambda kv: -len(kv[1]))[:6]]
+    # Style « Instrument » : chaque ligne porte la force estimée récente et
+    # sa mini-courbe (core/exercise_stats.resume_mouvement).
+    top_exos = [r for b, _ in sorted(_by_base.items(), key=lambda kv: -len(kv[1]))[:6]
+                if (r := exercise_stats.resume_mouvement(df_p, b))]
 
     # ── Calendrier mensuel ──────────────────────────────────
     today = today_paris()
@@ -719,6 +728,8 @@ def progres():
         cal_year=cal_year,
         cal_month=cal_month,
         cal_rate=cal_rate,
+        cal_faites=done_count,
+        cal_prevues=planned_count,
         prev_m=prev_m, prev_y=prev_y,
         next_m=next_m, next_y=next_y,
         vol_labels=vol_labels,

@@ -113,13 +113,8 @@
         <svg class="exo-chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}"
              preserveAspectRatio="none" role="img"
              aria-label="Évolution du {{ jour(chart.points[0].date) }} au {{ jour(chart.last.date) }} : de {{ chart.min|fr }} à {{ chart.max|fr }} {{ metric_unit }}{% if tendance %}, tendance {{ tendance.par_mois|fr(true) }} {{ metric_unit }} par mois{% endif %}">
-          <defs>
-            <linearGradient id="exoFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
-              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <polygon points="{{ chart.area }}" fill="url(#exoFill)"/>
+          {# Style « Instrument » : une aire à plat, sans dégradé. #}
+          <polygon points="{{ chart.area }}" fill="var(--accent)" fill-opacity="0.08"/>
           <polyline class="exo-line" points="{{ chart.polyline }}"/>
           {% if chart.tendance %}
             <line class="exo-trend" x1="{{ chart.tendance.x1 }}" y1="{{ chart.tendance.y1 }}"

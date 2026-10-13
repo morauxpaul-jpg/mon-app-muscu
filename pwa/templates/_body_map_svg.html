@@ -11,9 +11,10 @@
 
 {% macro radial_def(pfx, m, s) -%}
   <radialGradient id="{{ pfx }}{{ s.sid }}" cx="50%" cy="38%" r="65%">
+    {# Style « Instrument » : teinte pleine, sans dégradé (l'échelle de vert
+       de routes/progres.py porte seule l'intensité). #}
     <stop offset="0%" stop-color="{{ s.col }}" stop-opacity="1"/>
-    <stop offset="55%" stop-color="{{ s.col }}" stop-opacity="0.75"/>
-    <stop offset="100%" stop-color="{{ s.col }}" stop-opacity="0.35"/>
+    <stop offset="100%" stop-color="{{ s.col }}" stop-opacity="1"/>
   </radialGradient>
 {%- endmacro %}
 
