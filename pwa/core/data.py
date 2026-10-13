@@ -216,6 +216,30 @@ def sum_nutrition_range(date_from, date_to):
     return db.sum_nutrition_range(_uid(), date_from, date_to)
 
 
+# ── Mes aliments et mes recettes (v49) ─────────────────────────────────
+AlimentsIndisponibles = db.AlimentsIndisponibles
+
+
+def list_aliments_perso():
+    return db.list_aliments_perso(_uid())
+
+
+def get_aliment_perso(aliment_id):
+    return db.get_aliment_perso(_uid(), aliment_id)
+
+
+def enregistrer_aliment_perso(nom, food, recette, aliment_id=None):
+    return db.enregistrer_aliment_perso(_uid(), nom, food, recette, aliment_id)
+
+
+def supprimer_aliment_perso(aliment_id):
+    return db.supprimer_aliment_perso(_uid(), aliment_id)
+
+
+def list_all_aliments_perso():
+    return db.list_all_aliments_perso(_uid())
+
+
 # ── Coach IA (historique + conversations) ───────────────────────────────
 def list_coach_messages(conversation_id=None, limit=50):
     return db.list_coach_messages(_uid(), conversation_id, limit)

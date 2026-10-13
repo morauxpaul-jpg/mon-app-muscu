@@ -194,6 +194,38 @@
     </div>
   {% endif %}
 
+  {# ══════════════════════ Section 2a — Ton rythme réel ══════════════════════
+     La pente des pesées face à la fourchette de l'objectif ; hors fourchette,
+     une cible proposée, appliquée seulement sur un tap (core/nutrition_rythme.py). #}
+  {% if rythme %}
+  <div class="card" id="rythme">
+    <div class="label-icon s-a901d4"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>TON RYTHME RÉEL</div>
+    {% set _c = request.args.get('cible') %}
+    {% if _c == 'ajustee' %}<p class="rythme-ok" role="status">C'est fait : ta cible est à {{ targets.calories_cible }} kcal. Tu peux la changer dans ton profil.</p>
+    {% elif _c == 'change' %}<p class="rythme-texte" role="status">Tes pesées ont changé depuis l'affichage : voici la proposition à jour.</p>{% endif %}
+    {% if rythme.etat == 'manque' %}
+      <p class="rythme-texte">Pour comparer ton rythme à ton objectif, il faut au moins {{ rythme.pesees_min }} pesées sur {{ rythme.duree_min_semaines }} semaines. Sur les {{ rythme.fenetre_semaines }} dernières semaines, tu en as {{ rythme.pesees }}.</p>
+      <a class="nutri-lien-perso" href="/progres#poids">Me peser dans Progrès ›</a>
+    {% else %}
+      <p class="rythme-texte">Sur les {{ rythme.fenetre_semaines }} dernières semaines ({{ rythme.pesees }} pesées), <b>{{ rythme.constat }}</b>.</p>
+      <p class="rythme-vise">{{ rythme.vise }}.</p>
+      <p class="rythme-verdict {{ 'rythme-ok' if rythme.etat == 'dans_la_cible' else '' }}">{{ rythme.verdict }}</p>
+      {% if rythme.proposition %}
+        {% set p = rythme.proposition %}
+        <form method="post" action="/nutrition/cible/ajuster">
+          <input type="hidden" name="cible" value="{{ p.cible }}">
+          <button type="submit" class="btn primary rythme-bouton" data-haptic="1">Passer à {{ p.cible }} kcal par jour ({{ '+' if p.ecart > 0 else '−' }}{{ p.ecart|abs }})</button>
+        </form>
+        <p class="rythme-aide">Au lieu de {{ targets.calories_cible }} kcal. Un pas à la fois : on revérifie dans deux semaines. Ta cible devient manuelle, modifiable dans ton profil.</p>
+      {% elif rythme.attente_jusquau %}
+        <p class="rythme-aide">Ta cible vient d'être ajustée : on laisse à ton poids jusqu'au {{ rythme.attente_jusquau[8:10] }}/{{ rythme.attente_jusquau[5:7] }} pour répondre.</p>
+      {% elif rythme.plancher %}
+        <p class="rythme-aide">Ta cible est déjà au niveau de ton métabolisme de base : plutôt que de manger moins, bouge un peu plus (marche, cardio).</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# ══════════════════════ Section 2b — Mes plats de la semaine ══════════════════════ #}
   <div class="card" x-data="{ open: {{ 'false' if meal_plan.plats else 'true' }}, showImport: {{ 'false' if meal_plan.plats else 'true' }} }">
     <div class="label-icon s-0fef38">
@@ -332,6 +364,19 @@
               </div>
             </div>
           </template>
+          <template x-if="!q.trim() && basket.length === 0 && perso.length > 0">
+            <div>
+              <div class="food-titre">Tes recettes et aliments</div>
+              <div class="food-results">
+                <template x-for="r in perso" :key="r.perso">
+                  <button type="button" class="food-row" @click="pickFood(r)">
+                    <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g"></span></span>
+                    <span class="food-kcal"><span x-text="kcalFor(r, r.u[0][1])"></span> kcal · <span x-text="r.u[0][0]"></span></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </template>
           <template x-if="q.trim().length >= 2 && results.length === 0 && offResults.length === 0">
             <p class="s-b801fa">Aucun aliment courant trouvé — cherche dans les produits du commerce, ou passe en « Saisie rapide ».</p>
           </template>
@@ -399,6 +444,7 @@
             </div>
           </template>
           <p class="s-ea6f12">Aliments courants : valeurs moyennes. Produits du commerce : Open Food Facts, base collaborative — vérifie l'étiquette si un chiffre te surprend.</p>
+          <a class="nutri-lien-perso" href="/nutrition/aliments">Mes recettes et aliments ›</a>
         </div>
 
         {# Quick mode (existing) #}
@@ -577,7 +623,9 @@
     var FOODS = {{ foods|tojson }};
     var MEAL_LABELS = {{ meal_types_map|tojson }};
     var RECENTS = {{ recents|tojson }};
+    var PERSO = {{ perso|tojson }};
   </script>
+  <script src="/static/js/aliments-recherche.js"></script>
   <script src="/static/js/nutrition.js"></script>
 
   <style>
@@ -741,25 +789,6 @@
       background: var(--accent-bg);
       color: var(--accent);
     }
-    /* Aliments */
-    .food-results { margin-top: 6px; border: 0.5px solid var(--border-subtle); border-radius: 10px; overflow: hidden; }
-    .food-row {
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      width: 100%; padding: 9px 10px; border: none; border-bottom: 0.5px solid var(--border-subtle);
-      background: var(--bg-elevated); color: var(--text-1); font-size: 0.85rem; text-align: left; cursor: pointer; min-height: 40px;
-    }
-    .food-row:last-child { border-bottom: none; }
-    .food-row:active { background: var(--accent-bg); }
-    .food-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .food-kcal { font-size: 0.72rem; color: var(--text-3); white-space: nowrap; }
-    .food-cat { display: block; font-size: 0.7rem; color: var(--text-3); letter-spacing: 0.3px; }
-    .food-item { padding: 8px 0; border-bottom: 0.5px solid var(--border-subtle); }
-    .food-item-head { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-1); }
-    .food-item-head .food-name { flex: 1; min-width: 0; }
-    .food-item-kcal { font-size: 0.78rem; color: var(--accent); white-space: nowrap; }
-    .food-item-ctrl { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-    .food-item-ctrl .field { font-size: 0.8rem; padding: 6px 8px; min-width: 0; }
-    .food-item-macros { font-size: 0.7rem; color: var(--text-3); white-space: nowrap; }
     /* Compose items */
     .compose-item {
       display: flex;
@@ -769,13 +798,19 @@
       border-bottom: 0.5px solid var(--border-subtle);
     }
     .food-titre { font-size: 0.72rem; color: var(--text-3); letter-spacing: 0.4px; text-transform: uppercase; margin-top: 8px; }
-    .food-off-btn { width: 100%; margin-top: 8px; font-size: 0.8rem; }
     .meal-grams { color: var(--text-3); font-weight: 400; }
     .meal-edit { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.8rem; color: var(--text-3); }
     .meal-edit .field { width: 90px; padding: 6px 8px; font-size: 0.85rem; }
     .meal-edit .btn { padding: 6px 12px; }
     .reprendre-row { display: flex; flex-direction: column; gap: 6px; }
     .reprendre-row .btn { width: 100%; }
+    .rythme-texte, .rythme-vise, .rythme-verdict { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; margin: 0 0 6px; }
+    .rythme-vise { color: var(--text-3); font-size: 0.8rem; }
+    .rythme-verdict { color: var(--text-1); font-weight: 600; }
+    .rythme-ok { color: var(--success); font-size: 0.85rem; line-height: 1.5; margin: 0 0 6px; }
+    .rythme-bouton { width: 100%; margin-top: 6px; }
+    .rythme-aide { font-size: 0.75rem; color: var(--text-3); line-height: 1.45; margin: 8px 0 0; }
+    .nutri-lien-perso { display: block; margin-top: 10px; font-size: 0.8rem; color: var(--accent); text-decoration: none; }
     .nutri-explique { font-size: 0.75rem; color: var(--text-3); margin-top: 6px; line-height: 1.45; }
     .nutri-case { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; font-size: 0.85rem; color: var(--text-1); cursor: pointer; }
     .nutri-case input { margin-top: 3px; }

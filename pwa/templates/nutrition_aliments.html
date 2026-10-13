@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Mes recettes et aliments · Muscu Tracker{% endblock %}
+
+{% macro ligne(a) %}
+  <div class="perso-ligne" x-data="{ c: false }">
+    <div class="perso-info">
+      <div class="perso-nom">{{ a.nom }}</div>
+      <div class="perso-detail">
+        {% if a.recette %}{{ a.parts }} part{{ 's' if a.parts != 1 else '' }} · {{ a.ingredients }} ingrédient{{ 's' if a.ingredients != 1 else '' }}{% endif %}
+        {% if a.part %}{% if a.recette %} · {% endif %}{{ a.part.libelle }}{% if a.part.libelle != '100 g' %} ({{ a.part.grams }} g){% endif %} : {{ a.part.kcal }} kcal · P{{ a.part.p }} · G{{ a.part.c }} · L{{ a.part.f }}{% endif %}
+      </div>
+    </div>
+    <a class="mini-btn" href="/nutrition/aliments?modifier={{ a.id }}" x-show="!c" title="Modifier" aria-label="Modifier {{ a.nom }}"><svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg></a>
+    <button type="button" class="mini-btn" x-show="!c" @click="c = true" title="Supprimer" aria-label="Supprimer {{ a.nom }}"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg></button>
+    <form class="perso-confirme" method="post" action="/nutrition/aliments/supprimer" x-show="c" x-cloak>
+      <input type="hidden" name="id" value="{{ a.id }}">
+      <button type="button" class="btn" @click="c = false">Garder</button>
+      <button type="submit" class="btn btn-danger">Supprimer</button>
+    </form>
+  </div>
+{% endmacro %}
+
+{% block content %}
+  <a href="/nutrition" class="btn label-icon s-364572"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Nutrition</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>Mes recettes et aliments</h1>
+
+  {% if not dispo %}
+    <div class="card perso-alerte" role="status">Tes recettes arrivent bientôt : la base de données doit d'abord être mise à jour. Le reste de la nutrition marche comme avant.</div>
+  {% endif %}
+  {% if message %}
+    <div class="card label-icon perso-ok" role="status"><svg class="icon icon-sm icon-success"><use href="/static/img/icons.svg#check-circle"/></svg>{{ message }}</div>
+  {% endif %}
+
+  {% if dispo %}
+    {% if edition and edition.type == 'recette' %}
+      <div class="card" x-data="recetteForm()">
+        <div class="perso-titre">{{ 'Modifier la recette' if edition.id else 'Nouvelle recette' }}</div>
+        {% if erreur %}<p class="perso-erreur" role="alert">{{ erreur }}</p>{% endif %}
+        <form method="post" action="/nutrition/aliments/enregistrer">
+          <input type="hidden" name="type" value="recette">
+          {% if edition.id %}<input type="hidden" name="id" value="{{ edition.id }}">{% endif %}
+          <label class="field-label" for="rec-nom">Nom</label>
+          <input id="rec-nom" type="text" name="nom" class="field" maxlength="80" x-ref="nom" x-model="nom" required placeholder="Ex. Pâtes carbonara" autocomplete="off">
+
+          <div class="field-label perso-espace">Ingrédients, pesés crus</div>
+          <template x-for="(b, idx) in items" :key="idx">
+            <div class="food-item">
+              <div class="food-item-head">
+                <span class="food-name" x-text="b.food.n"></span>
+                <span class="food-item-kcal"><b x-text="arrondi(macro(b, 'k'))"></b> kcal</span>
+                <button type="button" class="mini-btn" @click="retirer(idx)" title="Retirer" aria-label="Retirer cet ingrédient"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
+              </div>
+              <div class="food-item-ctrl">
+                <input type="number" inputmode="decimal" class="field s-b78406" x-model.number="b.qty" min="0" step="any" aria-label="Quantité">
+                <select class="field s-0935c1" x-model.number="b.u" aria-label="Unité">
+                  <template x-for="(u, ui) in b.unites" :key="ui"><option :value="ui" x-text="libelleUnite(u)"></option></template>
+                </select>
+                <span class="food-item-macros">P<span x-text="arrondi(macro(b, 'p'))"></span> · G<span x-text="arrondi(macro(b, 'c'))"></span> · L<span x-text="arrondi(macro(b, 'f'))"></span></span>
+              </div>
+            </div>
+          </template>
+
+          <input type="search" class="field perso-espace" x-model="q" @input.debounce.120ms="search()" @keydown.enter.prevent="search()"
+                 placeholder="Ajouter : pâtes crues, lardons, œuf…" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Chercher un ingrédient">
+          <template x-if="results.length > 0">
+            <div class="food-results">
+              <template x-for="r in results" :key="r.n + (r.code || '')">
+                <button type="button" class="food-row" @click="pickFood(r)">
+                  <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g"></span></span>
+                  <span class="food-kcal"><span x-text="arrondi(r.k)"></span> kcal · 100 g</span>
+                </button>
+              </template>
+            </div>
+          </template>
+          <template x-if="q.trim().length >= 3">
+            <button type="button" class="btn food-off-btn" @click="offSearch()" :disabled="offBusy || offFor === q.trim().toLowerCase()"
+                    x-text="offBusy ? 'Recherche…' : 'Chercher « ' + q.trim() + ' » dans les produits du commerce'"></button>
+          </template>
+          <template x-if="offError"><p class="perso-erreur" x-text="offError"></p></template>
+          <template x-if="offResults.length > 0">
+            <div class="food-results">
+              <template x-for="(r, ri) in offResults" :key="ri">
+                <button type="button" class="food-row" @click="pickFood(r)">
+                  <span class="food-name"><span x-text="r.n"></span><span class="food-cat" x-text="r.g"></span></span>
+                  <span class="food-kcal"><span x-text="arrondi(r.k)"></span> kcal · 100 g</span>
+                </button>
+              </template>
+            </div>
+          </template>
+
+          <div class="perso-grille perso-espace">
+            <div>
+              <label class="field-label" for="rec-parts">Nombre de parts</label>
+              <input id="rec-parts" type="number" inputmode="numeric" name="parts" class="field" min="1" max="50" step="1" x-model="parts" required>
+            </div>
+            <div>
+              <label class="field-label" for="rec-cuit">Poids cuit (g)</label>
+              <input id="rec-cuit" type="number" inputmode="numeric" name="poids_cuit" class="field" min="1" max="20000" step="any" x-model="poidsCuit" placeholder="Facultatif">
+            </div>
+          </div>
+          <p class="perso-aide">Poids cuit : le plat entier une fois prêt, sans la casserole. Il permet de noter une assiette « au poids ». Sans lui, une part vaut une fraction de la recette, avec les mêmes calories.</p>
+
+          <template x-if="items.length > 0">
+            <div class="perso-bilan">
+              <div>Recette entière : <b x-text="total('k')"></b> kcal · P<span x-text="total('p')"></span> · G<span x-text="total('c')"></span> · L<span x-text="total('f')"></span></div>
+              <div class="perso-bilan-part">1 part (<span x-text="poidsPart()"></span> g) : <b x-text="parPart('k')"></b> kcal · P<span x-text="parPart('p')"></span> · G<span x-text="parPart('c')"></span> · L<span x-text="parPart('f')"></span></div>
+            </div>
+          </template>
+
+          <input type="hidden" name="ingredients" :value="ingredientsJson()">
+          <div class="perso-boutons">
+            <a href="/nutrition/aliments" class="btn">Annuler</a>
+            <button type="submit" class="btn primary label-icon" :disabled="!peutEnregistrer()" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+
+    {% elif edition and edition.type == 'aliment' %}
+      <div class="card">
+        <div class="perso-titre">{{ "Modifier l'aliment" if edition.id else "Nouvel aliment" }}</div>
+        {% if erreur %}<p class="perso-erreur" role="alert">{{ erreur }}</p>{% endif %}
+        <form method="post" action="/nutrition/aliments/enregistrer">
+          <input type="hidden" name="type" value="aliment">
+          {% if edition.id %}<input type="hidden" name="id" value="{{ edition.id }}">{% endif %}
+          <label class="field-label" for="ali-nom">Nom</label>
+          <input id="ali-nom" type="text" name="nom" class="field" maxlength="80" value="{{ edition.nom }}" required placeholder="Ex. Barre protéinée chocolat" autocomplete="off">
+          <div class="perso-grille perso-espace">
+            <div>
+              <label class="field-label" for="ali-pour">Valeurs pour (g)</label>
+              <input id="ali-pour" type="number" inputmode="decimal" name="pour_g" class="field" min="1" max="3000" step="any" value="{{ edition.pour_g or 100 }}" required>
+            </div>
+            <div>
+              <label class="field-label" for="ali-portion">Nom de la portion</label>
+              <input id="ali-portion" type="text" name="portion" class="field" maxlength="30" value="{{ edition.portion or '' }}" placeholder="Ex. 1 barre">
+            </div>
+          </div>
+          <div class="perso-grille4 perso-espace">
+            <div>
+              <label class="field-label" for="ali-kcal">Calories</label>
+              <input id="ali-kcal" type="number" inputmode="decimal" name="kcal" class="field" min="0" step="any" value="{{ edition.kcal or '' }}" placeholder="Auto">
+            </div>
+            <div>
+              <label class="field-label" for="ali-p">Prot. (g)</label>
+              <input id="ali-p" type="number" inputmode="decimal" name="p" class="field" min="0" step="any" value="{{ edition.p or '' }}">
+            </div>
+            <div>
+              <label class="field-label" for="ali-c">Gluc. (g)</label>
+              <input id="ali-c" type="number" inputmode="decimal" name="c" class="field" min="0" step="any" value="{{ edition.c or '' }}">
+            </div>
+            <div>
+              <label class="field-label" for="ali-f">Lip. (g)</label>
+              <input id="ali-f" type="number" inputmode="decimal" name="f" class="field" min="0" step="any" value="{{ edition.f or '' }}">
+            </div>
+          </div>
+          <p class="perso-aide">Recopie l'étiquette, pour 100 g ou pour une portion (ex. 1 barre de 45 g : mets 45). Sans calories, elles se calculent depuis les protéines, glucides et lipides.</p>
+          <div class="perso-boutons">
+            <a href="/nutrition/aliments" class="btn">Annuler</a>
+            <button type="submit" class="btn primary label-icon" data-haptic="1"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+
+    {% else %}
+      <div class="card">
+        <p class="perso-intro">Une recette se saisit une fois : ses ingrédients pesés et le nombre de parts. Ensuite, elle s'ajoute à un repas comme n'importe quel aliment.</p>
+        {% if plein %}
+          <p class="perso-aide">Tu as atteint {{ max_perso }} recettes et aliments : supprimes-en un pour en créer un autre.</p>
+        {% else %}
+          <div class="perso-boutons perso-empiles">
+            <a href="/nutrition/aliments?nouveau=recette" class="btn primary label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus-circle"/></svg>Nouvelle recette</a>
+            <a href="/nutrition/aliments?nouveau=aliment" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Nouvel aliment</a>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if recettes %}
+      <div class="card">
+        <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>MES RECETTES · {{ recettes|length }}</div>
+        {% for a in recettes %}{{ ligne(a) }}{% endfor %}
+      </div>
+    {% endif %}
+    {% if aliments %}
+      <div class="card">
+        <div class="label-icon s-2641b0"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#utensils"/></svg>MES ALIMENTS · {{ aliments|length }}</div>
+        {% for a in aliments %}{{ ligne(a) }}{% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% if donnees %}
+    <script nonce="{{ csp_nonce() }}">
+      // Données de l'éditeur, lues par static/js/recettes.js.
+      var RECETTE_DONNEES = {{ donnees|tojson }};
+    </script>
+    <script src="/static/js/aliments-recherche.js"></script>
+    <script src="/static/js/recettes.js"></script>
+  {% endif %}
+
+  <style>
+    .perso-titre { font-size: 0.95rem; font-weight: 600; color: var(--text-1); margin-bottom: 10px; }
+    .perso-intro { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; margin: 0 0 12px; }
+    .perso-aide { font-size: 0.75rem; color: var(--text-3); line-height: 1.45; margin: 8px 0 0; }
+    .perso-erreur { font-size: 0.82rem; color: #FF9F0A; line-height: 1.45; margin: 0 0 10px; }
+    .perso-alerte { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; }
+    .perso-ok { font-size: 0.85rem; color: var(--text-1); }
+    .perso-espace { margin-top: 12px; }
+    .perso-grille { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .perso-grille4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .perso-grille4 .field { padding: 8px 6px; }
+    .perso-bilan { margin-top: 12px; padding: 10px; border-radius: 10px; background: var(--bg-elevated); font-size: 0.8rem; color: var(--text-2); line-height: 1.6; }
+    .perso-bilan-part { color: var(--accent); font-weight: 600; }
+    .perso-boutons { display: flex; gap: 8px; margin-top: 14px; }
+    .perso-boutons .btn { flex: 1; justify-content: center; text-align: center; }
+    .perso-empiles { flex-direction: column; }
+    .perso-ligne { display: flex; align-items: center; gap: 6px; padding: 9px 0; border-top: 0.5px solid var(--border-subtle); }
+    .perso-ligne:first-of-type { border-top: none; }
+    .perso-info { flex: 1; min-width: 0; }
+    .perso-nom { font-size: 0.88rem; color: var(--text-1); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .perso-detail { font-size: 0.72rem; color: var(--text-3); line-height: 1.45; margin-top: 2px; }
+    .perso-confirme { display: flex; gap: 6px; }
+    .perso-confirme .btn { padding: 6px 10px; font-size: 0.78rem; }
+  </style>
+{% endblock %}

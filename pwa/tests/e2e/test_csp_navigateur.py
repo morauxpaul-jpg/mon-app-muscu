@@ -19,7 +19,9 @@ import pytest
 sync_api = pytest.importorskip("playwright.sync_api")
 
 PAGES = ["/accueil", "/seance", "/seance?mode=prefaite&name=Push", "/seance?mode=libre",
-         "/cardio", "/cardio/import", "/nutrition", "/progres", "/progres/exercice?exo=Squat",
+         "/cardio", "/cardio/import", "/nutrition", "/nutrition/aliments",
+         "/nutrition/aliments?nouveau=recette", "/nutrition/aliments?nouveau=aliment",
+         "/progres", "/progres/exercice?exo=Squat",
          "/programme", "/plus", "/gestion", "/gestion/import-muscu", "/coach", "/generator",
          "/parrainage", "/premium", "/plaques", "/faq", "/cgv", "/confidentialite",
          "/mentions-legales"]

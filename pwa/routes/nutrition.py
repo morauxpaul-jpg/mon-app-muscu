@@ -15,6 +15,7 @@ from core.data import (
     get_profile, save_profile, list_nutrition, insert_nutrition, delete_nutrition,
     sum_nutrition_range, get_prog, save_prog, upsert_body_weight, get_hist,
     insert_nutrition_rows, get_nutrition, update_nutrition, list_nutrition_recents,
+    list_aliments_perso, AlimentsIndisponibles, list_body_weight,
 )
 from core.dates import today_paris_str, today_paris, DAYS_FR
 from core.limiter import limiter
@@ -24,6 +25,8 @@ from core.nutrition_cibles import (
     compute_targets, custom_cal, cible_pour, cycle_actif, est_jour_entrainement, jours_seances,
 )
 from core.nutrition_aliments import lignes_panier, recalculer, recents as aliments_recents
+from core.nutrition_recettes import pour_la_recherche, rafraichir_recents
+from core.nutrition_rythme import phrases as phrases_rythme, rythme as rythme_reel
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +111,22 @@ def _parse_plats(data):
 # Noms historiques : `routes/progres.py` recalcule la cible après une pesée.
 _compute_targets = compute_targets
 _custom_cal = custom_cal
+
+
+def _rythme(prog, targets):
+    """Le rythme des pesées face à l'objectif (core/nutrition_rythme.py), ou
+    None sans profil complet ou sans pesées lisibles."""
+    if not targets:
+        return None
+    try:
+        pesees = list_body_weight(limit=60)
+    except Exception as e:  # migration v33 absente ou base indisponible
+        logger.warning("nutrition rythme : pesées indisponibles: %s", e)
+        return None
+    nutri = (prog or {}).get("_nutrition") or {}
+    r = rythme_reel(pesees, targets["objectif"], today_paris(), targets["calories_cible"],
+                    targets["bmr"], nutri.get("ajuste_le"))
+    return {**r, **phrases_rythme(r, targets["objectif"])}
 
 
 def _date_demandee(raw) -> str:
@@ -204,6 +223,18 @@ def index():
         # Colonnes v40 absentes ou base indisponible : la recherche marche sans.
         logger.warning("nutrition recents indisponibles: %s", e)
         recents = []
+    try:
+        perso = pour_la_recherche(list_aliments_perso())
+    except AlimentsIndisponibles:
+        perso = []          # v49 pas encore passée : signalé à /admin
+    except Exception as e:
+        logger.error("nutrition aliments perso FAILED: %s", e)
+        perso = []
+    recents = rafraichir_recents(recents, perso)
+    if date_iso == today_iso:
+        rythme = _rythme(prog, targets)
+    else:
+        rythme = None       # le rythme se lit au présent, pas sur un jour passé
 
     return render_template(
         "nutrition.html",
@@ -229,6 +260,8 @@ def index():
         calories_custom=_custom_cal(prog),
         foods=FOODS,
         recents=recents,
+        perso=perso,
+        rythme=rythme,
     )
 
 
@@ -299,6 +332,39 @@ def save_profile_route():
         except Exception as e:
             logger.error("nutrition upsert_body_weight FAILED: %s", e)
     return redirect(url_for("nutrition.index"))
+
+
+@bp.route("/nutrition/cible/ajuster", methods=["POST"])
+@limiter.limit("10 per minute")
+def ajuster_cible():
+    """Applique la cible proposée par la carte « Ton rythme réel ». Elle est
+    recalculée ici : si les pesées ont changé depuis l'affichage, rien n'est
+    appliqué et la page montre la nouvelle proposition."""
+    if _require_vip():
+        return redirect(url_for("nutrition.index"))
+    profile = get_profile() or {}
+    prog = get_prog()
+    targets = _compute_targets(profile, _custom_cal(prog))
+    r = _rythme(prog, targets)
+    proposition = (r or {}).get("proposition")
+    try:
+        vue = int(request.form.get("cible") or 0)
+    except (TypeError, ValueError):
+        vue = 0
+    if not proposition or proposition["cible"] != vue:
+        return redirect(url_for("nutrition.index", cible="change") + "#rythme")
+    nutri = prog.setdefault("_nutrition", {})
+    nutri.update({"calories_custom": proposition["cible"], "ajuste_le": today_paris_str(),
+                  "ajuste_de": targets["calories_cible"]})
+    try:
+        save_prog(prog)
+        nouveaux = _compute_targets(profile, proposition["cible"])
+        save_profile({"calories_cible": nouveaux["calories_cible"]})
+    except Exception as e:
+        logger.error("ajuster_cible FAILED: %s", e)
+        return render_template("error.html", code=503,
+                               message="La cible n'a pas pu être changée. Réessaie dans un instant."), 503
+    return redirect(url_for("nutrition.index", cible="ajustee") + "#rythme")
 
 
 @bp.route("/nutrition/add-meal", methods=["POST"])
