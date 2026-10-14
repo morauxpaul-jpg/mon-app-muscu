@@ -249,28 +249,28 @@
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sliders"/></svg>Paramètres d'affichage</h3>
     <form method="post" action="/gestion/settings">
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
+      <label class="reglage">
         <span>Chrono de repos automatique entre les séries</span>
+        <input type="checkbox" role="switch" name="auto_rest_timer" {% if settings.auto_rest_timer %}checked{% endif %}>
       </label>
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="show_rpe" {% if settings.show_rpe %}checked{% endif %}>
+      <label class="reglage">
         <span>Afficher la colonne RPE (difficulté ressentie)</span>
+        <input type="checkbox" role="switch" name="show_rpe" {% if settings.show_rpe %}checked{% endif %}>
       </label>
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="show_overload_hint" {% if settings.show_overload_hint %}checked{% endif %}>
+      <label class="reglage">
         <span>Suggérer la progression (+2,5 kg / +1 rep) d'après les dernières séances</span>
+        <input type="checkbox" role="switch" name="show_overload_hint" {% if settings.show_overload_hint %}checked{% endif %}>
       </label>
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
+      <label class="reglage">
         <span>Pré-remplir les poids de la dernière séance</span>
+        <input type="checkbox" role="switch" name="auto_prefill_weight" {% if settings.auto_prefill_weight %}checked{% endif %}>
       </label>
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %}>
+      <label class="reglage">
         <span>Notifications de rappel &amp; relances (même app fermée)</span>
+        <input type="checkbox" role="switch" name="notifications" id="notif-toggle" {% if settings.notifications %}checked{% endif %}>
       </label>
-      <p class="s-da7920">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
-      <div class="s-f3ec68" id="reminder-hour-row" {% if not settings.notifications %}hidden{% endif %}>
+      <p class="reglage-aide">Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.</p>
+      <div class="reglage-sous" id="reminder-hour-row" {% if not settings.notifications %}hidden{% endif %}>
         <label class="field-label s-d46224" for="reminder-hour">Heure du rappel les jours de séance</label>
         <select name="reminder_hour" id="reminder-hour" class="field s-27af89">
           <option value="0" {% if not settings.reminder_hour %}selected{% endif %}>Aucun rappel</option>
@@ -281,16 +281,16 @@
         <p class="s-fdee3b">
           Envoyé seulement si la séance du jour n'est pas encore faite.
         </p>
-        <label class="muscle-check s-2e0efa">
-          <input type="checkbox" name="recap_hebdo" {% if settings.recap_hebdo %}checked{% endif %}>
+        <label class="reglage">
           <span>Récap de ma semaine le dimanche à 19 h</span>
+          <input type="checkbox" role="switch" name="recap_hebdo" {% if settings.recap_hebdo %}checked{% endif %}>
         </label>
       </div>
-      <label class="muscle-check s-2e0efa">
-        <input type="checkbox" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
+      <label class="reglage">
         <span>Recevoir les nouveautés par e-mail (mises à jour, nouveaux programmes)</span>
+        <input type="checkbox" role="switch" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
       </label>
-      <p class="s-da7920">Quelques e-mails par an, jamais de spam. Désactivable ici à tout moment.</p>
+      <p class="reglage-aide">Quelques e-mails par an, jamais de spam. Désactivable ici à tout moment.</p>
       <button type="submit" class="btn primary label-icon s-d5b41c"><svg class="icon icon-sm"><use href="/static/img/icons.svg#save"/></svg>Sauvegarder</button>
     </form>
   </div>
@@ -305,7 +305,7 @@
         <div class="detail-value s-f15bdb" id="sw-version">—</div>
       </div>
     </div>
-    <button type="button" class="btn primary label-icon s-9f1047" id="btn-check-update"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
+    <button type="button" class="btn label-icon s-9f1047" id="btn-check-update"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Vérifier les mises à jour</button>
     <p class="s-33a3e1" id="update-status"></p>
   </div>
 
@@ -326,7 +326,7 @@
   <div class="card">
     <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#save"/></svg>Sauvegarde complète</h3>
     <p class="s-434391">Exporte <strong>toutes</strong> tes données (programme, historique, pesées, bilans, nutrition, conversations du coach) dans un fichier JSON.</p>
-    <a href="/gestion/export" class="btn primary label-icon s-b8db1d"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
+    <a href="/gestion/export" class="btn label-icon s-b8db1d"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Exporter tout</a>
     {% if is_vip_full %}
     <form class="s-d2c171" method="post" action="/gestion/import" enctype="multipart/form-data"
           x-data="{ c:false }">

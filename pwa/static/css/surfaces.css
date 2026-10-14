@@ -455,3 +455,52 @@ a.btn.lien-retour:hover { background: none; color: var(--accent); }
 .rest-timer-bar {
   transform: translateZ(0);
 }
+
+/* ═══════════════════════════════════════════
+   INTERRUPTEUR — une case à cocher qui porte role="switch" (Programme,
+   Réglages). Gris éteint, blanc allumé : un réglage est un choix, pas une
+   action (le vert reste aux actions principales). Sélecteur à trois
+   attributs : il passe devant la taille des cases de a11y.css.
+   ═══════════════════════════════════════════ */
+input[type="checkbox"][role="switch"]:not(.sr-only) {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  border-radius: 14px;
+  background: #333333;
+  cursor: pointer;
+}
+input[type="checkbox"][role="switch"]:not(.sr-only)::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform var(--ease-fast);
+}
+input[type="checkbox"][role="switch"]:not(.sr-only):checked { background: var(--text-1); }
+input[type="checkbox"][role="switch"]:not(.sr-only):checked::before { transform: translateX(20px); background: var(--bg-base); }
+input[type="checkbox"][role="switch"]:not(.sr-only):focus-visible { outline: 2px solid var(--text-1); outline-offset: 2px; }
+
+/* Une ligne de réglage : le texte à gauche, l'interrupteur à droite. */
+.reglage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 0;
+  border-bottom: 1px solid #262626;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.reglage-aide { margin: 6px 0 10px; font-size: 0.74rem; color: var(--text-2); }
+.reglage-sous { margin: 0 0 10px; }

@@ -571,7 +571,8 @@ def test_success_active_vip_malgre_stripeobject(fake_db, client, monkeypatch):
 
     r = client.get("/billing/success?session_id=cs_test_123")
     assert r.status_code == 200
-    assert "VIP" in r.data.decode("utf-8")
+    # La page « activée » (et non « en cours de validation »).
+    assert "Bienvenue en PRO" in r.data.decode("utf-8")
     prof = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
     assert prof["tier"] == "vip"
 

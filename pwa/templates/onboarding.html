@@ -9,24 +9,40 @@
     flex:1; height:3px; border-radius:2px;
     background: var(--border-default); transition: background .25s;
   }
-  .onboard-progress .seg.on { background: var(--accent); }
-  .onboard-step-title { font-size: 1.35rem; font-weight:500; margin: 0 0 4px; color: var(--text-1); }
+  .onboard-progress .seg.on { background: var(--text-1); }
+  /* Style « Instrument » : titres en capitales étroites, choix en mots (plus
+     d'emoji), le choix fait en blanc, la difficulté en quatre barres. */
+  .onboard-step-title {
+    font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; line-height: 1;
+    text-transform: uppercase; margin: 0 0 4px; color: var(--text-1);
+  }
   .onboard-step-sub { color: var(--text-2); font-size: .9rem; margin-bottom: 18px; }
   .opt-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .opt-grid.three { grid-template-columns: repeat(3, 1fr); }
   .opt {
-    position:relative;
-    background: var(--bg-surface); border: 0.5px solid var(--border-default);
-    border-radius: var(--radius-md); padding: 12px 8px; text-align:center; cursor:pointer;
-    font-size: .9rem; color: var(--text-1); transition: border-color var(--ease-fast), background var(--ease-fast);
+    position:relative; min-height: 56px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background: var(--bg-base); border: 1px solid #333333;
+    border-radius: var(--radius-sm); padding: 10px 8px; text-align:center; cursor:pointer;
+    font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; text-transform: uppercase;
+    line-height: 1.1; color: var(--text-1); transition: border-color var(--ease-fast), background var(--ease-fast);
   }
   .opt:hover { border-color: var(--border-hover); }
   /* Le bouton radio est masqué visuellement (.sr-only) mais reste focusable :
      l'anneau de focus doit donc apparaître sur l'étiquette qui le porte. */
   .opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .opt.sel { border-color: var(--text-1); background: rgba(255,255,255,0.08); }
-  .opt .emoji { display:block; font-size:1.6rem; margin-bottom:4px; }
-  .field-label { display:block; font-size:.8rem; color: var(--text-3); margin: 10px 0 4px; text-transform:uppercase; letter-spacing:0; }
+  .opt.sel { border-color: var(--text-1); background: var(--text-1); color: var(--bg-base); }
+  .opt .opt-chiffre { display:block; font-size:1.7rem; line-height:1; }
+  /* Matériel (choix multiple) : une liste de mots, en texte courant. */
+  .opt.opt--liste {
+    flex-direction: row; justify-content: flex-start; gap: 8px; min-height: 48px;
+    padding: 10px 12px; text-align: left;
+    font-family: var(--font); font-weight: 500; font-size: .9rem; text-transform: none;
+  }
+  .field-label {
+    display:block; margin: 14px 0 6px; font-family: var(--font-display); font-weight: 600;
+    font-size: 1rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0;
+  }
   .field {
     width:100%; background: var(--bg-base); border: 0.5px solid var(--border-default);
     border-radius:var(--radius-md); padding: 11px 12px; color: var(--text-1); font-size:1rem;
@@ -49,8 +65,8 @@
   .info-tip {
     display:inline-flex; align-items:center; justify-content:center;
     width:24px; height:24px; border-radius:50%; padding:0;
-    background: var(--accent-bg); border: 0.5px solid var(--border-default);
-    color: var(--accent); font-size:.7rem; font-weight:500; cursor:pointer;
+    background: var(--bg-elevated); border: 1px solid #333333;
+    color: var(--text-2); font-family: inherit; font-size:.7rem; font-weight:500; cursor:pointer;
     position:absolute; top:6px; right:6px; z-index:2;
   }
   .info-tip:hover + .info-bubble,
@@ -69,23 +85,23 @@
   .onb-card {
     display:block;
     position:relative;
-    background: var(--bg-surface); border: 0.5px solid var(--border-default);
-    border-radius:var(--radius-lg); padding:14px; cursor:pointer;
+    background: var(--bg-surface); border: 1px solid #262626;
+    border-radius:var(--radius-sm); padding:14px; cursor:pointer;
     box-sizing:border-box;
     transition: border-color var(--ease-fast), background var(--ease-fast);
   }
   .onb-card:hover { border-color: var(--border-hover); }
-  .onb-card.sel { border-color: var(--text-1); background: rgba(255,255,255,0.08); }
-  .onb-card.reco-card { border-color: var(--border-glass-bright); }
-  .onb-card.custom { border-style: dashed; }
-  .onb-card.custom.sel { border-style: solid; border-color: var(--warning); background: var(--warning-bg); }
+  .onb-card.sel { border-color: var(--text-1); }
+  .onb-card.reco-card { border-color: var(--text-1); }
+  .onb-card.custom { border-style: dashed; border-color: #333333; background: var(--bg-base); }
+  .onb-card.custom.sel { border-style: solid; border-color: var(--text-1); }
   .onb-card.locked { opacity: 0.78; cursor: default; }
   .onb-card.locked:hover { border-color: var(--border-default); }
 
   .onb-title {
     display:flex; align-items:center; gap:8px;
-    font-size:1rem; font-weight:500; margin:0 0 6px;
-    color: var(--text-1); line-height:1.3;
+    font-family: var(--font-display); font-size:1.35rem; font-weight:700; text-transform: uppercase;
+    margin:0 0 6px; color: var(--text-1); line-height:1.05;
     min-width:0;
   }
   .onb-title-icon { flex-shrink:0; }
@@ -100,7 +116,12 @@
     display:inline-flex; align-items:center; gap:3px;
     white-space:nowrap;
   }
-  .onb-stars { color: var(--warning); letter-spacing: 0; font-family: var(--font-display); white-space:nowrap; }
+  .onb-diff { display:inline-flex; align-items:flex-end; gap:2px; height:12px; }
+  .onb-diff i { display:block; width:4px; height:100%; background:#333333; }
+  .onb-diff i:nth-child(1) { height:40%; }
+  .onb-diff i:nth-child(2) { height:60%; }
+  .onb-diff i:nth-child(3) { height:80%; }
+  .onb-diff i.on { background: var(--text-1); }
 
   .onb-muscles { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
   .onb-muscle {
@@ -112,22 +133,22 @@
   .onb-badges { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
   .onb-badge-reco {
     background: var(--accent); color: var(--on-accent);
-    padding:3px 10px; border-radius:var(--radius-full); font-size:.64rem; font-weight:500;
+    padding:3px 8px; border-radius:2px; font-family: var(--font-display); font-size:.8rem; font-weight:700;
     letter-spacing:0; text-transform:uppercase; white-space:nowrap;
   }
   .onb-badge-pro {
-    background: var(--accent-bg); color:var(--accent); border:0.5px solid var(--accent);
-    padding:3px 10px; border-radius:var(--radius-full); font-size:.64rem; font-weight:600;
+    background: none; color:var(--accent); border:1px solid var(--accent);
+    padding:2px 7px; border-radius:2px; font-family: var(--font-display); font-size:.8rem; font-weight:700;
     letter-spacing:0; white-space:nowrap;
   }
 
   .onb-preview-btn {
     display:inline-flex; align-items:center; gap:4px;
-    font-size:.78rem; color:var(--accent); cursor:pointer;
-    text-decoration:underline; margin:2px 0 0;
+    font-size:.82rem; color:var(--text-1); cursor:pointer;
+    text-decoration:underline; text-underline-offset: 3px; margin:2px 0 0;
     background:none; border:none; padding:0;
   }
-  .onb-preview-btn:hover { color: var(--accent-hover); }
+  .onb-preview-btn:hover { color: var(--text-2); }
 
   .onb-locked-cta {
     display:block; width:100%; text-align:center; box-sizing:border-box;
@@ -144,15 +165,18 @@
   }
   .preview-panel {
     background: #111111;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius:18px 18px 0 0; width:100%; max-width:560px;
+    border: 1px solid #262626;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0; width:100%; max-width:560px;
     max-height:80vh; overflow-y:auto; padding:20px 16px 28px;
     animation: slideUpModal .25s ease-out;
   }
   @keyframes fadeInModal { from { opacity:0; } to { opacity:1; } }
   @keyframes slideUpModal { from { transform:translateY(40px); opacity:0; } to { transform:translateY(0); opacity:1; } }
   .preview-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
-  .preview-header h3 { margin:0; font-size:1.05rem; color: var(--text-1); flex:1; min-width:0; overflow-wrap:anywhere; line-height:1.3; }
+  .preview-header h3 {
+    margin:0; font-family: var(--font-display); font-size:1.6rem; font-weight:700; text-transform:uppercase;
+    color: var(--text-1); flex:1; min-width:0; overflow-wrap:anywhere; line-height:1.05;
+  }
   .preview-close { flex-shrink:0; background:none; border:none; color:var(--text-3); font-size:1.4rem; cursor:pointer; padding:4px 8px; line-height:1; }
   .preview-seance { margin-bottom:14px; }
   .preview-seance-name { font-weight:500; font-size:.92rem; margin-bottom:6px; color:var(--text-1); overflow-wrap:anywhere; }
@@ -173,22 +197,21 @@
   }
   .preview-choose:hover { background: var(--accent-hover); }
 
-  .welcome-hero { text-align:center; padding: 10px 0 4px; }
-  .welcome-hero h1 { font-size:1.5rem; margin: 0 0 4px; color: var(--text-1); font-weight: 500; }
+  .welcome-hero { padding: 10px 0 4px; }
+  .welcome-hero h1 { margin: 0 0 6px; }
   .welcome-hero p { color: var(--text-2); font-size:.9rem; margin:0; }
 
   /* ── Responsive : petits mobiles (< 380px) ── */
   @media (max-width: 380px) {
     .onboard-step-title { font-size: 1.15rem; }
     .opt { padding: 10px 6px; font-size: .82rem; }
-    .opt .emoji { font-size: 1.35rem; }
+    .opt .opt-chiffre { font-size: 1.4rem; }
     .opt-grid { gap: 8px; }
     .onb-card { padding: 12px; }
     .onb-title { font-size: .94rem; }
     .onb-meta { gap: 6px; }
     .onb-meta-item { font-size: .68rem; }
     .onb-muscle { font-size: .6rem; padding: 2px 6px; }
-    .welcome-hero h1 { font-size: 1.3rem; }
   }
 </style>
 {% endblock %}
@@ -201,7 +224,7 @@
 <div class="onboard-wrap" x-data="onboardingFlow()">
 
   <div class="welcome-hero">
-    <h1 class="label-icon s-03c4bb"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#zap"/></svg>Bienvenue</h1>
+    <h1>Bienvenue</h1>
     <p>Construisons ton plan d'entraînement en 1 minute.</p>
   </div>
 
@@ -214,7 +237,7 @@
 
   <!-- Étape 1 : identité -->
   <div class="card" x-show="step === 1" x-cloak>
-    <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#user"/></svg>Qui es-tu ?</h2>
+    <h2 class="onboard-step-title">Qui es-tu ?</h2>
     <p class="onboard-step-sub">Étape 1 sur 4</p>
 
     <label class="field-label">Prénom</label>
@@ -247,15 +270,15 @@
     <div class="opt-grid three" role="radiogroup" aria-label="Sexe">
       <label class="opt" :class="{ sel: form.sexe === 'homme' }">
         <input type="radio" class="sr-only" name="ob-sexe" value="homme" x-model="form.sexe">
-        <span class="emoji" aria-hidden="true">♂️</span>Homme
+        Homme
       </label>
       <label class="opt" :class="{ sel: form.sexe === 'femme' }">
         <input type="radio" class="sr-only" name="ob-sexe" value="femme" x-model="form.sexe">
-        <span class="emoji" aria-hidden="true">♀️</span>Femme
+        Femme
       </label>
       <label class="opt" :class="{ sel: form.sexe === 'autre' }">
         <input type="radio" class="sr-only" name="ob-sexe" value="autre" x-model="form.sexe">
-        <span class="emoji" aria-hidden="true">⚧️</span>Autre
+        Autre
       </label>
     </div>
 
@@ -266,28 +289,28 @@
 
   <!-- Étape 2 : niveau + fréquence -->
   <div class="card" x-show="step === 2" x-cloak>
-    <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>Ton niveau</h2>
+    <h2 class="onboard-step-title">Ton niveau</h2>
     <p class="onboard-step-sub">Étape 2 sur 4</p>
 
     <label class="field-label">Expérience</label>
     <div class="opt-grid three" role="radiogroup" aria-label="Expérience">
       <label class="opt" :class="{ sel: form.niveau === 'débutant' }">
         <input type="radio" class="sr-only" name="ob-niveau" value="débutant" x-model="form.niveau">
-        <span class="emoji" aria-hidden="true">🌱</span>Débutant
+        Débutant
         <button type="button" class="info-tip" @click.stop.prevent
                 aria-label="En savoir plus sur le niveau débutant">?</button>
         <span class="info-bubble" role="tooltip">Tu débutes la musculation ou tu n'as jamais suivi de programme structuré.</span>
       </label>
       <label class="opt" :class="{ sel: form.niveau === 'intermédiaire' }">
         <input type="radio" class="sr-only" name="ob-niveau" value="intermédiaire" x-model="form.niveau">
-        <span class="emoji" aria-hidden="true">🔥</span>Intermédiaire
+        Intermédiaire
         <button type="button" class="info-tip" @click.stop.prevent
                 aria-label="En savoir plus sur le niveau intermédiaire">?</button>
         <span class="info-bubble" role="tooltip">Tu connais les mouvements de base et tu t'entraînes régulièrement depuis plusieurs mois.</span>
       </label>
       <label class="opt" :class="{ sel: form.niveau === 'avancé' }">
         <input type="radio" class="sr-only" name="ob-niveau" value="avancé" x-model="form.niveau">
-        <span class="emoji" aria-hidden="true">⚡</span>Avancé
+        Avancé
         <button type="button" class="info-tip" @click.stop.prevent
                 aria-label="En savoir plus sur le niveau avancé">?</button>
         <span class="info-bubble" role="tooltip">Tu maîtrises la technique et tu cherches à optimiser tes performances.</span>
@@ -303,7 +326,7 @@
              comparaison form.frequence === n serait toujours fausse. #}
           <input type="radio" class="sr-only" name="ob-frequence" :value="n" x-model.number="form.frequence"
                  :aria-label="n + ' séances par semaine'">
-          <span class="emoji" aria-hidden="true" x-text="n"></span>j
+          <span class="opt-chiffre" aria-hidden="true" x-text="n"></span>j
         </label>
       </template>
     </div>
@@ -316,26 +339,26 @@
 
   <!-- Étape 3 : objectif + équipement -->
   <div class="card" x-show="step === 3" x-cloak>
-    <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#target"/></svg>Ton objectif</h2>
+    <h2 class="onboard-step-title">Ton objectif</h2>
     <p class="onboard-step-sub">Étape 3 sur 4</p>
 
     <label class="field-label">Objectif principal</label>
     <div class="opt-grid" role="radiogroup" aria-label="Objectif principal">
       <label class="opt" :class="{ sel: form.objectif === 'prise de masse' }">
         <input type="radio" class="sr-only" name="ob-objectif" value="prise de masse" x-model="form.objectif">
-        <span class="emoji" aria-hidden="true">📈</span>Prise de masse
+        Prise de masse
       </label>
       <label class="opt" :class="{ sel: form.objectif === 'force' }">
         <input type="radio" class="sr-only" name="ob-objectif" value="force" x-model="form.objectif">
-        <span class="emoji" aria-hidden="true">🏋️</span>Force
+        Force
       </label>
       <label class="opt" :class="{ sel: form.objectif === 'sèche' }">
         <input type="radio" class="sr-only" name="ob-objectif" value="sèche" x-model="form.objectif">
-        <span class="emoji" aria-hidden="true">🔪</span>Sèche
+        Sèche
       </label>
       <label class="opt" :class="{ sel: form.objectif === 'forme' }">
         <input type="radio" class="sr-only" name="ob-objectif" value="forme" x-model="form.objectif">
-        <span class="emoji" aria-hidden="true">💫</span>Forme générale
+        Forme générale
       </label>
     </div>
 
@@ -343,19 +366,19 @@
     <div class="opt-grid" role="radiogroup" aria-label="Équipement disponible">
       <label class="opt" :class="{ sel: form.equipement === 'salle' }">
         <input type="radio" class="sr-only" name="ob-equipement" value="salle" x-model="form.equipement">
-        <span class="emoji" aria-hidden="true">🏟️</span>Salle complète
+        Salle complète
       </label>
       <label class="opt" :class="{ sel: form.equipement === 'home gym' }">
         <input type="radio" class="sr-only" name="ob-equipement" value="home gym" x-model="form.equipement">
-        <span class="emoji" aria-hidden="true">🏠</span>Home gym
+        Home gym
       </label>
       <label class="opt" :class="{ sel: form.equipement === 'maison' }">
         <input type="radio" class="sr-only" name="ob-equipement" value="maison" x-model="form.equipement">
-        <span class="emoji" aria-hidden="true">🛋️</span>Peu d'équipement
+        Peu d'équipement
       </label>
       <label class="opt" :class="{ sel: form.equipement === 'aucun' }">
         <input type="radio" class="sr-only" name="ob-equipement" value="aucun" x-model="form.equipement">
-        <span class="emoji" aria-hidden="true">✊</span>Poids du corps
+        Poids du corps
       </label>
     </div>
 
@@ -365,14 +388,13 @@
         <label class="field-label">Quel matériel as-tu ? (sélection multiple)</label>
         <div class="s-7799bc">
           <template x-for="eq in equipmentOptions" :key="eq.id">
-            <label class="opt s-60ca2d"
+            <label class="opt opt--liste"
                    :class="{ sel: form.equipment_details.includes(eq.id) }">
               {# La case pilote la sélection : @change plutôt que @click, sinon
                  le clavier (Espace) coche sans rien changer au formulaire. #}
               <input type="checkbox" class="sr-only" :checked="form.equipment_details.includes(eq.id)"
                      @change="toggleEquipment(eq.id)" :aria-label="eq.label">
-              <span class="s-101860" x-text="eq.icon"></span>
-              <span class="s-474a30" x-text="eq.label"></span>
+              <span x-text="eq.label"></span>
             </label>
           </template>
         </div>
@@ -390,7 +412,7 @@
     <div class="card">
       <div class="s-d10cb8">
         <div>
-          <h2 class="onboard-step-title label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Ton programme</h2>
+          <h2 class="onboard-step-title">Ton programme</h2>
           <p class="onboard-step-sub s-ef0b7a">Touche un programme pour voir sa description et ses exercices, puis lance-toi.</p>
         </div>
         <button type="button" class="btn-ghost label-icon s-6ee066" @click="step = 3"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</button>
@@ -398,7 +420,7 @@
     </div>
 
     {# Form caché — soumis directement depuis la modale détail / la carte custom.
-       ⚠️ form.submit() programmatique ne déclenche PAS l'événement submit, donc
+       Attention : form.submit() programmatique ne déclenche PAS l'événement submit, donc
        l'injection CSRF globale de base.html ne s'applique pas : le token doit
        être inclus statiquement ici, sinon le POST est rejeté en 400. #}
     <form id="onb-form" x-ref="onbForm" method="post" action="{{ url_for('onboarding.submit') }}" style="display:none;">
@@ -426,11 +448,10 @@
            @click="openPreview(p)">
 
         <div class="onb-badges" x-show="isReco(p.id)">
-          <span class="onb-badge-reco" x-show="isReco(p.id)">★ Recommandé</span>
+          <span class="onb-badge-reco" x-show="isReco(p.id)">Recommandé</span>
         </div>
 
         <h3 class="onb-title">
-          <span class="onb-title-icon" x-text="p.icon"></span>
           <span class="onb-title-text" x-text="p.title"></span>
         </h3>
 
@@ -440,8 +461,9 @@
         <div class="onb-meta">
           <span class="onb-meta-item"><span x-text="p.freq"></span>x/sem</span>
           <span class="onb-meta-item" x-text="p.duration"></span>
-          <span class="onb-meta-item onb-stars"
-                x-text="'★'.repeat(p.difficulty) + '☆'.repeat(3 - p.difficulty)"></span>
+          <span class="onb-meta-item onb-diff" role="img" :aria-label="'Difficulté ' + p.difficulty + ' sur 4'">
+            <template x-for="n in [1, 2, 3, 4]" :key="n"><i :class="n <= p.difficulty ? 'on' : ''"></i></template>
+          </span>
           <span class="onb-meta-item"><span x-text="p.nb_seances"></span> séance(s)</span>
         </div>
 
@@ -483,14 +505,15 @@
     <div class="preview-overlay" @click.self="previewProg = null">
       <div class="preview-panel">
         <div class="preview-header">
-          <h3 x-text="previewProg.icon + ' ' + previewProg.title"></h3>
+          <h3 x-text="previewProg.title"></h3>
           <button class="preview-close" @click="previewProg = null" aria-label="Fermer"><svg class="icon icon-sm"><use href="/static/img/icons.svg#x"/></svg></button>
         </div>
         <div class="prog-meta s-2b583d">
           <span class="prog-meta-item" x-text="previewProg.freq + 'x/sem'"></span>
           <span class="prog-meta-item" x-text="previewProg.duration"></span>
-          <span class="prog-meta-item prog-stars"
-                x-text="'★'.repeat(previewProg.difficulty) + '☆'.repeat(3 - previewProg.difficulty)"></span>
+          <span class="prog-meta-item onb-diff" role="img" :aria-label="'Difficulté ' + previewProg.difficulty + ' sur 4'">
+            <template x-for="n in [1, 2, 3, 4]" :key="n"><i :class="n <= previewProg.difficulty ? 'on' : ''"></i></template>
+          </span>
         </div>
         <template x-for="s in previewProg.seances_preview" :key="s.name">
           <div class="preview-seance">
@@ -533,16 +556,16 @@ function onboardingFlow() {
       programme_id: "",
     },
     equipmentOptions: [
-      { id: "halteres", label: "Haltères réglables", icon: "🏋️" },
-      { id: "barre", label: "Barre droite + disques", icon: "🔩" },
-      { id: "barre_ez", label: "Barre EZ", icon: "〰️" },
-      { id: "banc_plat", label: "Banc plat", icon: "🪑" },
-      { id: "banc_inclinable", label: "Banc inclinable", icon: "📐" },
-      { id: "barre_traction", label: "Barre de traction", icon: "🔝" },
-      { id: "elastiques", label: "Élastiques / bandes", icon: "🔗" },
-      { id: "kettlebell", label: "Kettlebell", icon: "🔔" },
-      { id: "trx", label: "TRX / sangles", icon: "⛓️" },
-      { id: "rien", label: "Rien (poids du corps)", icon: "✊" },
+      { id: "halteres", label: "Haltères réglables" },
+      { id: "barre", label: "Barre droite + disques" },
+      { id: "barre_ez", label: "Barre EZ" },
+      { id: "banc_plat", label: "Banc plat" },
+      { id: "banc_inclinable", label: "Banc inclinable" },
+      { id: "barre_traction", label: "Barre de traction" },
+      { id: "elastiques", label: "Élastiques / bandes" },
+      { id: "kettlebell", label: "Kettlebell" },
+      { id: "trx", label: "TRX / sangles" },
+      { id: "rien", label: "Rien (poids du corps)" },
     ],
     recommended: [],
     // Les programmes verrouillés (PRO) ne sont pas proposés pendant
@@ -590,7 +613,7 @@ function onboardingFlow() {
 
     // Choisit un programme et valide l'onboarding directement (pas besoin de
     // scroller jusqu'à un bouton en bas).
-    // ⚠️ Ne PAS utiliser this.$refs ici : ce handler est appelé depuis la
+    // Attention : ne PAS utiliser this.$refs ici : ce handler est appelé depuis la
     // modale <template x-if="previewProg">, et fermer la modale détruit
     // l'élément d'origine — $refs (qui remonte le DOM depuis cet élément)
     // devient introuvable et le submit était silencieusement ignoré.

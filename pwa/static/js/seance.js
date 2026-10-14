@@ -1171,7 +1171,7 @@
     }
 
     document.getElementById("finish-open").addEventListener("click", function () {
-      // « Séance terminée 💪 » s'affichait sur une séance où rien n'était
+      // « Séance terminée » (avec un emoji) s'affichait sur une séance où rien n'était
       // enregistré (audit du 06/10, profil 1) : on le dit au lieu de féliciter.
       var vide = seanceVide();
       var titre = document.getElementById("finish-titre");
