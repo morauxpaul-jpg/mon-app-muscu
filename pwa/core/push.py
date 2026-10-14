@@ -79,13 +79,13 @@ MAX_REACTIVATIONS = 3
 MIN_DAYS_BETWEEN = 4  # jours entre deux relances d'une même personne
 
 REACTIVATION_MESSAGES = [
-    {"title": "On reprend ? 💪",
+    {"title": "On reprend ?",
      "body": "Ta prochaine séance t'attend — même courte, elle compte.",
      "url": "/accueil"},
     {"title": "Ton programme t'attend",
      "body": "Reprends là où tu t'es arrêté : 20 minutes suffisent pour relancer la machine.",
      "url": "/seance"},
-    {"title": "Un dernier coup de pouce 👋",
+    {"title": "Un dernier coup de pouce",
      "body": "Reviens quand tu veux — ton historique et tes records sont intacts.",
      "url": "/accueil"},
 ]

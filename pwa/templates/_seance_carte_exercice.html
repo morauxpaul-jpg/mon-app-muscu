@@ -1,7 +1,7 @@
 {#- Inclus par seance_edit.html (découpé le 01/10/2026 : le fichier faisait
     plus de 1 000 lignes, audit du 30/09, M11). Une carte d'exercice : attend `exo` et `exo_index` (Jinja ne passe
     pas `loop` à un fichier inclus). -#}
-    <div class="exo-card {% if exo.completed %}done{% endif %}{% if exo.superset_avec %} exo-card--ss-debut{% endif %}{% if exo.superset_de %} exo-card--ss-fin{% endif %}" :class="{ done: completed }"
+    <div class="exo-card {% if exo.completed %}done{% endif %}{% if exo.superset_avec %} exo-card--ss-debut{% endif %}{% if exo.superset_de %} exo-card--ss-fin{% endif %}" :class="{ done: completed, ouverte: open }"
          id="exo-anchor-{{ exo_index }}"
          data-exo-base="{{ exo.base }}"
          x-data='exoBlock({{ exo_index }}, {{ exo|sans_prive|tojson }})'>
@@ -210,32 +210,50 @@
                         :aria-label="'Modifier la série ' + (i + 1)">
                   <span class="serie-num" x-text="i + 1"></span>
                   <span class="serie-resume" x-text="resumeSerie(s)"></span>
-                  <svg class="icon icon-sm icon-ok" aria-hidden="true"><use href="/static/img/icons.svg#check"/></svg>
                 </button>
 
                 {# Série en cours. #}
                 <div class="serie-encours" x-show="!estFait(i) && i === indexCourant()" x-cloak>
                   <div class="serie-encours-tete">
-                    <b>Série <span x-text="i + 1"></span><span class="serie-type" x-show="s.type === 'echauffement'" x-cloak> · échauffement</span></b>
+                    <b>Série <span x-text="i + 1"></span> <span class="serie-sur" x-text="'/ ' + sets.length"></span><span class="serie-type" x-show="s.type === 'echauffement'" x-cloak> · échauffement</span></b>
                     <span x-show="suggestion && suggestion.reps"
                           x-text="objectifTexte()"></span>
                     <span x-show="!(suggestion && suggestion.reps) && targetReps"
                           x-text="'objectif ' + targetReps"></span>
                   </div>
 
+                  {# Style « Instrument » (maquette du 13/10) : la charge puis les
+                     reps, chacune entre un − et un +. Le − / + de la charge
+                     passe à la charge d'à côté déjà soulevée (les plaques de
+                     la machine), sinon d'un écart habituel (ajuster()). Le
+                     chiffre reste un champ : on peut toujours le taper.
+                     Des <div> et non des <label> : un label envoie son clic
+                     au premier bouton qu'il contient (le −). #}
                   <div class="serie-duo" :class="showWeight ? '' : 'seul'">
-                    <label class="serie-champ">
+                    <div class="serie-champ" x-show="showWeight">
+                      <span class="serie-etiq">Kg</span>
+                      <div class="serie-pas">
+                        <button type="button" class="serie-moins" @click="ajuster(s, 'poids', -1)"
+                                :aria-label="'Moins lourd, série ' + (i + 1)">−</button>
+                        <input type="number" inputmode="decimal" step="any" min="0" x-model.number="s.poids"
+                               placeholder="kg" :aria-label="'Poids série ' + (i + 1)"
+                               @input.once="aSaisi()">
+                        <button type="button" class="serie-plus" @click="ajuster(s, 'poids', 1)"
+                                :aria-label="'Plus lourd, série ' + (i + 1)">+</button>
+                      </div>
+                    </div>
+                    <div class="serie-champ">
                       <span class="serie-etiq">Reps</span>
-                      <input type="number" inputmode="numeric" min="0" x-model.number="s.reps"
-                             :placeholder="placeholderReps()"
-                             :aria-label="'Répétitions série ' + (i + 1)" @input.once="aSaisi()">
-                    </label>
-                    <label class="serie-champ" x-show="showWeight">
-                      <span class="serie-etiq">Poids</span>
-                      <input type="number" inputmode="decimal" step="0.5" min="0" x-model.number="s.poids"
-                             placeholder="kg" :aria-label="'Poids série ' + (i + 1)"
-                             @input.once="aSaisi()">
-                    </label>
+                      <div class="serie-pas">
+                        <button type="button" class="serie-moins" @click="ajuster(s, 'reps', -1)"
+                                :aria-label="'Une répétition de moins, série ' + (i + 1)">−</button>
+                        <input type="number" inputmode="numeric" min="0" x-model.number="s.reps"
+                               :placeholder="placeholderReps()"
+                               :aria-label="'Répétitions série ' + (i + 1)" @input.once="aSaisi()">
+                        <button type="button" class="serie-plus" @click="ajuster(s, 'reps', 1)"
+                                :aria-label="'Une répétition de plus, série ' + (i + 1)">+</button>
+                      </div>
+                    </div>
                   </div>
 
                   <div class="serie-options">

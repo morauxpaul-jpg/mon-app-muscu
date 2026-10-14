@@ -30,11 +30,16 @@
   letter-spacing: 0; font-family: var(--font-display);
   font-weight: 500;
 }
+/* Le nom de la séance en grand, comme le titre des autres pages. */
 .seance-title {
-  font-size: var(--text-xl);
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 0.95;
   color: var(--text-1);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .field-label {
@@ -82,6 +87,9 @@
   transition: opacity var(--ease-fast), transform var(--ease-spring);
 }
 .exo-card.done { opacity: 0.55; }
+/* Faite mais ouverte : on y travaille encore (une série de plus, une
+   correction). Grisée, elle avait l'air terminée dès la première série. */
+.exo-card.done.ouverte { opacity: 1; }
 .exo-card.upcoming { opacity: 0.45; }
 .exo-head {
   display: flex;
@@ -184,43 +192,57 @@
    base n'a pas changé. */
 .series { margin: var(--sp-md) 0 4px; }
 
+/* Style « Instrument » (maquette du 13/10) : une liste à filets, une case
+   par série — verte et numérotée quand elle est faite, grise à venir. */
 .serie-faite {
   width: 100%;
   display: grid;
   grid-template-columns: 22px 1fr auto;
-  gap: var(--sp-sm);
+  gap: 12px;
   align-items: center;
-  padding: 8px 10px;
-  margin-bottom: 4px;
-  border-radius: var(--radius-sm);
-  background: var(--success-bg);
-  border: 1px solid var(--border-glass-bright);
+  padding: 0 2px;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid #262626;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
   color: var(--text-1);
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   text-align: left;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 44px;
 }
-.serie-faite .serie-num { color: var(--success); font-weight: 600; }
-.serie-faite .serie-resume { color: var(--text-2); }
-.serie-faite .icon-ok { color: var(--success); }
+.serie-faite:hover { background: none; }
+.serie-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.serie-faite .serie-num { background: var(--accent); color: var(--on-accent); }
+.serie-faite .serie-resume { color: var(--text-1); }
 
 .serie-avenir {
   display: grid;
   grid-template-columns: 22px 1fr;
-  gap: var(--sp-sm);
+  gap: 12px;
   align-items: center;
-  padding: 8px 10px;
-  margin-bottom: 4px;
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border-default);
-  color: var(--text-3);
-  font-size: 0.82rem;
-  min-height: 36px;
+  padding: 0 2px;
+  margin: 0;
+  border-bottom: 1px solid #262626;
+  color: var(--text-2);
+  font-size: 0.86rem;
+  min-height: 40px;
 }
+.serie-avenir .serie-num { border: 2px solid #333333; color: var(--text-3); }
 
 /* La série en cours : cadre blanc (« maintenant »), comme le jour
    d'aujourd'hui. Le vert reste aux séries faites. */
@@ -228,8 +250,8 @@
   border: 1px solid var(--text-1);
   background: var(--bg-elevated);
   border-radius: var(--radius-md);
-  padding: var(--sp-md);
-  margin-bottom: 6px;
+  padding: 12px;
+  margin: 6px 0;
 }
 .serie-encours-tete {
   display: flex;
@@ -238,44 +260,80 @@
   gap: var(--sp-sm);
   margin-bottom: 10px;
 }
-.serie-encours-tete b { font-size: 0.92rem; }
-.serie-encours-tete span { color: var(--text-3); font-size: 0.75rem; }
+.serie-encours-tete b {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.serie-encours-tete .serie-sur { color: var(--text-2); }
+.serie-encours-tete > span { color: var(--accent); font-size: 0.8rem; text-align: right; }
 
-.serie-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.serie-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .serie-duo.seul { grid-template-columns: 1fr; }
-.serie-champ {
-  display: block;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
-  padding: 7px 6px 8px;
-  text-align: center;
-}
-.serie-champ:focus-within {
-  border-color: rgba(200,240,49,0.4);
-  box-shadow: 0 0 0 2px rgba(200,240,49,0.08);
-}
+.serie-champ { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .serie-etiq {
   display: block;
-  color: var(--text-3);
-  font-size: var(--text-xs);
+  color: var(--text-2);
+  font-size: 0.9rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0; font-family: var(--font-display);
-  margin-bottom: 2px;
+}
+/* − chiffre + dans une boîte noire. Les boutons font toute la hauteur de
+   la boîte : une cible de 36 × 58 px, au pouce, en pleine série. Assez
+   étroits pour que « 102,5 » tienne entre eux sur un écran de 360 px. */
+.serie-pas {
+  display: flex;
+  align-items: stretch;
+  height: 58px;
+  background: var(--bg-base);
+  border: 1px solid #333333;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.serie-pas:focus-within { border-color: var(--text-1); }
+.serie-pas button {
+  flex: 0 0 36px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.serie-pas button:hover { background: var(--bg-surface); }
+.serie-pas button:active { background: #262626; transform: none; }
+/* Trois attributs : passe devant le cadre des champs (surfaces.css). */
+.serie-pas input[type="number"] {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 .serie-champ input {
+  flex: 1;
   width: 100%;
+  min-width: 0;
   background: none;
   border: 0;
   color: var(--text-1);
-  font-family: inherit;
-  font-size: 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.8rem;
   text-align: center;
   font-variant-numeric: tabular-nums;
   padding: 0;
-  min-height: 34px;
+  min-height: 0;
 }
 .serie-champ input:focus { outline: none; }
+/* Écran de 360 px : « 102,5 » tient entre le − et le +. */
+@media (max-width: 370px) { .serie-champ input { font-size: 1.55rem; } }
 /* Les flèches du champ nombre volent de la place au chiffre. */
 .serie-champ input::-webkit-outer-spin-button,
 .serie-champ input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

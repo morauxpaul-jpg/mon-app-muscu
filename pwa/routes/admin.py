@@ -157,7 +157,7 @@ def send_test_push():
     subs = core_db.list_push_subscriptions(uid)
     if not subs:
         return jsonify({"error": "Aucun abonnement sur ce compte. Va dans Gestion → « Activer les notifications » sur cet appareil, puis réessaie."}), 400
-    payload = {"title": "Test ✅", "body": "Les notifications push fonctionnent !", "url": "/accueil"}
+    payload = {"title": "Test", "body": "Les notifications push fonctionnent !", "url": "/accueil"}
     sent, expired, errors = 0, 0, 0
     for sub in subs:
         status = core_push.send_push(sub, payload)
