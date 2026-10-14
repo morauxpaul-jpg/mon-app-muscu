@@ -578,3 +578,141 @@ def test_une_vraie_cle_passe_le_controle_de_forme():
     sys.path.insert(0, "tools")
     from generate_exercise_art import _forme_de_cle
     assert _forme_de_cle("AIzaSyExempleDeCleQuiRessembleAUneVraie") == (None, None)
+
+
+# ── Clé et coût ──────────────────────────────────────────────────
+
+
+def _requete_envoyee(monkeypatch, cle):
+    """La requête telle qu'elle part sur le réseau, réponse simulée."""
+    import base64
+    import contextlib
+    import io as flux
+    import json
+    import sys
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    envoyee = {}
+
+    @contextlib.contextmanager
+    def _faux_appel(requete, timeout=None):
+        envoyee["requete"] = requete
+        image = base64.b64encode(b"PNG").decode()
+        yield flux.BytesIO(json.dumps({
+            "candidates": [{"content": {"parts": [
+                {"inline_data": {"data": image}}]}}],
+            "usageMetadata": {"promptTokenCount": 10}}).encode())
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _faux_appel)
+    g._demander(cle, "PROMPT", None)
+    return envoyee["requete"]
+
+
+def test_la_cle_part_dans_lentete_jamais_dans_ladresse(monkeypatch):
+    """Une clé dans l'adresse passe AVANT celle que le réseau ajoute : une
+    fausse clé y donnait 400 « API key not valid » alors que l'en-tête
+    portait la bonne. Une adresse finit aussi dans les journaux."""
+    requete = _requete_envoyee(monkeypatch, "AIzaCleDeTest")
+    assert "key=" not in requete.full_url
+    assert "AIzaCleDeTest" not in requete.full_url
+    assert requete.get_header("X-goog-api-key") == "AIzaCleDeTest"
+
+
+def test_sans_cle_la_requete_part_sans_en_inventer(monkeypatch):
+    """Dans un environnement cloud, le réseau ajoute l'en-tête lui-même.
+    Le script ne doit ni s'arrêter, ni envoyer une clé vide qui
+    l'écraserait."""
+    requete = _requete_envoyee(monkeypatch, None)
+    assert "key=" not in requete.full_url
+    assert requete.get_header("X-goog-api-key") is None
+
+
+def test_sans_cle_un_refus_arrete_la_file_et_parle_du_reseau(monkeypatch, tmp_path):
+    """Si le réseau n'ajoute rien, Google refuse chaque image : un seul
+    appel, et un message qui dit où regarder."""
+    import io as flux
+    import sys
+    import urllib.error
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    appels = []
+
+    def _refus(requete, timeout=None):
+        appels.append(1)
+        raise urllib.error.HTTPError(
+            "http://x", 403, "Forbidden", {},
+            flux.BytesIO(b'{"error":{"status":"PERMISSION_DENIED"}}'))
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _refus)
+    with pytest.raises(g.CleRefusee) as refus:
+        g.generer(None, str(tmp_path), seulement=["Tractions"])
+    assert "x-goog-api-key" in str(refus.value)
+    assert len(appels) == 1
+
+
+def test_une_reference_transparente_est_posee_sur_du_noir(tmp_path):
+    """Convertie telle quelle, une image transparente garde la couleur
+    cachée sous sa transparence — ici du blanc — comme fond de référence,
+    alors que tous les prompts demandent du noir."""
+    import io as _io
+    import sys
+    from PIL import Image
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import _sans_rouge
+
+    source = Image.new("RGBA", (20, 20), (255, 255, 255, 0))   # blanc caché
+    source.putpixel((10, 10), (150, 150, 150, 255))            # le mannequin
+    chemin = tmp_path / "ref.png"
+    source.save(chemin)
+
+    octets, _ = _sans_rouge(str(chemin))
+    sortie = Image.open(_io.BytesIO(octets)).convert("RGB")
+    assert sortie.getpixel((0, 0)) == (0, 0, 0)
+    assert sortie.getpixel((10, 10)) == (150, 150, 150)
+
+
+def test_le_cout_se_calcule_sur_les_jetons_factures():
+    """1 120 jetons d'image à 120 $ le million : 0,134 $, le prix public
+    d'une image 1K de gemini-3-pro-image. Un modèle sans tarif connu
+    n'affiche pas de prix inventé."""
+    import sys
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import cout_estime
+    usage = {"promptTokenCount": 1000, "candidatesTokenCount": 1120,
+             "thoughtsTokenCount": 200,
+             "candidatesTokensDetails": [{"modality": "IMAGE",
+                                          "tokenCount": 1120}]}
+    # 1000 × 2 $ + 200 × 12 $ + 1120 × 120 $, par million de jetons.
+    assert cout_estime("gemini-3-pro-image", usage) == pytest.approx(0.1388)
+    assert cout_estime("modele-inconnu", usage) is None
+
+
+def test_une_image_jpeg_est_enregistree_en_vrai_png(monkeypatch, tmp_path):
+    """Gemini 3 renvoie du JPEG. Écrit tel quel dans « tractions.png », le
+    fichier mentait sur son format."""
+    import base64
+    import contextlib
+    import io as flux
+    import json
+    import sys
+    from PIL import Image
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    jpeg = flux.BytesIO()
+    Image.new("RGB", (8, 8), (0, 0, 0)).save(jpeg, "JPEG")
+
+    @contextlib.contextmanager
+    def _faux_appel(requete, timeout=None):
+        yield flux.BytesIO(json.dumps({"candidates": [{"content": {"parts": [
+            {"inlineData": {"mimeType": "image/jpeg",
+                            "data": base64.b64encode(jpeg.getvalue()).decode()}}
+        ]}}]}).encode())
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _faux_appel)
+    monkeypatch.setattr(g, "PAUSE", 0)
+    g.generer(None, str(tmp_path), seulement=["Tractions"])
+    with Image.open(tmp_path / "tractions.png") as im:
+        assert im.format == "PNG"
