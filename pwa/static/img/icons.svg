@@ -208,5 +208,17 @@
   <symbol id="star" viewBox="0 0 24 24" fill="currentColor" stroke="none">
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
   </symbol>
+  <!-- L'haltère de l'icône de l'app, même géométrie que tools/dessiner_icone.py
+       (grille de 512, sans le fond noir) ; tests/test_icone.py vérifie qu'elles
+       ne divergent pas. Plein, couleur du texte qui le porte. -->
+  <symbol id="logo" viewBox="86 142 340 228" fill="currentColor" stroke="none">
+    <rect x="86" y="234" width="20" height="44" rx="4"/>
+    <rect x="112" y="178" width="38" height="156" rx="6"/>
+    <rect x="158" y="142" width="42" height="228" rx="6"/>
+    <rect x="200" y="243" width="112" height="26"/>
+    <rect x="312" y="142" width="42" height="228" rx="6"/>
+    <rect x="362" y="178" width="38" height="156" rx="6"/>
+    <rect x="406" y="234" width="20" height="44" rx="4"/>
+  </symbol>
 </defs>
 </svg>

@@ -16,19 +16,22 @@
   <link rel="stylesheet" href="/static/css/icons.css">
   <link rel="stylesheet" href="/static/css/surfaces.css">
   <style>
-    /* Style « Instrument » : texte aligné à gauche en bas de l'écran, le nom
-       en très grand, un seul bouton plein. Le logo bleu lumineux (l'ancienne
-       icône) n'a plus sa place ici. */
+    /* Style « Instrument » : texte aligné à gauche, le nom en très grand, un
+       seul bouton plein. Le bloc est CENTRÉ dans la hauteur : calé en bas,
+       il laissait sur téléphone un grand vide noir au-dessus du nom (retour
+       du propriétaire, 14/10/2026). L'haltère vert de l'icône de l'app ouvre
+       le bloc ; l'ancien logo bleu lumineux ne revient pas. */
     .login-wrap {
       min-height: 100vh;
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
+      justify-content: center;
       max-width: 480px;
       margin: 0 auto;
       padding: 24px 16px calc(40px + env(safe-area-inset-bottom));
     }
+    .login-logo { width: 84px; height: 56px; color: var(--accent); margin-bottom: 28px; }
     .login-sur {
       font-family: var(--font-display); font-weight: 600; font-size: 1rem;
       text-transform: uppercase; color: var(--text-2);
@@ -53,6 +56,7 @@
 </head>
 <body>
   <div class="login-wrap">
+    <svg class="login-logo" aria-hidden="true"><use href="/static/img/icons.svg#logo"/></svg>
     <div class="login-sur">Suivi de musculation</div>
     <h1 class="app-logo">Muscu Tracker</h1>
     <div class="login-sub">Connecte-toi pour retrouver ton programme et ton historique.</div>

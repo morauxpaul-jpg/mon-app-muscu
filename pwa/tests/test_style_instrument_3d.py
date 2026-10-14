@@ -88,3 +88,34 @@ def test_le_coach_n_a_plus_d_alerte_orange_ni_de_retrait_parasite(fake_db, logge
     # white-space: pre-wrap : l'indentation du gabarit devenait un retrait
     # visible avant « Salut ».
     assert '<div class="msg-bubble">Salut <strong' in src
+
+
+def test_la_connexion_n_est_plus_calee_en_bas_de_l_ecran(client):
+    """Calé en bas (justify-content: flex-end), le bloc laissait sur
+    téléphone un grand vide noir au-dessus du nom (retour du propriétaire,
+    14/10/2026). Il est centré, ouvert par l'haltère de l'icône."""
+    html = client.get("/login").get_data(as_text=True)
+    regle = html[html.index(".login-wrap {"):]
+    regle = regle[:regle.index("}")]
+    assert "justify-content: center" in regle
+    assert "flex-end" not in regle
+    assert 'icons.svg#logo' in html
+
+
+def test_la_page_publique_montre_l_accueil_actuel(client):
+    """Le croquis de l'app sur la page publique montrait encore l'interface
+    « verre » retirée le 13/10 : cartes translucides arrondies, « STREAK »
+    en orange (retour du propriétaire, 14/10/2026)."""
+    html = client.get("/").get_data(as_text=True)
+    croquis = html[html.index('<svg class="landing-mockup"'):]
+    croquis = croquis[:croquis.index("</svg>")]
+    assert "PROCHAINE SÉANCE" in croquis and "COMMENCER" in croquis
+    assert "STREAK" not in croquis and "rgba(" not in croquis
+    # Le bouton principal : plein, texte noir, sans halo ni ombre.
+    style = html[html.index("<style>"):html.index("</style>")]
+    assert "box-shadow: 0 0" not in style
+    assert "rgba(200,240,49,0.15)" not in style
+    regle = style[style.index(".landing-cta {"):]
+    regle = regle[:regle.index("}")]
+    assert "background: var(--accent)" in regle
+    assert "color: var(--on-accent)" in regle
