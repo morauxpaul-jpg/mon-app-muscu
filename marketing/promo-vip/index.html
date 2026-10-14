@@ -21,13 +21,14 @@
   }
   html, body { margin: 0; width: 720px; height: 1280px; overflow: hidden; background: var(--bg); }
   #gl { position: absolute; inset: 0; width: 720px; height: 1280px; }
-  #ui { position: absolute; inset: 0; color: var(--t1); font-family: 'Barlow', sans-serif; }
-  .scene { position: absolute; inset: 0; display: none; }
+  /* La perspective sert aux transitions en volume (cube, téléphone). */
+  #ui { position: absolute; inset: 0; color: var(--t1); font-family: 'Barlow', sans-serif; perspective: 1600px; }
+  .scene { position: absolute; inset: 0; display: none; transform-origin: 0 0; backface-visibility: hidden; }
   .cond { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; line-height: .92; letter-spacing: 0; }
   .vert { color: var(--v); }
   .gris { color: var(--t2); }
   .masque { display: block; overflow: hidden; padding-bottom: .04em; }
-  .masque > span { display: inline-block; will-change: transform; }
+  .masque > span { display: inline-block; }
 
   /* Titre commun des scènes : une étiquette verte, deux lignes très grandes. */
   .titre { position: absolute; left: 48px; top: 112px; right: 48px; }
@@ -101,11 +102,16 @@
   .prog .cond { font-size: 40px; }
   .prog .s { font-size: 19px; color: var(--t2); margin-top: 6px; }
   .prog .pro { position: absolute; right: 22px; top: 20px; background: var(--v); color: #000; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; padding: 3px 9px 1px; border-radius: 3px; }
-  #s8-ia { position: absolute; left: 48px; right: 48px; top: 1050px; height: 150px; background: var(--v); color: #000; border-radius: 4px; padding: 22px 26px; box-sizing: border-box; }
+  #s8-ia { position: absolute; left: 48px; width: 624px; top: 1050px; height: 150px; background: var(--v); color: #000; border-radius: 4px; padding: 22px 26px; box-sizing: border-box; }
   #s8-ia .cond { font-size: 56px; }
   #s8-ia .s { font-size: 21px; margin-top: 8px; font-weight: 500; }
 
-  /* 9 — extras */
+  /* 9 — extras, posés sur le vert du générateur IA */
+  #s9 { background: var(--v); color: #000; }
+  #s9 .etiquette { color: #000; opacity: .6; }
+  #s9 .extra { border-color: rgba(0, 0, 0, .2) !important; }
+  #s9 .case { background: #000; }
+  #s9 .case svg { stroke: var(--v); }
   #s9-liste { position: absolute; left: 48px; right: 48px; top: 520px; }
   .extra { display: flex; align-items: center; gap: 26px; padding: 34px 0; border-top: 1px solid var(--l1); }
   .extra .cond { font-size: 58px; }
@@ -116,11 +122,16 @@
   #s10-pro { position: absolute; left: 40px; top: 760px; font-size: 330px; color: var(--v); }
   #s10-bouton { position: absolute; left: 48px; right: 48px; top: 1110px; height: 104px; background: var(--v); color: #000; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; padding: 0 34px; box-sizing: border-box; font-size: 50px; }
 
-  #volet { position: absolute; left: 0; right: 0; top: 0; height: 1280px; background: var(--v); display: none; }
+  /* Éléments des transitions */
+  #plein { position: absolute; background: var(--v); display: none; }
+  #morph { position: absolute; margin: 0; box-sizing: border-box; display: none; }
+  #anneau { position: absolute; border: 4px solid var(--v); border-radius: 50%; box-sizing: border-box; display: none; }
 </style>
 </head>
 <body>
 <canvas id="gl" width="720" height="1280"></canvas>
+<!-- Flou de bougé du panoramique filé (horizontal seulement). -->
+<svg width="0" height="0" style="position:absolute"><filter id="flou" x="-10%" y="0" width="120%" height="100%"><feGaussianBlur id="flou-h" stdDeviation="0 0"/></filter></svg>
 <div id="ui">
 
   <!-- 1 — accroche -->
@@ -165,8 +176,8 @@
       <div class="gros cond"><span class="masque"><span>Après chaque</span></span><span class="masque"><span>séance</span></span></div>
     </div>
     <div class="carte" id="s4-carte" style="top:480px">
-      <div class="entete-carte"><span class="cond">Push · terminée</span><span class="petit">52 min</span></div>
-      <div class="chiffres" style="border-top:none">
+      <div class="entete-carte" id="s4-entete"><span class="cond">Push · terminée</span><span class="petit">52 min</span></div>
+      <div class="chiffres" id="s4-chiffres" style="border-top:none">
         <div class="chiffre"><div class="n" id="s4-series">0</div><div class="u">séries</div></div>
         <div class="chiffre"><div class="n" id="s4-volume">0</div><div class="u">kg soulevés</div></div>
         <div class="chiffre"><div class="n vert" id="s4-gain">+0 %</div><div class="u">vs semaine passée</div></div>
@@ -257,7 +268,9 @@
     <div id="s10-bouton" class="cond"><span>Débloquer PRO</span><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
   </section>
 
-  <div id="volet"></div>
+  <div id="plein"></div>
+  <div id="morph" class="bulle-coach"></div>
+  <div id="anneau"></div>
 </div>
 <script type="module" src="scene.js"></script>
 </body>

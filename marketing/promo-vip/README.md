@@ -1,6 +1,6 @@
 # Vidéo promo PRO
 
-Source de `pwa/static/promo-vip-motion.mp4` (720 × 1280, 24,5 s, muette),
+Source de `pwa/static/promo-vip-motion.mp4` (720 × 1280, 37 s, muette),
 lue en boucle sur la page PRO, et de son image d'aperçu
 `promo-vip-motion-poster.jpg`.
 

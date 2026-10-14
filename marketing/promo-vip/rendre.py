@@ -29,7 +29,7 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.abspath(os.path.join(ICI, "..", ".."))
 STATIC = os.path.join(RACINE, "pwa", "static")
 FPS = 30
-APERCU_T = 23.2   # l'image d'aperçu : l'appel à l'action, haltère posé
+APERCU_T = 36.6   # l'image d'aperçu : l'appel à l'action, haltère posé
 
 
 def ecrire_corps():
