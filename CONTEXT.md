@@ -172,7 +172,7 @@ pwa/
 │   ├── img/
 │   │   ├── icons.svg              # Sprite SVG (lucide-like) référencé via <use href="…#name"/>
 │   │   └── exercises/             # Illustrations d'exercices : 101 WebP 400×400 (une par entrée du catalogue sauf « Copenhagen plank », en attente ; 46 refaites ou créées le 14/10/2026 avec gemini-3-pro-image, référence squat.webp) + 18 anciens SVG plus affichés
-│   ├── promo/, promo-vip*.mp4/.png # Assets marketing (fiche store, vidéo VIP)
+│   ├── promo-vip-motion.mp4 / -poster.jpg # Vidéo de la page PRO (37 s, muette, style « Instrument », 14/10/2026) et son aperçu ; fabriquées par ../marketing/promo-vip/rendre.py, ne pas retoucher à la main
 │   ├── changelog.json             # Notes de version (patch notes modal)
 │   ├── service-worker.js          # SW : Network First, CACHE_VERSION = base ; le SHA du commit est ajouté par app.py
 │   ├── manifest.json              # PWA manifest

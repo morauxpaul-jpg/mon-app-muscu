@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Promo PRO — source de la vidéo</title>
+<!-- Source de pwa/static/promo-vip-motion.mp4. Chaque image est calculée à
+     partir du temps (scene.js, window.seek) ; rendre.py la photographie
+     30 fois par seconde dans Chromium puis ffmpeg assemble la vidéo.
+     Polices et couleurs : celles de l'app (style « Instrument »). -->
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 500; src: url(/pwa/static/fonts/barlow-condensed-latin-500-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 600; src: url(/pwa/static/fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 700; src: url(/pwa/static/fonts/barlow-condensed-latin-700-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 400; src: url(/pwa/static/fonts/barlow-latin-400-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 500; src: url(/pwa/static/fonts/barlow-latin-500-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow'; font-weight: 600; src: url(/pwa/static/fonts/barlow-latin-600-normal.woff2) format('woff2'); }
+
+  :root {
+    --bg: #000; --s1: #111; --s2: #1a1a1a; --l1: #262626; --l2: #333;
+    --t1: #f2f2f2; --t2: #a3a3a3; --t3: #858585; --v: #c8f031;
+  }
+  html, body { margin: 0; width: 720px; height: 1280px; overflow: hidden; background: var(--bg); }
+  #gl { position: absolute; inset: 0; width: 720px; height: 1280px; }
+  /* La perspective sert aux transitions en volume (cube, téléphone). */
+  #ui { position: absolute; inset: 0; color: var(--t1); font-family: 'Barlow', sans-serif; perspective: 1600px; }
+  .scene { position: absolute; inset: 0; display: none; transform-origin: 0 0; backface-visibility: hidden; }
+  .cond { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; line-height: .92; letter-spacing: 0; }
+  .vert { color: var(--v); }
+  .gris { color: var(--t2); }
+  .masque { display: block; overflow: hidden; padding-bottom: .04em; }
+  .masque > span { display: inline-block; }
+
+  /* Titre commun des scènes : une étiquette verte, deux lignes très grandes. */
+  .titre { position: absolute; left: 48px; top: 112px; right: 48px; }
+  .etiquette { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 28px; text-transform: uppercase; color: var(--v); margin-bottom: 14px; }
+  .gros { font-size: 92px; }
+
+  .carte { position: absolute; left: 48px; right: 48px; background: var(--s1); border-radius: 4px; }
+
+  /* 1 — accroche */
+  #hook { position: absolute; left: 48px; top: 300px; font-size: 196px; }
+  #plat { position: absolute; left: 48px; top: 900px; width: 624px; height: 190px; }
+  #s1-sous { position: absolute; left: 48px; top: 1110px; font-size: 30px; color: var(--t2); }
+
+  /* 2 — marque */
+  #s2-nom { position: absolute; left: 0; right: 0; top: 820px; text-align: center; font-size: 104px; }
+  #s2-pro { position: absolute; left: 50%; top: 940px; transform: translateX(-50%); background: var(--v); color: #000; font-size: 72px; padding: 6px 22px 2px; border-radius: 4px; }
+
+  /* Téléphone (coach) */
+  #s3-scene3d { position: absolute; left: 0; right: 0; top: 410px; height: 820px; perspective: 1600px; perspective-origin: 50% 40%; }
+  .tel { position: absolute; left: 50%; top: 0; width: 440px; height: 790px; margin-left: -220px; background: #000; border: 3px solid var(--l2); border-radius: 44px; overflow: hidden; transform-style: preserve-3d; box-sizing: border-box; }
+  .tel-haut { height: 96px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px; box-sizing: border-box; border-bottom: 1px solid var(--l1); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 32px; text-transform: uppercase; }
+  .avert { font-size: 16px; color: var(--t3); padding: 12px 20px; line-height: 1.35; }
+  .bulle-moi { margin: 22px 18px 0 60px; background: var(--t1); color: #000; font-size: 25px; line-height: 1.35; padding: 13px 16px; border-radius: 4px; min-height: 26px; }
+  .bulle-coach { margin: 20px 40px 0 18px; background: var(--s2); color: var(--t1); font-size: 25px; line-height: 1.4; padding: 13px 16px; border-radius: 4px; min-height: 26px; }
+  .bulle-coach b { color: var(--v); font-weight: 600; }
+  .points span { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--t2); }
+  .saisie { position: absolute; left: 14px; right: 14px; bottom: 18px; height: 60px; border: 1px solid var(--l2); border-radius: 4px; display: flex; align-items: center; padding-left: 16px; color: var(--t3); font-size: 21px; }
+  .envoi { position: absolute; right: 6px; top: 6px; width: 48px; height: 48px; background: var(--v); border-radius: 4px; }
+  .envoi svg { position: absolute; left: 14px; top: 14px; }
+
+  /* Lignes de carte (debrief, extras) */
+  .ligne-carte { display: flex; align-items: center; gap: 18px; padding: 22px 26px; border-top: 1px solid var(--l1); font-size: 27px; }
+  .ligne-carte:first-child { border-top: none; }
+  .case { flex: none; width: 44px; height: 44px; border-radius: 4px; background: var(--v); color: #000; display: flex; align-items: center; justify-content: center; }
+  .chiffres { display: flex; padding: 26px; gap: 0; border-top: 1px solid var(--l1); }
+  .chiffre { flex: 1; }
+  .chiffre .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 64px; line-height: 1; }
+  .chiffre .u { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 22px; color: var(--t2); text-transform: uppercase; margin-top: 6px; }
+  .entete-carte { padding: 24px 26px 0; display: flex; justify-content: space-between; align-items: baseline; }
+  .entete-carte .cond { font-size: 40px; }
+  .petit { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 22px; text-transform: uppercase; color: var(--t2); }
+
+  /* 5 — force */
+  #s5-carte { top: 470px; height: 690px; }
+  #s5-nombre { font-size: 168px; line-height: .9; }
+  #s5-nombre small { font-size: 52px; color: var(--t2); margin-left: 8px; }
+  #s5-gain { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 34px; color: var(--v); text-transform: uppercase; }
+  #courbe { position: absolute; left: 26px; right: 26px; bottom: 30px; height: 300px; }
+
+  /* 6 — carte musculaire */
+  #s6-corps { position: absolute; left: 48px; right: 48px; top: 470px; height: 690px; display: flex; justify-content: space-between; }
+  #s6-corps svg { width: 300px; height: 660px; }
+  #s6-legende { position: absolute; left: 48px; right: 48px; top: 1170px; display: flex; justify-content: space-between; }
+
+  /* 7 — nutrition */
+  #s7-carte { top: 470px; }
+  #s7-kcal { font-size: 168px; line-height: .9; }
+  #s7-kcal small { font-size: 46px; color: var(--t2); margin-left: 6px; }
+  .barre { height: 14px; background: var(--l1); border-radius: 2px; overflow: hidden; }
+  .barre > i { display: block; height: 100%; width: 0; background: var(--t1); }
+  .macros { display: flex; gap: 22px; padding: 30px 26px 30px; border-top: 1px solid var(--l1); }
+  .macro { flex: 1; }
+  .macro .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 50px; line-height: 1; margin: 10px 0 12px; }
+  .macro .n small { font-size: 24px; color: var(--t2); }
+  #s7-note { position: absolute; left: 48px; right: 48px; top: 1110px; display: flex; gap: 16px; align-items: center; font-size: 27px; color: var(--t2); }
+  #s7-note b { color: var(--t1); font-weight: 600; }
+
+  /* 8 — programmes */
+  #s8-pile { position: absolute; left: 0; right: 0; top: 440px; height: 800px; perspective: 1400px; perspective-origin: 50% 20%; }
+  .prog { position: absolute; left: 48px; right: 48px; height: 104px; background: var(--s1); border: 1px solid var(--l1); border-radius: 4px; padding: 18px 24px; box-sizing: border-box; transform-origin: 50% 0; }
+  .prog .cond { font-size: 40px; }
+  .prog .s { font-size: 19px; color: var(--t2); margin-top: 6px; }
+  .prog .pro { position: absolute; right: 22px; top: 20px; background: var(--v); color: #000; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; padding: 3px 9px 1px; border-radius: 3px; }
+  #s8-ia { position: absolute; left: 48px; width: 624px; top: 1050px; height: 150px; background: var(--v); color: #000; border-radius: 4px; padding: 22px 26px; box-sizing: border-box; }
+  #s8-ia .cond { font-size: 56px; }
+  #s8-ia .s { font-size: 21px; margin-top: 8px; font-weight: 500; }
+
+  /* 9 — extras, posés sur le vert du générateur IA */
+  #s9 { background: var(--v); color: #000; }
+  #s9 .etiquette { color: #000; opacity: .6; }
+  #s9 .extra { border-color: rgba(0, 0, 0, .2) !important; }
+  #s9 .case { background: #000; }
+  #s9 .case svg { stroke: var(--v); }
+  #s9-liste { position: absolute; left: 48px; right: 48px; top: 520px; }
+  .extra { display: flex; align-items: center; gap: 26px; padding: 34px 0; border-top: 1px solid var(--l1); }
+  .extra .cond { font-size: 58px; }
+  .extra .case { width: 64px; height: 64px; }
+
+  /* 10 — appel à l'action */
+  #s10-passe { position: absolute; left: 48px; top: 640px; font-size: 128px; }
+  #s10-pro { position: absolute; left: 40px; top: 760px; font-size: 330px; color: var(--v); }
+  #s10-bouton { position: absolute; left: 48px; right: 48px; top: 1110px; height: 104px; background: var(--v); color: #000; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; padding: 0 34px; box-sizing: border-box; font-size: 50px; }
+
+  /* Éléments des transitions */
+  #plein { position: absolute; background: var(--v); display: none; }
+  #morph { position: absolute; margin: 0; box-sizing: border-box; display: none; }
+  #anneau { position: absolute; border: 4px solid var(--v); border-radius: 50%; box-sizing: border-box; display: none; }
+</style>
+</head>
+<body>
+<canvas id="gl" width="720" height="1280"></canvas>
+<!-- Flou de bougé du panoramique filé (horizontal seulement). -->
+<svg width="0" height="0" style="position:absolute"><filter id="flou" x="-10%" y="0" width="120%" height="100%"><feGaussianBlur id="flou-h" stdDeviation="0 0"/></filter></svg>
+<div id="ui">
+
+  <!-- 1 — accroche -->
+  <section class="scene" id="s1">
+    <div id="hook" class="cond">
+      <span class="masque"><span>Tu</span></span>
+      <span class="masque"><span>stagnes</span></span>
+      <span class="masque"><span class="vert">?</span></span>
+    </div>
+    <svg id="plat" viewBox="0 0 624 190"></svg>
+    <div id="s1-sous">80 kg × 8. Depuis six semaines.</div>
+  </section>
+
+  <!-- 2 — marque (l'haltère est en 3D, dans le canvas) -->
+  <section class="scene" id="s2">
+    <div id="s2-nom" class="cond"><span class="masque"><span>Muscu Tracker</span></span></div>
+    <div id="s2-pro" class="cond">PRO</div>
+  </section>
+
+  <!-- 3 — coach IA -->
+  <section class="scene" id="s3">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Coach IA · 15 messages par jour</span></span></div>
+      <div class="gros cond"><span class="masque"><span>Un coach qui</span></span><span class="masque"><span>lit ton carnet</span></span></div>
+    </div>
+    <div id="s3-scene3d">
+      <div class="tel" id="s3-tel">
+        <div class="tel-haut">Coach IA</div>
+        <div class="avert">Cet assistant est un outil d'aide : il ne remplace pas un coach certifié.</div>
+        <div class="bulle-moi" id="s3-moi"></div>
+        <div class="bulle-coach points" id="s3-points"><span></span><span></span><span></span></div>
+        <div class="bulle-coach" id="s3-coach"></div>
+        <div class="saisie">Pose ta question…<div class="envoi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 — debrief -->
+  <section class="scene" id="s4">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Debrief du coach</span></span></div>
+      <div class="gros cond"><span class="masque"><span>Après chaque</span></span><span class="masque"><span>séance</span></span></div>
+    </div>
+    <div class="carte" id="s4-carte" style="top:480px">
+      <div class="entete-carte" id="s4-entete"><span class="cond">Push · terminée</span><span class="petit">52 min</span></div>
+      <div class="chiffres" id="s4-chiffres" style="border-top:none">
+        <div class="chiffre"><div class="n" id="s4-series">0</div><div class="u">séries</div></div>
+        <div class="chiffre"><div class="n" id="s4-volume">0</div><div class="u">kg soulevés</div></div>
+        <div class="chiffre"><div class="n vert" id="s4-gain">+0 %</div><div class="u">vs semaine passée</div></div>
+      </div>
+      <div class="ligne-carte" id="s4-l1"><div class="case"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><div><b>Record</b> au développé couché : <span class="vert">85 kg × 5</span></div></div>
+      <div class="ligne-carte" id="s4-l2"><div class="case"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><div>Épaules : volume en hausse, garde le rythme</div></div>
+      <div class="ligne-carte" id="s4-l3"><div class="case"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><div>Prochaine fois : <b>dips + 2,5 kg</b></div></div>
+    </div>
+  </section>
+
+  <!-- 5 — force -->
+  <section class="scene" id="s5">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Stats détaillées</span></span></div>
+      <div class="gros cond"><span class="masque"><span>Ta force,</span></span><span class="masque"><span>mesurée</span></span></div>
+    </div>
+    <div class="carte" id="s5-carte">
+      <div class="entete-carte"><span class="petit">Développé couché · force estimée (1RM)</span></div>
+      <div style="padding: 14px 26px 0">
+        <div id="s5-nombre" class="cond"><span id="s5-val">87,0</span><small>KG</small></div>
+        <div id="s5-gain">+18 % depuis le 4 mai</div>
+      </div>
+      <svg id="courbe" viewBox="0 0 572 300"></svg>
+    </div>
+  </section>
+
+  <!-- 6 — carte musculaire -->
+  <section class="scene" id="s6">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Carte musculaire</span></span></div>
+      <div class="gros cond"><span class="masque"><span>Chaque muscle</span></span><span class="masque"><span>compte</span></span></div>
+    </div>
+    <div id="s6-corps"><svg id="corps-face" viewBox="0 0 100 220"></svg><svg id="corps-dos" viewBox="0 0 100 220"></svg></div>
+    <div id="s6-legende" class="petit"><span>Face</span><span id="s6-compte">0 groupes travaillés</span><span>Dos</span></div>
+  </section>
+
+  <!-- 7 — nutrition -->
+  <section class="scene" id="s7">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Suivi nutrition</span></span></div>
+      <div class="gros cond"><span class="masque"><span>Calories</span></span><span class="masque"><span>et macros</span></span></div>
+    </div>
+    <div class="carte" id="s7-carte">
+      <div class="entete-carte"><span class="petit">Objectif du jour</span><span class="petit">reste <span id="s7-reste">2 250</span></span></div>
+      <div style="padding: 10px 26px 26px">
+        <div id="s7-kcal" class="cond"><span id="s7-val">0</span><small>/ 2 250 KCAL</small></div>
+        <div class="barre" style="margin-top:20px"><i id="s7-barre"></i></div>
+      </div>
+      <div class="macros">
+        <div class="macro"><div class="petit">Protéines</div><div class="n"><span id="s7-p">0</span><small> / 160 g</small></div><div class="barre"><i id="s7-bp"></i></div></div>
+        <div class="macro"><div class="petit">Glucides</div><div class="n"><span id="s7-g">0</span><small> / 260 g</small></div><div class="barre"><i id="s7-bg"></i></div></div>
+        <div class="macro"><div class="petit">Lipides</div><div class="n"><span id="s7-l">0</span><small> / 70 g</small></div><div class="barre"><i id="s7-bl"></i></div></div>
+      </div>
+    </div>
+    <div id="s7-note"><div class="case"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></div><div>Ta cible <b>suit ta balance</b>, semaine après semaine.</div></div>
+  </section>
+
+  <!-- 8 — programmes -->
+  <section class="scene" id="s8">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Programmes</span></span></div>
+      <div class="gros cond"><span class="masque"><span>15 programmes</span></span><span class="masque"><span>avancés</span></span></div>
+    </div>
+    <div id="s8-pile"></div>
+    <div id="s8-ia">
+      <div class="cond">+ Générateur IA</div>
+      <div class="s">Décris ton objectif : l'IA construit ton programme.</div>
+    </div>
+  </section>
+
+  <!-- 9 — et aussi -->
+  <section class="scene" id="s9">
+    <div class="titre">
+      <div class="etiquette"><span class="masque"><span>Et aussi</span></span></div>
+      <div class="gros cond"><span class="masque"><span>Tout est</span></span><span class="masque"><span>débloqué</span></span></div>
+    </div>
+    <div id="s9-liste">
+      <div class="extra" id="s9-a"><div class="case"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><div class="cond">Plusieurs programmes<br>en parallèle</div></div>
+      <div class="extra" id="s9-b"><div class="case"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><div class="cond">Réimport de tes<br>sauvegardes</div></div>
+      <div class="extra" id="s9-c" style="border-bottom:1px solid var(--l1)"><div class="case"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><div class="cond">Zéro publicité</div></div>
+    </div>
+  </section>
+
+  <!-- 10 — appel à l'action (l'haltère revient en 3D) -->
+  <section class="scene" id="s10">
+    <div id="s10-passe" class="cond"><span class="masque"><span>Passe en</span></span></div>
+    <div id="s10-pro" class="cond">PRO</div>
+    <div id="s10-bouton" class="cond"><span>Débloquer PRO</span><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
+  </section>
+
+  <div id="plein"></div>
+  <div id="morph" class="bulle-coach"></div>
+  <div id="anneau"></div>
+</div>
+<script type="module" src="scene.js"></script>
+</body>
+</html>
