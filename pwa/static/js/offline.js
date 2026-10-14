@@ -381,7 +381,7 @@
       a.addEventListener("click", function (e) {
         if (!navigator.onLine) {
           e.preventDefault();
-          showToast("📡 Cette page nécessite une connexion internet");
+          showToast("Cette page nécessite une connexion internet");
         }
       });
     });

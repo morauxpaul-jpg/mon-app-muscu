@@ -177,7 +177,7 @@
 }
 .stat-blue   .stat-value { color: var(--text-1); }
 .stat-green  .stat-value { color: var(--success); }
-.stat-gold   .stat-value { color: var(--warning); font-size: var(--text-xl); }
+.stat-gold   .stat-value { color: var(--text-1); font-size: var(--text-xl); }
 .stat-orange .stat-value { color: var(--warning); font-size: var(--text-xl); }
 
 /* ── Semaine — grille 7 cellules ── */

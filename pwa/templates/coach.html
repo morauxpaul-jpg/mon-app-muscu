@@ -58,9 +58,7 @@
       <button type="button" class="coach-icon-btn" @click="drawerOpen = true" aria-label="Conversations">
         <svg class="icon icon-md"><use href="/static/img/icons.svg#menu"/></svg>
       </button>
-      <div class="coach-header-title label-icon">
-        <svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#message-circle"/></svg>Coach IA
-      </div>
+      <h1 class="coach-header-title">Coach IA</h1>
       <button type="button" class="coach-icon-btn" @click="newChat()" aria-label="Nouveau chat" title="Nouveau chat">
         <svg class="icon icon-md"><use href="/static/img/icons.svg#plus-circle"/></svg>
       </button>
@@ -74,9 +72,7 @@
     <div class="coach-messages" x-ref="scroll">
       <!-- Message d'accueil (chat vide seulement) -->
       <div class="msg msg-bot" x-show="messages.length === 0">
-        <div class="msg-bubble">
-          Salut <strong x-text="prenom"></strong> ! Je suis ton coach IA. Pose-moi une question sur ton entraînement, ta nutrition, ou ta progression.
-        </div>
+        <div class="msg-bubble">Salut <strong x-text="prenom"></strong> ! Je suis ton coach IA. Pose-moi une question sur ton entraînement, ta nutrition, ou ta progression.</div>
       </div>
 
       <!-- Suggestions (affichées seulement sur un chat vide) -->
@@ -379,12 +375,12 @@
       padding: 8px 2px;
       background: var(--bg-base);
     }
-    .coach-header-title {
+    h1.coach-header-title {
       flex: 1;
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--text-1);
-      justify-content: center;
+      margin: 0;
+      font-size: 1.6rem;
+      line-height: 1;
+      text-align: center;
     }
     .coach-icon-btn {
       display: flex;
@@ -395,22 +391,22 @@
       flex-shrink: 0;
       background: var(--bg-surface);
       border: 0.5px solid var(--border-default);
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       color: var(--text-1);
       cursor: pointer;
       transition: background 0.15s;
     }
     .coach-icon-btn:active { background: var(--bg-elevated); }
+    /* Une précision, pas une alerte : en gris (l'orange est réservé au
+       retard). */
     .coach-disclaimer {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 12px;
-      background: rgba(255,159,10,0.08);
-      border: 1px solid rgba(255,159,10,0.25);
-      border-radius: 10px;
+      padding: 0 0 10px;
+      border-bottom: 1px solid #262626;
       font-size: 0.75rem;
-      color: #FFB347;
+      color: var(--text-2);
       margin-bottom: 14px;
       line-height: 1.4;
     }
@@ -486,7 +482,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       transition: background 0.12s;
     }
     .coach-conv-item.active { background: rgba(255,255,255,0.08); }
@@ -516,7 +512,7 @@
       color: var(--text-3);
       font-size: 1rem;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
     }
     .coach-conv-del.danger { color: var(--danger); }
     .coach-conv-confirm { display: flex; gap: 2px; }
@@ -543,23 +539,22 @@
     .msg-bubble {
       max-width: 82%;
       padding: 10px 13px;
-      border-radius: 14px;
+      border-radius: var(--radius-sm);
       font-size: 0.9rem;
       line-height: 1.45;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
+    /* Tes messages en blanc, ceux du coach sur un bloc gris. */
     .msg-user .msg-bubble {
-      background: var(--accent-bg);
-      color: var(--text-1);
-      border: 1px solid var(--border-glass-bright);
-      border-bottom-right-radius: 4px;
+      background: var(--text-1);
+      color: var(--bg-base);
+      border: 1px solid var(--text-1);
     }
     .msg-bot .msg-bubble {
       background: var(--bg-surface);
       color: var(--text-1);
-      border: 0.5px solid var(--border-default);
-      border-bottom-left-radius: 4px;
+      border: 1px solid #262626;
     }
     .msg-error {
       background: var(--danger-bg) !important;
@@ -594,8 +589,8 @@
     .date-sep span {
       background: var(--bg-elevated);
       padding: 2px 10px;
-      border-radius: 10px;
-      border: 0.5px solid var(--border-subtle);
+      border-radius: 2px;
+      border: 1px solid var(--border-subtle);
     }
     .coach-suggestions {
       display: flex;
@@ -645,8 +640,8 @@
       max-height: 120px;
       padding: 10px 13px;
       background: var(--bg-elevated);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
+      border: 1px solid #333333;
+      border-radius: var(--radius-sm);
       color: var(--text-1);
       font-size: 0.9rem;
       font-family: inherit;
@@ -654,8 +649,8 @@
     }
     .coach-textarea:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(200,240,49,0.15);
+      border-color: var(--text-1);
+      box-shadow: none;
     }
     .coach-textarea::placeholder {
       color: var(--text-3);
@@ -686,6 +681,7 @@
     }
     .msg-bubble .coach-link:hover { background: var(--accent-bg-hover); }
     .msg-bubble strong { color: var(--text-1); font-weight: 600; }
+    .msg-user .msg-bubble strong, .msg-user .msg-bubble em { color: inherit; }
     .msg-bubble em { font-style: italic; color: var(--text-1); }
     .msg-bubble code {
       background: var(--bg-elevated);

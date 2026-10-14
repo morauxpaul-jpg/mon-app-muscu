@@ -67,10 +67,12 @@
   --danger: #ff5a4e;
   --danger-bg: rgba(255,90,78,0.12);
 
-  /* ── Médailles ── */
-  --gold: #ffd60a;
-  --silver: #c0c5ce;
-  --bronze: #cd7f32;
+  /* ── Médailles et PRO ── une seule couleur vive : le premier et le
+     diamant PRO prennent le vert (records), le deuxième le blanc, le
+     troisième le gris. L'or #ffd60a faisait une deuxième couleur vive. */
+  --gold: #c8f031;
+  --silver: #f2f2f2;
+  --bronze: #9a9a9a;
 
   /* ── Rayons : à peine arrondis. --radius-full ne servait qu'à des
      « pilules » (badges, puces, barres) : elles deviennent des rectangles.

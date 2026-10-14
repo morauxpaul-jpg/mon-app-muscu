@@ -79,7 +79,7 @@
       if (perm !== 'granted') return false;
       var reg = await navigator.serviceWorker.ready;
       await subscribeInternal(reg, cfg.public_key);
-      toast('Notifications activées ✅');
+      toast('Notifications activées');
       document.querySelectorAll('[data-push-enable]').forEach(function (el) {
         el.textContent = 'Notifications activées ✓';
         el.disabled = true;

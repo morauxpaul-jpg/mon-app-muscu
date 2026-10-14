@@ -70,12 +70,12 @@
       window.copyRefLink = function () {
         if (input) { input.select(); }
         (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
-          .then(function(){ toast('Lien copié 📋'); trackShare('copy'); })
-          .catch(function(){ try { document.execCommand('copy'); toast('Lien copié 📋'); trackShare('copy'); } catch(e){} });
+          .then(function(){ toast('Lien copié'); trackShare('copy'); })
+          .catch(function(){ try { document.execCommand('copy'); toast('Lien copié'); trackShare('copy'); } catch(e){} });
       };
 
       window.shareRefLink = async function () {
-        var text = 'Rejoins-moi sur Muscu Tracker 💪 On gagne chacun des jours PRO !';
+        var text = 'Rejoins-moi sur Muscu Tracker : on gagne chacun des jours PRO !';
         if (navigator.share) {
           try { await navigator.share({ title: 'Muscu Tracker', text: text, url: link }); trackShare('share'); return; }
           catch (e) { if (e && e.name === 'AbortError') return; }
