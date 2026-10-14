@@ -34,6 +34,7 @@ from core.seance_semaine import (_date_label, _display_week, _find_done_session,
 from core.seance_historique import (_best_record, _exo_completed, _exo_curr_rows,
                                     _last_session_sets, _norm, _previous_weeks_data,
                                     _suggestion_for, _cible_du_programme, resume_series)
+from core.seance_charges import echelle_charges
 from core.seance_contexte import (_build_all_exo_contexts, _reconstruct_history_exos)
 from core.seance_calques import _appliquer_substituts, _apply_seance_order
 from core.seance_saisie import (MESSAGE_DATE_A_VENIR, _form_date, _known_exo_names,
@@ -702,4 +703,5 @@ def api_variant_history():
         "record": record,
         "prev_weeks": pw_display,
         "suggestion": suggestion,
+        "echelle": echelle_charges(hist, exo_final),
     })

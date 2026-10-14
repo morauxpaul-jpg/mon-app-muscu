@@ -238,6 +238,21 @@ def test_premiere_fois_a_la_barre_le_premier_tap_enregistre_la_barre_vide(page, 
     assert _attendre(lambda: _series(serveur) == [(1, 5, 20.0)])
 
 
+def test_les_boutons_moins_plus_reglent_la_serie_avant_serie_faite(page, serveur):
+    """Style « Instrument » (14/10) : − / + de part et d'autre du chiffre.
+    Les reps partent de l'objectif grisé (5 → 6), la charge de la barre
+    pré-remplie (20 → 22,5, sans historique) ; « Série faite » enregistre ce
+    qu'affichent les champs. Un clic sur « Kg » ne déclenche pas le −."""
+    carte = page.locator("#exo-anchor-0")
+    carte.get_by_role("button", name="Une répétition de plus, série 1", exact=True).click()
+    carte.get_by_role("button", name="Plus lourd, série 1", exact=True).click()
+    carte.locator(".serie-encours .serie-etiq", has_text="Kg").first.click()
+    assert carte.get_by_label("Répétitions série 1", exact=True).input_value() == "6"
+    assert carte.get_by_label("Poids série 1", exact=True).input_value() == "22.5"
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: _series(serveur) == [(1, 6, 22.5)])
+
+
 def test_sans_charge_ni_reps_la_serie_nest_pas_pretendue_faite(page, serveur):
     carte = page.locator("#exo-anchor-0")
     # La barre vide est pré-remplie depuis le 06/10 : on l'efface, comme

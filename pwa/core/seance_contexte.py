@@ -23,6 +23,7 @@ from core.seance_historique import (_all_used_variants, _best_record, _exo_compl
                                     _exo_curr_rows, _extract_variant, _last_session_sets,
                                     _last_variant, _norm, _previous_weeks_data,
                                     _suggestion_for, resume_series)
+from core.seance_charges import echelle_charges
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         "sets": sets,
         "last_summary": last_summary,
         "suggestion": suggestion,
+        # Boutons − / + du poids : les charges déjà soulevées et leur écart.
+        "echelle": echelle_charges(hist, exo_final),
         "echauffement": echauffement,
         "conseil_depart": "" if (last_sets or completed or is_iso) else conseil_depart(base, is_bw),
         "info": info,

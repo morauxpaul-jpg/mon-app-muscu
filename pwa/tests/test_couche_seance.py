@@ -41,8 +41,9 @@ def _modules():
     return sorted(p.stem for p in CORE.glob("seance_*.py"))
 
 
-def test_les_six_modules_existent():
-    assert _modules() == ["seance_calques", "seance_cardio", "seance_contexte",
+def test_les_modules_existent():
+    # seance_charges (14/10) : le pas des boutons − / + de la charge.
+    assert _modules() == ["seance_calques", "seance_cardio", "seance_charges", "seance_contexte",
                           "seance_historique", "seance_saisie", "seance_semaine"]
 
 

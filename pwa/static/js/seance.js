@@ -319,6 +319,9 @@
 
       lastSummary: data.last_summary || "",
       suggestion: data.suggestion || null,
+      // Boutons − / + (maquette du 13/10) : les charges déjà soulevées sur
+      // cet exercice et leur écart habituel (core/seance_charges.py).
+      echelle: data.echelle || { charges: [], pas: 2.5 },
       suggestionApplied: false,
       record: data.record || null,
 
@@ -429,6 +432,7 @@
             self.suggestion = d.suggestion || null;
             self.suggestionApplied = false;
             self.record = d.record || null;
+            if (d.echelle) self.echelle = d.echelle;
             self.prevWeeks = (d.prev_weeks || []).map(function (pw) {
               return { week: pw.week, missed: pw.missed, rows: pw.rows || [],
                        cross_session: pw.cross_session || false };
@@ -574,6 +578,34 @@
       // Le poids s'écrit avec une virgule partout où c'est du TEXTE. Dans un
       // champ nombre, le navigateur s'en charge ; dans une phrase, non.
       _kg: function (v) { return String(v).replace(".", ","); },
+
+      // Le − / + part de ce que le champ montre : la valeur tapée, sinon la
+      // valeur grisée (objectif, charge proposée), comme « Série faite ».
+      ajuster: function (s, champ, sens) {
+        var v = s[champ];
+        var base;
+        if (v !== "" && v != null && !isNaN(Number(v))) base = Number(v);
+        else if (champ === "reps") base = this._repsProposees();
+        else base = this.suggestion && Number(this.suggestion.poids) > 0 ? Number(this.suggestion.poids) : 0;
+        var nouveau = champ === "reps" ? base + sens : this._chargeVoisine(base, sens);
+        s[champ] = Math.max(0, Math.round(nouveau * 10) / 10);
+        this.aSaisi();
+      },
+      // La charge d'à côté : celle déjà soulevée juste au-dessus (ou
+      // au-dessous) si elle est à un pas et demi au plus — les plaques d'une
+      // machine, 73 → 79 —, sinon un pas de plus.
+      _chargeVoisine: function (v, sens) {
+        var pas = Number(this.echelle.pas) || 2.5;
+        var charges = this.echelle.charges || [];
+        var voisine = null;
+        for (var k = 0; k < charges.length; k++) {
+          var c = Number(charges[k]);
+          if (sens > 0 && c > v + 0.05) { voisine = c; break; }
+          if (sens < 0 && c < v - 0.05) voisine = c;
+        }
+        if (voisine !== null && Math.abs(voisine - v) <= pas * 1.5 + 0.05) return voisine;
+        return v + sens * pas;
+      },
 
       objectifTexte: function () {
         if (!this.suggestion || !this.suggestion.reps) return "";
