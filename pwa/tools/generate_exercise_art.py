@@ -20,9 +20,23 @@ images, donc elle se regarde avant de lancer la série.
         --reference ../art_genere/arnold-press.png \\
         --sortie ../art_genere
 
+Pour refaire ou compléter le catalogue dans le style existant, une
+illustration déjà livrée et JUSTE sert de référence telle quelle :
+
+    python tools/generate_exercise_art.py --modele gemini-3-pro-image \\
+        --reference static/img/exercises/squat.webp \\
+        --un "Tractions" --limite 1 --sortie ../art_genere
+
+La clé part dans l'en-tête `x-goog-api-key`, jamais dans l'adresse : une
+adresse finit dans les journaux, et une clé qui y figure passe AVANT celle
+que le réseau ajoute. Sans --cle ni GEMINI_API_KEY, rien n'est envoyé :
+c'est le cas d'un environnement qui ajoute lui-même l'en-tête à chaque
+requête vers Google (les « Network secrets » d'un environnement cloud).
+
 Le script est REPRENABLE : il saute ce qui existe déjà. Coupez-le, relancez-
 le, il continue. En cas de dépassement de quota il attend et réessaie au
-lieu d'abandonner la file.
+lieu d'abandonner la file. Après chaque image, il affiche les jetons
+facturés par Google et le coût estimé.
 
 Vérifiez les images avant de les importer : un modèle se trompe souvent sur
 les articulations et le matériel, et une illustration fausse apprend un
@@ -53,6 +67,37 @@ URL = "https://generativelanguage.googleapis.com/v1beta/models/{modele}:generate
 PAUSE = 4.0          # secondes entre deux images, pour rester sous le quota gratuit
 ATTENTE_QUOTA = 65   # secondes après un 429
 ESSAIS = 3
+
+# Dollars par million de jetons : (entrée, sortie texte et réflexion,
+# sortie image). Grille publique du palier payant relevée le 14/10/2026 ;
+# elle sert à ESTIMER, la facture fait foi. Un modèle absent d'ici affiche
+# ses jetons sans estimation plutôt qu'un prix inventé.
+TARIFS = {
+    "gemini-2.5-flash-image": (0.30, 2.50, 30.0),
+    "gemini-3-pro-image": (2.00, 12.0, 120.0),
+    "gemini-3-pro-image-preview": (2.00, 12.0, 120.0),
+    "gemini-3.1-flash-image": (0.50, 3.00, 60.0),
+    "gemini-3.1-flash-image-preview": (0.50, 3.00, 60.0),
+}
+
+
+def _jetons(usage):
+    """(entrée, sortie texte et réflexion, sortie image) d'une réponse."""
+    usage = usage or {}
+    entree = usage.get("promptTokenCount") or 0
+    image = sum(d.get("tokenCount") or 0
+                for d in usage.get("candidatesTokensDetails") or []
+                if d.get("modality") == "IMAGE")
+    sortie = (usage.get("candidatesTokenCount") or 0) - image
+    return entree, sortie + (usage.get("thoughtsTokenCount") or 0), image
+
+
+def cout_estime(modele, usage):
+    """Dollars estimés pour une réponse, ou None si le tarif est inconnu."""
+    tarif = TARIFS.get(modele)
+    if not tarif:
+        return None
+    return sum(n * prix / 1e6 for n, prix in zip(_jetons(usage), tarif))
 
 
 def _resume_quota(corps):
@@ -105,7 +150,13 @@ def _forme_de_cle(cle):
             "ni à un jeton AI Studio (« AQ. »)."), None
 
 
-def _resume_cle(corps):
+def _resume_cle(corps, cle_locale=True):
+    if not cle_locale:
+        return ("Google n'a reçu aucune clé valable. Aucune n'a été donnée "
+                "ici (ni --cle, ni GEMINI_API_KEY), et le réseau n'en a pas "
+                "ajouté d'utilisable dans l'en-tête x-goog-api-key. Vérifiez "
+                "le secret réseau de l'environnement (site autorisé : "
+                "generativelanguage.googleapis.com), ou passez --cle.")
     if "OAuth 2 access token" in corps or "UNAUTHENTICATED" in corps:
         return ("clé refusée. Si c'est un jeton AI Studio (« AQ. »), il a "
                 "sans doute expiré : ils ne durent que quelques heures. "
@@ -129,8 +180,19 @@ def _sans_rouge(chemin):
 
     Le mannequin est gris (r ≈ v ≈ b) : un pixel dont le rouge domine
     franchement les deux autres canaux est du coloriage, pas une ombre.
+
+    Une image au fond transparent (une illustration déjà livrée, un PNG
+    détouré) est d'abord posée sur du noir, le fond que demandent les
+    prompts. Convertie telle quelle, c'est la couleur cachée sous la
+    transparence qui ressortirait : presque noire dans nos WebP, mais
+    n'importe laquelle dans un PNG.
     """
-    im = Image.open(chemin).convert("RGB")
+    source = Image.open(chemin)
+    if "A" in source.getbands():
+        fond = Image.new("RGBA", source.size, (0, 0, 0, 255))
+        fond.alpha_composite(source.convert("RGBA"))
+        source = fond
+    im = source.convert("RGB")
     px = im.load()
     largeur, hauteur = im.size
     efface = 0
@@ -160,44 +222,62 @@ def _reference(chemin):
 
 
 def _demander(cle, prompt, reference, modele=MODELE):
-    """Renvoie les octets de l'image, ou lève une erreur explicite."""
+    """Renvoie (octets de l'image, jetons facturés), ou lève une erreur
+    explicite. Sans clé, la requête part sans : le réseau l'ajoute."""
     parties = [{"text": prompt}]
     if reference:
         # La référence doit gouverner le STYLE, rien d'autre. Sans ce cadrage,
         # le modèle recopiait aussi sa pose et sa zone musclée en rouge : tous
-        # les exercices ressortaient avec les épaules en rouge.
+        # les exercices ressortaient avec les épaules en rouge. Les poses
+        # copiées ont surtout été DEBOUT (tractions, rowing barre) : la
+        # consigne le nomme.
         parties.insert(0, {"text": "Use the reference image ONLY for the "
                                    "rendering style, the mannequin's look and "
                                    "materials, the lighting and the background. "
-                                   "The reference shows a standing figure "
-                                   "holding a BARBELL: neither its pose nor "
-                                   "its equipment apply here. Draw only the "
-                                   "equipment named in the instructions "
+                                   "The reference shows one particular "
+                                   "exercise with a BARBELL: neither its pose "
+                                   "nor its equipment apply here. Draw only "
+                                   "the equipment named in the instructions "
                                    "below — if they say dumbbells, there is "
                                    "no bar of any kind in the image. "
-                                   "The reference shows a STANDING figure: "
-                                   "your pose comes from the instructions "
+                                   "Your pose comes from the instructions "
                                    "below and will usually be completely "
-                                   "different. Do NOT copy its pose. "
+                                   "different: lying, hanging, kneeling or "
+                                   "seated when they say so, never standing "
+                                   "by default. Do NOT copy its pose. "
                                    "The reference has "
                                    "no coloured muscle; the red area is "
                                    "described in the instructions below and "
                                    "nowhere else."})
         parties.append(reference)
 
-    corps = json.dumps({"contents": [{"parts": parties}]}).encode()
+    demande = {"contents": [{"parts": parties}]}
+    if modele.startswith("gemini-3"):
+        # Carré, et la plus petite taille qui garde du détail : l'import
+        # réduit tout à 400 px, une 2K coûterait plus pour rien.
+        demande["generationConfig"] = {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": {"aspectRatio": "1:1", "imageSize": "1K"}}
+    entetes = {"Content-Type": "application/json"}
+    if cle:
+        entetes["x-goog-api-key"] = cle
     requete = urllib.request.Request(
-        URL.format(modele=modele) + "?key=" + cle,
-        data=corps, headers={"Content-Type": "application/json"})
+        URL.format(modele=modele), data=json.dumps(demande).encode(),
+        headers=entetes)
 
-    with urllib.request.urlopen(requete, timeout=180) as reponse:
+    with urllib.request.urlopen(requete, timeout=300) as reponse:
         charge = json.loads(reponse.read().decode())
 
     for candidat in charge.get("candidates") or []:
         for partie in (candidat.get("content") or {}).get("parts") or []:
+            if partie.get("thought"):
+                # Gemini 3 peut joindre des brouillons pendant sa réflexion :
+                # seule l'image finale compte.
+                continue
             donnees = partie.get("inlineData") or partie.get("inline_data")
             if donnees and donnees.get("data"):
-                return base64.b64decode(donnees["data"])
+                return (base64.b64decode(donnees["data"]),
+                        charge.get("usageMetadata") or {})
 
     # Pas d'image : on rend la réponse brute plutôt qu'un « échec » opaque.
     raise RuntimeError("aucune image dans la réponse : "
@@ -226,6 +306,7 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
 
     ref = _reference(reference)
     faits = ignores = echecs = 0
+    depense = 0.0
 
     for i, entree in enumerate(entrees, 1):
         if limite and faits >= limite:
@@ -238,11 +319,19 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
 
         for essai in range(1, ESSAIS + 1):
             try:
-                image = _demander(cle, entree["prompt"], ref, modele)
-                with open(chemin, "wb") as f:
-                    f.write(image)
+                image, usage = _demander(cle, entree["prompt"], ref, modele)
+                # Gemini 3 renvoie du JPEG : écrit tel quel, un « .png »
+                # contiendrait un JPEG. Réencodé, le nom dit la vérité.
+                Image.open(io.BytesIO(image)).save(chemin, "PNG")
                 faits += 1
-                print(f"  [{i}/{len(entrees)}] {entree['nom']}")
+                entree_j, texte_j, image_j = _jetons(usage)
+                cout = cout_estime(modele, usage)
+                prix = (f" ≈ {cout:.3f} $" if cout is not None
+                        else " (tarif inconnu pour ce modèle)")
+                depense += cout or 0
+                print(f"  [{i}/{len(entrees)}] {entree['nom']} — jetons : "
+                      f"{entree_j} en entrée, {texte_j} de texte et "
+                      f"réflexion, {image_j} d'image{prix}")
                 break
             except urllib.error.HTTPError as e:
                 if e.code == 429:
@@ -265,10 +354,10 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
                     continue
                 detail = e.read().decode(errors="replace")
                 if e.code == 401 or (e.code in (400, 403)
-                                     and "API_KEY" in detail):
+                                     and ("API_KEY" in detail or not cle)):
                     # La clé ne deviendra pas valide à l'exercice suivant.
                     # Répéter l'erreur 87 fois noie le message utile.
-                    raise CleRefusee(_resume_cle(detail))
+                    raise CleRefusee(_resume_cle(detail, cle_locale=bool(cle)))
                 if e.code == 402:
                     # Crédits épuisés : l'image suivante coûte le même prix.
                     # Continuer la file ne fait qu'aligner le même refus.
@@ -289,6 +378,9 @@ def generer(cle, sortie, reference=None, modele=MODELE, seulement=None, limite=N
                     time.sleep(3 * essai)
         time.sleep(PAUSE)
 
+    if faits:
+        print(f"  coût estimé de cette exécution : {depense:.3f} $ "
+              f"({modele}, la facture Google fait foi)")
     return faits, ignores, echecs
 
 
@@ -308,13 +400,16 @@ if __name__ == "__main__":
     a = p.parse_args()
 
     if not a.cle:
-        print("Clé manquante : --cle, ou GEMINI_API_KEY dans l'environnement.")
-        print("Une clé s'obtient sur https://aistudio.google.com/apikey")
-        raise SystemExit(1)
+        # Pas d'arrêt : un environnement cloud peut ajouter la clé lui-même
+        # à chaque requête. S'il ne le fait pas, Google refuse dès la
+        # première image et le message dit quoi faire.
+        print("Pas de clé ici (ni --cle, ni GEMINI_API_KEY) : la requête part "
+              "sans, le réseau doit l'ajouter (en-tête x-goog-api-key).")
+        print()
 
     # Un modèle de commande collé tel quel se reconnaît sans rien demander
     # à Google : autant le dire tout de suite.
-    probleme, avertissement = _forme_de_cle(a.cle)
+    probleme, avertissement = _forme_de_cle(a.cle) if a.cle else (None, None)
     if probleme:
         print(probleme)
         print("Une clé s'obtient sur https://aistudio.google.com/apikey,")

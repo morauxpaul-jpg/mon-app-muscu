@@ -24,8 +24,9 @@ pwa/
 ├── compress_icon.py / generate_icons.py / rebuild_program_from_history.py  # Scripts utilitaires (non commités pour partie)
 ├── tools/                          # Outils de développement (hors chemin d'exécution de l'app)
 │   ├── build_exercise_prompts.py   # écrit exercise_prompts.json : 1 prompt d'illustration par exercice
-│   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe)
-│   └── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
+│   ├── generate_exercise_art.py    # génère les images via l'API Gemini (reprenable, image de référence jointe ; clé en en-tête x-goog-api-key, ou ajoutée par le réseau de l'environnement cloud ; coût affiché après chaque image)
+│   ├── import_exercise_art.py      # recadre, détouré, carre et convertit en WebP vers static/img/exercises/
+│   └── dessiner_icone.py           # dessine icon-192/512.png (haltère vert #c8f031 sur noir) depuis sa géométrie
 ├── supabase_schema_v23.sql … v49  # Migrations SQL Supabase successives (nutrition, VIP, coach, stripe, events, referral, push, newsletter, … v40 repas par aliment, v41 index unique des séries, v42 exercise_id, v43 type_serie, v44 colonnes cardio, v45 table reglages, v46 table calques_seance, v47 table etat_compte, v48 durcissement, appliquée le 10/10/2026, v49 table aliments_perso)
 ├── supabase_schema_v32_prog_version_hist_index.sql  # programs.version (verrou optimiste) + index history(user_id,id)
 ├── supabase_schema_v33_body_weight.sql  # table body_weight (une pesée / jour / user)
@@ -170,12 +171,12 @@ pwa/
 │   │   └── barcode.js             # Scan de code-barres via BarcodeDetector (Nutrition), repli saisie manuelle
 │   ├── img/
 │   │   ├── icons.svg              # Sprite SVG (lucide-like) référencé via <use href="…#name"/>
-│   │   └── exercises/             # Illustrations d'exercices : 82 WebP 400×400 (une par entrée du catalogue) + 18 anciens SVG plus affichés
+│   │   └── exercises/             # Illustrations d'exercices : 101 WebP 400×400 (une par entrée du catalogue sauf « Copenhagen plank », en attente ; 46 refaites ou créées le 14/10/2026 avec gemini-3-pro-image, référence squat.webp) + 18 anciens SVG plus affichés
 │   ├── promo/, promo-vip*.mp4/.png # Assets marketing (fiche store, vidéo VIP)
 │   ├── changelog.json             # Notes de version (patch notes modal)
 │   ├── service-worker.js          # SW : Network First, CACHE_VERSION = base ; le SHA du commit est ajouté par app.py
 │   ├── manifest.json              # PWA manifest
-│   └── icon-192.png / icon-512.png # Icônes app
+│   └── icon-192.png / icon-512.png # Icônes app : haltère vert sur noir, style « Instrument » (14/10/2026), redessinées par tools/dessiner_icone.py
 ```
 
 ## Navigation (4 onglets)

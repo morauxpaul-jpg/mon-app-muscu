@@ -403,7 +403,12 @@ def test_aucune_illustration_livree_ne_correspond_a_rien():
 # Un exercice tout juste ajouté n'a pas encore d'image : elle se génère à la
 # demande et coûte quelques centimes. On le nomme ici plutôt que de laisser
 # le test rouge ou de l'affaiblir — il bloque toute NOUVELLE omission.
-EN_ATTENTE_DILLUSTRATION = set()
+#
+# « Copenhagen plank » (14/10/2026) : trois essais, aucun juste (corps qui
+# flotte, deux jambes sur le banc, jambes inversées), puis crédit Gemini
+# épuisé. Mieux vaut le dessin au trait qu'une image qui apprend un faux
+# geste ; la consigne est prête dans tools/build_exercise_prompts.py.
+EN_ATTENTE_DILLUSTRATION = {"Copenhagen plank"}
 
 
 def test_aucun_nouvel_exercice_sans_illustration():
@@ -545,8 +550,12 @@ def test_le_curl_marteau_precise_sa_prise():
     assert "hammer grip" in p
     # Ce qui fait la prise marteau, c'est l'ORIENTATION de l'haltère, pas
     # seulement celle de la paume : la première tentative ne parlait que
-    # des paumes, et l'haltère est ressorti en travers du corps.
-    assert "front-to-back" in p
+    # des paumes, et l'haltère est ressorti en travers du corps. La
+    # suivante disait « manche dans l'axe de l'avant-bras », ce qui est
+    # faux (un poing tient son manche en travers de l'avant-bras) : avant-
+    # bras à l'horizontale, l'haltère marteau est vertical.
+    assert "vertically" in p
+    assert "never front-to-back or across the body" in p
     assert "thumbs on top" in p
 
 
@@ -578,3 +587,163 @@ def test_une_vraie_cle_passe_le_controle_de_forme():
     sys.path.insert(0, "tools")
     from generate_exercise_art import _forme_de_cle
     assert _forme_de_cle("AIzaSyExempleDeCleQuiRessembleAUneVraie") == (None, None)
+
+
+# ── Clé et coût ──────────────────────────────────────────────────
+
+
+def _requete_envoyee(monkeypatch, cle):
+    """La requête telle qu'elle part sur le réseau, réponse simulée."""
+    import base64
+    import contextlib
+    import io as flux
+    import json
+    import sys
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    envoyee = {}
+
+    @contextlib.contextmanager
+    def _faux_appel(requete, timeout=None):
+        envoyee["requete"] = requete
+        image = base64.b64encode(b"PNG").decode()
+        yield flux.BytesIO(json.dumps({
+            "candidates": [{"content": {"parts": [
+                {"inline_data": {"data": image}}]}}],
+            "usageMetadata": {"promptTokenCount": 10}}).encode())
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _faux_appel)
+    g._demander(cle, "PROMPT", None)
+    return envoyee["requete"]
+
+
+def test_la_cle_part_dans_lentete_jamais_dans_ladresse(monkeypatch):
+    """Une clé dans l'adresse passe AVANT celle que le réseau ajoute : une
+    fausse clé y donnait 400 « API key not valid » alors que l'en-tête
+    portait la bonne. Une adresse finit aussi dans les journaux."""
+    requete = _requete_envoyee(monkeypatch, "AIzaCleDeTest")
+    assert "key=" not in requete.full_url
+    assert "AIzaCleDeTest" not in requete.full_url
+    assert requete.get_header("X-goog-api-key") == "AIzaCleDeTest"
+
+
+def test_sans_cle_la_requete_part_sans_en_inventer(monkeypatch):
+    """Dans un environnement cloud, le réseau ajoute l'en-tête lui-même.
+    Le script ne doit ni s'arrêter, ni envoyer une clé vide qui
+    l'écraserait."""
+    requete = _requete_envoyee(monkeypatch, None)
+    assert "key=" not in requete.full_url
+    assert requete.get_header("X-goog-api-key") is None
+
+
+def test_sans_cle_un_refus_arrete_la_file_et_parle_du_reseau(monkeypatch, tmp_path):
+    """Si le réseau n'ajoute rien, Google refuse chaque image : un seul
+    appel, et un message qui dit où regarder."""
+    import io as flux
+    import sys
+    import urllib.error
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    appels = []
+
+    def _refus(requete, timeout=None):
+        appels.append(1)
+        raise urllib.error.HTTPError(
+            "http://x", 403, "Forbidden", {},
+            flux.BytesIO(b'{"error":{"status":"PERMISSION_DENIED"}}'))
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _refus)
+    with pytest.raises(g.CleRefusee) as refus:
+        g.generer(None, str(tmp_path), seulement=["Tractions"])
+    assert "x-goog-api-key" in str(refus.value)
+    assert len(appels) == 1
+
+
+def test_une_reference_transparente_est_posee_sur_du_noir(tmp_path):
+    """Convertie telle quelle, une image transparente garde la couleur
+    cachée sous sa transparence — ici du blanc — comme fond de référence,
+    alors que tous les prompts demandent du noir."""
+    import io as _io
+    import sys
+    from PIL import Image
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import _sans_rouge
+
+    source = Image.new("RGBA", (20, 20), (255, 255, 255, 0))   # blanc caché
+    source.putpixel((10, 10), (150, 150, 150, 255))            # le mannequin
+    chemin = tmp_path / "ref.png"
+    source.save(chemin)
+
+    octets, _ = _sans_rouge(str(chemin))
+    sortie = Image.open(_io.BytesIO(octets)).convert("RGB")
+    assert sortie.getpixel((0, 0)) == (0, 0, 0)
+    assert sortie.getpixel((10, 10)) == (150, 150, 150)
+
+
+def test_le_cout_se_calcule_sur_les_jetons_factures():
+    """1 120 jetons d'image à 120 $ le million : 0,134 $, le prix public
+    d'une image 1K de gemini-3-pro-image. Un modèle sans tarif connu
+    n'affiche pas de prix inventé."""
+    import sys
+    sys.path.insert(0, "tools")
+    from generate_exercise_art import cout_estime
+    usage = {"promptTokenCount": 1000, "candidatesTokenCount": 1120,
+             "thoughtsTokenCount": 200,
+             "candidatesTokensDetails": [{"modality": "IMAGE",
+                                          "tokenCount": 1120}]}
+    # 1000 × 2 $ + 200 × 12 $ + 1120 × 120 $, par million de jetons.
+    assert cout_estime("gemini-3-pro-image", usage) == pytest.approx(0.1388)
+    assert cout_estime("modele-inconnu", usage) is None
+
+
+def test_une_image_jpeg_est_enregistree_en_vrai_png(monkeypatch, tmp_path):
+    """Gemini 3 renvoie du JPEG. Écrit tel quel dans « tractions.png », le
+    fichier mentait sur son format."""
+    import base64
+    import contextlib
+    import io as flux
+    import json
+    import sys
+    from PIL import Image
+    sys.path.insert(0, "tools")
+    import generate_exercise_art as g
+
+    jpeg = flux.BytesIO()
+    Image.new("RGB", (8, 8), (0, 0, 0)).save(jpeg, "JPEG")
+
+    @contextlib.contextmanager
+    def _faux_appel(requete, timeout=None):
+        yield flux.BytesIO(json.dumps({"candidates": [{"content": {"parts": [
+            {"inlineData": {"mimeType": "image/jpeg",
+                            "data": base64.b64encode(jpeg.getvalue()).decode()}}
+        ]}}]}).encode())
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", _faux_appel)
+    monkeypatch.setattr(g, "PAUSE", 0)
+    g.generer(None, str(tmp_path), seulement=["Tractions"])
+    with Image.open(tmp_path / "tractions.png") as im:
+        assert im.format == "PNG"
+
+
+def test_le_fond_noir_reste_transparent_quand_une_machine_touche_les_coins():
+    """L'import devinait le fond sur les quatre coins. Une tour de poulie qui
+    monte jusqu'au bord en occupait deux : le « fond » devenait gris, et le
+    vrai fond noir passait pour le sujet — « Écartés poulie » et « Rowing
+    machine » sortaient dans un carré noir opaque au lieu d'être détourés
+    (vu sur les images du 14/10/2026). Le fond est la couleur MÉDIANE du
+    bord entier : un montant ne couvre jamais la moitié du tour."""
+    import sys
+    from PIL import Image, ImageDraw
+    sys.path.insert(0, "tools")
+    from import_exercise_art import _masque_sujet
+
+    im = Image.new("RGB", (100, 100), (0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 9, 99], fill=(150, 150, 150))     # tour de poulie, deux coins
+    d.rectangle([40, 30, 60, 80], fill=(180, 180, 180))  # le mannequin
+    masque = _masque_sujet(im)
+    assert masque.getpixel((75, 50)) == 0, "le fond noir est pris pour le sujet"
+    assert masque.getpixel((50, 50)) == 255
+    assert masque.getpixel((5, 50)) == 255
