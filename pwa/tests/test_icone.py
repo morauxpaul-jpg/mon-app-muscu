@@ -47,3 +47,21 @@ def test_lhaltere_tient_dans_le_cercle_que_android_garde():
                 if im.getpixel((x, y)) != FOND
                 and math.hypot(x - 256, y - 256) > 0.4 * 512]
     assert not hors, hors[:5]
+
+
+def test_le_logo_du_sprite_est_le_meme_haltere_que_licone():
+    """La page de connexion montre l'haltère en vectoriel (sprite), l'écran
+    d'accueil du téléphone en PNG (tools/dessiner_icone.py). Deux copies de
+    la même géométrie : ce test les empêche de diverger."""
+    import re
+    import sys
+    sys.path.insert(0, "tools")
+    from dessiner_icone import HALTERE
+    sprite = open("static/img/icons.svg", encoding="utf-8").read()
+    bloc = re.search(r'<symbol id="logo".*?</symbol>', sprite, re.S).group(0)
+    rects = []
+    for attributs in re.findall(r"<rect ([^>]*)/>", bloc):
+        val = dict(re.findall(r'(\w+)="([\d.]+)"', attributs))
+        rects.append((int(val["x"]), int(val["y"]), int(val["width"]),
+                      int(val["height"]), int(val.get("rx", 0))))
+    assert rects == HALTERE
