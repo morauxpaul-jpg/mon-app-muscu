@@ -1,0 +1,8 @@
+{
+  "name": "promo-vip-motion",
+  "private": true,
+  "description": "Source de la vidéo promo PRO (pwa/static/promo-vip-motion.mp4). Voir README.md.",
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}
