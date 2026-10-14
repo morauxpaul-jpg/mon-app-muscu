@@ -140,8 +140,12 @@ GESTES = {
                      "the bench, front knee bent to 90 degrees, torso "
                      "upright. The buttocks are in the air, well away from "
                      "the bench, and the mannequin is NOT seated",
+    # Refaite le 14/10/2026 : premier essai les hanches affaissées, presque
+    # assis par terre — la faute que l'exercice apprend justement à éviter.
     "Tractions australiennes": "lying FACE UP under a low horizontal bar, "
-                               "body straight and rigid from heels to head, "
+                               "body straight and rigid from heels to head "
+                               "like a plank, the hips NOT sagging and well "
+                               "off the floor, only the heels touching it, "
                                "heels on the floor, both hands gripping the "
                                "bar above the chest, pulling the chest up to "
                                "it. Show it from a low side angle so the "
@@ -191,16 +195,25 @@ GESTES = {
     # interdisait de la recopier. La geometrie est ce qui marche — deux
     # objets courts, un espace vide entre les mains — la ou « ce n'est pas
     # une barre » n'avait jamais rien donne.
-    "Curl marteau": "standing, a small dumbbell in each hand — a short "
-                    "handle with one small disc at each end, held entirely "
-                    "inside the closed hand, the two far apart with the "
-                    "torso between them. HAMMER GRIP: each dumbbell is "
-                    "turned so its handle runs FRONT-TO-BACK, in line with "
-                    "the forearm, the way you would hold a hammer. The discs "
-                    "are seen edge-on from the front, one in front of the "
-                    "other, NOT side by side across the body. Palms face "
-                    "each other, thumbs on top. Elbows pinned to the sides, "
-                    "forearms curled up to chest height",
+    # « Manche dans l'axe de l'avant-bras » était faux : dans un poing
+    # fermé, le manche est PERPENDICULAIRE à l'avant-bras. Avant-bras à
+    # l'horizontale, l'haltère tenu en marteau est donc VERTICAL, pouce
+    # au-dessus — et le modèle, lui, retombait sur la prise du curl (refait
+    # le 14/10/2026, l'haltère encore en travers du corps).
+    # Deuxième essai : le bras ENTIER tendu devant, comme une élévation
+    # frontale. Il faut dire ce que fait le HAUT du bras.
+    "Curl marteau": "strict SIDE view. Standing, a small dumbbell in each "
+                    "hand — a short handle with one small disc at each end, "
+                    "held entirely inside the closed fist. The UPPER ARMS "
+                    "hang VERTICALLY, pressed against the ribs; the ELBOWS "
+                    "are BENT at 90 degrees, so only the FOREARMS point "
+                    "forward, horizontal. The arms are NOT stretched out in "
+                    "front. HAMMER GRIP, like holding a hammer: palms "
+                    "facing each other, thumbs on top, so each dumbbell "
+                    "stands VERTICALLY in the fist, one disc above the thumb "
+                    "and one below the little finger. Seen from the side, "
+                    "the handle runs up and down, never front-to-back or "
+                    "across the body",
     "Curl incliné haltères": "sitting leaning back on a bench inclined at "
                              "about 45 degrees. In EACH hand, a small "
                              "dumbbell: a short handle no longer than the "
@@ -297,6 +310,229 @@ GESTES = {
                       "together directly under the chest so the thumbs and "
                       "index fingers form a diamond, elbows tucked in "
                       "close to the ribs",
+
+    # ── Refaites le 14/10/2026 : faux geste ou faux matériel ─────────
+    # Leur image montrait autre chose que la fiche (relevé à l'œil sur les
+    # 82) et rien n'était écrit pour le modèle : il dessinait d'après la
+    # description française, ou d'après la pose de la référence.
+    "Écartés poulie": "standing in the MIDDLE of a cable crossover station, "
+                      "between two tall cable towers, one on the left and "
+                      "one on the right. Each hand holds its own handle, "
+                      "attached to a cable that comes down diagonally from "
+                      "a HIGH pulley at the top of each tower; the arms "
+                      "sweep down and forward so the two hands meet in front "
+                      "of the hips, elbows slightly bent. The two hands do "
+                      "NOT hold the same object",
+    "Hip thrust": "the UPPER BACK resting across the edge of a flat bench "
+                  "placed BEHIND the mannequin, feet flat on the floor, knees "
+                  "bent at 90 degrees, a barbell lying across the FRONT OF "
+                  "THE HIPS and held there by both hands, hips PUSHED UP so "
+                  "the body is a flat table from the knees to the shoulders. "
+                  "The mannequin is NOT lying along the bench and does NOT "
+                  "press the bar with the arms",
+    "Hip thrust (sol)": "lying FACE UP on the floor, the upper back and "
+                        "shoulders ON THE FLOOR, knees bent, feet flat, arms "
+                        "resting on the floor beside the body, hips LIFTED "
+                        "high so the body is a straight line from the knees "
+                        "to the shoulders. NO barbell, NO bench, nothing in "
+                        "the hands",
+    "Presse à cuisses": "lying back in the reclined seat of a 45-degree LEG "
+                        "PRESS machine, both feet flat against a large sled "
+                        "platform ABOVE and in front, knees bent, pushing the "
+                        "platform up along its diagonal rails. The platform "
+                        "is a big flat plate on rails, NOT a roller pad on "
+                        "the shins",
+    "Rowing machine": "SITTING on a chest-supported seated row machine: the "
+                      "chest pressed against a vertical padded support in "
+                      "front, feet on the footrests, both hands gripping two "
+                      "handles attached to the machine and pulling them back "
+                      "beside the stomach, elbows pointing back past the "
+                      "torso. A strength machine with a weight stack, NOT a "
+                      "cardio rowing ergometer and NOT a sliding seat",
+    "Rowing inversé": "lying FACE UP under a low horizontal bar, body "
+                      "straight and rigid from heels to head, heels on the "
+                      "floor, both hands gripping the bar above the chest, "
+                      "pulling the chest up to it. Show it from a low side "
+                      "angle so the back and shoulder blades are visible",
+    "Shrugs": "standing upright, arms STRAIGHT down, holding a barbell at "
+              "arm's length in front of the thighs with both hands, shoulders "
+              "shrugged straight UP towards the ears. The elbows are straight "
+              "and the bar stays at thigh height — this is NOT a curl",
+    "Kickback triceps": "torso BENT FORWARD almost horizontal, one hand and "
+                        "one knee resting on a flat bench; the other hand "
+                        "holds ONE short dumbbell, that upper arm pinned "
+                        "along the side of the torso, parallel to the floor, "
+                        "and the forearm EXTENDED STRAIGHT BACK behind the "
+                        "body, so the whole working arm is straight and "
+                        "horizontal",
+    "Front squat": "in a deep squat, a barbell resting on the FRONT of the "
+                   "shoulders against the collarbones, elbows pointing "
+                   "FORWARD and high, upper arms parallel to the floor, torso "
+                   "very upright. The bar is NOT behind the neck",
+    "Pompes déclinées (pieds surélevés)": "in a push-up position with BOTH "
+                        "HANDS ON THE FLOOR and both FEET RAISED on a box "
+                        "behind, so the body slopes DOWN from the feet to "
+                        "the head. The hands are on the floor, NOT on the box",
+    "Pike push-ups": "in an INVERTED V: hands and feet on the floor, hips "
+                     "raised HIGH as the top of the V, legs straight, the "
+                     "head pointing down between the arms towards the floor, "
+                     "elbows bent, lowering the top of the head towards the "
+                     "floor",
+    "Mollets debout": "standing on BOTH feet on the edge of a step, raised "
+                      "HIGH on the balls of both feet, heels lifted well "
+                      "above the step, legs straight, a dumbbell hanging in "
+                      "each hand. Both feet are on the step",
+    "Mountain climbers": "in a high push-up position, arms straight, hands "
+                         "under the shoulders; ONE knee is driven forward up "
+                         "to the chest under the body while the other leg "
+                         "stays extended behind",
+    # Premier essai : juste, mais posé sur un sol gris que l'import ne
+    # détoure pas — une tache sombre restait sous le corps.
+    "Superman": "floating on the pure black background with NO visible floor, "
+                "no ground plane, no shadow and no reflection. Lying FACE DOWN, "
+                "arms stretched forward beyond "
+                "the head; the ARMS, the CHEST and the LEGS are all lifted "
+                "off the floor at the same time, only the stomach and hips "
+                "touching it, the body curved in a gentle arc like a flying "
+                "superhero",
+    "Tirage élastique": "standing facing a post, a resistance band anchored "
+                        "to it at CHEST height in front; each hand holds one "
+                        "end of the band and pulls it back towards the "
+                        "stomach like a row, elbows pointing back past the "
+                        "torso, shoulder blades squeezed. The band runs from "
+                        "the anchor in front to the hands",
+
+    # ── Les vingt fiches ajoutées le 14/10/2026 ─────────────────────
+    "Développé décliné": "lying FACE UP on a DECLINE bench tilted head-DOWN "
+                         "(the head lower than the hips), the shins hooked "
+                         "under foam rollers at the raised end, pressing a "
+                         "barbell straight up above the LOWER chest, arms "
+                         "extended",
+    "Écarté couché": "lying FACE UP on a flat bench, holding TWO SEPARATE "
+                     "SHORT DUMBBELLS, one in each hand, the arms opened WIDE "
+                     "out to the sides like wings, elbows slightly bent, the "
+                     "dumbbells level with the bench. Nothing connects the "
+                     "two hands and there is NO barbell",
+    # Premier essai : juste, mais coupé aux hanches par le bord de l'image.
+    "Pull-over": "seen from far enough that the WHOLE body and the WHOLE "
+                 "bench fit in the frame, feet included. Lying FACE UP on a "
+                 "flat bench, BOTH hands holding ONE "
+                 "single dumbbell by its upper disc, arms almost straight and "
+                 "extended BEHIND the head, the dumbbell lowered below the "
+                 "level of the bench behind the head, so the body forms one "
+                 "long stretched arc from the hips to the hands. No barbell",
+    "T-bar row": "standing BENT FORWARD at the hips to about 45 degrees, back "
+                 "flat, knees slightly bent, straddling a long barbell whose "
+                 "far end is anchored on the floor behind the feet and whose "
+                 "loaded end, with weight plates, is in front; both hands "
+                 "grip a V-handle under the plates and pull it up to the "
+                 "chest. The torso is NOT upright",
+    "Hyperextension": "on a 45-degree back extension bench: the front of the "
+                      "hips resting on the padded support, the ankles locked "
+                      "under the foot rollers behind, arms crossed over the "
+                      "chest, the body forming ONE STRAIGHT DIAGONAL LINE "
+                      "from the heels to the head. Seen from the side and "
+                      "slightly behind",
+    "Curl alterné": "standing, a short dumbbell in each hand, the two far "
+                    "apart with the torso between them: ONE arm is curled up "
+                    "with its dumbbell at shoulder height, palm facing up, "
+                    "while the OTHER arm hangs straight down beside the "
+                    "thigh. The two arms are clearly in DIFFERENT positions. "
+                    "No barbell",
+    "Curl concentré": "SITTING on the end of a flat bench, feet wide apart, "
+                      "torso leaning forward; ONE hand holds ONE short "
+                      "dumbbell, the back of that upper arm braced against "
+                      "the INSIDE of the thigh, the forearm curled up towards "
+                      "the shoulder. The other hand rests on the other knee. "
+                      "Only one dumbbell",
+    "Russian twist": "SITTING on the floor, knees bent, feet lifted just off "
+                     "the floor, torso leaning back at about 45 degrees with "
+                     "a straight back, both hands together holding one small "
+                     "weight plate, the shoulders and arms ROTATED to one "
+                     "side so the plate is beside the hip. The mannequin is "
+                     "NOT lying down",
+    "Roue abdominale": "KNEELING on the floor, both hands gripping the two "
+                       "handles of a small ab wheel (one wheel with a handle "
+                       "on each side) rolled far forward on the floor, arms "
+                       "extended in front, the body stretched out in one long "
+                       "straight line from the knees to the hands, close to "
+                       "the floor, back flat",
+    "Adduction poulie basse": "standing SIDE-ON next to a low cable pulley, "
+                              "one hand holding the machine frame, an ankle "
+                              "strap on the leg CLOSEST to the machine, its "
+                              "cable running to the bottom of the machine; "
+                              "that leg is pulled INWARD, across in front of "
+                              "the standing leg",
+    # Premier essai : le corps flottait en l'air. Deuxième : la main posée
+    # sur le banc, comme si tout le corps y était. Troisième : la jambe du
+    # DESSOUS sur le banc. Le banc n'est que sous les pieds, et chaque jambe
+    # se décrit à part.
+    "Copenhagen plank": "a side plank seen from the FRONT, the chest facing "
+                        "the viewer. The LOWER FOREARM lies flat on the floor "
+                        "under the shoulder and carries the upper body; there "
+                        "is no bench under the shoulders. A short low bench "
+                        "stands under the feet. The UPPER leg (the one closer "
+                        "to the ceiling) is straight and its inner ankle "
+                        "rests ON TOP of the bench. The LOWER leg (the one "
+                        "closer to the floor) does NOT touch the bench: it "
+                        "hangs underneath it, bent at the knee. The hips are "
+                        "lifted, the body one straight line from the head to "
+                        "the upper foot, the free hand on the hip",
+    "Abduction poulie basse": "standing SIDE-ON next to a low cable pulley, "
+                              "one hand holding the machine frame, an ankle "
+                              "strap on the leg FARTHEST from the machine, "
+                              "its cable passing in front of the standing "
+                              "leg; that outer leg is lifted straight OUT to "
+                              "the side, away from the machine",
+    "Marche latérale": "standing in a half squat, knees bent, torso upright, "
+                       "a short flat resistance BAND looped around both legs "
+                       "just above the knees and stretched tight, the feet "
+                       "WIDE apart in the middle of a big side step",
+    "Clam shell": "LYING ON ONE SIDE on the floor, head resting on the lower "
+                  "arm, hips and knees bent at about 90 degrees, both feet "
+                  "together and touching. The TOP knee is lifted HIGH toward "
+                  "the ceiling, opened like a clam shell, leaving a WIDE gap "
+                  "between the two knees while the two feet stay touching; "
+                  "a small band around both thighs just above the knees is "
+                  "stretched across the gap",
+    "Abduction de hanche debout": "standing tall and FACING the viewer, "
+                                  "one hand resting on a waist-high support "
+                                  "beside the body, ONE straight leg lifted "
+                                  "SIDEWAYS, away from the other leg, at "
+                                  "about 45 degrees, so the two legs form an "
+                                  "upside-down V seen from the front; the "
+                                  "foot points forward, torso upright. The "
+                                  "leg does NOT go forward. There is NO "
+                                  "machine and NO cable",
+    # Premier essai : les mains lisaient comme paumes vers le bas, c'est-à-
+    # dire comme l'extension poignet, l'exercice opposé.
+    "Curl poignet": "SITTING on a flat bench, both forearms resting along "
+                    "the thighs, the hands extending past the knees. The "
+                    "PALMS FACE THE CEILING: the bar lies across the open "
+                    "palms and the fingers curl UP around it from below, so "
+                    "the backs of the hands face the floor and are hidden. "
+                    "The wrists are curled up towards the body. The forearms "
+                    "stay flat on the thighs",
+    "Curl inversé": "standing, holding a straight barbell with an OVERHAND "
+                    "grip — palms facing DOWN, knuckles on top — elbows "
+                    "pinned to the sides, forearms curled up so the bar is "
+                    "at chest height, wrists straight",
+    "Extension poignet": "SITTING on a flat bench, both forearms resting "
+                         "along the thighs with the palms facing DOWN and "
+                         "the hands extending past the knees, holding a "
+                         "short barbell; the backs of the hands are LIFTED "
+                         "UP towards the ceiling by bending only the wrists. "
+                         "The forearms stay flat on the thighs",
+    "Farmer walk": "WALKING forward mid-stride, one foot in front of the "
+                   "other, torso upright, shoulders back, both arms straight "
+                   "down by the sides, each hand carrying one HEAVY dumbbell "
+                   "at arm's length beside the thigh",
+    "Gripper / pince": "standing, elbows bent with the forearms horizontal "
+                       "in front of the body, EACH hand squeezing a hand "
+                       "gripper — a small V-shaped spring tool with two "
+                       "handles joined by a coiled spring — the handles "
+                       "pressed closed inside the fist. No dumbbell and no "
+                       "bar",
 }
 
 # Le rouge ne peut pas être « le muscle de la fiche » tel quel : « Dos (grand
@@ -321,6 +557,9 @@ ABDOS = ("abdominals", "the front of the stomach, between the ribs "
          "and the navel", "")
 TRAPEZES = ("upper trapezius",
             "the slope between the neck and the shoulders", "")
+AVANT_BRAS = ("forearms",
+              "both forearms, strictly BETWEEN the elbow and the wrist",
+              " Do not paint the upper arm or the hand.")
 
 ZONES = {
     "Quadriceps": ("quadriceps", "the FRONT of both thighs", ""),
@@ -385,6 +624,8 @@ ZONES = {
     "Fessiers (moyen fessier)": ("outer glutes",
                                  "the OUTER side of the hips, just below the "
                                  "waist", ""),
+    "Avant-bras": AVANT_BRAS,
+    "Avant-bras (brachio-radial)": AVANT_BRAS,
     # Un corps entier tout rouge ne désigne rien : pas de coloriage.
     "Corps entier": None,
 }
@@ -406,6 +647,11 @@ SANS_ROUGE = {
     # version allongée, elle, garde son rouge : à plat ventre, l'arrière de
     # la cuisse fait face à la caméra.
     "Leg curl assis",
+    # Même cas que la planche : le corps allongé face au sol cache les
+    # abdominaux (roue) ; sur le Copenhagen, l'intérieur de la cuisse qui
+    # travaille est celui qui appuie sur le banc, tourné vers le bas.
+    "Roue abdominale",
+    "Copenhagen plank",
 }
 
 
@@ -455,8 +701,22 @@ SANS_COLORIAGE = (
 )
 
 
+# Quand la règle générale se trompe. « Vue de profil » par défaut a fait
+# dessiner l'abduction debout jambe EN AVANT : de profil, un écart sur le
+# côté ne se voit pas. Ces mouvements se lisent de face.
+ANGLES = {
+    "Abduction de hanche debout": "front view",
+    "Clam shell": "front view, from slightly above",
+    "Copenhagen plank": "front view",
+    "Curl marteau": "strict side view",
+    "Curl poignet": "strict side view",
+}
+
+
 def _angle(nom):
     """Poussées et tirages se lisent de profil ; élévations et écartés, de face."""
+    if nom in ANGLES:
+        return ANGLES[nom]
     n = nom.lower()
     if any(m in n for m in ("elevation", "élévation", "latéra", "latera",
                             "écarté", "ecarte", "oiseau", "papillon")):

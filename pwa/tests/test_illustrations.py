@@ -403,7 +403,12 @@ def test_aucune_illustration_livree_ne_correspond_a_rien():
 # Un exercice tout juste ajouté n'a pas encore d'image : elle se génère à la
 # demande et coûte quelques centimes. On le nomme ici plutôt que de laisser
 # le test rouge ou de l'affaiblir — il bloque toute NOUVELLE omission.
-EN_ATTENTE_DILLUSTRATION = set()
+#
+# « Copenhagen plank » (14/10/2026) : trois essais, aucun juste (corps qui
+# flotte, deux jambes sur le banc, jambes inversées), puis crédit Gemini
+# épuisé. Mieux vaut le dessin au trait qu'une image qui apprend un faux
+# geste ; la consigne est prête dans tools/build_exercise_prompts.py.
+EN_ATTENTE_DILLUSTRATION = {"Copenhagen plank"}
 
 
 def test_aucun_nouvel_exercice_sans_illustration():
@@ -545,8 +550,12 @@ def test_le_curl_marteau_precise_sa_prise():
     assert "hammer grip" in p
     # Ce qui fait la prise marteau, c'est l'ORIENTATION de l'haltère, pas
     # seulement celle de la paume : la première tentative ne parlait que
-    # des paumes, et l'haltère est ressorti en travers du corps.
-    assert "front-to-back" in p
+    # des paumes, et l'haltère est ressorti en travers du corps. La
+    # suivante disait « manche dans l'axe de l'avant-bras », ce qui est
+    # faux (un poing tient son manche en travers de l'avant-bras) : avant-
+    # bras à l'horizontale, l'haltère marteau est vertical.
+    assert "vertically" in p
+    assert "never front-to-back or across the body" in p
     assert "thumbs on top" in p
 
 
@@ -716,3 +725,25 @@ def test_une_image_jpeg_est_enregistree_en_vrai_png(monkeypatch, tmp_path):
     g.generer(None, str(tmp_path), seulement=["Tractions"])
     with Image.open(tmp_path / "tractions.png") as im:
         assert im.format == "PNG"
+
+
+def test_le_fond_noir_reste_transparent_quand_une_machine_touche_les_coins():
+    """L'import devinait le fond sur les quatre coins. Une tour de poulie qui
+    monte jusqu'au bord en occupait deux : le « fond » devenait gris, et le
+    vrai fond noir passait pour le sujet — « Écartés poulie » et « Rowing
+    machine » sortaient dans un carré noir opaque au lieu d'être détourés
+    (vu sur les images du 14/10/2026). Le fond est la couleur MÉDIANE du
+    bord entier : un montant ne couvre jamais la moitié du tour."""
+    import sys
+    from PIL import Image, ImageDraw
+    sys.path.insert(0, "tools")
+    from import_exercise_art import _masque_sujet
+
+    im = Image.new("RGB", (100, 100), (0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 9, 99], fill=(150, 150, 150))     # tour de poulie, deux coins
+    d.rectangle([40, 30, 60, 80], fill=(180, 180, 180))  # le mannequin
+    masque = _masque_sujet(im)
+    assert masque.getpixel((75, 50)) == 0, "le fond noir est pris pour le sujet"
+    assert masque.getpixel((50, 50)) == 255
+    assert masque.getpixel((5, 50)) == 255

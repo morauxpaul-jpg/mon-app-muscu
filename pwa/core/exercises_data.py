@@ -1135,6 +1135,326 @@ EXERCISES_INFO = {
         ],
         "image": "shoulder.svg",
     },
+
+    # ── La bibliothèque sans fiche (14/10/2026) ───────────────────────
+    # Vingt noms qu'on peut choisir dans la bibliothèque n'avaient ni fiche
+    # ni illustration : le « ? » restait vide et la carte de séance montrait
+    # un dessin au trait à côté des autres. Ils sont en FIN de catalogue :
+    # à égalité de reconnaissance, l'ordre du catalogue tranche, et les
+    # fiches existantes gardent ainsi la main.
+    "Développé décliné": {
+        "name": "Développé décliné",
+        "muscles": ["Pectoraux (bas)", "Triceps", "Épaules antérieures"],
+        "description": "Allongé sur un banc décliné, tête plus basse que les "
+                       "hanches et pieds calés sous les boudins, saisir la "
+                       "barre au-dessus de la poitrine. Descendre la barre "
+                       "vers le bas des pectoraux, puis pousser jusqu'à "
+                       "l'extension des bras. L'angle décliné recrute "
+                       "davantage le faisceau inférieur des pectoraux.",
+        "tips": [
+            "Cale bien les pieds avant de décrocher la barre",
+            "Descends la barre vers le bas de la poitrine, pas vers le cou",
+            "Fais-toi assister pour sortir et reposer la barre",
+        ],
+        "image": "bench-press.svg",
+    },
+    "Écarté couché": {
+        "name": "Écarté couché",
+        "muscles": ["Pectoraux", "Épaules antérieures"],
+        "description": "Allongé sur un banc plat, un haltère dans chaque "
+                       "main, bras tendus au-dessus de la poitrine, paumes "
+                       "face à face. Ouvrir les bras sur les côtés en arc de "
+                       "cercle, coudes légèrement fléchis, jusqu'à sentir "
+                       "l'étirement des pectoraux, puis refermer. Exercice "
+                       "d'isolation : la charge reste légère.",
+        "tips": [
+            "Garde les coudes légèrement fléchis et fixes du début à la fin",
+            "Ne descends pas les haltères plus bas que le banc",
+            "Pense à serrer la poitrine en refermant, pas à pousser",
+        ],
+        "image": "chest.svg",
+    },
+    "Pull-over": {
+        "name": "Pull-over",
+        "muscles": ["Dos (grand dorsal)", "Pectoraux", "Triceps (longue portion)"],
+        "description": "Allongé sur un banc, tenir un haltère à deux mains "
+                       "au-dessus de la poitrine, bras presque tendus. "
+                       "Descendre l'haltère en arc de cercle derrière la tête "
+                       "jusqu'à sentir l'étirement, puis le ramener au-dessus "
+                       "de la poitrine. Il travaille à la fois le grand "
+                       "dorsal et les pectoraux.",
+        "tips": [
+            "Garde les coudes légèrement fléchis et fixes",
+            "Descends seulement jusqu'où tes épaules restent à l'aise",
+            "Expire en ramenant l'haltère au-dessus de la poitrine",
+        ],
+        "image": "chest.svg",
+    },
+    "T-bar row": {
+        "name": "T-bar row (rowing barre en T)",
+        "muscles": ["Dos (milieu)", "Dos (grand dorsal)", "Biceps"],
+        "description": "Debout au-dessus d'une barre fixée au sol par une "
+                       "extrémité (ou sur une machine T-bar), buste penché à "
+                       "environ 45°, dos plat. Saisir la poignée sous les "
+                       "disques et tirer la charge vers le bas de la poitrine "
+                       "en serrant les omoplates. Redescendre en contrôlant, "
+                       "bras tendus.",
+        "tips": [
+            "Garde le dos plat, jamais arrondi",
+            "Tire avec les coudes, près du corps",
+            "Ne te redresse pas pour finir la répétition",
+        ],
+        "image": "row.svg",
+    },
+    "Hyperextension": {
+        "name": "Hyperextension (back extension)",
+        "muscles": ["Lombaires", "Fessiers", "Ischio-jambiers"],
+        "description": "Sur un banc à lombaires, hanches calées sur le "
+                       "coussin et chevilles bloquées. Descendre le buste vers "
+                       "le sol en pliant aux hanches, puis remonter jusqu'à "
+                       "aligner le buste avec les jambes. On peut tenir un "
+                       "disque contre la poitrine pour charger.",
+        "tips": [
+            "Remonte jusqu'à l'alignement, sans cambrer au-delà",
+            "Mouvement lent et contrôlé, sans élan",
+            "Croise les bras sur la poitrine, pas derrière la nuque",
+        ],
+        "image": "deadlift.svg",
+    },
+    "Curl alterné": {
+        "name": "Curl alterné",
+        "muscles": ["Biceps", "Avant-bras"],
+        "description": "Debout, un haltère dans chaque main, bras le long du "
+                       "corps. Fléchir un bras pour monter l'haltère vers "
+                       "l'épaule pendant que l'autre reste en bas, puis "
+                       "alterner à chaque répétition. Chaque bras récupère "
+                       "pendant que l'autre travaille.",
+        "tips": [
+            "Les coudes restent collés au corps",
+            "Ne balance pas le buste pour monter la charge",
+            "Redescends complètement avant de changer de bras",
+        ],
+        "image": "curl.svg",
+    },
+    "Curl concentré": {
+        "name": "Curl concentré",
+        "muscles": ["Biceps", "Avant-bras"],
+        "description": "Assis au bout d'un banc, jambes écartées, buste "
+                       "penché en avant. Le coude calé contre l'intérieur de "
+                       "la cuisse, monter l'haltère vers l'épaule en "
+                       "fléchissant le bras, puis redescendre lentement. "
+                       "L'appui empêche de tricher : le biceps fait tout le "
+                       "travail.",
+        "tips": [
+            "Le coude reste calé contre la cuisse du début à la fin",
+            "Serre le biceps une seconde en haut",
+            "Redescends lentement jusqu'au bras presque tendu",
+        ],
+        "image": "curl.svg",
+    },
+    "Russian twist": {
+        "name": "Russian twist (rotations assis)",
+        "muscles": ["Obliques", "Abdominaux"],
+        "description": "Assis au sol, genoux fléchis, buste incliné en "
+                       "arrière à environ 45°, pieds au sol ou décollés. "
+                       "Tourner le buste d'un côté puis de l'autre en amenant "
+                       "les mains (ou un poids) près de la hanche. Le dos "
+                       "reste droit pendant toute la rotation.",
+        "tips": [
+            "Tourne les épaules, pas seulement les bras",
+            "Garde le dos droit, sans t'affaisser",
+            "Décolle les pieds pour rendre l'exercice plus dur",
+        ],
+        "image": "core.svg",
+    },
+    "Roue abdominale": {
+        "name": "Roue abdominale (ab wheel)",
+        "muscles": ["Abdominaux", "Transverse", "Dos (grand dorsal)"],
+        "description": "À genoux, les mains sur les poignées de la roue posée "
+                       "au sol sous les épaules. Faire rouler la roue vers "
+                       "l'avant en allongeant le corps, aussi loin que "
+                       "possible sans creuser le dos, puis revenir en "
+                       "contractant les abdominaux. C'est l'un des gainages "
+                       "les plus exigeants.",
+        "tips": [
+            "Rentre le bassin et garde le dos plat, jamais creusé",
+            "Commence par une petite amplitude, puis va plus loin",
+            "Reviens avec les abdos, pas en tirant avec les bras",
+        ],
+        "image": "core.svg",
+    },
+    "Adduction poulie basse": {
+        "name": "Adduction poulie basse",
+        "muscles": ["Adducteurs"],
+        "description": "Debout de profil à côté d'une poulie basse, la sangle "
+                       "à la cheville la plus proche de la machine. Ramener "
+                       "la jambe vers l'intérieur, devant l'autre jambe, puis "
+                       "revenir lentement. Se tenir à la machine pour garder "
+                       "le buste immobile.",
+        "tips": [
+            "Garde le buste droit, sans te pencher",
+            "Jambe presque tendue, mouvement lent",
+            "Reviens jusqu'à sentir l'étirement de l'intérieur de la cuisse",
+        ],
+        "image": "legs.svg",
+    },
+    "Copenhagen plank": {
+        "name": "Copenhagen plank (gainage adducteurs)",
+        "muscles": ["Adducteurs", "Obliques", "Transverse"],
+        "description": "En gainage latéral sur l'avant-bras, la jambe du "
+                       "dessus posée sur un banc (au genou pour débuter, à la "
+                       "cheville pour plus de difficulté), la jambe du "
+                       "dessous libre. Soulever les hanches pour aligner le "
+                       "corps et tenir. L'intérieur de la cuisse du dessus "
+                       "porte une grande partie du poids.",
+        "tips": [
+            "Corps aligné des épaules aux pieds",
+            "Commence avec le genou sur le banc avant la cheville",
+            "Tiens des séries courtes, 15 à 30 secondes",
+        ],
+        "image": "core.svg",
+    },
+    "Abduction poulie basse": {
+        "name": "Abduction poulie basse",
+        "muscles": ["Fessiers (moyen fessier)", "Fessiers"],
+        "description": "Debout de profil à côté d'une poulie basse, la sangle "
+                       "à la cheville la plus éloignée de la machine. Écarter "
+                       "la jambe vers l'extérieur, jambe tendue, puis revenir "
+                       "lentement. Se tenir à la machine pour garder le buste "
+                       "immobile.",
+        "tips": [
+            "Ne penche pas le buste du côté opposé",
+            "Monte la jambe sans tourner le pied vers le haut",
+            "Contrôle le retour, sans laisser le poids tirer",
+        ],
+        "image": "legs.svg",
+    },
+    "Marche latérale": {
+        "name": "Marche latérale (band walk)",
+        "muscles": ["Fessiers (moyen fessier)", "Fessiers"],
+        "description": "Un élastique autour des jambes (au-dessus des genoux "
+                       "ou aux chevilles), pieds écartés à largeur de "
+                       "hanches, genoux légèrement fléchis. Faire des pas de "
+                       "côté en gardant l'élastique tendu, sans jamais "
+                       "rapprocher complètement les pieds. Aller dans un sens "
+                       "puis revenir dans l'autre.",
+        "tips": [
+            "Reste en demi-flexion, le buste droit",
+            "Garde l'élastique tendu à chaque pas",
+            "Les pointes de pieds restent orientées vers l'avant",
+        ],
+        "image": "legs.svg",
+    },
+    "Clam shell": {
+        "name": "Clam shell (coquillage)",
+        "muscles": ["Fessiers (moyen fessier)", "Fessiers"],
+        "description": "Allongé sur le côté, hanches et genoux fléchis, pieds "
+                       "l'un sur l'autre (un élastique au-dessus des genoux "
+                       "pour charger). Ouvrir le genou du dessus comme une "
+                       "coquille en gardant les pieds collés, puis refermer "
+                       "lentement. Le bassin ne bascule pas en arrière.",
+        "tips": [
+            "Les pieds restent collés pendant tout le mouvement",
+            "Ne fais pas basculer le bassin pour monter le genou plus haut",
+            "Marque une pause en haut",
+        ],
+        "image": "legs.svg",
+    },
+    "Abduction de hanche debout": {
+        "name": "Abduction de hanche debout",
+        "muscles": ["Fessiers (moyen fessier)", "Fessiers"],
+        "description": "Debout, une main en appui sur un support, écarter une "
+                       "jambe tendue sur le côté le plus haut possible sans "
+                       "pencher le buste, puis la ramener lentement. Se fait "
+                       "au poids du corps, avec un élastique aux chevilles ou "
+                       "des chevillères lestées.",
+        "tips": [
+            "Buste droit, sans te pencher du côté opposé",
+            "Pied orienté vers l'avant, pas vers le haut",
+            "Petite amplitude contrôlée plutôt que grand mouvement avec élan",
+        ],
+        "image": "legs.svg",
+    },
+    "Curl poignet": {
+        "name": "Curl poignet",
+        "muscles": ["Avant-bras"],
+        "description": "Assis, les avant-bras posés sur les cuisses ou sur un "
+                       "banc, paumes vers le haut, poignets dans le vide avec "
+                       "une barre ou des haltères. Laisser descendre la "
+                       "charge en ouvrant les poignets, puis l'enrouler vers "
+                       "le haut en ne fléchissant que les poignets. Il "
+                       "renforce les fléchisseurs de l'avant-bras et la "
+                       "poigne.",
+        "tips": [
+            "Seuls les poignets bougent, les avant-bras restent posés",
+            "Amplitude complète, en bas comme en haut",
+            "Charge légère et séries longues",
+        ],
+        "image": "curl.svg",
+    },
+    "Curl inversé": {
+        "name": "Curl inversé (reverse curl)",
+        "muscles": ["Avant-bras (brachio-radial)", "Biceps (brachial)"],
+        "description": "Debout, barre ou haltères en prise pronation, paumes "
+                       "vers le bas, bras le long du corps. Fléchir les "
+                       "coudes pour monter la charge vers les épaules en "
+                       "gardant les poignets droits, puis redescendre "
+                       "lentement. La prise paumes vers le bas fait "
+                       "travailler le dessus de l'avant-bras.",
+        "tips": [
+            "Poignets alignés avec les avant-bras, ni cassés ni relevés",
+            "Coudes collés au corps",
+            "Prends moins lourd qu'au curl classique",
+        ],
+        "image": "curl.svg",
+    },
+    "Extension poignet": {
+        "name": "Extension poignet",
+        "muscles": ["Avant-bras"],
+        "description": "Assis, les avant-bras posés sur les cuisses ou sur un "
+                       "banc, paumes vers le bas, poignets dans le vide avec "
+                       "une barre ou des haltères. Relever le dos de la main "
+                       "en ne bougeant que les poignets, puis redescendre "
+                       "lentement. Il renforce les extenseurs de "
+                       "l'avant-bras, souvent négligés.",
+        "tips": [
+            "Seuls les poignets bougent, les avant-bras restent posés",
+            "Charge très légère : ces muscles sont petits",
+            "Redescends lentement, sans laisser tomber la charge",
+        ],
+        "image": "curl.svg",
+    },
+    "Farmer walk": {
+        "name": "Farmer walk (marche du fermier)",
+        "muscles": ["Avant-bras", "Trapèzes", "Abdominaux"],
+        "description": "Debout, une charge lourde dans chaque main "
+                       "(haltères, kettlebells ou poignées dédiées), bras "
+                       "tendus le long du corps. Marcher à petits pas sur une "
+                       "distance ou un temps donné, épaules basses et buste "
+                       "droit. Il travaille la poigne, les trapèzes et le "
+                       "gainage de tout le corps.",
+        "tips": [
+            "Épaules basses et en arrière, poitrine sortie",
+            "Petits pas réguliers, regard devant",
+            "Pose les charges en pliant les jambes, dos droit",
+        ],
+        "image": "shrug.svg",
+    },
+    "Gripper / pince": {
+        "name": "Gripper / pince de préhension",
+        "muscles": ["Avant-bras"],
+        "description": "Une pince de préhension dans la main, les poignées "
+                       "entre la paume et les doigts. Serrer jusqu'à "
+                       "rapprocher complètement les poignées, tenir une "
+                       "seconde, puis relâcher lentement. Il renforce la "
+                       "force de serrage des mains et des avant-bras.",
+        "tips": [
+            "Serre jusqu'au contact des poignées",
+            "Relâche lentement, sans ouvrir la main d'un coup",
+            "Change de main à chaque série",
+        ],
+        "image": "curl.svg",
+    },
 }
 
 
@@ -1448,6 +1768,28 @@ _ANGLAIS = {
     "walking lunge": "Fentes marchées",
     "hanging leg raise": "Relevé de jambes",
     "leg raise": "Relevé de jambes",
+    # Les vingt fiches ajoutées le 14/10/2026, sous leurs noms anglais. Aucun
+    # de ces noms ne menait à une fiche avant : rien n'est détourné.
+    "decline bench press": "Développé décliné",
+    "dumbbell fly": "Écarté couché",
+    "dumbbell flyes": "Écarté couché",
+    "pullover": "Pull-over",
+    "dumbbell pullover": "Pull-over",
+    "tbar row": "T-bar row",
+    "alternating curl": "Curl alterné",
+    "ab roller": "Roue abdominale",
+    "ab wheel rollout": "Roue abdominale",
+    "cable hip adduction": "Adduction poulie basse",
+    "cable hip abduction": "Abduction poulie basse",
+    "lateral band walk": "Marche latérale",
+    "clamshell": "Clam shell",
+    "standing hip abduction": "Abduction de hanche debout",
+    "wrist curl": "Curl poignet",
+    "reverse wrist curl": "Extension poignet",
+    "wrist extension": "Extension poignet",
+    "farmer carry": "Farmer walk",
+    "farmers carry": "Farmer walk",
+    "hand gripper": "Gripper / pince",
 }
 
 def _index_par_jetons():

@@ -40,11 +40,17 @@ def _masque_sujet(im):
     """Masque du sujet : tout ce qui s'écarte de la couleur du fond.
 
     Le fond n'est pas parfaitement uni (léger dégradé radial), donc on le
-    mesure sur les quatre coins plutôt que sur un pixel unique.
+    mesure sur tout le BORD de l'image, par la médiane de chaque canal.
+    Pas sur les quatre coins : une tour de poulie qui monte jusqu'au bord en
+    couvre deux, le « fond » devenait gris et le vrai fond noir restait
+    opaque (« Écartés poulie », « Rowing machine », 14/10/2026). Un montant
+    ne couvre jamais la moitié du tour de l'image.
     """
-    l, h = im.size
-    coins = [im.getpixel(p) for p in ((2, 2), (l - 3, 2), (2, h - 3), (l - 3, h - 3))]
-    fond = tuple(sum(c[i] for c in coins) // len(coins) for i in range(3))
+    rgb = im.convert("RGB")
+    l, h = rgb.size
+    bord = ([rgb.getpixel((x, y)) for x in range(l) for y in (2, h - 3)]
+            + [rgb.getpixel((x, y)) for y in range(h) for x in (2, l - 3)])
+    fond = tuple(sorted(p[i] for p in bord)[len(bord) // 2] for i in range(3))
 
     ecart = ImageChops.difference(im.convert("RGB"), Image.new("RGB", im.size, fond))
     masque = ecart.convert("L").point(lambda v: 255 if v > SEUIL_FOND else 0)
