@@ -64,6 +64,14 @@ def ouvrir(p):
     return nav, page, erreurs
 
 
+def placer(page, t):
+    """Place l'animation à l'instant t, puis attend que Chromium ait fini de
+    la dessiner. Sans cette attente, un élément qui grandit est parfois
+    photographié avant d'être redessiné à sa nouvelle taille : l'image change
+    d'un rendu à l'autre (17 images sur 1 122, invisibles à l'œil)."""
+    page.evaluate(f"window.seek({t}); new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+
+
 def rendre(images=None, sortie=None, apercu=None, fps=FPS):
     from playwright.sync_api import sync_playwright
     ecrire_corps()
@@ -79,7 +87,7 @@ def rendre(images=None, sortie=None, apercu=None, fps=FPS):
             if images:
                 os.makedirs(sortie, exist_ok=True)
                 for t in images:
-                    page.evaluate(f"window.seek({t})")
+                    placer(page, t)
                     chemin = os.path.join(sortie, f"t{t:05.2f}.png")
                     page.screenshot(path=chemin)
                     print(chemin)
@@ -87,11 +95,11 @@ def rendre(images=None, sortie=None, apercu=None, fps=FPS):
             dossier = tempfile.mkdtemp(prefix="promo-")
             n = int(round(duree * fps))
             for i in range(n):
-                page.evaluate(f"window.seek({i / fps})")
+                placer(page, i / fps)
                 page.screenshot(path=os.path.join(dossier, f"{i:05d}.png"))
                 if i % fps == 0:
                     print(f"  {i // fps:2d} s / {duree:.1f} s", flush=True)
-            page.evaluate(f"window.seek({APERCU_T})")
+            placer(page, APERCU_T)
             page.screenshot(path=apercu, type="jpeg", quality=82)
             if erreurs:
                 raise SystemExit("erreur dans l'animation : " + erreurs[0])
