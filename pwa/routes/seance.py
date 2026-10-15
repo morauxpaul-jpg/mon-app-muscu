@@ -43,6 +43,7 @@ from core.seance_saisie import (MESSAGE_DATE_A_VENIR, _form_date, _known_exo_nam
 from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done)
 from core.bilans_seance import _load_session_note
 from core.memoire_exo import cle_reglages, completer_cartes, derniere_remarque, reglages_de
+from core.passes_seance import prochaine_passe, seance_de_base
 from core.navigation_seance import _back_to_editor
 
 bp = Blueprint("seance", __name__)
@@ -98,6 +99,10 @@ def seance():
 
     # ── Vue choix (pas de mode choisi) ────────────────────────────
     if not mode:
+        # Séance du programme déjà faite ce jour-là : on peut la REFAIRE,
+        # en seconde passe, sans toucher à la première (core/passes_seance).
+        base_faite = seance_de_base(done_name, prog_seances) if done_name else ""
+        refaire_nom = prochaine_passe(base_faite, hist, date_iso) if base_faite in prog_seances else ""
         # L'état du jour se lit sur la ligne de date (« VENDREDI 12 JUIN ·
         # MANQUÉE », en orange) ; le titre ne le répète pas.
         if date_iso == logical_today_str and not done_name:
@@ -213,6 +218,8 @@ def seance():
             etat_texte=etat_texte,
             etat=etat,
             done_name=done_name,
+            done_mode="prefaite" if base_faite in prog_seances else "libre",
+            refaire_nom=refaire_nom, refaire_base=base_faite,
             seance_names=sorted(prog_seances.keys(), key=_sort_key),
             prog_seances=prog_seances,
             planning=_planning,
@@ -224,10 +231,13 @@ def seance():
 
     # ── Vue édition : mode prefaite ───────────────────────────────
     if mode == "prefaite":
-        if not name or name not in prog_seances:
+        # « Push 1 · 2 » : seconde passe de Push 1 le même jour. Exercices du
+        # programme, séries et bilan sous son propre nom.
+        base_name = seance_de_base(name, prog_seances)
+        if not name or base_name not in prog_seances:
             return redirect(url_for("seance.seance", date=date_iso))
 
-        exos_prog = list(prog_seances[name])
+        exos_prog = list(prog_seances[base_name])
         # Filtrage équipement : si l'utilisateur n'est pas en profil salle,
         # on substitue les exos qui exigent du matériel qu'il n'a pas. Couvre
         # aussi le cas où l'équipement a changé après la création du programme.

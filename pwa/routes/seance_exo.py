@@ -17,6 +17,7 @@ from core.data import get_prog, save_prog
 from core.dates import logical_today_paris_str
 from core.limiter import limiter
 from core.memoire_exo import cle_reglages, noter_reglages
+from core.passes_seance import seance_de_base
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def _exercice_du_programme(prog, seance, exo_id, base):
     """L'entrée du programme : par identifiant stable d'abord (il survit aux
     renommages), sinon par nom. None si l'exercice n'y est pas (ajouté pour
     aujourd'hui, séance libre)."""
-    exos = prog.get(seance)
+    exos = prog.get(seance_de_base(seance, prog))    # « Push 1 · 2 » : Push 1
     if not isinstance(exos, list):
         return None
     if exo_id:

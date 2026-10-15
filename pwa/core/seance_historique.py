@@ -15,6 +15,7 @@ from datetime import datetime
 from core.dates import now_paris
 from core.exercises_data import variantes
 from core.muscu import VARIANTS, calc_1rm, overload_suggestion, parse_cible_reps, parse_rpe
+from core.passes_seance import seance_de_base
 
 logger = logging.getLogger(__name__)
 
@@ -222,8 +223,10 @@ def _suggestion_for(hist, exo_final, seance, date_str, is_bw, cible_reps=None):
 
 
 def _cible_du_programme(prog, seance, exo_base):
-    """Fourchette de reps prévue par le programme pour cet exercice, ou ""."""
-    for e in (prog or {}).get(seance) or []:
+    """Fourchette de reps prévue par le programme pour cet exercice, ou "".
+    Une seconde passe (« Push 1 · 2 ») lit celle de Push 1."""
+    prog = prog or {}
+    for e in prog.get(seance_de_base(seance, prog)) or []:
         if isinstance(e, dict) and e.get("name") == exo_base:
             return str(e.get("reps") or "")
     return ""
