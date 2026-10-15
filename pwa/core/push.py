@@ -28,12 +28,16 @@ def is_configured() -> bool:
     return bool(_env("VAPID_PUBLIC_KEY") and _env("VAPID_PRIVATE_KEY"))
 
 
-def send_push(subscription: dict, payload: dict) -> str:
+def send_push(subscription: dict, payload: dict, ttl: int = 24 * 3600, urgence: str = "") -> str:
     """Envoie une notif à un abonnement. Retourne :
       'ok'           — envoyé
       'expired'      — abonnement mort (404/410) → l'appelant doit le supprimer
       'error'        — échec transitoire
       'unconfigured' — clés/lib absentes
+
+    `ttl` : au-delà, le service de push abandonne (la fin d'un repos annoncée
+    dix minutes trop tard ne sert à rien). `urgence="high"` : le téléphone
+    est réveillé tout de suite, même en veille (en-tête Urgency, RFC 8030).
     """
     if not is_configured():
         return "unconfigured"
@@ -57,7 +61,8 @@ def send_push(subscription: dict, payload: dict) -> str:
             data=json.dumps(payload),
             vapid_private_key=vapid,
             vapid_claims={"sub": subject},
-            ttl=24 * 3600,
+            ttl=ttl,
+            headers={"Urgency": urgence} if urgence else None,
         )
         return "ok"
     except WebPushException as e:

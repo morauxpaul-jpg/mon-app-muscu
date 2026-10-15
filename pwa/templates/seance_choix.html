@@ -83,13 +83,25 @@
   {% endif %}
 
   {% if done_name %}
-    <a href="/seance?mode={{ 'prefaite' if done_name in seance_names else 'libre' }}&name={{ done_name|urlencode }}&date={{ date_iso }}" class="choix-encadre">
+    <a href="/seance?mode={{ done_mode }}&name={{ done_name|urlencode }}&date={{ date_iso }}" class="choix-encadre">
       <span class="choix-txt">
         <span class="choix-nom">Voir la séance</span>
         <span class="choix-sous">Consulter ou modifier les séries</span>
       </span>
       <svg class="icon icon-md choix-fleche" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
     </a>
+    {# La refaire aujourd'hui : une seconde passe à part, la première reste
+       intacte (retour du 14/10 : rouvrir la séance rouvrait celle déjà faite). #}
+    {% if refaire_nom %}
+    <a href="/seance?mode=prefaite&name={{ refaire_nom|urlencode }}&date={{ date_iso }}" class="choix-encadre choix-refaire" data-haptic="1">
+      <span class="choix-txt">
+        <span class="choix-surtitre">Encore une fois</span>
+        <span class="choix-nom">Refaire {{ refaire_base }}</span>
+        <span class="choix-sous">Enregistrée à part, sous « {{ refaire_nom }} » : la première reste intacte</span>
+      </span>
+      <span class="choix-faire">Faire<svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg></span>
+    </a>
+    {% endif %}
   {% endif %}
 
   {% if prog_groups %}

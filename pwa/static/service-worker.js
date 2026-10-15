@@ -350,5 +350,25 @@ self.addEventListener("push", (event) => {
     vibrate: [120, 60, 120],
     data: { url: data.url || "/accueil" },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  if (data.tag !== "rest-timer") {
+    event.waitUntil(self.registration.showNotification(title, options));
+    return;
+  }
+  // Fin de repos envoyée par le serveur (core/push_repos.py) : elle réveille
+  // le téléphone écran éteint (retour du 14/10). Si l'app est à l'écran, la
+  // page a déjà bipé : Chrome exige une notification par push, on l'affiche
+  // donc sans bruit et on la retire aussitôt.
+  options.renotify = true;
+  options.vibrate = [200, 100, 200];
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const visible = clients.some((c) => c.visibilityState === "visible");
+      if (!visible) return self.registration.showNotification(title, options);
+      const discrete = Object.assign({}, options, { silent: true, renotify: false });
+      delete discrete.vibrate;          // « silent » refuse un motif de vibration
+      return self.registration.showNotification(title, discrete)
+        .then(() => self.registration.getNotifications({ tag: "rest-timer" }))
+        .then((liste) => liste.forEach((n) => n.close()));
+    })
+  );
 });

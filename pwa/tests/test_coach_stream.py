@@ -163,6 +163,20 @@ def test_la_memoire_est_injectee_dans_le_prompt(fake_db, logged_in, monkeypatch)
     assert "CE QUE TU SAIS DÉJÀ DE LUI" in system
 
 
+def test_le_coach_connait_la_date_du_jour(fake_db, logged_in, monkeypatch):
+    """Sans elle, il annonçait « presque un mois sans séance » le 14/10, neuf
+    jours après la dernière (retour du propriétaire)."""
+    import datetime as dt
+    from routes import coach
+    monkeypatch.setattr(coach, "logical_today_paris", lambda: dt.date(2026, 10, 14))
+    fake_anthropic = _install_fake_anthropic(monkeypatch)
+    _seed(fake_db)
+    _ask(logged_in)
+    system = fake_anthropic.calls[0]["system"]
+    assert "Date du jour : mercredi 14 octobre 2026" in system
+    assert "Pas d'emoji" in system
+
+
 def test_sans_memoire_le_prompt_reste_propre(fake_db, logged_in, monkeypatch):
     fake_anthropic = _install_fake_anthropic(monkeypatch)
     _seed(fake_db)
