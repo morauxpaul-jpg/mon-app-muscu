@@ -9,6 +9,9 @@
  * - les composants (`x-data="exoBlock(…)"`) sont enregistrés auprès d'Alpine ;
  * - `x-au-corps="ouvert"` sort une fenêtre vers <body> quand elle s'ouvre
  *   (sinon un parent `transform` la coince dans sa carte) ;
+ * - `x-md="renderMd(texte)"` pose du HTML DÉJÀ ÉCHAPPÉ par la page : la
+ *   version CSP interdit `x-html` (les bulles du coach s'affichaient vides
+ *   depuis le passage à cette version, le 10/10) ;
  * - `$biblio` donne la bibliothèque d'exercices (exercise-library.js).
  *
  * Chargé AVANT alpine.min.js (qui est en `defer`) : les composants sont
@@ -56,6 +59,15 @@
         lire(function (ouvert) {
           if (ouvert && el.parentNode !== document.body) document.body.appendChild(el);
         });
+      });
+    });
+
+    // Seule source autorisée : une fonction de la page qui échappe le texte
+    // avant d'y ajouter ses balises (renderMd du coach).
+    Alpine.directive("md", function (el, directive, outils) {
+      var lire = outils.evaluateLater(directive.expression);
+      outils.effect(function () {
+        lire(function (html) { el.innerHTML = html == null ? "" : String(html); });
       });
     });
 

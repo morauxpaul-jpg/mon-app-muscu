@@ -32,9 +32,23 @@ if os.environ.get("FAUX_IA") == "lent":
         {"name": "Développé couché", "sets": 4, "reps": "6-8", "rest_seconds": 150, "muscle": "Pecs"}]},
         "planning": {"Lundi": "Haut du corps"}})
 
+    # Le coach lit sa réponse en flux, morceau par morceau.
+    _REPONSE_COACH = ["Pour progresser, ", "passe à **4 × 6** à 82,5 kg.\n\n",
+                      "- Ajoute une rep par séance\n", "- Revois ton [programme](/programme)"]
+
+    class _Flux:
+        def __init__(self):
+            self.text_stream = iter(_REPONSE_COACH)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
     class _FauxClient:
         def __init__(self, **k):
-            self.messages = types.SimpleNamespace(create=self._create)
+            self.messages = types.SimpleNamespace(create=self._create, stream=lambda **k: _Flux())
 
         def _create(self, **k):
             _time.sleep(3)

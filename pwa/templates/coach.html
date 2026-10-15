@@ -90,7 +90,7 @@
           <div class="date-sep"><span x-text="grp.label"></span></div>
           <template x-for="(m, i) in grp.items" :key="gi + '-' + i">
             <div :class="'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-bot')">
-              <div class="msg-bubble" x-html="renderMd(m.content)"></div>
+              <div class="msg-bubble" x-md="renderMd(m.content)"></div>
             </div>
           </template>
         </div>
@@ -120,7 +120,7 @@
           autocomplete="off"
           rows="1"
           @input="ajusterHauteur($el)"
-          @keydown.enter.exact.prevent="envoyerSiPret()"
+          @keydown.enter="envoyerSiPret($event)"
         ></textarea>
         <button type="submit" class="btn primary coach-send-btn" :disabled="typing || !draft.trim() || quotaLeft <= 0" data-haptic="1" aria-label="Envoyer">
           <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>
@@ -164,7 +164,11 @@
           el.style.height = Math.min(el.scrollHeight, 120) + 'px';
         },
         // Entrée envoie, sauf message vide, réponse en cours ou quota épuisé.
-        envoyerSiPret() {
+        // Entrée envoie, Maj+Entrée va à la ligne. Le modificateur `.exact`
+        // n'existe pas dans Alpine : l'ancien raccourci ne partait jamais.
+        envoyerSiPret(e) {
+          if (e && (e.shiftKey || e.isComposing)) return;
+          if (e) e.preventDefault();
           if (this.draft.trim() && !this.typing && this.quotaLeft > 0) this.send(this.draft);
         },
         newChat() {
@@ -277,7 +281,9 @@
           this.$nextTick(() => this.scrollDown());
 
           // Bulle de réponse créée vide : elle se remplit pendant la lecture.
-          const bubble = { role: 'assistant', content: '', created_at: new Date().toISOString(), streaming: true };
+          // Une fois ajoutée, on écrit dans la copie suivie par Alpine (celle
+          // du tableau) : écrire dans l'objet d'origine ne redessinait rien.
+          let bubble = { role: 'assistant', content: '', created_at: new Date().toISOString(), streaming: true };
           let bubbleAdded = false;
 
           try {
@@ -328,6 +334,7 @@
                 if (event === 'delta') {
                   if (!bubbleAdded) {
                     this.messages.push(bubble);
+                    bubble = this.messages[this.messages.length - 1];
                     bubbleAdded = true;
                     this.typing = false;
                   }

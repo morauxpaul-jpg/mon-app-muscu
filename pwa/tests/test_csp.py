@@ -133,6 +133,14 @@ def test_les_expressions_alpine_restent_lisibles_par_la_version_csp(chemin):
     assert fautes == []
 
 
+@pytest.mark.parametrize("chemin", GABARITS, ids=os.path.basename)
+def test_aucun_gabarit_n_utilise_x_html(chemin):
+    """La version CSP d'Alpine refuse `x-html` : l'élément reste vide, sans
+    autre signe qu'une ligne dans la console. Les bulles du coach sont restées
+    vides du 10 au 14/10. `x-md` (alpine-composants.js) le remplace."""
+    assert "x-html" not in _sans_commentaires(open(chemin, encoding="utf-8").read())
+
+
 def test_mode_observation_et_coupure(client, monkeypatch):
     monkeypatch.setenv("CSP_OBSERVER", "1")
     r = client.get("/")
