@@ -320,6 +320,9 @@
       },
 
       lastSummary: data.last_summary || "",
+      // Remarques de la fois d'avant (core/memoire_exo.py). Contrairement à
+      // « Dernière fois », l'enregistrement du jour ne les remplace pas.
+      lastNote: data.derniere_remarque || "",
       suggestion: data.suggestion || null,
       // Boutons − / + (maquette du 13/10) : les charges déjà soulevées sur
       // cet exercice et leur écart habituel (core/seance_charges.py).
@@ -431,6 +434,7 @@
           .then(function (r) { return r.json(); })
           .then(function (d) {
             self.lastSummary = d.last_summary || "";
+            self.lastNote = d.derniere_remarque || "";
             self.suggestion = d.suggestion || null;
             self.suggestionApplied = false;
             self.record = d.record || null;

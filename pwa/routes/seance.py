@@ -42,6 +42,7 @@ from core.seance_saisie import (MESSAGE_DATE_A_VENIR, _form_date, _known_exo_nam
                                 _session_totals, date_a_venir)
 from core.seance_cardio import (UNITES_CARDIO, _build_cardio_done)
 from core.bilans_seance import _load_session_note
+from core.memoire_exo import completer_cartes, derniere_remarque
 from core.navigation_seance import _back_to_editor
 
 bp = Blueprint("seance", __name__)
@@ -268,6 +269,7 @@ def seance():
 
         # Ordre personnalisé (drag dans la séance en cours)
         exos_ctx = _apply_seance_order(calque["ordre"], exos_ctx)
+        completer_cartes(exos_ctx, hist, name, date_iso)
 
         # Volume
         vol_curr = sum(r["Poids"] * r["Reps"] for r in hist
@@ -338,6 +340,7 @@ def seance():
 
         # Ordre personnalisé (drag dans la séance en cours)
         exos_ctx = _apply_seance_order(calque["ordre"], exos_ctx)
+        completer_cartes(exos_ctx, hist, libre_name, date_iso)
 
         exos_done = sum(1 for e in exos_ctx if e["completed"])
         exos_total = len(exos_ctx)
@@ -704,4 +707,5 @@ def api_variant_history():
         "prev_weeks": pw_display,
         "suggestion": suggestion,
         "echelle": echelle_charges(hist, exo_final),
+        "derniere_remarque": derniere_remarque(hist, exo_final, seance, date_str),
     })
