@@ -51,6 +51,53 @@ module.exports = ({ test, assert }) => {
     assert.deepEqual(env.wakeLog, []);
   });
 
+  // ── Web : le serveur annonce la fin, écran éteint (retour du 14/10) ──
+
+  function avecPush() {
+    const env = createEnv({ scripts: ['rest-timer.js'] });
+    env.window.PushManager = function () {};
+    env.navigator.serviceWorker = { ready: Promise.resolve({
+      pushManager: { getSubscription: () => Promise.resolve({ endpoint: 'https://push.test/abc' }) },
+    }) };
+    return env;
+  }
+  const appels = (env, url) => env.calls.filter((c) => c.url === url).map((c) => JSON.parse(c.body));
+
+  test('un repos prévient le serveur, qui enverra le push de fin', async () => {
+    const env = avecPush();
+    env.window.RestTimer.start(90, 'Squat');
+    await env.settle(); await env.settle();
+    const [corps] = appels(env, '/push/repos');
+    assert.equal(corps.dans, 90);
+    assert.equal(corps.nom, 'Squat');
+    assert.equal(corps.endpoint, 'https://push.test/abc');
+  });
+
+  test('passer le repos annule le push du serveur', async () => {
+    const env = avecPush();
+    env.window.RestTimer.start(90, 'Squat');
+    await env.settle(); await env.settle();
+    env.window.RestTimer.skip();
+    await env.settle(); await env.settle();
+    assert.deepEqual(appels(env, '/push/repos/annuler'), [{ endpoint: 'https://push.test/abc' }]);
+  });
+
+  test('un nouveau repos remplace l’ancien sans annulation qui pourrait arriver après', async () => {
+    const env = avecPush();
+    env.window.RestTimer.start(90, 'Squat');
+    env.window.RestTimer.setDuration(120);
+    await env.settle(); await env.settle();
+    assert.equal(appels(env, '/push/repos').length, 2);
+    assert.deepEqual(appels(env, '/push/repos/annuler'), []);
+  });
+
+  test("sans abonnement push (app native, notifications refusées), rien n'est envoyé", async () => {
+    const env = createEnv({ scripts: ['rest-timer.js'] });
+    env.window.RestTimer.start(90);
+    await env.settle();
+    assert.deepEqual(env.calls, []);
+  });
+
   // ── App native : compte à rebours dans la barre ────────────────
 
   test("l'app native affiche le compte à rebours au lieu de forcer l'écran", async () => {

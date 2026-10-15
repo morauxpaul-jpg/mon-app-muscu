@@ -3,6 +3,8 @@
   GET  /push/config       : clé publique VAPID (pour PushManager côté client)
   POST /push/subscribe    : enregistre un PushSubscription (toJSON)
   POST /push/unsubscribe  : supprime un abonnement (par endpoint)
+  POST /push/repos        : programme le push de fin de repos (écran éteint)
+  POST /push/repos/annuler: l'annule (nouveau repos, « Passer », fin de séance)
 
 Disponible à TOUS les users (free inclus) : la relance cible surtout les
 comptes gratuits qui décrochent.
@@ -15,6 +17,7 @@ from flask import Blueprint, jsonify, request, g
 
 from core import db as core_db
 from core import push as core_push
+from core import push_repos
 from core.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -56,6 +59,41 @@ def subscribe():
         logger.error("/push/subscribe FAILED user=%s: %s", g.user_id, e)
         return jsonify({"error": "enregistrement échoué"}), 500
     return ("", 204)
+
+
+@bp.route("/push/repos", methods=["POST"])
+@limiter.limit("60 per minute")
+def programmer_repos():
+    """Le navigateur annonce un repos : « fini dans `dans` secondes, sur cet
+    appareil ». Le serveur enverra le push de fin, écran éteint compris
+    (core/push_repos.py). L'abonnement est relu en base : on ne programme
+    que vers ses propres appareils."""
+    data = request.get_json(silent=True) or {}
+    endpoint = str(data.get("endpoint") or "")
+    if not endpoint or not core_push.is_configured():
+        return jsonify({"ok": False}), 400
+    abonnement = next((s for s in core_db.list_push_subscriptions(g.user_id)
+                       if s.get("endpoint") == endpoint), None)
+    if abonnement is None:
+        return jsonify({"ok": False, "error": "appareil inconnu"}), 404
+    jeton = push_repos.programmer(g.user_id, abonnement, data.get("dans"),
+                                  nom=data.get("nom") or "", url=_url_locale(data.get("url")))
+    return jsonify({"ok": bool(jeton)}), (200 if jeton else 400)
+
+
+@bp.route("/push/repos/annuler", methods=["POST"])
+@limiter.limit("60 per minute")
+def annuler_repos():
+    endpoint = str((request.get_json(silent=True) or {}).get("endpoint") or "")
+    if endpoint:
+        push_repos.annuler(g.user_id, endpoint)
+    return ("", 204)
+
+
+def _url_locale(url):
+    """La notification ramène à la séance : un chemin de l'app, rien d'autre."""
+    url = str(url or "")
+    return url if url.startswith("/") and not url.startswith("//") else "/seance"
 
 
 @bp.route("/push/unsubscribe", methods=["POST"])
