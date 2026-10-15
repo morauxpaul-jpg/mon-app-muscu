@@ -6,6 +6,11 @@ mais ne revenaient que dans le tableau replié « Historique et options », et
 seulement pour les semaines précédentes : la séance de lundi était
 invisible le jeudi. Elles reviennent désormais sous « Dernière fois ».
 
+Même retour : « potentiel onglet réglages de machine ». Une ligne libre par
+machine (« siège 4 · goupille 7 »), rangée dans le programme sous une clé
+personnelle : elle survit aux changements de programme, sans migration
+(core/db_programme.py, PROG_BODY_KEYS).
+
 Module pur : ni Flask ni base. Hors des `seance_*` (plafonnés en taille).
 """
 import re
@@ -70,8 +75,43 @@ def derniere_remarque(hist, exo_final, seance, date_str):
     return f"{_jour_court(jour)} · {notes}"[:LONGUEUR_MAX]
 
 
-def completer_cartes(exos_ctx, hist, seance, date_str):
+# ── Réglages de machine ──────────────────────────────────────────
+CLE_REGLAGES = "_reglages_machines"
+REGLAGES_MAX = 120
+
+
+def cle_reglages(exo_id, base, variant):
+    """Une machine = un exercice dans un équipement : la presse et la poulie
+    n'ont pas les mêmes crans. L'identifiant stable survit aux renommages ;
+    sans lui (exercice ajouté pour aujourd'hui), le nom."""
+    racine = exo_id or ("n:" + _norm(base))
+    return racine if not variant or variant == "Standard" else f"{racine}~{variant}"
+
+
+def reglages_de(prog, cle):
+    table = (prog or {}).get(CLE_REGLAGES)
+    entree = table.get(cle) if isinstance(table, dict) else None
+    return str(entree.get("texte") or "") if isinstance(entree, dict) else ""
+
+
+def noter_reglages(prog, cle, texte, aujourdhui):
+    """Écrit (ou efface, si vide) les réglages d'une machine dans `prog`.
+    Rend le texte retenu, borné et sans espaces en trop."""
+    texte = " ".join(str(texte or "").split())[:REGLAGES_MAX]
+    table = prog.get(CLE_REGLAGES)
+    if not isinstance(table, dict):
+        table = prog[CLE_REGLAGES] = {}
+    if texte:
+        table[cle] = {"texte": texte, "maj": aujourdhui}
+    else:
+        table.pop(cle, None)
+    return texte
+
+
+def completer_cartes(exos_ctx, hist, seance, date_str, prog=None):
     """Ajoute à chaque carte ce qu'elle doit rappeler de la fois d'avant."""
     for ctx in exos_ctx:
         ctx["derniere_remarque"] = derniere_remarque(hist, ctx["exo_final"], seance, date_str)
+        ctx["reglages_machine"] = reglages_de(
+            prog, cle_reglages(ctx.get("exo_id"), ctx["base"], ctx.get("variant")))
     return exos_ctx

@@ -323,6 +323,11 @@
       // Remarques de la fois d'avant (core/memoire_exo.py). Contrairement à
       // « Dernière fois », l'enregistrement du jour ne les remplace pas.
       lastNote: data.derniere_remarque || "",
+      // Réglages de la machine pour cet exercice et cet équipement
+      // (« siège 4 · goupille 7 »), gardés dans le programme.
+      reglages: data.reglages_machine || "",
+      editReglages: false,
+      brouillonReglages: "",
       suggestion: data.suggestion || null,
       // Boutons − / + (maquette du 13/10) : les charges déjà soulevées sur
       // cet exercice et leur écart habituel (core/seance_charges.py).
@@ -424,6 +429,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             exo_base: data.base,
+            exo_id: data.exo_id || "",
             variant: newVariant,
             seance: CONFIG.seance,
             date: CONFIG.date,
@@ -435,6 +441,7 @@
           .then(function (d) {
             self.lastSummary = d.last_summary || "";
             self.lastNote = d.derniere_remarque || "";
+            self.reglages = d.reglages_machine || "";
             self.suggestion = d.suggestion || null;
             self.suggestionApplied = false;
             self.record = d.record || null;
@@ -671,6 +678,30 @@
         } catch (e) { return 0; }
       },
       texteRepos: function () { return "repos " + this._dureeRepos() + " s"; },
+
+      // ── Réglages de la machine ──
+      ouvrirReglages: function () {
+        this.brouillonReglages = this.reglages;
+        this.editReglages = true;
+        this.open = true;           // le champ est dans le corps de la carte
+      },
+      enregistrerReglages: function () {
+        var texte = String(this.brouillonReglages || "").replace(/\s+/g, " ").trim().slice(0, 120);
+        this.reglages = texte;
+        this.editReglages = false;
+        var champs = { exo_id: data.exo_id || "", base: data.base, variant: this.variant, texte: texte };
+        var cle = "reglages_" + (data.exo_id || data.base) + "_" + this.variant;
+        // Hors ligne : la file le rejoue au retour du réseau, le dernier
+        // texte saisi pour cette machine remplaçant les précédents.
+        var enFile = function () {
+          if (window.OfflineQueue) window.OfflineQueue.enqueue("/seance/reglages", versFormData(champs), cle);
+        };
+        fetch("/seance/reglages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(champs),
+        }).then(function (r) { if (!r.ok && r.status >= 500) enFile(); }).catch(enFile);
+      },
       // Appelé par la barre du chrono quand on touche 1:00, 1:30, 2:00 ou 3:00.
       retenirRepos: function (sec) {
         var self = this;

@@ -222,6 +222,11 @@ details.exo-echauffement small { color: var(--text-3); }
 .exo-conseil { color: var(--text-2); }
 /* Équipement en tête de carte (retour du 04/10) : une ligne compacte. */
 .exo-equipement { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; font-size: 0.85rem; color: var(--text-3); }
+/* Réglages de la machine : une ligne de repère (bouton nu) et un champ. */
+.exo-repere .exo-reglages { background: none; border: 0; padding: 0; text-align: left; font: inherit; font-size: var(--text-sm); color: var(--text-2); cursor: pointer; }
+.exo-reglages-ajout { background: none; border: 0; padding: 0 0 10px; font: inherit; font-size: 0.85rem; color: var(--text-3); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.exo-reglages-form { display: flex; gap: 8px; margin: 0 0 10px; }
+.exo-reglages-form .field { flex: 1; min-width: 0; }
 .exo-equipement select { flex: 1; min-width: 0; padding: 8px 10px; border-radius: var(--radius-pill, 999px); background: var(--bg-surface, rgba(255,255,255,0.04)); color: var(--text-1); border: 1px solid var(--border-default, rgba(255,255,255,0.08)); font-size: 0.9rem; }
 .exo-suivant { width: 100%; margin-top: 8px; justify-content: center; }
 /* Séries d'échauffement (v43) : discrètes, hors volume de travail. */

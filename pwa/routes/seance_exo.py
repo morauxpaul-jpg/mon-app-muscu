@@ -5,13 +5,18 @@ que pour le repos en cours : le suivant repartait à la valeur du programme
 (retour du 14/10, « le chrono n'enregistre pas si je le change »). Il est
 désormais écrit dans le programme, pour cet exercice seulement : un appui un
 jour de fatigue ne change pas les autres (audit du 30/09, R12).
+
+Les réglages de la machine (même retour) : une ligne libre par exercice et
+équipement, sur la carte (core/memoire_exo.py).
 """
 import logging
 
 from flask import Blueprint, jsonify, request
 
 from core.data import get_prog, save_prog
+from core.dates import logical_today_paris_str
 from core.limiter import limiter
+from core.memoire_exo import cle_reglages, noter_reglages
 
 logger = logging.getLogger(__name__)
 
@@ -58,3 +63,19 @@ def retenir_repos():
         ex["rest_seconds"] = sec
         save_prog(prog)
     return jsonify({"ok": True, "rest_seconds": sec})
+
+
+@bp.route("/seance/reglages", methods=["POST"])
+@limiter.limit("30 per minute")
+def noter_reglages_machine():
+    """JSON depuis la carte ; formulaire quand la file hors-ligne le rejoue
+    (une salle en sous-sol est le cas normal)."""
+    data = request.get_json(silent=True) or request.form
+    base = str(data.get("base") or "").strip()
+    if not base:
+        return jsonify({"ok": False, "error": "exercice manquant"}), 400
+    cle = cle_reglages(str(data.get("exo_id") or ""), base, str(data.get("variant") or "Standard"))
+    prog = get_prog()
+    texte = noter_reglages(prog, cle, data.get("texte"), logical_today_paris_str())
+    save_prog(prog)
+    return jsonify({"ok": True, "texte": texte})

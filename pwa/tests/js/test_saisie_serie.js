@@ -292,6 +292,39 @@ module.exports = ({ test, assert }) => {
     assert.equal(demain._dureeRepos(), 60);
   });
 
+  // ── Réglages de la machine (retour du 14/10) ──────────────────
+
+  test('les réglages notés sur la carte partent au serveur et restent affichés', async () => {
+    const e = avecChrono();
+    const b = e.window.exoBlock(0, { base: 'Presse', exo_id: 'e_presse', exo_index: 0, sets: [S()],
+                                     variant: 'Machine' });
+    b.ouvrirReglages();
+    assert.equal(b.open, true, 'le champ est dans le corps de la carte');
+    b.brouillonReglages = '  siège 4   goupille 7 ';
+    b.enregistrerReglages();
+    await e.settle();
+    assert.equal(b.reglages, 'siège 4 goupille 7');
+    assert.equal(b.editReglages, false);
+    const envoi = e.calls.find((c) => c.url === '/seance/reglages');
+    assert.deepEqual(JSON.parse(envoi.body),
+                     { exo_id: 'e_presse', base: 'Presse', variant: 'Machine', texte: 'siège 4 goupille 7' });
+  });
+
+  test('hors ligne, les réglages attendent le réseau dans la file', async () => {
+    const e = createEnv({ scripts: ['offline.js', 'seance.js'], online: false });
+    e.setResponder(() => Promise.reject(new TypeError('Failed to fetch')));
+    const b = e.window.exoBlock(0, { base: 'Presse', exo_index: 0, sets: [S()], variant: 'Machine' });
+    b.ouvrirReglages();
+    b.brouillonReglages = 'siège 4';
+    b.enregistrerReglages();
+    await e.settle();
+    await e.settle();
+    const file = e.queue();
+    assert.equal(file.length, 1);
+    assert.equal(file[0].url, '/seance/reglages');
+    assert.equal(file[0].data.texte, 'siège 4');
+  });
+
   // ── Quelle série est ouverte ──────────────────────────────────
 
   test('une série déjà remplie s’ouvre repliée', () => {
