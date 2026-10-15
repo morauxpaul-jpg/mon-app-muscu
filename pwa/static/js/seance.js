@@ -34,6 +34,8 @@
   var DRAFT_PREFIX = "draft_" + CONFIG.seance + "_" + CONFIG.date + "_";
   var SESSION_KEY = "active_session";
   var START_KEY = "seance_start_" + CONFIG.seance + "_" + CONFIG.date;
+  // Repos choisis pour les exercices absents du programme : {exo_id ou nom: s}.
+  var REPOS_PAR_EXO = "repos_par_exo";
 
   function readJson(id) {
     var el = document.getElementById(id);
@@ -648,10 +650,45 @@
       // dernier préréglage touché dans la barre : un appui sur « 1:00 » un
       // jour de fatigue remplaçait le repos de TOUS les exercices, à vie.
       // Le préréglage reste le repos des exercices sans prescription.
+      // Une durée choisie pendant le repos de CET exercice passe avant tout :
+      // elle est enregistrée dans le programme (ou, pour un exercice ajouté
+      // aujourd'hui, sur l'appareil).
       _dureeRepos: function () {
-        return (this.restPrescrit ? this.restSeconds : 0) ||
+        return this._reposRetenu() ||
+               (this.restPrescrit ? this.restSeconds : 0) ||
                parseInt(localStorage.getItem("restTimerDefault"), 10) ||
                this.restSeconds || 90;
+      },
+      _cleRepos: function () { return data.exo_id || data.base; },
+      _reposRetenu: function () {
+        try {
+          var m = JSON.parse(localStorage.getItem(REPOS_PAR_EXO) || "{}");
+          return parseInt(m[this._cleRepos()], 10) || 0;
+        } catch (e) { return 0; }
+      },
+      texteRepos: function () { return "repos " + this._dureeRepos() + " s"; },
+      // Appelé par la barre du chrono quand on touche 1:00, 1:30, 2:00 ou 3:00.
+      retenirRepos: function (sec) {
+        var self = this;
+        this.restSeconds = sec;
+        this.restPrescrit = true;
+        fetch("/seance/repos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ seance: CONFIG.seance, exo_id: data.exo_id || "",
+                                 base: data.base, rest_seconds: sec }),
+        }).then(function (r) {
+          // Absent du programme (ajouté aujourd'hui, séance libre) : on le
+          // retient sur l'appareil. Présent : le programme fait foi.
+          self._noterRepos(r && r.ok ? 0 : sec);
+        }).catch(function () { self._noterRepos(sec); });
+      },
+      _noterRepos: function (sec) {
+        try {
+          var m = JSON.parse(localStorage.getItem(REPOS_PAR_EXO) || "{}");
+          if (sec) m[this._cleRepos()] = sec; else delete m[this._cleRepos()];
+          localStorage.setItem(REPOS_PAR_EXO, JSON.stringify(m));
+        } catch (e) {}
       },
       // Le nom part avec le chrono : la notification le lisait dans la page
       // et retombait toujours sur le PREMIER exercice (retour du 04/10).
@@ -661,10 +698,12 @@
       },
       startRestTimer: function () {
         if (!CONFIG.autoRestTimer) return;
-        if (window.RestTimer) window.RestTimer.start(this._dureeRepos(), this._nomPourChrono());
+        this.manualRestTimer();
       },
       manualRestTimer: function () {
-        if (window.RestTimer) window.RestTimer.start(this._dureeRepos(), this._nomPourChrono());
+        if (window.RestTimer) {
+          window.RestTimer.start(this._dureeRepos(), this._nomPourChrono(), this.retenirRepos.bind(this));
+        }
       },
 
       // ── Enregistrement ──

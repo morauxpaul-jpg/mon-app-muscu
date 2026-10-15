@@ -255,6 +255,43 @@ module.exports = ({ test, assert }) => {
     assert.equal(b._dureeRepos(), 180);
   });
 
+  // Retour du 14/10 : « le chrono n'enregistre pas si je le change ». Le
+  // préréglage touché ne valait que pour le repos en cours.
+  const avecChrono = () => createEnv({ scripts: ['rest-timer.js', 'seance.js'],
+                                       json: { 'seance-config': { seance: 'Push 1', autoRestTimer: true } } });
+
+  test('une durée touchée pendant le repos devient celle de cet exercice', async () => {
+    const e = avecChrono();
+    const squat = e.window.exoBlock(0, { base: 'Squat', exo_id: 'e_squat', exo_index: 0, sets: [S()],
+                                         variant: 'Standard', rest_seconds: 90, rest_prescrit: true });
+    const curl = e.window.exoBlock(1, { base: 'Curl', exo_id: 'e_curl', exo_index: 1, sets: [S()],
+                                        variant: 'Standard', rest_seconds: 180, rest_prescrit: true });
+    squat.manualRestTimer();
+    e.window.RestTimer.setDuration(120);
+    await e.settle();
+    assert.equal(squat._dureeRepos(), 120, 'le repos suivant du squat');
+    assert.equal(squat.texteRepos(), 'repos 120 s', 'la carte affiche la nouvelle durée');
+    assert.equal(curl._dureeRepos(), 180, 'les autres exercices gardent la leur (R12)');
+    const envoi = e.calls.find((c) => c.url === '/seance/repos');
+    assert.ok(envoi, 'enregistrée dans le programme');
+    assert.deepEqual(JSON.parse(envoi.body),
+                     { seance: 'Push 1', exo_id: 'e_squat', base: 'Squat', rest_seconds: 120 });
+    assert.equal(e.localStorage.getItem('repos_par_exo'), '{}', 'le programme fait foi');
+  });
+
+  test('un exercice absent du programme garde sa durée sur le téléphone', async () => {
+    const e = avecChrono();
+    e.setResponder(() => ({ ok: false, status: 404 }));
+    const extra = e.window.exoBlock(0, { base: 'Pull-over', exo_index: 0, sets: [S()], variant: 'Standard' });
+    extra.manualRestTimer();
+    e.window.RestTimer.setDuration(60);
+    await e.settle();
+    assert.equal(e.localStorage.getItem('repos_par_exo'), '{"Pull-over":60}');
+    // La séance suivante : une carte neuve relit la durée retenue.
+    const demain = e.window.exoBlock(0, { base: 'Pull-over', exo_index: 0, sets: [S()], variant: 'Standard' });
+    assert.equal(demain._dureeRepos(), 60);
+  });
+
   // ── Quelle série est ouverte ──────────────────────────────────
 
   test('une série déjà remplie s’ouvre repliée', () => {

@@ -51,7 +51,7 @@
             <span class="exo-superset">Superset · après {{ exo.superset_de }} ↑, puis repos</span>
             {% endif %}
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
-            <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · repos {{ exo.rest_seconds }} s</span>
+            <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · <span x-text="texteRepos()">repos {{ exo.rest_seconds }} s</span></span>
             <template x-if="completed"><svg class="icon icon-sm icon-success" aria-label="terminé"><use href="/static/img/icons.svg#check-circle"/></svg></template>
           </div>
         </div>

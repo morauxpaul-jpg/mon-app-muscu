@@ -41,6 +41,10 @@
   var _comp = null;       // compresseur de sortie (bip fort sans saturation)
   var _doneUntil = 0;     // fin de l'affichage « C'est reparti »
   var _origTitle = document.title;
+  // Qui retient une durée choisie dans la barre : la carte d'exercice qui a
+  // lancé ce repos (seance.js). Pas persisté : après un rechargement, un
+  // préréglage ne vaut plus que pour le repos en cours.
+  var _surChoix = null;
 
   // ── Persistance ─────────────────────────────────────────────────
   function _load() {
@@ -494,7 +498,8 @@
   }
 
   // ── API publique ────────────────────────────────────────────────
-  function start(seconds, nom) {
+  function start(seconds, nom, surChoix) {
+    _surChoix = typeof surChoix === "function" ? surChoix : null;
     var total = parseInt(seconds, 10) || _defaultDuration();
     nom = String(nom || _currentExerciseName() || "").slice(0, 60);
     _state = { end: Date.now() + total * 1000, total: total, url: _sessionUrl(), nom: nom };
@@ -513,7 +518,11 @@
     sec = parseInt(sec, 10);
     if (!(sec > 0)) return;
     try { localStorage.setItem(DEFAULT_KEY, String(sec)); } catch (e) {}
-    start(sec, _state && _state.nom);   // changer la durée garde l'exercice
+    var retenir = _surChoix;
+    start(sec, _state && _state.nom, retenir);   // changer la durée garde l'exercice
+    // …et l'exercice la garde pour la suite : la durée touchée ne valait que
+    // pour ce repos-là, le suivant repartait à 90 s (retour du 14/10).
+    if (retenir) { try { retenir(sec); } catch (e) {} }
   }
 
   function skip() {
