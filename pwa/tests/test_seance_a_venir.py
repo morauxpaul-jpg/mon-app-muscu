@@ -86,6 +86,53 @@ def test_suivre_la_carte_enregistre_aujourdhui(fake_db, logged_in):
     assert _dates_en_base(fake_db) == [auj.isoformat()]
 
 
+def test_la_meme_seance_deux_jours_de_suite_reste_proposee(fake_db, logged_in):
+    """Retour du 14/10 : « si je veux refaire la séance deux fois d'affilée…
+    je dois attendre une semaine ». Push prévue hier ET aujourd'hui, faite
+    hier : la carte sautait celle d'aujourd'hui (le test de « rattrapage »
+    était écrit à l'envers) et proposait la semaine suivante."""
+    auj = logical_today_paris()
+    hier = auj - dt.timedelta(days=1)
+    _programme(fake_db, [hier, auj])
+    assert _serie(logged_in, hier).status_code == 200
+    html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
+    lien, bloc = _carte(html)
+    assert f"date={auj.isoformat()}" in lien and "prevue=" not in lien
+    assert "Commencer" in bloc
+
+
+def test_une_seance_faite_la_veille_ne_cache_pas_celle_du_jour(fake_db, logged_in):
+    """Push prévue aujourd'hui, faite hier (jour sans Push) : la carte la
+    propose quand même. La refaire est un choix (retour du 14/10)."""
+    auj = logical_today_paris()
+    hier = auj - dt.timedelta(days=1)
+    _programme(fake_db, [auj])
+    assert _serie(logged_in, hier).status_code == 200
+    html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
+    lien, bloc = _carte(html)
+    assert f"date={auj.isoformat()}" in lien and "prevue=" not in lien
+    assert "Commencer" in bloc
+
+
+def test_le_streak_lit_le_rattrapage_dans_le_bon_sens(fake_db, logged_in, monkeypatch):
+    """Faite en avance hier (jour sans Push) : pas « en danger ». Faite hier
+    à SON jour prévu : celle d'aujourd'hui reste à faire, donc en danger.
+    L'ancien test faisait exactement l'inverse."""
+    from routes import accueil
+    reel = logical_today_paris()
+    auj = reel - dt.timedelta(days=(reel.weekday() - 2) % 7)   # un mercredi : l'alerte ne s'affiche qu'en semaine
+    monkeypatch.setattr(accueil, "logical_today_paris", lambda: auj)
+    hier = auj - dt.timedelta(days=1)
+    _programme(fake_db, [auj])
+    _serie(logged_in, hier)
+    html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
+    assert "En danger" not in html
+    fake_db.tables["programs"].clear()
+    _programme(fake_db, [hier, auj])
+    html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
+    assert "En danger" in html
+
+
 # ── La page de séance ─────────────────────────────────────────────
 
 

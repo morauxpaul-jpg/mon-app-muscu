@@ -67,6 +67,8 @@ pwa/
 │   ├── seance_semaine.py          # Semaine de programme, libellé du jour, séance réellement faite
 │   ├── seance_historique.py       # Ce que l'historique dit d'un exercice : variante, record, suggestion
 │   ├── seance_contexte.py         # Le dictionnaire que reçoit chaque carte d'exercice
+│   ├── memoire_exo.py             # Ce que la carte rappelle de la fois d'avant : remarques, réglages de la machine (`_reglages_machines`)
+│   ├── passes_seance.py           # Refaire une séance le même jour : « Push · 2 », séance du programme d'origine
 │   ├── seance_calques.py          # Applique substituts et ordre des cartes ; purge des restes d'avant la v46 dans le blob
 │   ├── seance_saisie.py           # Le formulaire devient des lignes d'historique + détection de record
 │   ├── seance_cardio.py           # Unités cardio, et passage colonnes en base (v44) ↔ forme de l'app (Reps/Poids/Remarque)
@@ -83,7 +85,8 @@ pwa/
 │   ├── foods_data.py              # Base de ~430 aliments courants (kcal/macros pour 100 g + portions) pour la recherche Nutrition
 │   ├── body_map.py                # Polygones SVG du body map (d'après react-body-highlighter)
 │   ├── challenges.py              # Défis hebdomadaires (un défi tournant, évalué depuis l'historique)
-│   ├── push.py                    # Push web : config VAPID + envoi pywebpush, relance des inactifs
+│   ├── push.py                    # Push web : config VAPID + envoi pywebpush (ttl, urgence), relance des inactifs
+│   ├── push_repos.py              # Fin du repos envoyée par le serveur (écran éteint) : file + fil d'arrière-plan
 │   ├── limiter.py                 # Instance Flask-Limiter partagée (60 req/min par IP, Redis si dispo)
 │   ├── exercice_ids.py            # Identité stable des exercices : id au programme, exercise_id sur les séries, affichage sous le nom actuel
 │   ├── partage.py                 # État commun aux instances : verrous, compteurs, générations de cache, valeurs (Redis si REDIS_URL, sinon mémoire ; repli mémoire si Redis tombe)
@@ -92,6 +95,7 @@ pwa/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
 │   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance" (résumé : core/accueil_resume.py)
 │   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline, suggestion de surcharge)
+│   ├── seance_exo.py              # Ce qu'on retient d'un exercice depuis sa carte : repos (/seance/repos), réglages machine (/seance/reglages)
 │   ├── programme.py               # CRUD programme + planning + import/export
 │   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement, poids corporel (/progres/poids)
 │   ├── gestion.py                 # Paramètres, settings, export/import, « Ranger mes exercices », reset total (le reset soft a été retiré en v47)
@@ -103,7 +107,7 @@ pwa/
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
 │   ├── generator.py               # Générateur de programme IA (VIP) — tâche de fond → JSON validé → save_prog
-│   ├── push.py                    # Abonnement push (clé VAPID, subscribe/unsubscribe), /tasks/reactivation
+│   ├── push.py                    # Abonnement push (clé VAPID, subscribe/unsubscribe), fin du repos (/push/repos, /push/repos/annuler), /tasks/reactivation
 │   ├── share.py                   # POST /share/track — compteur de partages de progression (analytics)
 │   ├── parrainage.py              # Lien d'invitation + récompense VIP (parrain/filleul) + apply_referral
 │   └── admin.py                   # Stats, gestion VIP, fiche user, funnel (gated par ADMIN_EMAILS env)
@@ -218,6 +222,10 @@ pwa/
 - **Record annoncé en direct** : `_pr_check()` compare la série à tout l'historique de l'exercice et renvoie le type de record (première fois / charge / reps / reps à charge égale) ; la carte l'affiche au moment où il tombe.
 - **Bilan de séance** (`session_notes`, migrations v34/v35) : ressenti, commentaire, durée. `history.session_id` (uuid5 déterministe user|date|séance) relie les lignes d'une même séance.
 - Une même séance peut être faite **deux fois dans la semaine** : les opérations ciblent la date exacte, plus la semaine (cf. « Semaine continue »).
+- **Refaire la même séance** (retour du 14/10) : le lendemain, l'accueil propose toujours la séance prévue aujourd'hui, même faite la veille (le « rattrapage » ne compte que ce qui a été fait un jour où elle n'était pas prévue). Le jour même, « Refaire Push » sous « Voir la séance » ouvre une seconde passe nommée « Push · 2 » (puis « · 3 ») : séries, bilan et `session_id` à elle, la première intacte. `core/passes_seance.py` : `seance_de_base` (« Push · 2 » → « Push » pour les exercices, le repos et la cible), `prochaine_passe`. Aucune migration : c'est le nom de séance qui distingue les passes.
+- **Durée de repos retenue par exercice** (14/10) : toucher une durée dans la barre du chrono l'enregistre pour l'exercice qui a lancé le repos (`rest_seconds` du programme, `POST /seance/repos`, 30–300 s, `routes/seance_exo.py`). Exercice absent du programme : gardée sur l'appareil (`localStorage.repos_par_exo`). La carte affiche la durée en vigueur.
+- **Remarques de la fois d'avant** (14/10, `core/memoire_exo.derniere_remarque`) : sous « Dernière fois », les remarques de la dernière séance annotée de cet exercice, avant le jour affiché (même séance d'abord), sans « SKIP », « @RPE » ni mentions d'import. 300 caractères au plus.
+- **Réglages de la machine** (14/10) : une ligne libre par exercice et équipement (« Siège 4 · goupille 7 »), 120 caractères, dans le programme sous `_reglages_machines` (clé personnelle hors `PROG_BODY_KEYS` : survit aux changements de programme, part dans l'export). Clé : `exo_id`, sinon `n:` + nom normalisé, suivie de `~variante` hors « Standard ». `POST /seance/reglages` (JSON, ou formulaire rejoué par la file hors-ligne) ; texte vide = efface. Visible carte fermée.
 
 ### Cardio
 - 10 activités (`routes/cardio.py`, `ACTIVITES_MAP`), avec MET pour estimation calories
@@ -242,7 +250,8 @@ pwa/
 - Accès réservé VIP (mur `vip_wall.html` pour les free)
 - Quota VIP : 15 msg/jour (champs `profiles.coach_quota_date` + `coach_quota_count`, reset auto à chaque nouveau jour) — protège le coût API. Le quota est **rendu** si la génération échoue.
 - Historique persisté dans `coach_messages` / `coach_conversations`, effaçable via `/coach/clear`
-- Le system prompt inclut le profil utilisateur, le programme, l'historique récent et la note de mémoire
+- Le system prompt inclut le profil utilisateur, le programme, l'historique récent, la note de mémoire et la date du jour (sans elle, il comptait mal les jours depuis la dernière séance) ; consigne : pas d'emoji
+- **Affichage des réponses** : directive `x-md` (`alpine-composants.js`), qui pose le HTML déjà échappé par `renderMd`. **Jamais `x-html`** : la version CSP d'Alpine le refuse et la bulle reste vide (panne du 10 au 14/10 ; `test_aucun_gabarit_n_utilise_x_html`). Entrée envoie, Maj+Entrée va à la ligne (`envoyerSiPret`)
 - Les erreurs techniques ne remontent plus au client (avant : « Vérifie ANTHROPIC_API_KEY dans Railway »)
 
 ### Debrief de fin de séance
@@ -346,6 +355,7 @@ pwa/
 ### Pré-lancement : sélection texte + chrono notif natif (2026-06-16)
 - **Texte non sélectionnable** : `theme.css` pose `user-select:none` + `-webkit-touch-callout:none` sur `body` (supprime le menu « Rechercher sur le web » au clic long en webview Android). Réactivé sur `input/textarea/select/[contenteditable]/.selectable`. Déployé par Railway → corrige l'app native **sans rebuild**.
 - **Notif de fin de repos fiable** : le chrono (`seance_edit.html`) planifiait la notif via un `setTimeout` dans le service worker → tué en arrière-plan = notif parfois manquante. Ajout de `@capacitor/local-notifications` (plugin natif) : en app native, la notif est planifiée par l'**OS** (`LocalNotifications.schedule({at})`, fiable même app fermée) ; le SW reste le fallback web. Cancel sur fin/skip (SW + natif). **Nécessite rebuild AAB.** Permission via `requestPermissions()`.
+- **Fin du repos écran éteint, sur le web** (14/10, `core/push_repos.py`) : dans l'app installée depuis Chrome, les minuteurs du téléphone (page, service worker) gèlent avec l'écran. À chaque repos, `rest-timer.js` annonce `POST /push/repos {endpoint, dans, nom, url}` (fetch keepalive) ; le serveur relit l'abonnement en base (ses appareils seulement), et un fil d'arrière-plan envoie le push à l'heure : `Urgency: high`, durée de vie 120 s, tag `rest-timer`. Un nouveau repos remplace le précédent (sans annulation envoyée avant : elle pourrait arriver après) ; « Passer » et la fin de séance appellent `/push/repos/annuler`. Jeton dans `core/partage.py` : une annulation reçue par une autre instance est respectée. Au plus 15 min. Le service worker affiche la notification en vibrant ; app à l'écran, il l'affiche sans bruit puis la retire (Chrome exige une notification par push). Sans abonnement push (notifications refusées) ou en app native : rien n'est envoyé.
 - **Compte à rebours vivant dans la barre de notification** (app native, 2026-09-24) : comme le minuteur de l'Horloge, les chiffres défilent même app fermée. `RestTimerNotification.java` pose une notification `setUsesChronometer` + `setChronometerCountDown` avec une **échéance absolue** ; c'est le SYSTÈME qui anime le compteur. Donc **aucun service en premier plan** : rien de notre code ne tourne pendant le repos, le compteur reste juste même si Android tue le processus, zéro batterie, et rien à justifier auprès de Play. Pont `window.MTTimer.start(échéance, exercice)` / `.stop()` (MainActivity), appelé par `rest-timer.js` à chaque départ de repos et reposé à la reprise (`_adopt`). **Impossible sur le web** : aucune API ne permet de faire défiler une notification — c'est la seule fonction qui justifie encore la coquille native.
 
 ### Défis hebdo (rétention, 2026-06-16)

@@ -41,6 +41,10 @@
   var _comp = null;       // compresseur de sortie (bip fort sans saturation)
   var _doneUntil = 0;     // fin de l'affichage « C'est reparti »
   var _origTitle = document.title;
+  // Qui retient une durée choisie dans la barre : la carte d'exercice qui a
+  // lancé ce repos (seance.js). Pas persisté : après un rechargement, un
+  // préréglage ne vaut plus que pour le repos en cours.
+  var _surChoix = null;
 
   // ── Persistance ─────────────────────────────────────────────────
   function _load() {
@@ -236,11 +240,38 @@
     try { lock.release(); } catch (e) {}
   }
 
-  function cancelNotifications() {
+  // ── Push du serveur à la fin du repos (app installée depuis Chrome) ──
+  // Écran éteint, le téléphone gèle la page ET le service worker : leurs
+  // minuteurs ne partent pas, rien n'arrive (retour du 14/10). Un push venu
+  // du serveur, lui, réveille le téléphone (core/push_repos.py). L'app
+  // native n'a pas de PushManager : elle garde ses notifications locales.
+  function _abonnementPush() {
+    try {
+      if (!("serviceWorker" in navigator) || !window.PushManager) return Promise.resolve(null);
+      return navigator.serviceWorker.ready.then(function (reg) {
+        return reg && reg.pushManager ? reg.pushManager.getSubscription() : null;
+      }).catch(function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+  function _prevenirServeur(url, corps) {
+    _abonnementPush().then(function (sub) {
+      if (!sub || !sub.endpoint) return;
+      corps.endpoint = sub.endpoint;
+      // keepalive : part même si l'on quitte la page juste après.
+      fetch(url, { method: "POST", keepalive: true,
+                   headers: { "Content-Type": "application/json" },
+                   body: JSON.stringify(corps) }).catch(function () {});
+    });
+  }
+
+  // `pourReprogrammer` : un nouveau repos remplace l'ancien côté serveur ; lui
+  // envoyer en plus une annulation pourrait arriver APRÈS et l'effacer.
+  function cancelNotifications(pourReprogrammer) {
     _postSW({ type: "CANCEL_TIMER" });
     _nativeTimerHide();
     var ln = _capLN();
     if (ln) { try { ln.cancel({ notifications: [{ id: NOTIF_ID }] }); } catch (e) {} }
+    if (pourReprogrammer !== true) _prevenirServeur("/push/repos/annuler", {});
   }
   function _ensureNotifPermission() {
     try {
@@ -251,7 +282,7 @@
     } catch (e) {}
   }
   function _scheduleNotif(seconds, nom) {
-    cancelNotifications();
+    cancelNotifications(true);
     _nativeTimerShow(Date.now() + seconds * 1000, nom);
     var ln = _capLN();
     if (ln) {
@@ -271,6 +302,7 @@
       title: "Repos terminé !",
       body: "C'est reparti — série suivante"
     });
+    _prevenirServeur("/push/repos", { dans: seconds, nom: nom || "", url: _sessionUrl() });
   }
 
   // ── Construction de la barre (une fois par page) ────────────────
@@ -494,7 +526,8 @@
   }
 
   // ── API publique ────────────────────────────────────────────────
-  function start(seconds, nom) {
+  function start(seconds, nom, surChoix) {
+    _surChoix = typeof surChoix === "function" ? surChoix : null;
     var total = parseInt(seconds, 10) || _defaultDuration();
     nom = String(nom || _currentExerciseName() || "").slice(0, 60);
     _state = { end: Date.now() + total * 1000, total: total, url: _sessionUrl(), nom: nom };
@@ -513,7 +546,11 @@
     sec = parseInt(sec, 10);
     if (!(sec > 0)) return;
     try { localStorage.setItem(DEFAULT_KEY, String(sec)); } catch (e) {}
-    start(sec, _state && _state.nom);   // changer la durée garde l'exercice
+    var retenir = _surChoix;
+    start(sec, _state && _state.nom, retenir);   // changer la durée garde l'exercice
+    // …et l'exercice la garde pour la suite : la durée touchée ne valait que
+    // pour ce repos-là, le suivant repartait à 90 s (retour du 14/10).
+    if (retenir) { try { retenir(sec); } catch (e) {} }
   }
 
   function skip() {

@@ -159,7 +159,9 @@ def test_la_cible_de_reps_du_programme_est_affichee(fake_db, logged_in):
     _seed(fake_db)
     html = logged_in.get(f"/seance?mode=prefaite&name=Push&date={MONDAY.isoformat()}")\
         .get_data(as_text=True)
-    assert "3 séries × 8-12 reps · repos 120 s" in html
+    # Le repos est dans sa propre balise : il change à l'écran quand on
+    # choisit une autre durée dans la barre du chrono (retour du 14/10).
+    assert '3 séries × 8-12 reps · <span x-text="texteRepos()">repos 120 s</span>' in html
 
 
 def test_la_duree_de_seance_est_enregistree(fake_db, logged_in):

@@ -341,25 +341,28 @@ def index():
     today_seance = seance_prevue(prog, today)
     today_iso = today.strftime("%Y-%m-%d")
     today_done = any(r for r in hist if r["Date"] == today_iso and _is_perf(r))
-    # Si la séance du jour a été rattrapée récemment, on ne considère pas
-    # le streak en danger (le jour est affiché comme RATTRAPÉE).
+    # Faite en avance (un jour récent où elle n'était PAS prévue) : le streak
+    # n'est pas en danger. Le test était écrit à l'envers : il regardait le
+    # jour où la même séance était prévue, donc sa propre occurrence
+    # précédente (retour du 14/10). On s'arrête à cette occurrence : ce qui
+    # la précède lui appartient.
     if today_seance and not today_done:
         for off in range(1, MAKEUP_WINDOW_DAYS + 1):
             d_prev = today - timedelta(days=off)
             if seance_prevue(prog, d_prev) == today_seance:
-                d_prev_iso = d_prev.strftime("%Y-%m-%d")
-                d_prev_done = any(
-                    r for r in hist
-                    if r["Date"] == d_prev_iso and r.get("Séance") == today_seance
-                    and _is_perf(r)
-                )
-                if d_prev_done:
-                    today_done = True  # déjà couvert par un rattrapage récent
-                    break
+                break
+            d_prev_iso = d_prev.strftime("%Y-%m-%d")
+            if any(r for r in hist
+                   if r["Date"] == d_prev_iso and r.get("Séance") == today_seance and _is_perf(r)):
+                today_done = True
+                break
     streak_danger = bool(today_seance and not today_done and today.weekday() < 5)
 
     # Prochaine séance — premier jour (aujourd'hui inclus) avec un planning
-    # non vide et pas encore faite.
+    # non vide et pas encore faite. Une séance faite les jours précédents ne
+    # fait plus sauter celle d'aujourd'hui : refaire Push deux jours de suite
+    # est un choix, et la carte renvoyait à la semaine suivante (retour du
+    # 14/10 ; le test de « rattrapage » était en plus écrit à l'envers).
     next_session = None
     for offset in range(0, 14):
         d = today + timedelta(days=offset)
@@ -370,23 +373,6 @@ def index():
         d_done = any(r for r in hist if r["Date"] == d_iso and _is_perf(r))
         if d_done:
             continue
-        # Tolérance : si cette séance a été rattrapée sur un jour précédent
-        # (dans la fenêtre), on la considère couverte.
-        if offset == 0:
-            covered = False
-            for off_prev in range(1, MAKEUP_WINDOW_DAYS + 1):
-                d_prev = d - timedelta(days=off_prev)
-                if seance_prevue(prog, d_prev) == seance_name:
-                    d_prev_iso = d_prev.strftime("%Y-%m-%d")
-                    if any(
-                        r for r in hist
-                        if r["Date"] == d_prev_iso and r.get("Séance") == seance_name
-                        and _is_perf(r)
-                    ):
-                        covered = True
-                        break
-            if covered:
-                continue
         if offset == 0:
             relative = "Aujourd'hui"
         elif offset == 1:

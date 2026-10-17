@@ -35,6 +35,7 @@ CROISSANTES = {
     "_challenges_done": "un par défi terminé",
     "_badges":        "un par badge débloqué",
     "_custom_exercises": "un par exercice perso",
+    "_reglages_machines": "un par machine dont on a noté les réglages (120 car. max)",
 }
 
 # Les calques indexés par « séance|date » : ceux dont on veut l'âge.

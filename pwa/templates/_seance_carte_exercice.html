@@ -51,7 +51,7 @@
             <span class="exo-superset">Superset · après {{ exo.superset_de }} ↑, puis repos</span>
             {% endif %}
             <span x-text="variant === 'Standard' ? '{{ exo.base }}' : '{{ exo.base }} (' + variant + ')'"></span>
-            <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · repos {{ exo.rest_seconds }} s</span>
+            <span class="exo-target">{{ exo.p_sets }} séries{% if exo.target_reps %} × {{ exo.target_reps }} reps{% endif %} · <span x-text="texteRepos()">repos {{ exo.rest_seconds }} s</span></span>
             <template x-if="completed"><svg class="icon icon-sm icon-success" aria-label="terminé"><use href="/static/img/icons.svg#check-circle"/></svg></template>
           </div>
         </div>
@@ -67,6 +67,16 @@
         </template>
         <template x-if="!lastSummary && !completed">
           <div class="exo-last-session label-icon"><svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Première fois{% if exo.conseil_depart %}<span class="exo-conseil"> · {{ exo.conseil_depart }}</span>{% endif %}</div>
+        </template>
+        {# Les remarques tapées la fois d'avant (retour du 14/10 : elles ne
+           revenaient que dans le tableau replié, et jamais dans la semaine). #}
+        <template x-if="lastNote">
+          <div class="exo-last-session exo-derniere-remarque label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#message-circle"/></svg>Remarque : <span x-text="lastNote"></span></div>
+        </template>
+        {# Réglages de la machine : visibles carte fermée, modifiables d'un tap. #}
+        <template x-if="reglages && !editReglages">
+          <button type="button" class="exo-last-session exo-reglages label-icon" @click.stop="ouvrirReglages()"
+                  aria-label="Modifier les réglages de la machine pour {{ exo.base }}"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#sliders"/></svg>Réglages : <span x-text="reglages"></span></button>
         </template>
         {# ── Suggestion de surcharge (double progression, cf. core.muscu.overload_suggestion) ── #}
         <template x-if="suggestion && !completed">
@@ -158,6 +168,22 @@
             {% for v in variants %}<option value="{{ v }}">{{ v }}</option>{% endfor %}
           </select>
         </label>
+
+        {# Réglages de la machine (retour du 14/10) : une ligne libre, par
+           exercice et équipement, gardée dans le programme. #}
+        <template x-if="!editReglages">
+          <button type="button" class="exo-reglages-ajout" @click.stop="ouvrirReglages()"
+                  x-text="reglages ? 'Modifier les réglages de la machine' : '+ Noter les réglages de la machine'"></button>
+        </template>
+        <template x-if="editReglages">
+          <form class="exo-reglages-form" @submit.prevent="enregistrerReglages()">
+            <input type="text" class="field" x-model="brouillonReglages" maxlength="120"
+                   placeholder="Siège 4 · goupille 7 · dossier 2" autocomplete="off"
+                   aria-label="Réglages de la machine pour {{ exo.base }}">
+            <button type="submit" class="btn primary">OK</button>
+            <button type="button" class="btn" @click.stop="editReglages = false">Annuler</button>
+          </form>
+        </template>
 
         {# ── Chrono isométrique (gainage, planche, wall sit...) ── #}
         <template x-if="isIso">

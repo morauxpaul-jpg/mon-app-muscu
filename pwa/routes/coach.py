@@ -24,7 +24,7 @@ from core.data import (
     list_coach_messages, clear_coach_messages,
     list_coach_conversations, delete_coach_conversation,
 )
-from core.dates import today_paris_str
+from core.dates import DAYS_FR, MONTHS_FR, logical_today_paris, today_paris_str
 from core.db import _env
 from core.limiter import limiter
 from core import catalog
@@ -92,6 +92,7 @@ SYSTEM_PROMPT_TMPL = (
     "{catalog_list}\n\n"
     "{memory_block}"
     "## CONTEXTE UTILISATEUR\n"
+    "- Date du jour : {aujourdhui}\n"
     "- Prénom : {prenom}\n"
     "- Âge : {age}\n"
     "- Poids : {poids}\n"
@@ -108,8 +109,17 @@ SYSTEM_PROMPT_TMPL = (
     "- Quand tu mentionnes un programme du catalogue, fais-en un lien cliquable "
     "[Titre du programme](/programme?apply=ID) pour que l'utilisateur puisse y aller en un clic.\n"
     "- Quand tu suggères de consulter une section de l'app, mets un lien [nom onglet](/chemin).\n"
-    "- Reste bref : 3-6 phrases max par réponse, sauf si l'utilisateur demande un plan détaillé."
+    "- Reste bref : 3-6 phrases max par réponse, sauf si l'utilisateur demande un plan détaillé.\n"
+    "- Pas d'emoji : l'app n'en affiche plus nulle part."
 )
+
+def _date_du_jour():
+    """« mercredi 15 octobre 2026 ». Sans elle, le modèle devinait la date :
+    il annonçait « presque un mois sans séance » neuf jours après la
+    dernière (retour du 14/10)."""
+    d = logical_today_paris()
+    return f"{DAYS_FR[d.weekday()].lower()} {d.day} {MONTHS_FR[d.month - 1].lower()} {d.year}"
+
 
 SUGGESTIONS = [
     "Comment progresser au développé couché ?",
@@ -596,6 +606,7 @@ def ask():
     taille_str = f"{taille} cm" if taille else "non précisé"
 
     system_prompt = SYSTEM_PROMPT_TMPL.format(
+        aujourdhui=_date_du_jour(),
         memory_block=coach_memory.format_for_prompt(coach_memory.get_memory(profile)),
         prenom=prenom,
         age=age_str,
