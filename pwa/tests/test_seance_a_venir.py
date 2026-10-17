@@ -114,14 +114,14 @@ def test_une_seance_faite_la_veille_ne_cache_pas_celle_du_jour(fake_db, logged_i
     assert "Commencer" in bloc
 
 
-def test_le_streak_lit_le_rattrapage_dans_le_bon_sens(fake_db, logged_in):
+def test_le_streak_lit_le_rattrapage_dans_le_bon_sens(fake_db, logged_in, monkeypatch):
     """Faite en avance hier (jour sans Push) : pas « en danger ». Faite hier
     à SON jour prévu : celle d'aujourd'hui reste à faire, donc en danger.
     L'ancien test faisait exactement l'inverse."""
-    import pytest
-    auj = logical_today_paris()
-    if auj.weekday() >= 5:
-        pytest.skip("l'alerte ne s'affiche qu'en semaine")
+    from routes import accueil
+    reel = logical_today_paris()
+    auj = reel - dt.timedelta(days=(reel.weekday() - 2) % 7)   # un mercredi : l'alerte ne s'affiche qu'en semaine
+    monkeypatch.setattr(accueil, "logical_today_paris", lambda: auj)
     hier = auj - dt.timedelta(days=1)
     _programme(fake_db, [auj])
     _serie(logged_in, hier)
