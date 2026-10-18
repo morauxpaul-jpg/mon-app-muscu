@@ -19,6 +19,7 @@ Base en retard (table absente) : le programme garde tout, comme avant, et la
 table est redemandée au bout d'une minute. Sans ligne, un reste dans le
 programme fait foi ; la première sauvegarde l'y retire et le range en table.
 """
+import copy
 import datetime as _dt
 import logging
 import time
@@ -121,13 +122,22 @@ def superposer(user_id: str, prog: dict) -> dict:
         if valeur is None:
             prog.pop(cle, None)
         else:
-            prog[cle] = valeur
+            # Une copie : la ligne vient du cache, et une route qui ajoute à
+            # une liste (défi gagné) ou change un dictionnaire (cible perso)
+            # le ferait sinon dans le cache lui-même.
+            prog[cle] = copy.deepcopy(valeur)
     return prog
 
 
 def etat_lu(prog: dict) -> dict:
-    """Ce que la requête a vu de l'état du compte : la base de `extraire`."""
-    return _depuis_prog(prog)
+    """Ce que la requête a vu de l'état du compte : la base de `extraire`.
+
+    Une copie, pas les objets du programme : une valeur modifiée en place
+    (`liste.append`, `dict[clé] = …`) se comparait sinon à elle-même,
+    passait pour inchangée et n'était jamais écrite dès que le compte avait
+    sa ligne (audit du 18/10, C1 : défi validé à chaque visite, aperçu
+    gratuit du debrief jamais décompté, cible calorique perdue)."""
+    return copy.deepcopy(_depuis_prog(prog))
 
 
 def extraire(user_id: str, prog: dict, base: dict | None = None) -> dict:

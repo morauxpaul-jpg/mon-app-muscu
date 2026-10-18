@@ -229,3 +229,91 @@ def test_deux_requetes_ne_secrasent_pas_leur_etat(compte):
     ligne = _ligne(compte)
     assert ligne["badges"] == ["first_session"]
     assert ligne["plats_semaine"] == {"Lundi": []}
+
+
+# ── Une valeur modifiée en place est écrite (audit du 18/10, C1) ──────────
+#
+# Le compte a déjà sa ligne (tous les comptes depuis la v47). La base de
+# comparaison de `extraire` était l'objet même que la route modifiait : une
+# liste allongée ou un dictionnaire changé « n'avait pas changé » et n'était
+# jamais écrit. En production : défi de la semaine validé 15 fois, aperçu
+# gratuit du debrief jamais décompté, cible calorique perdue sans message.
+
+@pytest.fixture()
+def avec_ligne(compte):
+    compte.table("etat_compte").insert({
+        "user_id": USER_ID, "badges": ["first_session"], "record_serie": 1,
+        "defis_faits": [142, 144], "defis_gagnes": 2, "upsell_vu": False,
+        "debrief_gratuit": {}, "nutrition_perso": {"calories_custom": 2400}}).execute()
+    return compte
+
+
+def _evenements(fake, nom):
+    return [e for e in fake.tables.get("events", []) if e["event"] == nom]
+
+
+def test_un_defi_gagne_n_est_compte_qu_une_fois(avec_ligne, logged_in, monkeypatch):
+    import core.challenges as ch
+    vrai = ch.weekly_challenge
+
+    def fini(hist, today, prog):
+        c = vrai(hist, today, prog)
+        c.update(done=True, week=146)
+        return c
+    monkeypatch.setattr(ch, "weekly_challenge", fini)
+    for _ in range(3):
+        assert logged_in.get("/accueil", headers=VISITE).status_code == 200
+    ligne = _ligne(avec_ligne)
+    assert ligne["defis_faits"] == [142, 144, 146]
+    assert ligne["defis_gagnes"] == 3
+    assert len(_evenements(avec_ligne, "challenge_completed")) == 1
+
+
+def test_l_apercu_gratuit_du_debrief_est_decompte(avec_ligne, client, monkeypatch):
+    import time
+    avec_ligne.tables["profiles"][0]["tier"] = "free"
+    with client.session_transaction() as s:
+        s.update(user_id=USER_ID, email="t@example.com", fournisseurs=["google"], onboarded=True,
+                 is_vip=False, is_vip_full=False, is_vip_ts=time.time(), _csrf=CSRF)
+    import core.debrief as cd
+    monkeypatch.setattr(cd, "generate", lambda cle, faits: "Trois phrases.")
+    jour = logical_today_paris().isoformat()
+    reponses = [client.post("/seance/debrief", json={"seance": "Push", "date": jour},
+                            headers={"X-CSRFToken": CSRF}).get_json() for _ in range(3)]
+    assert [r.get("ok") for r in reponses] == [True, False, False]
+    assert all(r.get("locked") for r in reponses[1:])
+    assert sum(_ligne(avec_ligne)["debrief_gratuit"].values()) == 1
+
+
+def test_changer_sa_cible_calorique_l_enregistre(avec_ligne, logged_in):
+    logged_in.post("/nutrition/profile", data={
+        "_csrf": CSRF, "poids_kg": "90", "taille_cm": "180", "age": "30", "sexe": "H",
+        "activite": "modere", "objectif_nutrition": "seche", "calories_custom": "2250"},
+        headers={"X-CSRFToken": CSRF})
+    assert _ligne(avec_ligne)["nutrition_perso"]["calories_custom"] == 2250
+    db.vider_cache()
+    assert db.get_prog(USER_ID)["_nutrition"]["calories_custom"] == 2250
+
+
+def test_ton_rythme_reel_applique_la_cible_proposee(avec_ligne, logged_in, monkeypatch):
+    import routes.nutrition as rn
+    monkeypatch.setattr(rn, "_rythme", lambda prog, cibles: {"proposition": {"cible": 2250}})
+    monkeypatch.setattr(rn, "_compute_targets",
+                        lambda profil, perso: {"calories_cible": perso or 2400, "tdee": 2900})
+    r = logged_in.post("/nutrition/cible/ajuster", data={"_csrf": CSRF, "cible": "2250"},
+                       headers={"X-CSRFToken": CSRF})
+    assert r.status_code == 302
+    perso = _ligne(avec_ligne)["nutrition_perso"]
+    assert perso["calories_custom"] == 2250
+    assert perso["ajuste_le"] and perso["ajuste_de"] == 2400
+
+
+def test_une_modification_non_enregistree_ne_touche_pas_le_cache(avec_ligne):
+    """La route lit, modifie une liste, puis échoue avant d'écrire : la
+    lecture suivante ne doit pas voir la modification (le cache gardait sinon
+    l'objet modifié jusqu'à son expiration)."""
+    import app as appmod
+    with appmod.app.app_context():
+        db.get_prog(USER_ID)["_challenges_done"].append(999)
+    with appmod.app.app_context():
+        assert 999 not in db.get_prog(USER_ID)["_challenges_done"]
