@@ -1121,7 +1121,7 @@ def test_log_weight_enregistre_et_synchronise_le_profil(fake_db, logged_in):
     _seed_prog(fake_db)
     _profile(fake_db)
     r = logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": "2026-09-20", "poids_kg": "78,4"})
-    assert r.status_code == 302 and r.headers["Location"].endswith("/progres#poids")
+    assert r.status_code == 302 and r.headers["Location"].endswith("/progres/corps#poids")
     assert _weights(fake_db) == {"2026-09-20": 78.4}
     prof = fake_db.tables["profiles"][0]
     assert prof["poids_kg"] == 78.4
@@ -1163,7 +1163,7 @@ def test_delete_weight(fake_db, logged_in):
     assert fake_db.tables["profiles"][0]["poids_kg"] == 79.0   # resynchronisé
 
 
-def test_progres_affiche_la_courbe_de_poids(fake_db, logged_in):
+def test_l_onglet_corps_affiche_la_courbe_de_poids(fake_db, logged_in):
     _seed_prog(fake_db)
     _profile(fake_db)
     # Dates relatives : la courbe ne montre que 90 jours. En dur, ce test
@@ -1174,7 +1174,7 @@ def test_progres_affiche_la_courbe_de_poids(fake_db, logged_in):
     for ecart, kg in ((55, 82.0), (36, 80.5), (5, 79.0)):
         d = (t - _dt.timedelta(days=ecart)).isoformat()
         logged_in.post("/progres/poids", data={"_csrf": CSRF, "date": d, "poids_kg": str(kg)})
-    r = logged_in.get("/progres")
+    r = logged_in.get("/progres/corps")
     assert r.status_code == 200
     html = r.data.decode("utf-8")
     assert 'class="weight-chart"' in html
@@ -1183,11 +1183,21 @@ def test_progres_affiche_la_courbe_de_poids(fake_db, logged_in):
     assert "weight-good" in html      # sèche → perdre = positif
 
 
-def test_progres_sans_pesee_affiche_le_formulaire(fake_db, logged_in):
+def test_sans_pesee_l_onglet_corps_affiche_le_formulaire(fake_db, logged_in):
     _seed_prog(fake_db)
-    r = logged_in.get("/progres")
+    r = logged_in.get("/progres/corps")
     html = r.data.decode("utf-8")
     assert 'action="/progres/poids"' in html and 'class="weight-chart"' not in html
+
+
+def test_le_poids_a_quitte_l_onglet_entrainement(fake_db, logged_in):
+    """Demande du propriétaire (18/10) : Progrès était trop chargé ; le poids
+    rejoint les photos dans l'onglet « Corps »."""
+    _seed_prog(fake_db)
+    html = logged_in.get("/progres").get_data(as_text=True)
+    assert 'action="/progres/poids"' not in html
+    assert '<a href="/progres/corps" class="prg-onglet">Corps</a>' in html
+    assert '<a href="/progres" class="prg-onglet" aria-current="page">Entraînement</a>' in html
 
 
 def test_profil_nutrition_cree_une_pesee(fake_db, logged_in):

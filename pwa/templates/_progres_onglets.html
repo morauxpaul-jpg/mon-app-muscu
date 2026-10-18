@@ -1,0 +1,6 @@
+{# Les deux onglets de Progrès (demande du propriétaire, 18/10) : l'entraînement,
+   et le corps (poids et photos au même endroit). `onglet` : entrainement | corps. #}
+<nav class="prg-onglets" aria-label="Progrès">
+  <a href="/progres" class="prg-onglet"{% if onglet == "entrainement" %} aria-current="page"{% endif %}>Entraînement</a>
+  <a href="/progres/corps" class="prg-onglet"{% if onglet == "corps" %} aria-current="page"{% endif %}>Corps</a>
+</nav>

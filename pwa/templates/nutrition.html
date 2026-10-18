@@ -73,7 +73,7 @@
         <div>
           <label class="field-label" for="nutri-poids">Poids (kg)</label>
           <input type="number" id="nutri-poids" step="0.1" name="poids_kg" class="field" value="{{ profile.poids_kg or '' }}" required>
-          <div class="s-78b762">Suit ta dernière pesée (<a class="s-a80552" href="/progres#poids">courbe dans Progrès</a>)</div>
+          <div class="s-78b762">Suit ta dernière pesée (<a class="s-a80552" href="/progres/corps#poids">courbe dans Progrès</a>)</div>
         </div>
         <div>
           <label class="field-label" for="nutri-taille">Taille (cm)</label>
@@ -206,7 +206,7 @@
     {% elif _c == 'change' %}<p class="rythme-texte" role="status">Tes pesées ont changé depuis l'affichage : voici la proposition à jour.</p>{% endif %}
     {% if rythme.etat == 'manque' %}
       <p class="rythme-texte">Pour comparer ton rythme à ton objectif, il faut au moins {{ rythme.pesees_min }} pesées sur {{ rythme.duree_min_semaines }} semaines. Sur les {{ rythme.fenetre_semaines }} dernières semaines, tu en as {{ rythme.pesees }}.</p>
-      <a class="nutri-lien-perso" href="/progres#poids">Me peser dans Progrès ›</a>
+      <a class="nutri-lien-perso" href="/progres/corps#poids">Me peser dans Progrès ›</a>
     {% else %}
       <p class="rythme-texte">Sur les {{ rythme.fenetre_semaines }} dernières semaines ({{ rythme.pesees }} pesées), <b>{{ rythme.constat }}</b>.</p>
       <p class="rythme-vise">{{ rythme.vise }}.</p>

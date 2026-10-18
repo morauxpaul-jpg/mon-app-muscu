@@ -842,3 +842,8 @@ a.btn.acc-demarrer {
 .acc-chiffres b { font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; line-height: 1.1; overflow-wrap: anywhere; }
 .acc-chiffres small { font-size: 0.75rem; color: var(--text-2); }
 .acc-titre-section { margin: 0 0 8px; letter-spacing: 0; }
+
+/* ── Progrès : onglets « Entraînement » / « Corps » (18/10) ── */
+.prg-onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 18px; }
+.prg-onglet { display: block; text-align: center; padding: 10px 6px; border: 1px solid var(--border-default); border-radius: 4px; color: var(--text-2); text-decoration: none; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; text-transform: uppercase; }
+.prg-onglet[aria-current="page"] { background: var(--text-1); border-color: var(--text-1); color: var(--bg-base); }

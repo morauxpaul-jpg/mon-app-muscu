@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Corps · Progrès · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Progrès</h1>
+  {% include "_progres_onglets.html" %}
+
+  {# ── Poids ─────────────────────────────────────────────────── #}
+  {% include "_poids_carte.html" %}
+
+  {# ── Photos de progression (PRO) ────────────────────────────── #}
+  <section id="photos" aria-label="Photos de progression">
+  {% if not ph %}
+    <div class="card">
+      <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#image"/></svg>Photos de progression <span class="badge-pro s-391ef1">PRO</span></h3>
+      <p class="ph-texte">De face, de profil et de dos, puis avant / après côte à côte, avec ton poids&nbsp;: l'évolution que la balance seule ne montre pas.</p>
+      <a href="/premium" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Débloquer <span class="badge-pro">PRO</span></a>
+    </div>
+  {% elif not ph.dispo %}
+    <div class="card ph-texte" role="status">Les photos arrivent bientôt&nbsp;: la base de données doit d'abord être mise à jour.</div>
+  {% else %}
+
+  {% if ph.erreur %}
+    <div class="card ph-erreur" role="alert">La photo n'a pas pu être supprimée. Réessaie dans un instant.</div>
+  {% endif %}
+
+  {# Photos récentes sans pesée ce jour-là : une invitation par date, pas par photo. #}
+  {% if ph.pesee %}
+    <div class="card ph-pesee" id="ph-pesee" data-date="{{ ph.pesee.date }}">
+      <p class="ph-texte"><b>Pas de pesée le {{ ph.pesee.date_fr }}</b>, le jour de tes photos. Note ton poids pour le voir sous les photos{% if ph.pesee.derniere %}, ou garde ta dernière pesée&nbsp;: <b>{{ ph.pesee.derniere[0]|fr }} kg</b> (le {{ ph.pesee.derniere[1] }}){% endif %}.</p>
+      <form method="post" action="/progres/poids" class="weight-form">
+        <input type="hidden" name="date" value="{{ ph.pesee.date }}">
+        <input type="hidden" name="retour" value="photos">
+        <input type="number" name="poids_kg" class="field" inputmode="decimal" step="0.1" min="20" max="499" required aria-label="Poids du {{ ph.pesee.date_fr }} en kg" placeholder="{% if ph.pesee.derniere %}{{ ph.pesee.derniere[0]|fr }}{% else %}kg{% endif %}">
+        <button type="submit" class="btn primary" data-haptic="1">Noter</button>
+      </form>
+      {% if ph.pesee.derniere %}<button type="button" class="btn ph-garder" id="ph-garder">Garder la dernière pesée</button>{% endif %}
+    </div>
+  {% endif %}
+
+  {# ── Ajouter ─────────────────────────────────────────────── #}
+  <div class="card" id="ajout">
+    <h2 class="ph-surtitre">Photos de progression · ajouter</h2>
+    {% if ph.plein %}
+      <p class="ph-texte">Tu as atteint {{ ph.photos_max }} photos&nbsp;: supprimes-en avant d'en ajouter.</p>
+    {% else %}
+    <form id="ph-form" class="ph-form" action="/progres/photos" method="post" enctype="multipart/form-data">
+      <fieldset class="ph-angles">
+        <legend class="ph-legende">Angle</legend>
+        {% for a, libelle, n in ph.angles %}
+          <label class="ph-angle"><input type="radio" name="angle" value="{{ a }}"{% if a == ph.angle %} checked{% endif %}><span>{{ libelle }}</span></label>
+        {% endfor %}
+      </fieldset>
+      <label class="ph-legende" for="ph-date">Date de la photo</label>
+      <input type="date" id="ph-date" name="date" class="field" value="{{ today_iso }}" max="{{ today_iso }}" required>
+      <label class="btn primary label-icon ph-choisir" for="ph-fichier"><svg class="icon icon-sm"><use href="/static/img/icons.svg#upload"/></svg>Prendre ou choisir une photo</label>
+      <input type="file" id="ph-fichier" name="image" accept="image/*" class="ph-fichier">
+      <p id="ph-etat" class="ph-etat" role="status" aria-live="polite"></p>
+    </form>
+    <p class="ph-aide">Même lumière, même pose, même heure de la journée&nbsp;: la comparaison sera plus juste. Une seule photo par angle et par jour&nbsp;: en reprendre une la remplace.</p>
+    {% endif %}
+    <p class="ph-aide label-icon"><svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#shield-check"/></svg>Privées&nbsp;: rangées sur le serveur, visibles par toi seul, jamais envoyées au coach. Réduites avant l'envoi, sans la position GPS de l'appareil photo. Supprimées avec ton compte.</p>
+  </div>
+
+  {# ── Angle ───────────────────────────────────────────────── #}
+  {% if ph.total %}
+  <nav class="ph-onglets" aria-label="Angle">
+    {% for a, libelle, n in ph.angles %}
+      <a href="/progres/corps?angle={{ a }}#photos" class="vbtn{% if a == ph.angle %} active{% endif %}"{% if a == ph.angle %} aria-current="page"{% endif %}>{{ libelle }} · {{ n }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  {% macro poids(p) %}{% if p.kg is not none %}{{ p.kg|fr }} kg{% if p.kg_le %} <span class="ph-pesee-le">(pesée du {{ p.kg_le }})</span>{% endif %}{% endif %}{% endmacro %}
+
+  {# ── Avant / après ───────────────────────────────────────── #}
+  {% if ph.comparaison %}
+  {% set c = ph.comparaison %}
+  <div class="card" id="comparaison">
+    <h2 class="ph-surtitre">Avant / après · {{ c.ecart }}{% if c.ecart_poids %} · {{ c.ecart_poids }}{% endif %}</h2>
+    <div class="ph-duo">
+      {% for cote, p in (("Avant", c.avant), ("Après", c.apres)) %}
+        <figure class="ph-cote">
+          <a href="{{ p.image }}" target="_blank" rel="noopener"><img src="{{ p.image }}" alt="{{ cote }} : {{ p.libelle|lower }} du {{ p.date_fr }}" class="ph-grande" loading="lazy"></a>
+          <figcaption><span class="ph-quand">{{ cote }}</span> {{ p.date_fr }}{% if p.kg is not none %}<br>{{ poids(p) }}{% endif %}</figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+    <form class="ph-choix" method="get" action="/progres/corps">
+      <input type="hidden" name="angle" value="{{ ph.angle }}">
+      {% for nom, libelle, choisie in (("avant", "Avant", c.avant), ("apres", "Après", c.apres)) %}
+        <label class="ph-legende">{{ libelle }}
+          <select name="{{ nom }}" class="field">
+            {% for p in ph.liste %}<option value="{{ p.id }}"{% if p.id == choisie.id %} selected{% endif %}>{{ p.date_fr }}</option>{% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+      <button type="submit" class="btn ph-comparer">Comparer</button>
+    </form>
+  </div>
+  {% elif ph.seule %}
+  <div class="card">
+    <figure class="ph-cote ph-seule">
+      <img src="{{ ph.seule.image }}" alt="{{ ph.seule.libelle }} du {{ ph.seule.date_fr }}" class="ph-grande" loading="lazy">
+      <figcaption>{{ ph.seule.date_fr }}{% if ph.seule.kg is not none %} · {{ poids(ph.seule) }}{% endif %}</figcaption>
+    </figure>
+    <p class="ph-texte">Ajoute une deuxième photo {{ ph.seule.libelle|lower }} dans quelques semaines&nbsp;: elles s'afficheront côte à côte.</p>
+  </div>
+  {% elif ph.total %}
+  <div class="card ph-texte">Aucune photo {{ ph.libelle|lower }} pour l'instant.</div>
+  {% endif %}
+
+  {# ── Toutes les photos de l'angle ────────────────────────── #}
+  {% if ph.liste %}
+  <div class="card">
+    <h2 class="ph-surtitre">Toutes · {{ ph.liste|length }}</h2>
+    <div class="ph-grille">
+      {% for p in ph.liste %}
+        <div class="ph-case" x-data="{ c: false }">
+          <a href="{{ p.image }}" target="_blank" rel="noopener"><img src="{{ p.mini }}" alt="{{ p.libelle }} du {{ p.date_fr }}" class="ph-mini" loading="lazy" width="400" height="533"></a>
+          <div class="ph-legende-case">{{ p.date_fr }}{% if p.kg is not none %}<br>{{ poids(p) }}{% endif %}</div>
+          <div class="ph-actions" x-show="!c">
+            <a class="mini-btn" href="{{ p.image }}?telecharger=1" title="Télécharger" aria-label="Télécharger la photo du {{ p.date_fr }}"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg></a>
+            <button type="button" class="mini-btn" @click="c = true" title="Supprimer" aria-label="Supprimer la photo du {{ p.date_fr }}"><svg class="icon icon-sm"><use href="/static/img/icons.svg#trash"/></svg></button>
+          </div>
+          <form class="ph-confirme" method="post" action="/progres/photos/{{ p.id }}/supprimer" x-show="c" x-cloak>
+            <input type="hidden" name="angle" value="{{ ph.angle }}">
+            <button type="button" class="btn" @click="c = false">Garder</button>
+            <button type="submit" class="btn btn-danger">Supprimer</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <script src="/static/js/photos.js"></script>
+  {% endif %}
+  </section>
+
+  <style>
+    /* ── Poids corporel (repris de la page Progrès) ── */
+    .weight-chart { width:100%; height:150px; display:block; margin-top:12px; }
+    .weight-axis { display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-3); margin-top:2px; padding:0 4px; }
+    .weight-sub { font-size:0.7rem; color:var(--text-3); margin-top:2px; }
+    .weight-good { color:var(--success); }
+    .weight-bad { color:var(--warning); }
+    .weight-form { display:flex; gap:8px; margin-top:12px; align-items:stretch; }
+    .weight-form .field { min-width:0; flex:1; margin:0; }
+    .weight-form .field[type="number"] { flex:0 0 96px; }
+    .weight-form .btn { flex:0 0 auto; }
+    .weight-history { margin-top:10px; }
+    .weight-history summary { cursor:pointer; font-size:0.8rem; color:var(--text-3); }
+    .weight-history .mrow { padding:6px 0; }
+    .mrow { display:flex; justify-content:space-between; padding: 6px 0; border-bottom:0.5px solid var(--border-default); font-size:0.85rem; }
+    .mrow:last-child { border-bottom: 0; }
+    .mrow b { color: var(--text-1); font-weight: 500; }
+
+    /* ── Photos ── */
+    .ph-surtitre { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; text-transform: uppercase; color: var(--text-1); margin: 0 0 12px; }
+    .ph-texte { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; margin: 0 0 8px; }
+    .ph-texte b { color: var(--text-1); font-weight: 600; }
+    .ph-erreur { font-size: 0.85rem; color: #FF9F0A; line-height: 1.5; }
+    .ph-aide { font-size: 0.75rem; color: var(--text-3); line-height: 1.45; margin: 10px 0 0; }
+    .ph-pesee .weight-form { margin-top: 4px; }
+    .ph-pesee .weight-form .field[type="number"] { flex: 1; }
+    .ph-garder { width: 100%; justify-content: center; margin-top: 8px; }
+    .ph-pesee-le { color: var(--text-3); }
+    .ph-form { display: flex; flex-direction: column; gap: 8px; }
+    .ph-angles { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .ph-legende { font-size: 0.75rem; color: var(--text-3); display: flex; flex-direction: column; gap: 4px; }
+    .ph-angles .ph-legende { grid-column: 1 / -1; margin-bottom: 2px; }
+    .ph-angle { position: relative; }
+    .ph-angle input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .ph-angle span { display: block; text-align: center; padding: 10px 4px; border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-2); font-size: 0.85rem; }
+    .ph-angle input:checked + span { background: var(--text-1); border-color: var(--text-1); color: #000; font-weight: 600; }
+    .ph-angle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .ph-choisir { justify-content: center; margin-top: 6px; cursor: pointer; }
+    .ph-fichier { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .ph-etat { font-size: 0.82rem; color: var(--text-2); margin: 0; min-height: 1.2em; }
+    .ph-etat.ph-ko { color: #FF9F0A; }
+    .ph-onglets { display: flex; gap: 6px; margin: 0 0 12px; }
+    .ph-onglets .vbtn { flex: 1; text-align: center; padding: 9px 4px; border-radius: 4px; color: var(--text-2); text-decoration: none; font-size: 0.85rem; }
+    .ph-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .ph-cote { margin: 0; }
+    .ph-cote figcaption { font-size: 0.8rem; color: var(--text-2); margin-top: 6px; line-height: 1.4; }
+    .ph-quand { font-weight: 700; color: var(--text-1); text-transform: uppercase; font-size: 0.72rem; margin-right: 2px; }
+    .ph-grande { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: var(--bg-elevated); }
+    .ph-seule { max-width: 280px; margin: 0 auto 10px; }
+    .ph-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .ph-comparer { grid-column: 1 / -1; justify-content: center; }
+    .ph-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .ph-case { min-width: 0; }
+    .ph-mini { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: var(--bg-elevated); }
+    .ph-legende-case { font-size: 0.72rem; color: var(--text-2); margin-top: 4px; line-height: 1.35; }
+    .ph-actions { display: flex; gap: 4px; margin-top: 4px; }
+    .ph-confirme { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+    .ph-confirme .btn { padding: 6px 8px; font-size: 0.75rem; justify-content: center; }
+  </style>
+{% endblock %}

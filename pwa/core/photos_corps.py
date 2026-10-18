@@ -6,7 +6,7 @@ classées par angle (face, profil, dos) ; comparaison avant / après ; poids
 du jour sous la photo ; rappel toutes les 4 semaines.
 
 La table et les fichiers sont dans core/db_photos.py, la page dans
-routes/photos.py.
+routes/corps.py (onglet « Corps » de Progrès, avec le poids).
 """
 from datetime import date
 
@@ -64,8 +64,8 @@ def ecart(avant, apres) -> str:
     return f"{texte} et {reste} mois" if reste else texte
 
 
-def poids_par_date(pesees) -> dict:
-    """{'2026-10-18': 91.4} : la pesée du jour, sous la photo du même jour."""
+def index_pesees(pesees) -> list:
+    """[('2026-10-16', 91.2), …] de la plus ancienne à la plus récente."""
     out = {}
     for p in pesees or []:
         d, kg = str(p.get("date") or "")[:10], p.get("poids_kg")
@@ -74,7 +74,19 @@ def poids_par_date(pesees) -> dict:
                 out[d] = round(float(kg), 1)
         except (TypeError, ValueError):
             continue
-    return out
+    return sorted(out.items())
+
+
+def pesee_pour(index: list, jour: str):
+    """La pesée à afficher sous une photo du `jour` : celle du jour même,
+    sinon la dernière d'avant (choix du propriétaire, 18/10 : « afficher la
+    dernière pesée », rien d'inventé). (kg, date ISO de la pesée) ou
+    (None, None) sans pesée jusqu'à ce jour."""
+    avant = [(d, kg) for d, kg in index if d <= jour]
+    if not avant:
+        return None, None
+    d, kg = avant[-1]
+    return kg, d
 
 
 def ecart_poids(avant, apres):
@@ -98,13 +110,15 @@ def par_angle(photos) -> dict:
     return out
 
 
-def fiche(p: dict, poids: dict) -> dict:
-    """Ce que la page affiche d'une photo."""
+def fiche(p: dict, pesees: list) -> dict:
+    """Ce que la page affiche d'une photo. `kg_le` : la date de la pesée
+    quand elle n'est pas du jour de la photo (« pesée du 16/10 »)."""
     d = str(p.get("date") or "")[:10]
+    kg, le = pesee_pour(pesees, d)
     return {
         "id": p.get("id"), "date": d, "date_fr": f"{d[8:10]}/{d[5:7]}/{d[0:4]}",
         "angle": p.get("angle"), "libelle": LIBELLES.get(p.get("angle"), ""),
-        "kg": poids.get(d),
+        "kg": kg, "kg_le": f"{le[8:10]}/{le[5:7]}" if le and le != d else "", "pesee": le,
         "mini": f"/progres/photos/{p.get('id')}/image?mini=1",
         "image": f"/progres/photos/{p.get('id')}/image",
     }
@@ -131,19 +145,30 @@ def comparaison(liste: list, avant_id=None, apres_id=None):
     return {
         "avant": avant, "apres": apres,
         "ecart": ecart(date.fromisoformat(avant["date"]), date.fromisoformat(apres["date"])),
-        "ecart_poids": ecart_poids(avant["kg"], apres["kg"]),
+        # Les deux photos reprennent la même pesée : leur écart ne dit rien.
+        "ecart_poids": ecart_poids(avant["kg"], apres["kg"]) if avant["pesee"] != apres["pesee"] else "",
     }
 
 
-def resume(photos: list, aujourdhui) -> dict:
-    """Le bloc « Photos » de la page Progrès : combien, la dernière, et s'il
-    est temps d'en reprendre. `photos` : les plus récentes d'abord."""
-    if not photos:
-        return {"dispo": True, "total": 0}
-    derniere = fiche(photos[0], {})
-    jours = jours_sans_photo(derniere["date"], aujourdhui)
-    return {"dispo": True, "total": len(photos), "derniere": derniere,
-            "a_reprendre": jours is not None and jours >= RAPPEL_JOURS}
+PESEE_RECENTE_JOURS = 7
+
+
+def pesee_manquante(photos, pesees: list, aujourdhui):
+    """L'invitation à se peser, par date et non par photo (demande du
+    propriétaire, 18/10 : « on ne pense pas forcément à se peser »). Pour la
+    photo la plus récente, prise il y a 7 jours au plus, si aucune pesée
+    n'est notée ce jour-là : {date, date_fr, derniere: (kg, 'jj/mm') | None}.
+    Sinon None : de vieilles photos importées ne réclament rien."""
+    jours = sorted({str(p.get("date") or "")[:10] for p in photos or []})
+    if not jours:
+        return None
+    jour = jours[-1]
+    n = jours_sans_photo(jour, aujourdhui)
+    if n is None or not 0 <= n <= PESEE_RECENTE_JOURS or any(d == jour for d, _ in pesees):
+        return None
+    kg, le = pesee_pour(pesees, jour)
+    return {"date": jour, "date_fr": f"{jour[8:10]}/{jour[5:7]}",
+            "derniere": (kg, f"{le[8:10]}/{le[5:7]}") if kg is not None else None}
 
 
 def jours_sans_photo(derniere, aujourdhui):
@@ -167,6 +192,6 @@ def payload_rappel(jours: int) -> dict:
     return {
         "title": "Tes photos de progression",
         "body": f"{semaines} semaines depuis les dernières : reprends-les, même lumière, même pose.",
-        "url": "/progres/photos",
+        "url": "/progres/corps#photos",
         "tag": "photos-rappel",
     }

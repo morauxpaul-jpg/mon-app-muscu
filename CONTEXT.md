@@ -58,6 +58,7 @@ pwa/
 │   ├── db_photos.py               # Photos de progression (v50) : table photos_corps + dossier privé photos-corps (Storage)
 │   ├── photos_corps.py            # Photos : angles, contrôles, écart « 8 semaines », poids du jour, avant / après, rappel 4 sem.
 │   ├── rappel_photos.py           # Push « reprends tes photos » à 28, 56, 84 jours (PRO), dans le cron horaire
+│   ├── poids_courbe.py            # Carte « Poids corporel » : dernière pesée, variation 30 j, courbe 90 j (sortie de routes/progres.py)
 │   ├── db_bilans.py               # session_notes (v34) : bilans de séance
 │   ├── db_abonnement.py           # Tier PRO, Stripe, parrainage et VIP à durée limitée
 │   ├── db_push.py                 # push_subscriptions, newsletter, relance des inactifs
@@ -106,7 +107,7 @@ pwa/
 │   ├── cardio.py                  # Saisie cardio (chrono + distance + cal + RPE) → table history
 │   ├── nutrition.py               # Profil métabolique (Mifflin-St Jeor) + journal repas (recherche aliments, plats de la semaine, saisie rapide, composition) + carte « Ton rythme réel »
 │   ├── nutrition_recettes.py      # Page « Mes recettes et aliments » : créer, corriger, supprimer (/nutrition/aliments)
-│   ├── photos.py                  # Photos de progression (PRO) : /progres/photos, ajout, image, suppression
+│   ├── corps.py                   # Onglet « Corps » de Progrès (/progres/corps) : poids + photos (PRO), ajout, image, suppression
 │   ├── coach.py                   # Chat IA (Claude Haiku 4.5) en flux SSE, réservé VIP, quota 15 msg/jour, mémoire entre conversations
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
@@ -322,15 +323,19 @@ pwa/
 ### Séries par muscle et par semaine (core/volume_muscle.py)
 - Page Progrès, pour tous : séries faites cette semaine par muscle (principal 1, secondaires ½, hors cardio/SESSION/SKIP), face au repère 10-20 (6-16 pour les petits muscles), avec la semaine passée. La carte du corps PRO garde la part relative.
 
-### Photos de progression (PRO, 18/10/2026)
-- Demande du propriétaire ; choix faits avec lui : sur le serveur, en privé ; un bloc dans Progrès (`#photos`) qui ouvre `/progres/photos` ; face / profil / dos ; avant / après ; poids du jour ; rappel toutes les 4 semaines.
+### Onglet « Corps » : poids et photos de progression (18/10/2026)
+- **Progrès a deux onglets** (`templates/_progres_onglets.html`) : « Entraînement » (`/progres`, sans la carte du poids) et « Corps » (`/progres/corps`, `routes/corps.py`, `templates/corps.html`). Demande du propriétaire : Progrès était trop chargé, et « en ajoutant les photos on ne pense pas forcément à se peser » ; le poids et les photos sont donc au même endroit. La carte « Poids corporel » (`templates/_poids_carte.html`, calcul `core/poids_courbe.carte_poids`, inchangé) reste gratuite ; les photos sont PRO (aperçu verrouillé sinon). Une pesée revient sur `/progres/corps#poids` (ou `#photos` avec `retour=photos`). Liens vers le poids (accueil, nutrition) : `/progres/corps#poids`. L'ancienne adresse `/progres/photos` redirige vers `/progres/corps…#photos`.
+- **Poids sous les photos** (choix du propriétaire) : la pesée du jour de la photo, sinon **la dernière d'avant, avec sa date** (« 91,2 kg (pesée du 16/10) », `photos_corps.pesee_pour`) ; rien n'est inventé dans la courbe. Si les deux photos comparées reprennent la même pesée, pas d'écart de poids affiché.
+- **Invitation à se peser** (`photos_corps.pesee_manquante`) : une par date, pas par photo ; pour la photo la plus récente (7 jours au plus) sans pesée ce jour-là. Noter le poids (formulaire daté du jour des photos) ou « Garder la dernière pesée » (rien n'est écrit ; l'invitation se tait pour cette date sur cet appareil, `localStorage`).
+- Photos : choix faits avec le propriétaire : sur le serveur, en privé ; face / profil / dos ; avant / après ; poids ; rappel toutes les 4 semaines.
 - **Stockage** : table `photos_corps` (migration **v50** : date, angle, `chemin`, `miniature`, `octets` ; une photo par angle et par jour, en reprendre une la remplace) et dossier **privé** `photos-corps` de Supabase Storage, fichiers sous `<user_id>/`. Aucune règle pour le navigateur : seul le serveur (service_role) lit et écrit, et ne sert un fichier qu'après avoir retrouvé sa ligne chez le compte connecté (`core/db_photos.py`). 400 photos par compte, 2 Mo par fichier, JPEG seulement (`est_jpeg`).
 - **Envoi** (`static/js/photos.js`) : la photo est redessinée dans un canevas avant l'envoi, 1 600 px au plus (JPEG 0,82) + miniature 400 px : elle perd ses métadonnées, donc la position GPS (test navigateur : un bloc EXIF « GPSLatitude » envoyé ne revient pas). `POST /progres/photos` (multipart, JSON en retour).
 - **Lecture** : `GET /progres/photos/<id>/image[?mini=1][&telecharger=1]`, `Cache-Control: private, no-cache` + ETag (304 sans relire le fichier) : un autre compte ouvert ensuite sur le même téléphone ne peut pas revoir la photo depuis le cache. Ouvert au propriétaire même redevenu gratuit (télécharger, supprimer : l'export RGPD liste les photos avec ces liens). La page et l'ajout sont PRO (essai compris, `g.is_vip`).
-- **Comparaison** par l'adresse (`?angle=face&avant=12&apres=40`), sans script : première et dernière photo de l'angle par défaut, « Avant / après · 8 semaines · −3,2 kg » (pesée du même jour, table `body_weight`).
+- **Comparaison** par l'adresse (`/progres/corps?angle=face&avant=12&apres=40`), sans script : première et dernière photo de l'angle par défaut, « Avant / après · 8 semaines · −3,2 kg ».
 - **Suppression** : fichiers d'abord, ligne ensuite (un fichier qui résiste garde la ligne : on peut réessayer). Suppression du compte : `supprimer_toutes_les_photos` en premier dans `delete_user_account`, **sans repli** : un fichier qui résiste arrête tout, sinon la ligne partirait avec le compte (clé étrangère) et la photo resterait sur le serveur sans rien qui la rattache.
 - **Rappel** (`core/rappel_photos.py`, appelé par `/tasks/reminders` et `cron_reminders.py`) : compte PRO aujourd'hui (`comptes_pro`), notifications activées, dernière photo à 28, 56 ou 84 jours ; à son heure de rappel de séance (18 h par défaut). Sans état : une nouvelle photo remet le compte à zéro.
-- Sans la v50 : la page et le bloc disent « arrivent bientôt », l'ajout répond 503, /admin signale la table.
+- Sans la v50 : l'onglet Corps garde le poids et dit « les photos arrivent bientôt », l'ajout répond 503, /admin signale la table.
+- Après un ajout, la page se recharge même quand l'adresse de retour est la sienne au `#photos` près (`location.reload()`) : changer seulement le fragment ne fait que défiler, la nouvelle photo n'apparaissait pas (trouvé par le test navigateur, vu échouer avec l'ancien script).
 
 ### Progression
 - **Calendrier mensuel** : cases colorées (vert plein = fait, pointillés orange = manqué, gris clair = à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
