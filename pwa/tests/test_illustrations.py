@@ -400,15 +400,16 @@ def test_aucune_illustration_livree_ne_correspond_a_rien():
     assert not orphelines, f"illustrations sans exercice : {orphelines}"
 
 
-# Un exercice tout juste ajouté n'a pas encore d'image : elle se génère à la
-# demande et coûte quelques centimes. On le nomme ici plutôt que de laisser
-# le test rouge ou de l'affaiblir — il bloque toute NOUVELLE omission.
+# Les exercices qui gardent leur dessin au trait, par choix. On les nomme ici
+# plutôt que de laisser le test rouge ou de l'affaiblir — il bloque toute
+# NOUVELLE omission.
 #
 # « Copenhagen plank » (14/10/2026) : trois essais, aucun juste (corps qui
 # flotte, deux jambes sur le banc, jambes inversées), puis crédit Gemini
-# épuisé. Mieux vaut le dessin au trait qu'une image qui apprend un faux
-# geste ; la consigne est prête dans tools/build_exercise_prompts.py.
-EN_ATTENTE_DILLUSTRATION = {"Copenhagen plank"}
+# épuisé. Abandonné le 18/10 (choix du propriétaire : pas de nouveau
+# crédit). Mieux vaut le dessin au trait qu'une image qui apprend un faux
+# geste ; la consigne reste dans tools/build_exercise_prompts.py.
+SANS_ILLUSTRATION = {"Copenhagen plank"}
 
 
 def test_aucun_nouvel_exercice_sans_illustration():
@@ -421,19 +422,19 @@ def test_aucun_nouvel_exercice_sans_illustration():
               for f in glob.glob("static/img/exercises/*.webp")}
     manquantes = {nom for nom in EXERCISES_INFO
                   if illustration_slug(nom) not in livres}
-    nouvelles = manquantes - EN_ATTENTE_DILLUSTRATION
+    nouvelles = manquantes - SANS_ILLUSTRATION
     assert not nouvelles, f"sans illustration et pas recensés : {sorted(nouvelles)}"
 
 
-def test_la_liste_dattente_ne_se_fossilise_pas():
-    """Quand l'image arrive, le nom doit sortir de la liste — sinon elle
-    devient un trou permanent que plus personne ne regarde."""
+def test_la_liste_sans_illustration_reste_a_jour():
+    """Si l'image arrive un jour, le nom doit sortir de la liste — sinon elle
+    excuse un exercice qui n'en a plus besoin."""
     import glob
     import os
     from core.exercises_data import EXERCISES_INFO, illustration_slug
     livres = {os.path.basename(f)[:-5]
               for f in glob.glob("static/img/exercises/*.webp")}
-    servies = {nom for nom in EN_ATTENTE_DILLUSTRATION
+    servies = {nom for nom in SANS_ILLUSTRATION
                if illustration_slug(nom) in livres}
     assert not servies, f"ont leur illustration, à retirer de la liste : {sorted(servies)}"
 
