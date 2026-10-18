@@ -54,6 +54,20 @@ def get_user_by_stripe_customer(customer_id: str) -> Optional[str]:
 import hashlib as _hashlib
 
 
+def comptes_pro(user_ids) -> set:
+    """Parmi ces comptes, ceux qui sont PRO aujourd'hui (payants ou essai en
+    cours), en une requête par lot de 100. Pour les crons."""
+    ids = sorted({u for u in user_ids or [] if u})
+    out = set()
+    client = get_client()
+    for i in range(0, len(ids), 100):
+        lignes = (client.table("profiles").select("id, tier, vip_until")
+                  .in_("id", ids[i:i + 100]).execute()).data or []
+        out |= {r["id"] for r in lignes
+                if r.get("tier") == "vip" or vip_until_active(r.get("vip_until"))}
+    return out
+
+
 def vip_until_active(vip_until) -> bool:
     """True si un VIP à durée limitée (`profiles.vip_until`) est encore valide."""
     if not vip_until:
