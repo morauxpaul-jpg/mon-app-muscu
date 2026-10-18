@@ -6,6 +6,7 @@ de l'app, puis on injecte un faux client requêtable via core.db.use_client().
 
 Lancer : cd pwa && python -m pytest tests -q
 """
+import copy
 import sys
 import types
 from pathlib import Path
@@ -84,19 +85,19 @@ class FakeQuery:
 
     def insert(self, payload):
         self._op = "insert"
-        self._payload = payload
+        self._payload = copy.deepcopy(payload)   # envoyé en JSON : la base n'en garde qu'une copie
         return self
 
     def upsert(self, payload, **kwargs):
         self._op = "upsert"
-        self._payload = payload
+        self._payload = copy.deepcopy(payload)   # envoyé en JSON : la base n'en garde qu'une copie
         self._on_conflict = kwargs.get("on_conflict")
         self._ignorer = bool(kwargs.get("ignore_duplicates"))
         return self
 
     def update(self, payload):
         self._op = "update"
-        self._payload = payload
+        self._payload = copy.deepcopy(payload)   # envoyé en JSON : la base n'en garde qu'une copie
         return self
 
     def eq(self, col, val):
@@ -218,6 +219,15 @@ class FakeQuery:
                                         f"'{self._table}' in the schema cache\"}}")
 
     def execute(self):
+        """Comme PostgREST, la réponse est du JSON neuf : modifier une liste
+        lue ne modifie pas la base. Sans cette copie, une valeur changée en
+        place « s'écrivait » toute seule dans la fausse base, et l'état du
+        compte perdu en production passait tous les tests (audit du 18/10, C1)."""
+        reponse = self._executer()
+        reponse.data = copy.deepcopy(reponse.data)
+        return reponse
+
+    def _executer(self):
         self._verifier_colonnes()
         rows = self._db.tables.setdefault(self._table, [])
         if self._op == "insert":
