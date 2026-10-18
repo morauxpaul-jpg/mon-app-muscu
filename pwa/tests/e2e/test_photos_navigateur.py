@@ -49,8 +49,9 @@ def test_une_photo_est_reduite_sans_gps_puis_comparee(serveur, navigateur):
     pg.goto(serveur + "/test-vierge")
     pg.goto(serveur + "/test-login?vip=1&to=/progres/corps")
     pg.goto(serveur + "/progres")
-    with pg.expect_navigation():
-        pg.get_by_role("link", name="Corps").click()
+    pg.get_by_role("link", name="Corps").click()
+    pg.wait_for_url("**/progres/corps")
+    pg.wait_for_selector("#ph-date")
 
     apres = date.fromisoformat(pg.locator("#ph-date").input_value())   # aujourd'hui, à Paris
     avant = apres - timedelta(days=56)

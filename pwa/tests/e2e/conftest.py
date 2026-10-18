@@ -47,7 +47,13 @@ def serveur():
 def navigateur():
     with sync_api.sync_playwright() as p:
         try:
-            b = p.chromium.launch()
+            # À l'heure de Paris, comme le téléphone d'un utilisateur et comme
+            # le serveur. Le jour de la séance vient du téléphone
+            # (jour-seance.js) : un Chromium à l'heure UTC, celle de la CI,
+            # n'était pas d'accord avec le serveur entre 4 h et 6 h à Paris,
+            # et la page de demain s'ouvrait en « RATTRAPAGE » (main rouge le
+            # 18/10 à 04:02, déploiement sauté).
+            b = p.chromium.launch(env={**os.environ, "TZ": "Europe/Paris"})
         except Exception as e:  # navigateur non installé
             pytest.skip(f"Chromium indisponible : {e}")
         yield b
