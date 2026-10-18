@@ -23,6 +23,7 @@ from routes.seance import bp as seance_bp
 from routes.seance_fin import bp as seance_fin_bp
 from routes.seance_cardio import bp as seance_cardio_bp
 from routes.seance_exo import bp as seance_exo_bp
+from routes.photos import bp as photos_bp
 from routes.programme import bp as programme_bp
 from routes.progres import bp as progres_bp
 from routes.gestion import bp as gestion_bp
@@ -175,6 +176,7 @@ app.register_blueprint(seance_bp)
 app.register_blueprint(seance_fin_bp)
 app.register_blueprint(seance_cardio_bp)
 app.register_blueprint(seance_exo_bp)
+app.register_blueprint(photos_bp)
 app.register_blueprint(programme_bp)
 app.register_blueprint(progres_bp)
 app.register_blueprint(gestion_bp)

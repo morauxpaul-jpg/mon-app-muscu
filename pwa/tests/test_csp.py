@@ -58,7 +58,7 @@ def test_chaque_script_de_la_page_porte_le_jeton_de_la_reponse(client):
 
 
 PAGES = ["/accueil", "/programme", "/gestion", "/nutrition", "/coach", "/generator",
-         "/plaques", "/progres", "/parrainage", "/cardio", "/seance"]
+         "/plaques", "/progres", "/progres/photos", "/parrainage", "/cardio", "/seance"]
 
 
 def test_les_pages_connectees_aussi(logged_in):

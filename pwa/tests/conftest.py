@@ -146,7 +146,8 @@ class FakeQuery:
     # respecter, sinon un code qui double une série passerait ici et
     # échouerait en production — ou l'inverse, un code qui suppose l'index
     # ne serait jamais confronté à son refus.
-    UNIQUE = {"history": ("user_id", "date", "seance", "exercice", "serie")}
+    UNIQUE = {"history": ("user_id", "date", "seance", "exercice", "serie"),
+              "photos_corps": ("user_id", "date", "angle")}            # v50
 
     def _cle_unique(self, row):
         cols = self.UNIQUE.get(self._table)
@@ -316,10 +317,48 @@ class FakeAuth:
         self.admin = FakeAdmin()
 
 
+class FakeDossier:
+    """Un dossier de Supabase Storage : {chemin: octets}. `pannes` fait
+    échouer l'opération nommée (upload, download, remove)."""
+    def __init__(self, store, pannes):
+        self._store, self._pannes = store, pannes
+
+    def _peut(self, op):
+        if op in self._pannes:
+            raise Exception(f"storage {op} indisponible")
+
+    def upload(self, path, file, file_options=None):
+        self._peut("upload")
+        if path in self._store:
+            raise Exception("The resource already exists")
+        self._store[path] = bytes(file)
+        return types.SimpleNamespace(path=path)
+
+    def download(self, path, options=None):
+        self._peut("download")
+        if path not in self._store:
+            raise Exception("Object not found")
+        return self._store[path]
+
+    def remove(self, paths):
+        self._peut("remove")
+        return [{"name": p} for p in paths if self._store.pop(p, None) is not None]
+
+
+class FakeStorage:
+    def __init__(self):
+        self.dossiers = {}
+        self.pannes = set()
+
+    def from_(self, nom):
+        return FakeDossier(self.dossiers.setdefault(nom, {}), self.pannes)
+
+
 class FakeSupabase:
     def __init__(self):
         self.tables = {}
         self.auth = FakeAuth()
+        self.storage = FakeStorage()
         self._id = 0
 
     def next_id(self):

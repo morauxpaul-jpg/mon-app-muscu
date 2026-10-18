@@ -99,6 +99,13 @@
 
     /* ── Style « Instrument » (maquette du 13/10) ── */
     .prg-bloc { margin-bottom: 24px; }
+    .prg-photos-texte { display: block; font-size: 0.85rem; color: var(--text-2); line-height: 1.5; margin: 0 0 12px; }
+    .prg-photos-lien { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .prg-photos-mini { width: 64px; height: 85px; object-fit: cover; border-radius: 4px; background: var(--bg-elevated); flex: none; }
+    .prg-photos-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .prg-photos-info .prg-photos-texte { margin: 0; }
+    .prg-photos-nb { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--text-1); text-transform: uppercase; }
+    .prg-photos-rappel { font-size: 0.8rem; color: var(--accent); }
     .prg-surtitre {
       margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1rem;
       text-transform: uppercase; color: var(--text-2); letter-spacing: 0;
@@ -538,6 +545,30 @@
           </div>
         {% endfor %}
       </details>
+    {% endif %}
+  </div>
+
+  {# ── Photos de progression (PRO, 18/10) : la page est /progres/photos ── #}
+  <div class="card" id="photos">
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#image"/></svg>Photos de progression{% if not is_vip %} <span class="badge-pro s-391ef1">PRO</span>{% endif %}</h3>
+    {% if not photos %}
+      <p class="prg-photos-texte">De face, de profil et de dos, puis avant / après côte à côte&nbsp;: l'évolution que la balance ne montre pas.</p>
+      <a href="/premium" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Débloquer <span class="badge-pro">PRO</span></a>
+    {% elif photos.derniere %}
+      <a href="/progres/photos" class="prg-photos-lien">
+        <img src="{{ photos.derniere.mini }}" alt="Ta dernière photo, {{ photos.derniere.libelle|lower }}, du {{ photos.derniere.date_fr }}" class="prg-photos-mini" loading="lazy" width="64" height="85">
+        <span class="prg-photos-info">
+          <span class="prg-photos-nb">{{ photos.total }} photo{{ 's' if photos.total > 1 }}</span>
+          <span class="prg-photos-texte">Dernière : {{ photos.derniere.libelle|lower }}, le {{ photos.derniere.date_fr }}</span>
+          {% if photos.a_reprendre %}<span class="prg-photos-rappel">Plus de 4 semaines&nbsp;: c'est le moment d'en reprendre.</span>{% endif %}
+        </span>
+        <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
+      </a>
+    {% elif photos.dispo %}
+      <p class="prg-photos-texte">Prends une photo de face, de profil et de dos aujourd'hui&nbsp;: dans quelques semaines, tu verras ce que la balance ne dit pas.</p>
+      <a href="/progres/photos" class="btn primary">Ajouter mes premières photos</a>
+    {% else %}
+      <p class="prg-photos-texte">Les photos arrivent bientôt&nbsp;: la base de données doit d'abord être mise à jour.</p>
     {% endif %}
   </div>
 

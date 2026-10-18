@@ -17,6 +17,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_profil       profil, onboarding, poids de corps
     db_nutrition    les repas et les sommes de macros
     db_aliments     mes aliments et mes recettes (table `aliments_perso`, v49)
+    db_photos       les photos de progression et leurs fichiers (table `photos_corps`, v50)
     db_bilans       les bilans de séance
     db_abonnement   tier PRO, Stripe, parrainage
     db_push         notifications, newsletter, relance des inactifs
@@ -106,12 +107,18 @@ from core.db_aliments import (
     list_aliments_perso, list_all_aliments_perso, supprimer_aliment_perso,
     COLONNES_ALIMENTS, LIMITE_ALIMENTS, TABLE_ALIMENTS, _aliments_absents
 )
+from core.db_photos import (
+    PhotosIndisponibles, dernieres_photos_par_compte, enregistrer_photo, get_photo,
+    lire_fichier, list_photos, supprimer_photo, supprimer_toutes_les_photos,
+    COLONNES_PHOTOS, DOSSIER, TABLE_PHOTOS, _absente, _dossier, _requete, _retirer_fichiers,
+)
 
 # ── tier PRO, Stripe, parrainage ────────────────────────────────
 from core.db_abonnement import (
     count_referrals, get_or_create_referral_code, get_referred_by,
     get_user_by_referral_code, get_user_by_stripe_customer, grant_vip_days,
-    set_referred_by, set_stripe_customer, set_user_tier, vip_until_active, essai_restant
+    set_referred_by, set_stripe_customer, set_user_tier, vip_until_active, essai_restant,
+    comptes_pro,
 )
 
 # ── notifications, newsletter, relances ─────────────────────────

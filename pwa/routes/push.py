@@ -130,6 +130,12 @@ def cron_reminders():
         result["recap"] = recap.run_recap_hebdo()
     except Exception as e:
         logger.error("récap hebdo FAILED: %s", e)
+    # Toutes les 4 semaines : reprendre ses photos de progression (PRO).
+    try:
+        from core import rappel_photos
+        result["photos"] = rappel_photos.run_rappel_photos()
+    except Exception as e:
+        logger.error("rappel photos FAILED: %s", e)
     if not result.get("ok"):
         code = 503 if result.get("error") == "unconfigured" else 500
         return jsonify(result), code

@@ -12,7 +12,7 @@ from flask import Blueprint, render_template, request, g, redirect, url_for
 
 from core.data import (
     get_hist, get_prog, get_onboarding, get_profile, save_profile,
-    list_body_weight, upsert_body_weight, delete_body_weight,
+    list_body_weight, upsert_body_weight, delete_body_weight, resume_photos,
 )
 from core.dates import today_paris, today_paris_str
 from core.limiter import limiter
@@ -737,6 +737,7 @@ def progres():
         vol_max=vol_max,
         cardio=cardio,
         weight=weight,
+        photos=resume_photos(),
         today_iso=today_paris_str(),
     )
 

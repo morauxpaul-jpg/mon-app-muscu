@@ -325,6 +325,11 @@ def delete_user_account(user_id: str) -> None:
     échoue, l'utilisateur peut réessayer (les données restantes seront déjà
     parties, les deletes sont idempotents)."""
     client = get_client()
+    # Les photos de progression d'abord, et sans repli : un fichier qui
+    # résiste arrête tout, sinon la ligne partirait avec le compte (clé
+    # étrangère) et la photo resterait sur le serveur, plus rattachée à rien.
+    from core.db_photos import supprimer_toutes_les_photos
+    supprimer_toutes_les_photos(user_id)
     # coach_conversations en premier : supprime aussi coach_messages liés
     # (ON DELETE CASCADE) ; le delete coach_messages qui suit couvre les
     # éventuels messages legacy sans conversation_id.

@@ -44,6 +44,11 @@ def main() -> int:
         logger.info("Récap hebdo : %s", recap.run_recap_hebdo())
     except Exception as e:
         logger.error("Récap hebdo FAILED: %s", e)
+    try:
+        from core import rappel_photos
+        logger.info("Rappel photos : %s", rappel_photos.run_rappel_photos())
+    except Exception as e:
+        logger.error("Rappel photos FAILED: %s", e)
     return 0 if result.get("ok") else 1
 
 

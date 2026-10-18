@@ -240,6 +240,42 @@ def list_all_aliments_perso():
     return db.list_all_aliments_perso(_uid())
 
 
+# ── Photos de progression (v50) ─────────────────────────────────────────
+PhotosIndisponibles = db.PhotosIndisponibles
+
+
+def list_photos():
+    return db.list_photos(_uid())
+
+
+def get_photo(photo_id):
+    return db.get_photo(_uid(), photo_id)
+
+
+def enregistrer_photo(date_iso, angle, image, miniature):
+    return db.enregistrer_photo(_uid(), date_iso, angle, image, miniature)
+
+
+def supprimer_photo(photo_id):
+    return db.supprimer_photo(_uid(), photo_id)
+
+
+def resume_photos():
+    """Le bloc « Photos » de Progrès : None hors PRO ; table absente ou
+    lecture en échec, le bloc le dit au lieu de casser la page."""
+    if not getattr(g, "is_vip", False):
+        return None
+    from core.dates import today_paris
+    from core.photos_corps import resume
+    try:
+        return resume(db.list_photos(_uid()), today_paris())
+    except Exception as e:
+        if not isinstance(e, db.PhotosIndisponibles):
+            import logging
+            logging.getLogger(__name__).error("resume_photos FAILED: %s", e)
+        return {"dispo": False, "total": 0}
+
+
 # ── Coach IA (historique + conversations) ───────────────────────────────
 def list_coach_messages(conversation_id=None, limit=50):
     return db.list_coach_messages(_uid(), conversation_id, limit)
