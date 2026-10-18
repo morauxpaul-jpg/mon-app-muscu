@@ -180,7 +180,7 @@ def _suggestion_dans_la_fourchette(weight, same_weight, min_reps, avg_rpe, cible
         target = weight + step
         return {
             "kind": "load", "poids": target, "reps": lo,
-            "label": f"Monte à {target:g} kg (+{step:g})",
+            "label": f"Monte à {target:g} kg (+{step:g})".replace(".", ","),
             "why": "range_top" if min_reps >= hi else "rpe_low",
         }
     vise = min(hi, max(lo, min_reps + 1))
@@ -300,7 +300,7 @@ def overload_suggestion(last_sets, prev_sets=None, is_bw=False, cible=None):
         target = weight + step
         return {
             "kind": "load", "poids": target, "reps": max(6, min_reps - 2),
-            "label": f"Monte à {target:g} kg (+{step:g})",
+            "label": f"Monte à {target:g} kg (+{step:g})".replace(".", ","),
             "why": why,
         }
     return {

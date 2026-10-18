@@ -560,6 +560,7 @@ def progres():
     cal_days = []
     planned_count = 0
     done_count = 0
+    echues = 0
     for day_num in range(1, days_in_month + 1):
         d = date(cal_year, cal_month, day_num)
         d_str = d.isoformat()
@@ -591,6 +592,11 @@ def progres():
 
         if is_training_day and not (floor_date and d < floor_date):
             planned_count += 1
+            # L'assiduité ne juge que les jours passés (et aujourd'hui une
+            # fois la séance faite) : compter les séances à venir du mois
+            # affichait 31 % au lieu de 57 % le 18/10 (audit du 18/10, m1).
+            if d < today or status == "done":
+                echues += 1
 
         cal_days.append({
             "day": day_num,
@@ -611,7 +617,7 @@ def progres():
     if any(c is not None for c in week_row):
         cal_weeks.append(week_row)
 
-    cal_rate = round(done_count / planned_count * 100) if planned_count > 0 else 0
+    cal_rate = round(done_count / echues * 100) if echues > 0 else 0
     MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
                  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
     prev_m, prev_y = (cal_month - 1, cal_year) if cal_month > 1 else (12, cal_year - 1)

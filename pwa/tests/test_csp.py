@@ -176,3 +176,50 @@ def test_un_blocage_arrive_dans_les_journaux_une_fois(client, caplog):
 def test_un_rapport_malforme_ne_fait_pas_d_erreur(client):
     assert client.post("/csp/rapport", data="pas du json").status_code == 204
     assert client.post("/csp/rapport", json=[1, 2]).status_code == 204
+
+
+# ── Erreurs JavaScript (static/js/erreurs.js, audit du 18/10, I-2) ─────────
+
+
+def test_une_erreur_js_arrive_dans_les_journaux_une_fois(logged_in, caplog):
+    from conftest import CSRF
+    from routes import csp as route
+    route._ERREURS_VUES.clear()
+    erreur = {"genre": "erreur", "message": "coachChat is not defined",
+              "source": "https://muscu.example/static/js/coach.js?v=3", "ligne": 12,
+              "page": "/coach?onglet=chat"}
+    with caplog.at_level(logging.WARNING, logger="routes.csp"):
+        for _ in range(3):
+            r = logged_in.post("/erreurs/js", json=erreur, headers={"X-CSRFToken": CSRF})
+            assert r.status_code == 204
+    lignes = [rec.getMessage() for rec in caplog.records if "Erreur JS" in rec.getMessage()]
+    assert len(lignes) == 1
+    assert "/coach" in lignes[0] and "/static/js/coach.js:12" in lignes[0]
+    assert "coachChat is not defined" in lignes[0]
+    assert "onglet=chat" not in lignes[0] and "v=3" not in lignes[0]
+
+
+def test_une_erreur_js_exige_le_jeton_csrf(logged_in, caplog):
+    from routes import csp as route
+    route._ERREURS_VUES.clear()
+    with caplog.at_level(logging.WARNING, logger="routes.csp"):
+        sans_jeton = logged_in.post("/erreurs/js", json={"message": "x"})
+    assert sans_jeton.status_code in (400, 403)
+    assert not [r for r in caplog.records if "Erreur JS" in r.getMessage()]
+
+
+def test_une_erreur_js_malformee_ne_fait_pas_d_erreur(logged_in):
+    from conftest import CSRF
+    h = {"X-CSRFToken": CSRF}
+    assert logged_in.post("/erreurs/js", data="pas du json", headers=h).status_code == 204
+    assert logged_in.post("/erreurs/js", json=[1, 2], headers=h).status_code == 204
+    assert logged_in.post("/erreurs/js", json={"message": "x" * 5000}, headers=h).status_code == 413
+
+
+def test_une_erreur_js_sans_session_n_est_pas_consignee(client, caplog):
+    from routes import csp as route
+    route._ERREURS_VUES.clear()
+    with caplog.at_level(logging.WARNING, logger="routes.csp"):
+        r = client.post("/erreurs/js", json={"message": "x"})
+    assert r.status_code in (302, 401, 403)
+    assert not [rec for rec in caplog.records if "Erreur JS" in rec.getMessage()]

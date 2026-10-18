@@ -14,7 +14,7 @@ import sys
 import time
 from datetime import timedelta
 
-from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request, abort, make_response
+from flask import Flask, render_template, send_from_directory, session, g, redirect, url_for, request, abort, make_response, Response
 
 from core.limiter import limiter
 
@@ -202,7 +202,7 @@ app.register_blueprint(csp_bp)
 # une URL de politique de confidentialité consultable sans compte.
 # /billing/webhook : appelé par Stripe (pas de session) → public, sécurisé par
 # la signature Stripe et exempté de CSRF (cf. _CSRF_EXEMPT_PATHS).
-_PUBLIC_PATHS = {"/", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/mentions-legales", "/cgv", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders", "/csp/rapport"}
+_PUBLIC_PATHS = {"/", "/robots.txt", "/login", "/auth/bridge", "/auth/session", "/auth/debug", "/manifest.json", "/service-worker.js", "/faq", "/confidentialite", "/mentions-legales", "/cgv", "/.well-known/assetlinks.json", "/billing/webhook", "/tasks/reactivation", "/tasks/reminders", "/csp/rapport"}
 
 
 @app.before_request
@@ -396,6 +396,10 @@ def _security_headers(response):
     # geolocation=(), le navigateur refusait la position avant même de poser
     # la question. Les iframes tierces restent bloquées, comme le micro.
     response.headers.setdefault("Permissions-Policy", "geolocation=(self), camera=(self), microphone=()")
+    # HTTPS seulement, retenu un an par le navigateur (audit du 18/10, m6).
+    # En production uniquement : en local, l'app tourne en HTTP.
+    if _IS_PROD:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
 
     # Domaine Supabase autorisé en connect-src (auth/OAuth) — lu depuis l'env.
     try:
@@ -579,6 +583,23 @@ def cgv():
 # ────────────────────────────────────────────────────────────────
 # Manifest et service worker servis depuis la racine pour scope /
 # ────────────────────────────────────────────────────────────────
+# Les robots d'indexation recevaient la page de connexion (302) : seules les
+# pages publiques sont à indexer (audit du 18/10, m10).
+_ROBOTS = """User-agent: *
+Allow: /$
+Allow: /faq
+Allow: /confidentialite
+Allow: /mentions-legales
+Allow: /cgv
+Disallow: /
+"""
+
+
+@app.route("/robots.txt")
+def robots():
+    return Response(_ROBOTS, mimetype="text/plain")
+
+
 @app.route("/manifest.json")
 def manifest():
     return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")

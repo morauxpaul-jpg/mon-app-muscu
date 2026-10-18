@@ -278,8 +278,8 @@ def test_l_apercu_gratuit_du_debrief_est_decompte(avec_ligne, client, monkeypatc
     import core.debrief as cd
     monkeypatch.setattr(cd, "generate", lambda cle, faits: "Trois phrases.")
     jour = logical_today_paris().isoformat()
-    reponses = [client.post("/seance/debrief", json={"seance": "Push", "date": jour},
-                            headers={"X-CSRFToken": CSRF}).get_json() for _ in range(3)]
+    reponses = [client.post("/seance/debrief", json={"seance": s, "date": jour},
+                            headers={"X-CSRFToken": CSRF}).get_json() for s in ("Push", "Pull", "Legs")]
     assert [r.get("ok") for r in reponses] == [True, False, False]
     assert all(r.get("locked") for r in reponses[1:])
     assert sum(_ligne(avec_ligne)["debrief_gratuit"].values()) == 1

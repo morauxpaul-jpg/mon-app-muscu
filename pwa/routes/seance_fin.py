@@ -131,30 +131,54 @@ def _debrief_allowed(prog) -> tuple[bool, str]:
 @limiter.limit("10 per hour")
 def debrief():
     """Trois phrases sur la séance qui vient d'être terminée."""
-    from core import debrief as core_debrief
-    from core.db import _env
-
     data = request.get_json(silent=True) or {}
     seance = str(data.get("seance") or "").strip()
     date_str = _form_date({"date": data.get("date")})
     if not seance:
         return jsonify({"ok": False, "error": "séance manquante"}), 400
 
+    # Un debrief par séance : la carte peut être rendue deux fois (deux
+    # navigations parties avec le même cookie, une page gardée par le service
+    # worker), et chaque appel coûtait une génération IA — trois debriefs pour
+    # la même séance en production le 18/10 (audit du 18/10, m3). Le texte est
+    # gardé trois jours ; un second appel simultané attend le premier.
+    from core import partage
+    cle = f"debrief:{getattr(g, 'user_id', '')}:{date_str}:{seance}"
+    deja = partage.lire(cle)
+    if deja:
+        return jsonify(deja)
+    try:
+        with partage.verrou("debrief", getattr(g, "user_id", ""), date_str, seance, ttl=60, attente=45):
+            deja = partage.lire(cle)
+            if deja:
+                return jsonify(deja)
+            reponse = _rediger_debrief(seance, date_str)
+            if reponse.get("ok"):
+                partage.ecrire(cle, reponse, ttl=3 * 86400)
+            return jsonify(reponse)
+    except TimeoutError:
+        return jsonify(_rediger_debrief(seance, date_str))
+
+
+def _rediger_debrief(seance: str, date_str: str) -> dict:
+    from core import debrief as core_debrief
+    from core.db import _env
+
     prog = get_prog()
     allowed, reason = _debrief_allowed(prog)
     if not allowed:
-        return jsonify({"ok": False, "locked": True,
-                        "message": "Le debrief après séance fait partie de PRO."}), 200
+        return {"ok": False, "locked": True,
+                "message": "Le debrief après séance fait partie de PRO."}
 
     hist, _ = _normalize_hist(get_hist(), prog)
     facts = core_debrief.collect_facts(
         hist, seance, date_str, _load_session_note(prog, date_str, seance))
     if not facts:
-        return jsonify({"ok": False, "error": "aucune série enregistrée"}), 200
+        return {"ok": False, "error": "aucune série enregistrée"}
 
     text = core_debrief.generate(_env("ANTHROPIC_API_KEY"), facts)
     if not text:
-        return jsonify({"ok": False, "error": "indisponible"}), 200
+        return {"ok": False, "error": "indisponible"}
 
     # Consomme l'aperçu gratuit seulement si la génération a abouti.
     if reason == "free_trial":
@@ -169,5 +193,5 @@ def debrief():
         save_prog(prog)
 
     track("debrief_generated", {"seance": seance, "tier": reason})
-    return jsonify({"ok": True, "text": text, "trial": reason == "free_trial",
-                    "volume": facts["volume"], "records": len(facts["records"])})
+    return {"ok": True, "text": text, "trial": reason == "free_trial",
+            "volume": facts["volume"], "records": len(facts["records"])}
