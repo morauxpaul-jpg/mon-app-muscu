@@ -1,8 +1,9 @@
-"""Photos de progression dans le navigateur : réduction, envoi, comparaison.
+"""Onglet « Corps » dans le navigateur : pesée, photos, avant / après.
 
 Ce que les tests sans navigateur ne voient pas : la photo redessinée dans un
 canevas avant l'envoi (taille bornée, métadonnées retirées, donc la position
-GPS), l'envoi par fetch sous la CSP, puis l'avant / après affiché.
+GPS), l'envoi par fetch sous la CSP, l'avant / après affiché, et
+l'invitation à se peser qu'on peut écarter (« Garder la dernière pesée »).
 """
 import base64
 from datetime import date, timedelta
@@ -46,18 +47,38 @@ def test_une_photo_est_reduite_sans_gps_puis_comparee(serveur, navigateur):
           if ("Alpine" in m.text or "Content Security Policy" in m.text) else None)
     pg.on("pageerror", lambda e: erreurs.append(str(e)))
     pg.goto(serveur + "/test-vierge")
-    pg.goto(serveur + "/test-login?vip=1&to=/progres/photos")
-    pg.goto(serveur + "/progres/photos")
+    pg.goto(serveur + "/test-login?vip=1&to=/progres/corps")
+    pg.goto(serveur + "/progres")
+    with pg.expect_navigation():
+        pg.get_by_role("link", name="Corps").click()
 
     apres = date.fromisoformat(pg.locator("#ph-date").input_value())   # aujourd'hui, à Paris
     avant = apres - timedelta(days=56)
+    # Une pesée le jour de la première photo, dans la même page.
+    poids = pg.locator('#poids form[action="/progres/poids"]')
+    poids.locator('input[name="date"]').fill(avant.isoformat())
+    poids.locator('input[name="poids_kg"]').fill("94.6")
+    with pg.expect_navigation():
+        poids.get_by_role("button", name="OK").click()
     fichier = _photo_de_telephone(pg)
     assert b"GPSLatitude" in fichier and len(fichier) > 50_000
     _envoyer(pg, "Face", avant.isoformat(), fichier)
     _envoyer(pg, "Face", apres.isoformat(), _photo_de_telephone(pg, 2400, 3200))
 
+    # La seconde photo n'a pas de pesée ce jour-là : la dernière s'affiche,
+    # avec sa date, et l'écart de poids n'est pas inventé.
     sync_api.expect(pg.locator("#comparaison .ph-surtitre")).to_have_text("Avant / après · 8 semaines")
-    sync_api.expect(pg.locator(".ph-cote figcaption").first).to_contain_text(avant.strftime("%d/%m/%Y"))
+    legendes = pg.locator(".ph-cote figcaption")
+    sync_api.expect(legendes.first).to_contain_text(avant.strftime("%d/%m/%Y"))
+    sync_api.expect(legendes.first).to_contain_text("94,6 kg")
+    sync_api.expect(legendes.last).to_contain_text(f"94,6 kg (pesée du {avant.strftime('%d/%m')})")
+
+    invitation = pg.locator("#ph-pesee")
+    sync_api.expect(invitation).to_contain_text(f"Pas de pesée le {apres.strftime('%d/%m')}")
+    pg.get_by_role("button", name="Garder la dernière pesée").click()
+    sync_api.expect(invitation).to_be_hidden()
+    pg.reload()
+    sync_api.expect(pg.locator("#ph-pesee")).to_be_hidden()
 
     # Ce que le serveur a reçu : 1 600 px au plus, miniature 400, plus d'EXIF.
     recu = pg.evaluate("""async () => {

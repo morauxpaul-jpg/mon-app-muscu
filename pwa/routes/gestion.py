@@ -429,7 +429,7 @@ def export_data():
         "coach": optionnels["coach"],
         "aliments_perso": optionnels["aliments_perso"],
         # La liste seulement : chaque photo se télécharge depuis sa page
-        # (/progres/photos), un JSON de plusieurs dizaines de Mo n'aide personne.
+        # (onglet Corps de Progrès), un JSON de plusieurs dizaines de Mo n'aide personne.
         "photos": [{"date": str(p.get("date"))[:10], "angle": p.get("angle"),
                     "fichier": f"/progres/photos/{p.get('id')}/image?telecharger=1"}
                    for p in optionnels["photos"]],

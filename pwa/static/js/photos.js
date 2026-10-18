@@ -1,5 +1,6 @@
 /*
- * Photos de progression (templates/photos.html, routes/photos.py).
+ * Photos de progression, onglet « Corps » de Progrès (templates/corps.html,
+ * routes/corps.py).
  *
  * Une photo de téléphone pèse 3 à 8 Mo et porte la position GPS de la prise
  * de vue. Avant l'envoi, la page la redessine dans un canevas : 1 600 px au
@@ -78,7 +79,15 @@
       return r.json().catch(function () { return { ok: false }; }).then(function (d) {
         if (r.ok && d.ok) {
           dire(etat, d.remplace ? "Photo remplacée." : "Photo ajoutée.");
-          window.location.href = d.url || "/progres/photos";
+          // Même adresse que la page, au « #photos » près : changer l'adresse
+          // ne ferait que défiler, sans recharger la nouvelle photo.
+          var cible = new URL(d.url || "/progres/corps#photos", window.location.href);
+          if (cible.pathname + cible.search === window.location.pathname + window.location.search) {
+            window.location.hash = cible.hash;
+            window.location.reload();
+          } else {
+            window.location.href = cible.href;
+          }
         } else {
           dire(etat, d.error || "L'envoi a échoué. Réessaie dans un instant.", true);
         }
@@ -100,6 +109,22 @@
       if (!fichier) return;
       envoyer(form, fichier).then(function () { champ.value = ""; });
     });
+  }
+
+  // « Garder la dernière pesée » : rien n'est écrit en base (la dernière
+  // pesée s'affiche déjà sous les photos, avec sa date) ; l'invitation se
+  // tait pour cette date, sur cet appareil.
+  var carte = document.getElementById("ph-pesee");
+  if (carte) {
+    var cle = "pesee-photos-gardee-" + carte.getAttribute("data-date");
+    var garder = document.getElementById("ph-garder");
+    try { if (localStorage.getItem(cle) === "1") carte.style.display = "none"; } catch (e) {}
+    if (garder) {
+      garder.addEventListener("click", function () {
+        try { localStorage.setItem(cle, "1"); } catch (e) {}
+        carte.style.display = "none";
+      });
+    }
   }
 
   var choix = document.querySelector(".ph-choix");

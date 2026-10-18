@@ -1,4 +1,5 @@
-"""Photos de progression (PRO) : ajout, comparaison, accès, suppression.
+"""Photos de progression (PRO) dans l'onglet « Corps » de Progrès : ajout,
+comparaison, poids sous les photos, accès, suppression.
 
 Demande du propriétaire (18/10/2026) : « des images de son corps pour voir
 l'évolution ». Rangées sur le serveur, dans un dossier privé : le point qui
@@ -72,7 +73,8 @@ def test_le_rappel_tombe_toutes_les_4_semaines_trois_fois():
 
 
 def test_la_comparaison_part_de_la_premiere_et_de_la_derniere():
-    liste = [pc.fiche({"id": i, "date": d, "angle": "face"}, {"2026-08-01": 94.6, "2026-10-01": 91.4})
+    pesees = [("2026-08-01", 94.6), ("2026-10-01", 91.4)]
+    liste = [pc.fiche({"id": i, "date": d, "angle": "face"}, pesees)
              for i, d in ((1, "2026-08-01"), (2, "2026-09-01"), (3, "2026-10-01"))]
     c = pc.comparaison(liste)
     assert (c["avant"]["id"], c["apres"]["id"]) == (1, 3)
@@ -82,18 +84,53 @@ def test_la_comparaison_part_de_la_premiere_et_de_la_derniere():
     assert pc.comparaison(liste[:1]) is None
 
 
+def test_sous_une_photo_sans_pesee_du_jour_la_derniere_pesee_et_sa_date():
+    """Choix du propriétaire (18/10) : « afficher la dernière pesée », rien
+    d'inventé dans la courbe de poids."""
+    pesees = pc.index_pesees([{"date": "2026-10-16", "poids_kg": 91.2},
+                              {"date": "2026-10-07", "poids_kg": "91.4"}])
+    assert pesees == [("2026-10-07", 91.4), ("2026-10-16", 91.2)]
+    du_jour = pc.fiche({"id": 1, "date": "2026-10-16", "angle": "face"}, pesees)
+    assert (du_jour["kg"], du_jour["kg_le"]) == (91.2, "")
+    plus_tard = pc.fiche({"id": 2, "date": "2026-10-18", "angle": "face"}, pesees)
+    assert (plus_tard["kg"], plus_tard["kg_le"]) == (91.2, "16/10")
+    trop_tot = pc.fiche({"id": 3, "date": "2026-10-01", "angle": "face"}, pesees)
+    assert trop_tot["kg"] is None, "pas de pesée d'après la photo"
+    meme_pesee = pc.comparaison([du_jour, plus_tard])
+    assert meme_pesee["ecart_poids"] == "", "même pesée sous les deux photos : pas d'écart inventé"
+
+
+def test_l_invitation_a_se_peser_vaut_pour_la_date_des_photos_recentes():
+    auj = date(2026, 10, 18)
+    photos = [{"date": "2026-10-18", "angle": a} for a in ("face", "profil", "dos")]
+    pesees = [("2026-10-16", 91.2)]
+    assert pc.pesee_manquante(photos, pesees, auj) == {
+        "date": "2026-10-18", "date_fr": "18/10", "derniere": (91.2, "16/10")}
+    assert pc.pesee_manquante(photos, pesees + [("2026-10-18", 91.0)], auj) is None, "déjà pesé ce jour-là"
+    assert pc.pesee_manquante(photos, [], auj)["derniere"] is None
+    vieilles = [{"date": "2026-07-26", "angle": "face"}]
+    assert pc.pesee_manquante(vieilles, pesees, auj) is None, "une vieille photo importée ne réclame rien"
+    assert pc.pesee_manquante([], pesees, auj) is None
+
+
 # ── La page et l'ajout ───────────────────────────────────────────
 
 
-def test_un_compte_gratuit_voit_le_mur_pro_et_ne_peut_rien_envoyer(fake_db, client):
+def test_un_compte_gratuit_voit_son_poids_et_les_photos_verrouillees(fake_db, client):
     with client.session_transaction() as s:
         s.update({"user_id": USER_ID, "onboarded": True, "is_vip": False, "_csrf": CSRF})
-    page = client.get("/progres/photos").get_data(as_text=True)
-    assert "Photos de progression" in page and 'id="ph-form"' not in page
+    page = client.get("/progres/corps").get_data(as_text=True)
+    assert 'action="/progres/poids"' in page, "le poids reste gratuit"
+    photos = page.split('id="photos"')[1]
+    assert "Débloquer" in photos and 'id="ph-form"' not in photos
     assert _envoyer(client).status_code == 403
     assert _lignes(fake_db) == [] and _fichiers(fake_db) == {}
-    progres = client.get("/progres").get_data(as_text=True)
-    assert 'id="photos"' in progres and "Débloquer" in progres.split('id="photos"')[1][:2000]
+
+
+def test_l_ancienne_adresse_des_photos_mene_a_l_onglet_corps(fake_db, logged_in):
+    r = logged_in.get("/progres/photos?angle=dos&avant=3")
+    assert r.status_code == 302
+    assert r.headers["Location"].endswith("/progres/corps?angle=dos&avant=3#photos")
 
 
 def test_ajouter_une_photo_la_range_chez_soi_et_l_affiche(fake_db, logged_in):
@@ -104,6 +141,7 @@ def test_ajouter_une_photo_la_range_chez_soi_et_l_affiche(fake_db, logged_in):
     assert set(_fichiers(fake_db)) == {ligne["chemin"], ligne["miniature"]}
     assert all(c.startswith(USER_ID + "/") for c in _fichiers(fake_db))
 
+    assert r.get_json()["url"] == "/progres/corps?angle=profil#photos"
     page = logged_in.get(r.get_json()["url"]).get_data(as_text=True)
     assert f'/progres/photos/{ligne["id"]}/image' in page and "Profil · 1" in page
     image = logged_in.get(f'/progres/photos/{ligne["id"]}/image')
@@ -143,7 +181,7 @@ def test_la_photo_d_un_autre_compte_reste_introuvable(fake_db, logged_in):
     assert logged_in.get(f"/progres/photos/{autre}/image?telecharger=1").status_code == 404
     logged_in.post(f"/progres/photos/{autre}/supprimer", headers={"X-CSRFToken": CSRF})
     assert len(_lignes(fake_db)) == 1 and AUTRE + "/x.jpg" in _fichiers(fake_db)
-    assert f"/progres/photos/{autre}/" not in logged_in.get("/progres/photos").get_data(as_text=True)
+    assert f"/progres/photos/{autre}/" not in logged_in.get("/progres/corps").get_data(as_text=True)
 
 
 def test_le_navigateur_revalide_sans_relire_le_fichier(fake_db, logged_in):
@@ -168,9 +206,31 @@ def test_avant_apres_avec_le_poids_du_jour(fake_db, logged_in):
     for d, kg in ((avant, 94.6), (auj, 91.4)):
         fake_db.table("body_weight").insert({"user_id": USER_ID, "date": d.isoformat(), "poids_kg": kg}).execute()
         _envoyer(logged_in, "face", d)
-    page = logged_in.get("/progres/photos?angle=face").get_data(as_text=True)
+    page = logged_in.get("/progres/corps?angle=face").get_data(as_text=True)
     assert "Avant / après · 8 semaines · −3,2 kg" in page
     assert "94,6 kg" in page and "91,4 kg" in page
+    assert 'id="ph-pesee"' not in page, "pesé le jour des photos : rien à demander"
+
+
+def test_photos_sans_pesee_du_jour_invitation_puis_poids_note(fake_db, logged_in):
+    auj = today_paris()
+    il_y_a_2 = (auj - timedelta(days=2)).isoformat()
+    fake_db.table("body_weight").insert({"user_id": USER_ID, "date": il_y_a_2, "poids_kg": 91.2}).execute()
+    _envoyer(logged_in, "face")
+    _envoyer(logged_in, "dos")
+    page = logged_in.get("/progres/corps").get_data(as_text=True)
+    invitation = page.split('id="ph-pesee"')[1].split("</div>")[0]
+    assert f"Pas de pesée le {auj.strftime('%d/%m')}" in invitation
+    assert f"91,2 kg</b> (le {il_y_a_2[8:10]}/{il_y_a_2[5:7]})" in invitation
+    assert page.count('id="ph-pesee"') == 1, "une invitation par date, pas par photo"
+    assert f"91,2 kg <span class=\"ph-pesee-le\">(pesée du {il_y_a_2[8:10]}/{il_y_a_2[5:7]})</span>" in page
+
+    r = logged_in.post("/progres/poids", headers={"X-CSRFToken": CSRF},
+                       data={"date": auj.isoformat(), "poids_kg": "90,8", "retour": "photos"})
+    assert r.headers["Location"].endswith("/progres/corps#photos")
+    page = logged_in.get("/progres/corps").get_data(as_text=True)
+    assert 'id="ph-pesee"' not in page and "90,8 kg" in page
+    assert "(pesée du" not in page, "la pesée du jour remplace l'ancienne sous les photos"
 
 
 def test_supprimer_retire_le_fichier_et_la_ligne(fake_db, logged_in):
@@ -213,22 +273,6 @@ def test_un_compte_redevenu_gratuit_garde_ses_photos(fake_db, logged_in):
     assert _lignes(fake_db) == []
 
 
-# ── Le bloc de la page Progrès ───────────────────────────────────
-
-
-def _bloc(client):
-    page = client.get("/progres").get_data(as_text=True)
-    return page.split('id="photos"')[1].split("── Cardio")[0]
-
-
-def test_progres_invite_a_la_premiere_photo_puis_montre_la_derniere(fake_db, logged_in):
-    assert "Ajouter mes premières photos" in _bloc(logged_in)
-    _envoyer(logged_in, "face", today_paris() - timedelta(days=30))
-    bloc = _bloc(logged_in)
-    assert "1 photo" in bloc and "c'est le moment d'en reprendre" in bloc
-    assert "/image?mini=1" in bloc
-
-
 # ── Base en retard ───────────────────────────────────────────────
 
 
@@ -245,10 +289,10 @@ def sans_table(monkeypatch):
     monkeypatch.setattr(FakeQuery, "execute", refuse)
 
 
-def test_sans_la_migration_la_page_le_dit_et_progres_marche(fake_db, logged_in, sans_table):
+def test_sans_la_migration_le_poids_marche_et_les_photos_le_disent(fake_db, logged_in, sans_table):
     from core import schema
-    assert "arrivent bientôt" in logged_in.get("/progres/photos").get_data(as_text=True)
-    assert "arrivent bientôt" in _bloc(logged_in)
+    page = logged_in.get("/progres/corps").get_data(as_text=True)
+    assert "arrivent bientôt" in page and 'action="/progres/poids"' in page
     assert _envoyer(logged_in).status_code == 503
     assert "photos_corps" in schema.etat()["absentes"]
 
@@ -313,5 +357,5 @@ def test_le_cron_envoie_le_rappel(fake_db, monkeypatch):
     assert rappel_photos.run_rappel_photos(heure=17)["sent"] == 0
     assert rappel_photos.run_rappel_photos(heure=18)["sent"] == 1
     endpoint, charge = envoyes[0]
-    assert endpoint == "https://push.test/x" and charge["url"] == "/progres/photos"
+    assert endpoint == "https://push.test/x" and charge["url"] == "/progres/corps#photos"
     assert charge["body"].startswith("4 semaines depuis les dernières")

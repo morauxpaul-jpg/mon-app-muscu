@@ -80,32 +80,11 @@
     /* ── Volume chart SVG ── */
     .vol-chart { width:100%; max-height: 160px; }
     .vol-bar { transition: height .3s ease-out; }
-    /* ── Poids corporel ── */
-    .weight-chart { width:100%; height:150px; display:block; margin-top:12px; }
-    .weight-axis { display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-3); margin-top:2px; padding:0 4px; }
-    .weight-sub { font-size:0.7rem; color:var(--text-3); margin-top:2px; }
-    .weight-good { color:var(--success); }
-    .weight-bad { color:var(--warning); }
-    .weight-form { display:flex; gap:8px; margin-top:12px; align-items:stretch; }
-    .weight-form .field { min-width:0; flex:1; margin:0; }
-    .weight-form .field[type="number"] { flex:0 0 96px; }
-    .weight-form .btn { flex:0 0 auto; }
-    .weight-history { margin-top:10px; }
-    .weight-history summary { cursor:pointer; font-size:0.8rem; color:var(--text-3); }
-    .weight-history .mrow { padding:6px 0; }
-
     /* Cardio chart plus compact que le volume muscu. */
     .cardio-chart { max-width: 100%; height: 120px; display:block; }
 
     /* ── Style « Instrument » (maquette du 13/10) ── */
     .prg-bloc { margin-bottom: 24px; }
-    .prg-photos-texte { display: block; font-size: 0.85rem; color: var(--text-2); line-height: 1.5; margin: 0 0 12px; }
-    .prg-photos-lien { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-    .prg-photos-mini { width: 64px; height: 85px; object-fit: cover; border-radius: 4px; background: var(--bg-elevated); flex: none; }
-    .prg-photos-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .prg-photos-info .prg-photos-texte { margin: 0; }
-    .prg-photos-nb { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--text-1); text-transform: uppercase; }
-    .prg-photos-rappel { font-size: 0.8rem; color: var(--accent); }
     .prg-surtitre {
       margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1rem;
       text-transform: uppercase; color: var(--text-2); letter-spacing: 0;
@@ -140,6 +119,7 @@
   </div>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#chart-line"/></svg>Progrès</h1>
+  {% with onglet="entrainement" %}{% include "_progres_onglets.html" %}{% endwith %}
 
   {# ── Calendrier mensuel ────────────────────────────── #}
   {# Style « Instrument » : le mois et le compte en titre, flèches nues,
@@ -465,7 +445,7 @@
       {% if std_relative %}
         Pourcentages calculés pour ton gabarit ({{ body_kg|round|int }} kg) — 100 % = niveau confirmé.
       {% else %}
-        Renseigne ton poids dans <a href="/progres#poids">Poids corporel</a> pour des pourcentages adaptés à ton gabarit.
+        Renseigne ton poids dans <a href="/progres/corps#poids">Corps</a> pour des pourcentages adaptés à ton gabarit.
       {% endif %}
     </p>
   {% endif %}
@@ -483,94 +463,6 @@
     </svg>
   </div>
   {% endif %}
-
-  {# ── Poids corporel ────────────────────────────────── #}
-  <div class="card" id="poids">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#activity"/></svg>Poids corporel</h3>
-
-    {% if weight %}
-      <div class="detail-row s-e5a6d3">
-        <div class="detail-metric">
-          <div class="detail-label">Actuel</div>
-          <div class="detail-value">{{ weight.current|round(1) }} kg</div>
-          <div class="weight-sub">{{ weight.current_date[8:10] }}/{{ weight.current_date[5:7] }}</div>
-        </div>
-        <div class="detail-metric">
-          <div class="detail-label">Sur 30 jours</div>
-          {% if weight.delta_30 is not none %}
-            <div class="detail-value {{ weight.delta_class }}">{{ '+' if weight.delta_30 > 0 else '' }}{{ weight.delta_30|round(1) }} kg</div>
-          {% else %}
-            <div class="detail-value s-ab23bb">—</div>
-            <div class="weight-sub">pas encore 30 j</div>
-          {% endif %}
-        </div>
-        <div class="detail-metric">
-          <div class="detail-label">Min · Max</div>
-          <div class="detail-value s-b28f1d">{{ weight.min|round(1) }} · {{ weight.max|round(1) }}</div>
-          <div class="weight-sub">90 jours</div>
-        </div>
-      </div>
-
-      {% if weight.points|length > 1 %}
-        <svg class="weight-chart" viewBox="0 0 {{ weight.chart_w }} {{ weight.chart_h }}" preserveAspectRatio="none" aria-label="Courbe de poids">
-          <polyline points="{{ weight.polyline }}" fill="none" stroke="#c8f031" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-          {% for pt in weight.points %}
-            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111111" stroke="#c8f031" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
-          {% endfor %}
-        </svg>
-        <div class="weight-axis"><span>{{ weight.first_label }}</span><span>{{ weight.last_label }}</span></div>
-      {% endif %}
-    {% else %}
-      <p class="s-3e3fe1">Pèse-toi une fois par semaine, toujours dans les mêmes conditions : la courbe apparaît ici et ta nutrition suit ton poids réel.</p>
-    {% endif %}
-
-    <form method="post" action="/progres/poids" class="weight-form">
-      <input type="date" name="date" class="field" value="{{ today_iso }}" max="{{ today_iso }}" aria-label="Date de la pesée">
-      <input type="number" name="poids_kg" class="field" inputmode="decimal" step="0.1" min="20" max="499" placeholder="kg" required aria-label="Poids en kg"{% if weight %} value="{{ weight.current|round(1) }}"{% endif %}>
-      <button type="submit" class="btn primary" data-haptic="1">OK</button>
-    </form>
-
-    {% if weight and weight.recent %}
-      <details class="weight-history">
-        <summary>Dernières pesées ({{ weight.count }})</summary>
-        {% for e in weight.recent %}
-          <div class="mrow">
-            <span>{{ e.date[8:10] }}/{{ e.date[5:7] }}/{{ e.date[0:4] }}</span>
-            <span class="s-26c3ae"><b>{{ e.poids_kg|round(1) }} kg</b>
-              <form class="s-374855" method="post" action="/progres/poids/delete">
-                <input type="hidden" name="date" value="{{ e.date }}">
-                <button type="submit" class="mini-btn" title="Supprimer cette pesée" aria-label="Supprimer la pesée du {{ e.date }}">×</button>
-              </form>
-            </span>
-          </div>
-        {% endfor %}
-      </details>
-    {% endif %}
-  </div>
-
-  {# ── Photos de progression (PRO, 18/10) : la page est /progres/photos ── #}
-  <div class="card" id="photos">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#image"/></svg>Photos de progression{% if not is_vip %} <span class="badge-pro s-391ef1">PRO</span>{% endif %}</h3>
-    {% if not photos %}
-      <p class="prg-photos-texte">De face, de profil et de dos, puis avant / après côte à côte&nbsp;: l'évolution que la balance ne montre pas.</p>
-      <a href="/premium" class="btn label-icon"><svg class="icon icon-sm"><use href="/static/img/icons.svg#lock"/></svg>Débloquer <span class="badge-pro">PRO</span></a>
-    {% elif photos.derniere %}
-      <a href="/progres/photos" class="prg-photos-lien">
-        <img src="{{ photos.derniere.mini }}" alt="Ta dernière photo, {{ photos.derniere.libelle|lower }}, du {{ photos.derniere.date_fr }}" class="prg-photos-mini" loading="lazy" width="64" height="85">
-        <span class="prg-photos-info">
-          <span class="prg-photos-nb">{{ photos.total }} photo{{ 's' if photos.total > 1 }}</span>
-          <span class="prg-photos-texte">Dernière : {{ photos.derniere.libelle|lower }}, le {{ photos.derniere.date_fr }}</span>
-          {% if photos.a_reprendre %}<span class="prg-photos-rappel">Plus de 4 semaines&nbsp;: c'est le moment d'en reprendre.</span>{% endif %}
-        </span>
-        <svg class="icon icon-sm icon-mute"><use href="/static/img/icons.svg#chevron-right"/></svg>
-      </a>
-    {% elif photos.dispo %}
-      <p class="prg-photos-texte">Prends une photo de face, de profil et de dos aujourd'hui&nbsp;: dans quelques semaines, tu verras ce que la balance ne dit pas.</p>
-      <a href="/progres/photos" class="btn primary">Ajouter mes premières photos</a>
-    {% else %}
-      <p class="prg-photos-texte">Les photos arrivent bientôt&nbsp;: la base de données doit d'abord être mise à jour.</p>
-    {% endif %}
-  </div>
 
   {# ── Cardio ────────────────────────────────────────── #}
   {% if cardio %}
