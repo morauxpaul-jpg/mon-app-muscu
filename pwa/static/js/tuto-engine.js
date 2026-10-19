@@ -5,12 +5,15 @@
  *
  * API :
  *   TutoEngine.run(steps, { storageKey, onFinish, force })
+ *   onFinish(comment) : comment = "bouton" (dernier bouton touché), "voile"
+ *   (touché à côté) ou "passer" (« Passer ✕ »).
  *
  * Chaque step : {
  *   target: string(selector) | function():Element | null,
  *   title, text,
  *   center?: bool,            // bulle centrée, pas de spotlight
  *   finalLabel?: string,      // libellé du bouton sur la dernière étape
+ *   action?: function()       // dernière étape : lancée par son bouton seul
  *   onEnter?: function(cb)    // hook async avant l'affichage (ex: déplier)
  * }
  */
@@ -60,16 +63,21 @@
     overlay.appendChild(bubble);
     document.body.appendChild(overlay);
 
-    skip.addEventListener("click", finish);
+    skip.addEventListener("click", function () { finish("passer"); });
     prevBtn.addEventListener("click", function () { go(-1); });
-    nextBtn.addEventListener("click", function () { go(1); });
+    nextBtn.addEventListener("click", function () { go(1, "bouton"); });
     // Clic sur le voile (hors cible) = étape suivante, geste naturel.
-    mask.addEventListener("click", function () { go(1); });
+    mask.addEventListener("click", function () { go(1, "voile"); });
 
     steps.forEach(function (_, i) {
       var d = h("span", { "class": "tuto-dot" });
       dotsHost.appendChild(d);
     });
+    // Une bulle seule : ni points ni « Précédent », rien à parcourir.
+    if (steps.length < 2) {
+      dotsHost.style.visibility = "hidden";
+      prevBtn.style.display = "none";
+    }
 
     window.addEventListener("resize", scheduleReposition);
     window.addEventListener("scroll", scheduleReposition, true);
@@ -83,10 +91,10 @@
     return null;
   }
 
-  function go(delta) {
+  function go(delta, comment) {
     var n = idx + delta;
     if (n < 0) return;
-    if (n >= steps.length) return finish();
+    if (n >= steps.length) return finish(comment);
     idx = n;
     var step = steps[idx];
     if (step && typeof step.onEnter === "function") {
@@ -96,9 +104,10 @@
     }
   }
 
-  function finish() {
+  function finish(comment) {
+    var derniere = steps[steps.length - 1];
     if (typeof opts.onFinish === "function") {
-      try { opts.onFinish(); } catch (e) {}
+      try { opts.onFinish(comment); } catch (e) {}
     } else if (opts.storageKey) {
       try { localStorage.setItem(opts.storageKey, "true"); } catch (e) {}
     }
@@ -110,6 +119,11 @@
     }
     window.removeEventListener("resize", scheduleReposition);
     window.removeEventListener("scroll", scheduleReposition, true);
+    // « Commencer » dans la bulle lance vraiment la séance : la dernière
+    // bulle disait « Compris » et laissait sur place (audit du 18/10, m9).
+    if (comment === "bouton" && derniere && typeof derniere.action === "function") {
+      try { derniere.action(); } catch (e) {}
+    }
   }
 
   function scheduleReposition() {

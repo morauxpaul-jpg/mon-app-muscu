@@ -1,5 +1,5 @@
 /**
- * Tutoriel d'accueil (onboarding des onglets) + démos de fonctionnalités.
+ * Tutoriel d'accueil (une bulle sur « Commencer ») + démos de fonctionnalités.
  * Utilise le moteur partagé TutoEngine (tuto-engine.js).
  */
 (function () {
@@ -7,56 +7,44 @@
 
   var STORAGE_KEY = "tutoSeen";
 
-  var STEPS = [
-    {
-      target: '[data-tuto="welcome"]',
-      title: "Bienvenue sur Muscu Tracker",
-      text: "Ce rapide tutoriel te présente les 4 onglets de l'app. Tu ne le verras qu'une seule fois — tu pourras le relancer depuis Plus › Gestion.",
-      center: true,
-    },
-    {
-      target: '[data-tuto="dashboard"]',
-      title: "Accueil — ton tableau de bord",
-      text: "Le résumé de ta semaine : planning, séance du jour, statistiques et série (streak) en un coup d'œil.",
-    },
-    {
-      target: '[data-tuto="seance"]',
-      title: "Séance — logger ton entraînement",
-      text: "Choisis ta séance, saisis reps + poids (+ RPE si tu veux). Un chrono de repos se lance entre les séries, et chaque exercice a sa fiche détaillée.",
-    },
-    {
-      target: '[data-tuto="progres"]',
-      title: "Progrès — suivre ton évolution",
-      text: "Calendrier, volume hebdomadaire, carte du corps, records et table des maxima (RM). Touche un jour du calendrier pour revoir la séance.",
-    },
-    {
-      target: '[data-tuto="plus"]',
-      title: "Plus — tout le reste",
-      text: "Coach IA, programme, nutrition, cardio, calcul de plaques, gestion… et ce tutoriel, à relancer quand tu veux.",
-    },
-    {
-      // Le bouton « Commencer » ne lançait rien : il fermait le tutoriel sur
-      // l'accueil (audit du 06/10, profil 1). On montre la carte qui lance
-      // vraiment la séance, même un jour où rien n'est prévu.
+  // Une bulle, sur le bouton qui lance la séance (audit du 18/10, m9). Six
+  // bulles présentaient les quatre onglets avant le moindre geste, puis
+  // « Compris » laissait sur l'accueil ; les retours disaient l'app peu
+  // claire au premier abord. Le reste s'apprend en s'entraînant : la séance
+  // a ses propres bulles, chacune au moment où elle sert (tuto-seance.js).
+  function etapes() {
+    var cta = document.querySelector(".next-session-card");
+    if (!cta) {
+      return [{
+        center: true,
+        title: "Bienvenue sur Muscu Tracker",
+        text: "Séance pour t'entraîner, Progrès pour voir tes courbes, Plus pour ton programme, le coach et la nutrition. Tout est dans les onglets du bas.",
+        finalLabel: "Compris",
+      }];
+    }
+    var libelle = (cta.textContent || "").replace(/\s+/g, " ").trim() || "Commencer";
+    return [{
       target: ".next-session-card",
-      title: "C'est parti !",
-      text: "Touche « Commencer » pour lancer ta séance, dès aujourd'hui si tu veux. Bon entraînement !",
-      finalLabel: "Compris",
-    },
-  ];
+      title: "Ta première séance est prête",
+      text: "Touche « " + libelle + " » : l'app te guide série par série, avec une charge de départ déjà proposée. Tes progrès, ton programme et le coach sont dans les onglets du bas.",
+      finalLabel: libelle,
+      action: function () { location.href = cta.href; },
+    }];
+  }
 
   function initTutorial(options) {
     options = options || {};
     if (!options.force) {
       try { if (localStorage.getItem(STORAGE_KEY) === "true") return; } catch (e) {}
     }
-    var p = location.pathname || "";
-    if (p.indexOf("/onboarding") === 0 || p.indexOf("/login") === 0) return;
+    // L'accueil seulement : la bulle parle de son bouton. Elle s'ouvrait sur
+    // n'importe quelle page vue en premier, séance comprise.
+    if ((location.pathname || "") !== "/accueil") return;
     if (!document.querySelector(".bottom-nav")) return;
 
     var launch = function () {
       if (!window.TutoEngine) return;
-      window.TutoEngine.run(STEPS, { storageKey: STORAGE_KEY });
+      window.TutoEngine.run(etapes(), { storageKey: STORAGE_KEY });
     };
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", launch);
@@ -98,7 +86,7 @@
   window.initTutorial = initTutorial;
   window.replayTutorial = function () {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    if (window.TutoEngine) window.TutoEngine.run(STEPS, { storageKey: STORAGE_KEY });
+    if (window.TutoEngine) window.TutoEngine.run(etapes(), { storageKey: STORAGE_KEY });
   };
   window.playFeatureDemo = playFeatureDemo;
 })();

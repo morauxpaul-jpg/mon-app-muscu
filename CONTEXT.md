@@ -131,7 +131,7 @@ pwa/
 │   ├── progres.html               # Progression (body map, calendrier, volume, standards de force)
 │   ├── exercice.html              # Fiche d'un exercice : records, courbes, variantes, toutes les séances
 │   ├── gestion.html               # Paramètres, export/import, reset, notifications, newsletter
-│   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Gestion, Tutoriel
+│   ├── plus.html                  # Hub : Premium, Coach, Programme, Nutrition, Cardio, Gestion (aide du premier jour)
 │   ├── premium.html               # Page de présentation des tiers
 │   ├── billing_success.html       # Retour Stripe Checkout
 │   ├── parrainage.html            # Page parrainage
@@ -169,7 +169,7 @@ pwa/
 │   │   ├── rest-timer.js          # Chrono de repos global et persistant (barre injectée par base.html)
 │   │   ├── share-card.js          # Carte de progression (canvas → PNG) + Web Share
 │   │   ├── tuto-engine.js         # Moteur de tutoriel partagé (spotlight + bulle)
-│   │   ├── tutorial.js / tuto-seance.js  # Tutoriels accueil / saisie de séance
+│   │   ├── tutorial.js / tuto-seance.js  # Aide du premier jour : 1 bulle accueil, 3 en séance au fil des gestes
 │   │   ├── ui-fx.js               # Effets UI (toasts, micro-animations)
 │   │   ├── prefetch.js            # Prefetch des pages clés
 │   │   ├── exercise-library.js    # Bibliothèque d'exercices (search/picker)
@@ -418,6 +418,13 @@ pwa/
 - Cartes enrichies : icône, étoiles de difficulté, durée, muscles tags, badge Free/PRO
 - Tooltips « ? » sur les niveaux, preview modale des séances avant choix
 - Bouton retour fonctionnel à chaque étape
+
+### Aide du premier jour (bulles, audit du 18/10, m9)
+- **Quatre bulles au plus, chacune au moment où elle sert** (14 avant : 6 sur l'accueil pour présenter les onglets, 8 d'affilée avant la première série ; retours d'utilisateurs : app peu claire au premier abord).
+- **Accueil** (`tutorial.js`, `/accueil` seulement) : une bulle sur le bouton de la carte « Prochaine séance » ; son bouton porte le même mot (« Commencer ») et **ouvre la séance**. Sans carte : une bulle centrée qui nomme les onglets. Clé `tutoSeen`.
+- **Séance** (`tuto-seance.js`) : 1. à l'arrivée, la série en cours et « Série faite » ; 2. après la première série faite, le repos (bulle posée sur la barre du chrono) et la série suivante prête ; 3. après le premier exercice fini, « Exercice suivant » et « Terminer la séance ». `seance.js` émet `seance:serie-faite` et `seance:exercice-fini`. Clé `tutoSeanceSeen` : "1"/"2" = bulles vues, "true" = fini ou « Passer » touché. Arriver en séance pose aussi `tutoSeen`.
+- Moteur (`tuto-engine.js`) : `onFinish(comment)` reçoit "bouton", "voile" ou "passer" ; `action` sur la dernière étape n'est lancée que par son bouton. Plus › Gestion : « Revoir l'aide de l'accueil / de la séance » efface la clé.
+- Preuves : `tests/e2e/test_premier_jour.py` (parcours complet : 4 bulles, puis plus rien), `tests/js/test_tuto_seance.js` (ordre, exercice d'une série, « Passer », stockage refusé, relance).
 
 ### Catalogue de programmes (20, dont 5 gratuits)
 - Plusieurs splits : Full Body, PPL, Upper/Lower, Bro Split, Home, etc.
