@@ -7,13 +7,13 @@
       <div class="detail-row s-e5a6d3">
         <div class="detail-metric">
           <div class="detail-label">Actuel</div>
-          <div class="detail-value">{{ weight.current|round(1) }} kg</div>
+          <div class="detail-value">{{ weight.current|fr }} kg</div>
           <div class="weight-sub">{{ weight.current_date[8:10] }}/{{ weight.current_date[5:7] }}</div>
         </div>
         <div class="detail-metric">
           <div class="detail-label">Sur 30 jours</div>
           {% if weight.delta_30 is not none %}
-            <div class="detail-value {{ weight.delta_class }}">{{ '+' if weight.delta_30 > 0 else '' }}{{ weight.delta_30|round(1) }} kg</div>
+            <div class="detail-value {{ weight.delta_class }}">{{ weight.delta_30|fr(true) }} kg</div>
           {% else %}
             <div class="detail-value s-ab23bb">—</div>
             <div class="weight-sub">pas encore 30 j</div>
@@ -21,7 +21,7 @@
         </div>
         <div class="detail-metric">
           <div class="detail-label">Min · Max</div>
-          <div class="detail-value s-b28f1d">{{ weight.min|round(1) }} · {{ weight.max|round(1) }}</div>
+          <div class="detail-value s-b28f1d">{{ weight.min|fr }} · {{ weight.max|fr }}</div>
           <div class="weight-sub">90 jours</div>
         </div>
       </div>
@@ -30,7 +30,7 @@
         <svg class="weight-chart" viewBox="0 0 {{ weight.chart_w }} {{ weight.chart_h }}" preserveAspectRatio="none" aria-label="Courbe de poids">
           <polyline points="{{ weight.polyline }}" fill="none" stroke="#c8f031" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
           {% for pt in weight.points %}
-            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111111" stroke="#c8f031" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|round(1) }} kg</title></circle>
+            <circle cx="{{ pt.x }}" cy="{{ pt.y }}" r="3" fill="#111111" stroke="#c8f031" stroke-width="2" vector-effect="non-scaling-stroke"><title>{{ pt.date }} : {{ pt.kg|fr }} kg</title></circle>
           {% endfor %}
         </svg>
         <div class="weight-axis"><span>{{ weight.first_label }}</span><span>{{ weight.last_label }}</span></div>
@@ -51,7 +51,7 @@
         {% for e in weight.recent %}
           <div class="mrow">
             <span>{{ e.date[8:10] }}/{{ e.date[5:7] }}/{{ e.date[0:4] }}</span>
-            <span class="s-26c3ae"><b>{{ e.poids_kg|round(1) }} kg</b>
+            <span class="s-26c3ae"><b>{{ e.poids_kg|fr }} kg</b>
               <form class="s-374855" method="post" action="/progres/poids/delete">
                 <input type="hidden" name="date" value="{{ e.date }}">
                 <button type="submit" class="mini-btn" title="Supprimer cette pesée" aria-label="Supprimer la pesée du {{ e.date }}">×</button>

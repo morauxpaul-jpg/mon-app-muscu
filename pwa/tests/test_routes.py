@@ -1178,8 +1178,10 @@ def test_l_onglet_corps_affiche_la_courbe_de_poids(fake_db, logged_in):
     assert r.status_code == 200
     html = r.data.decode("utf-8")
     assert 'class="weight-chart"' in html
-    assert "79.0 kg" in html
-    assert "-1.5 kg" in html          # vs 80.5 (pesée la plus proche d'il y a 30 j)
+    # Format français (audit du 18/10, m4) : « 79 kg », un vrai signe moins.
+    assert ">79 kg<" in html
+    assert "\u22121,5 kg" in html     # vs 80.5 (pesée la plus proche d'il y a 30 j)
+    assert "79.0 kg" not in html and "-1.5 kg" not in html
     assert "weight-good" in html      # sèche → perdre = positif
 
 

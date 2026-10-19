@@ -363,6 +363,7 @@ def index():
     # fait plus sauter celle d'aujourd'hui : refaire Push deux jours de suite
     # est un choix, et la carte renvoyait à la semaine suivante (retour du
     # 14/10 ; le test de « rattrapage » était en plus écrit à l'envers).
+    from urllib.parse import quote as _q
     next_session = None
     for offset in range(0, 14):
         d = today + timedelta(days=offset)
@@ -393,6 +394,11 @@ def index():
             # Ce que la séance contient : « 3 exercices · 10 séries ».
             **contenu_seance(prog, seance_name),
         }
+        # L'adresse du bouton, construite ici seulement : la même sert au
+        # lien et à la liste des pages gardées hors ligne.
+        next_session["lien"] = (
+            f"/seance?mode=prefaite&name={_q(seance_name)}&date={next_session['date_lien']}"
+            + ("" if offset == 0 else f"&prevue={d_iso}"))
         break
 
     # ── URLs à garder en cache pour le hors-ligne ───────────────
@@ -420,6 +426,12 @@ def index():
             f"/seance?mode=prefaite&name={_q(sname)}&date={d_iso}")
     # La page de choix du jour sert de point d'entrée même sans planning.
     precache_urls.append("/seance")
+    # Le bouton de l'accueil lui-même : un jour sans séance prévue, il ouvre
+    # la prochaine séance datée d'aujourd'hui (`…&prevue=…`), une adresse que
+    # la liste ci-dessus ne contient pas. Hors ligne, il menait à la liste
+    # des séances, un tap de plus au sous-sol (audit du 18/10, m2).
+    if next_session and next_session["lien"] not in precache_urls:
+        precache_urls.append(next_session["lien"])
 
     # Palier streak — icon_id = symbole SVG dans icons.svg, color = classe icon-*
     if streak >= 24:

@@ -88,7 +88,30 @@ def test_commencer_ouvre_la_seance_du_jour(fake_db, logged_in, monkeypatch):
         "Full Body A": [{"name": "Squat", "sets": 3, "muscle": "Jambes"}],
         "_planning": {"Lundi": "Full Body A"}, "_settings": {}}}).execute()
     html = logged_in.get("/accueil").get_data(as_text=True)
-    assert 'href="/seance?mode=prefaite&name=Full%20Body%20A&date=2026-09-28"' in html
+    # `&amp;` : l'adresse vient maintenant du serveur (une seule pour le lien
+    # et pour le hors-ligne, audit du 18/10, m2), échappée comme tout attribut.
+    assert 'href="/seance?mode=prefaite&amp;name=Full%20Body%20A&amp;date=2026-09-28"' in html
+
+
+def test_hors_ligne_le_bouton_de_l_accueil_est_garde(fake_db, logged_in, monkeypatch):
+    """Un jour sans séance prévue, « Faire maintenant » ouvre la prochaine
+    séance datée d'aujourd'hui : cette adresse doit être dans les pages que
+    le service worker garde, sinon hors ligne on tombe sur la liste."""
+    import datetime as dt
+    import json
+    import re
+    import routes.accueil as accueil
+    dimanche = dt.date(2026, 9, 27)
+    monkeypatch.setattr(accueil, "logical_today_paris", lambda: dimanche)
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    fake_db.table("programs").insert({"user_id": USER_ID, "data": {
+        "Full Body A": [{"name": "Squat", "sets": 3, "muscle": "Jambes"}],
+        "_planning": {"Lundi": "Full Body A"}, "_settings": {}}}).execute()
+    html = logged_in.get("/accueil").get_data(as_text=True)
+    lien = "/seance?mode=prefaite&name=Full%20Body%20A&date=2026-09-27&prevue=2026-09-28"
+    assert 'href="%s"' % lien.replace("&", "&amp;") in html
+    gardees = json.loads(re.search(r'id="precache-urls">(.*?)</script>', html).group(1))
+    assert lien in gardees
 
 
 # ── Scripts et styles versionnés par déploiement ─────────────────

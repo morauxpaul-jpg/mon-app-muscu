@@ -55,3 +55,34 @@ def rapport():
         _DEJA_VUS.add(cle)
     logger.warning("CSP bloqué : %s (%s) sur %s — %s %s", directive, bloque, page, source, extrait)
     return ("", 204)
+
+
+# ── Erreurs JavaScript (static/js/erreurs.js) ────────────────────────────
+# Le coach est resté vide sept jours en production sans rien dans les
+# journaux : l'erreur était dans le navigateur (audit du 18/10, I-2). Chaque
+# erreur distincte est consignée une fois par processus, comme les rapports
+# de CSP. Réservé aux comptes connectés, jeton CSRF compris (fetch de la page).
+_ERREURS_VUES = set()
+
+
+@bp.route("/erreurs/js", methods=["POST"])
+@limiter.limit("20 per minute")
+def erreur_js():
+    if (request.content_length or 0) > 4096:
+        return ("", 413)
+    corps = request.get_json(silent=True) or {}
+    if not isinstance(corps, dict):
+        return ("", 204)
+    genre = str(corps.get("genre") or "?")[:20]
+    message = " ".join(str(corps.get("message") or "").split())[:300]
+    page = _chemin(str(corps.get("page") or ""))[:120]
+    source = f"{_chemin(str(corps.get('source') or ''))}:{corps.get('ligne') or '?'}"[:200]
+    if not message:
+        return ("", 204)
+    cle = (genre, message, page, source)
+    if cle in _ERREURS_VUES:
+        return ("", 204)
+    if len(_ERREURS_VUES) < _PLAFOND:
+        _ERREURS_VUES.add(cle)
+    logger.warning("Erreur JS (%s) sur %s — %s : %s", genre, page, source, message)
+    return ("", 204)

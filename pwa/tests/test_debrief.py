@@ -125,9 +125,9 @@ def test_le_prompt_ne_contient_que_des_chiffres_reels(fake_db):
 # ── Route ────────────────────────────────────────────────────────
 
 
-def _call(client, date=D_NOW):
+def _call(client, date=D_NOW, seance="Push"):
     return client.post("/seance/debrief",
-                       json={"seance": "Push", "date": date.isoformat()},
+                       json={"seance": seance, "date": date.isoformat()},
                        headers={"X-CSRFToken": CSRF})
 
 
@@ -161,8 +161,31 @@ def test_un_gratuit_a_un_apercu_par_semaine(fake_db, client, monkeypatch):
     first = json.loads(_call(client).data)
     assert first["ok"] is True and first["trial"] is True
 
-    second = json.loads(_call(client).data)
+    # La même séance redemandée : le même texte, sans nouvelle génération ni
+    # nouveau décompte (audit du 18/10, m3).
+    encore = json.loads(_call(client).data)
+    assert encore == first
+
+    second = json.loads(_call(client, seance="Pull").data)
     assert second.get("locked") is True
+
+
+def test_un_debrief_n_est_redige_qu_une_fois_par_seance(fake_db, logged_in, monkeypatch):
+    """Deux cartes pour la même séance (deux navigations parties avec le même
+    cookie) : un seul appel à l'IA (production, 18/10 : trois debriefs pour
+    une séance, deux à 2 s d'écart)."""
+    appels = []
+
+    class _Compte(_FakeAnthropic):
+        def create(self, **kwargs):
+            appels.append(1)
+            return super().create(**kwargs)
+
+    _install(monkeypatch, _Compte)
+    _seed(fake_db)
+    _series(fake_db, D_NOW, 80.0)
+    textes = [json.loads(_call(logged_in).data)["text"] for _ in range(3)]
+    assert len(set(textes)) == 1 and len(appels) == 1
 
 
 def test_lapercu_nest_consomme_que_si_la_generation_aboutit(fake_db, client, monkeypatch):
