@@ -1,99 +1,112 @@
 /**
- * Tutoriel de la page Séance (saisie d'un entraînement).
+ * Bulles de la page Séance : trois, chacune au moment où elle sert.
  * Utilise le moteur partagé TutoEngine (tuto-engine.js).
+ *
+ * Huit bulles d'affilée s'ouvraient avant la première série (RPE, chrono,
+ * « Terminer »…) : au jour 1, quatorze avec celles de l'accueil (audit du
+ * 18/10, m9). Désormais :
+ *   1. à l'arrivée : la série en cours, et « Série faite » ;
+ *   2. après la première série faite : le repos, la série suivante prête ;
+ *   3. après le premier exercice fini : la suite, et « Terminer la séance ».
+ *
+ * localStorage « tutoSeanceSeen » : "1" ou "2" = bulles déjà vues, "true" =
+ * fini (ou « Passer » touché). L'effacer (Plus › Gestion) relance les trois.
+ * seance.js signale les gestes : « seance:serie-faite », « seance:exercice-fini ».
  */
 (function () {
   "use strict";
 
   var STORAGE_KEY = "tutoSeanceSeen";
 
+  function vues() {
+    try {
+      var v = localStorage.getItem(STORAGE_KEY);
+      return v === "true" ? 3 : (parseInt(v, 10) || 0);
+    } catch (e) { return 3; }   // stockage refusé : aucune bulle plutôt qu'à chaque page
+  }
+
+  function noter(n) {
+    try { localStorage.setItem(STORAGE_KEY, n >= 3 ? "true" : String(n)); } catch (e) {}
+  }
+
+  // getClientRects et non offsetParent : celui-ci est nul pour un élément
+  // en position fixe, comme la barre du chrono.
+  function visible(el) {
+    return !!(el && !el.hidden && el.getClientRects().length > 0);
+  }
+
+  function serieEnCours() {
+    var toutes = document.querySelectorAll(".serie-encours");
+    for (var i = 0; i < toutes.length; i++) if (visible(toutes[i])) return toutes[i];
+    return null;
+  }
+
   function openFirstExo(cb) {
+    if (serieEnCours()) return cb();
     var el = document.querySelector("#exo-anchor-0");
-    if (!el) return cb();
-    var d = el._x_dataStack && el._x_dataStack[0];
+    var d = el && el._x_dataStack && el._x_dataStack[0];
     if (d && !d.open) { d.open = true; setTimeout(cb, 320); return; }
     cb();
   }
 
-  function scrollToThen(selector, cb) {
-    var el = document.querySelector(selector);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(cb, 360);
+  // Montre la bulle n (1, 2 ou 3) si c'est son tour et que rien d'autre
+  // n'est ouvert. Rien n'est noté tant qu'elle n'a pas été vue.
+  function montrer(n, etape) {
+    if (vues() !== n - 1) return;
+    if (!window.TutoEngine || document.getElementById("tuto-overlay")) return;
+    window.TutoEngine.run([etape], {
+      onFinish: function (comment) { noter(comment === "passer" ? 3 : n); },
+    });
   }
 
-  var STEPS = [
-    {
-      target: "#exo-anchor-0",
-      title: "Tes exercices du jour",
-      text: "Voici tes exercices, dans l'ordre de ton programme. Touche un exercice (ou son +) pour le déplier.",
-    },
-    {
-      // Les cibles suivent la saisie série par série : l'ancien tableau
-      // (.sets-table, placeholder « reps », sélecteur « — ») n'existe plus,
-      // et trois bulles sur sept flottaient au centre de l'écran.
-      target: "#exo-anchor-0 .serie-encours",
+  function bulleArrivee() {
+    if (!serieEnCours() && !document.querySelector("#exo-anchor-0")) return;
+    // La bulle d'accueil parle d'un bouton qu'on vient de toucher : arrivé
+    // ici, elle n'a plus lieu d'être.
+    try { localStorage.setItem("tutoSeen", "true"); } catch (e) {}
+    montrer(1, {
+      target: function () { return serieEnCours() || document.querySelector("#exo-anchor-0"); },
       title: "Une série à la fois",
-      text: "Chaque exercice se déplie sur sa série en cours. Les séries faites se replient en une ligne, que tu peux toucher pour corriger.",
-      onEnter: function (cb) { openFirstExo(cb); },
-    },
-    {
-      target: '#exo-anchor-0 .serie-encours input[inputmode="numeric"]',
-      title: "Les répétitions",
-      text: "Le chiffre en gris est ton objectif. Fait tel quel ? Touche « Série faite » directement. Sinon, tape ce que tu as vraiment fait.",
-      onEnter: function (cb) { openFirstExo(cb); },
-    },
-    {
-      target: function () {
-        return document.querySelector('#exo-anchor-0 .serie-encours input[inputmode="decimal"]')
-            || document.querySelector("#exo-anchor-0 .serie-encours");
-      },
-      title: "Le poids",
-      text: "Saisis le poids en kg. S'il est pré-rempli depuis ta dernière séance, tu peux le corriger.",
-    },
-    {
-      target: function () {
-        return document.querySelector("#exo-anchor-0 .serie-options .serie-puce")
-            || document.querySelector("#exo-anchor-0 .serie-encours");
-      },
-      title: "Le RPE (optionnel)",
-      text: "Le RPE note la difficulté ressentie : 6 = facile, 8 = il restait 2 reps en réserve, 10 = échec. Il se cache derrière « RPE, remarque » — ignore-le si tu ne veux pas l'utiliser.",
-    },
-    {
-      target: "#exo-anchor-0 .serie-valider",
-      title: "Série faite",
-      text: "Touche « Série faite » : la série est enregistrée tout de suite, et le chrono de repos démarre. Sans réseau, elle est gardée sur le téléphone et part au retour du réseau.",
-    },
-    {
-      target: '[data-tuto-seance="chrono"]',
-      title: "Le chrono de repos",
-      text: "Le chrono de repos s'affiche en bas de l'écran. Tu peux changer sa durée ou le passer.",
-      onEnter: function (cb) { scrollToThen('[data-tuto-seance="chrono"]', cb); },
-    },
-    {
-      target: '[data-tuto-seance="finish"]',
-      title: "Terminer la séance",
-      text: "Une fois tes exercices faits, touche « Terminer la séance » pour noter ta séance. Ce qui n'était pas encore parti est envoyé avant : rien ne se perd.",
-      finalLabel: "Compris !",
-      onEnter: function (cb) { scrollToThen('[data-tuto-seance="finish"]', cb); },
-    },
-  ];
+      text: "La charge et les répétitions sont déjà proposées. Fais ta série, corrige les chiffres si besoin, puis touche « Série faite ».",
+      finalLabel: "C'est parti",
+      onEnter: openFirstExo,
+    });
+  }
+
+  function bulleRepos() {
+    // Le chrono apparaît juste après le geste : on lui laisse le temps.
+    setTimeout(function () {
+      var chrono = document.getElementById("rest-timer");
+      var avecChrono = visible(chrono);
+      montrer(2, {
+        target: avecChrono ? "#rest-timer" : null,
+        center: !avecChrono,
+        title: "Série enregistrée",
+        text: (avecChrono ? "Le chrono de repos tourne en bas de l'écran et sonne quand c'est reparti. " : "")
+          + "La série suivante est prête avec la même charge. Une série faite se corrige en la touchant.",
+        finalLabel: "OK",
+      });
+    }, 500);
+  }
+
+  function bulleExerciceFini() {
+    montrer(3, {
+      center: true,
+      title: "Premier exercice terminé",
+      text: "Touche « Exercice suivant » pour continuer. À la fin, « Terminer la séance », tout en bas, enregistre ta séance et ton ressenti. Rien ne se perd, même sans réseau.",
+      finalLabel: "Compris",
+    });
+  }
 
   function initTutoSeance(options) {
     options = options || {};
-    if (!options.force) {
-      try { if (localStorage.getItem(STORAGE_KEY) === "true") return; } catch (e) { return; }
-    }
-    // Le tuto d'accueil est prioritaire.
-    try { if (localStorage.getItem("tutoSeen") !== "true") return; } catch (e) { return; }
-    if (document.getElementById("tuto-overlay")) return;
-    setTimeout(function () {
-      if (window.TutoEngine) window.TutoEngine.run(STEPS, { storageKey: STORAGE_KEY });
-    }, 700);
+    if (options.force) noter(0);
+    if (vues() >= 3) return;
+    document.addEventListener("seance:serie-faite", bulleRepos);
+    document.addEventListener("seance:exercice-fini", bulleExerciceFini);
+    setTimeout(bulleArrivee, 700);
   }
 
   window.initTutoSeance = initTutoSeance;
-  window.replayTutoSeance = function () {
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    if (window.TutoEngine) window.TutoEngine.run(STEPS, { storageKey: STORAGE_KEY });
-  };
+  window.replayTutoSeance = function () { initTutoSeance({ force: true }); };
 })();

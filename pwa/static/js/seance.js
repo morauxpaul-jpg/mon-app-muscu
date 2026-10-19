@@ -103,6 +103,11 @@
       });
   }
 
+  // Les gestes que les bulles d'aide attendent (tuto-seance.js).
+  function signaler(nom) {
+    try { document.dispatchEvent(new CustomEvent(nom)); } catch (e) {}
+  }
+
   // ── Séance en cours + durée ──────────────────────────────────────
   // Le chrono démarre à la PREMIÈRE série saisie, pas à l'ouverture de la
   // page : ouvrir sa séance dans le métro ne doit pas compter.
@@ -581,7 +586,10 @@
         var card = this._carte();
         if (card) card.classList.add("done");
         refreshProgress();
-        if (!this.isIso && this.indexCourant() === -1) this.toutFait = true;
+        if (!this.isIso && this.indexCourant() === -1) {
+          this.toutFait = true;
+          signaler("seance:exercice-fini");
+        }
       },
       rouvrir: function (i) {
         this.faits = this.faits.filter(function (x) { return x !== i; });
@@ -650,6 +658,7 @@
         if (!(cur.reps !== "" && cur.reps != null && Number(cur.reps) > 0)) return;
         if (this._firedSets.indexOf(i) >= 0) return;
         this._firedSets.push(i);
+        signaler("seance:serie-faite");
         // Superset : pas de repos entre les deux exercices. Après le premier,
         // on passe au second ; après le second, repos, puis retour au premier.
         if (this.supersetAvec) { allerAuPartenaire(this._carte(), 1); return; }
