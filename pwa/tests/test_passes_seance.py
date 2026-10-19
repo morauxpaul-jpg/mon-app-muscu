@@ -90,6 +90,8 @@ def test_la_premiere_passe_se_rouvre_toujours_remplie(fake_db, logged_in):
     _serie(logged_in, "Push", 10)
     _serie(logged_in, "Push · 2", 8)
     html = logged_in.get("/seance", query_string={"mode": "prefaite", "name": "Push", "date": auj}).get_data(as_text=True)
-    assert "Mettre à jour" in html
+    # La carte rouverte est marquée faite (le libellé « Mettre à jour » servait
+    # de témoin ; il est parti avec le bouton « Enregistrer », audit m8).
+    assert 'class="exo-card done' in html
     choix = logged_in.get(f"/seance?date={auj}").get_data(as_text=True)
     assert "Push%20%C2%B7%203" in choix, "la suivante serait la troisième"

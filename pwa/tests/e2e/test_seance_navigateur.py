@@ -561,3 +561,13 @@ def test_generateur_reprend_apres_un_rechargement(serveur, navigateur):
     pg.wait_for_selector("text=Programme de test", timeout=20000)
     assert pg.evaluate("() => sessionStorage.getItem('gen_tache')") is None
     ctx.close()
+
+
+def test_la_carte_n_a_qu_un_verbe_vert(page):
+    """Audit du 18/10 (m8) : « Enregistrer », vert lui aussi, doublait
+    « Série faite » dans la même carte. Il reste un seul bouton plein."""
+    carte = page.locator("#exo-anchor-0")
+    verts = carte.locator("button.btn.primary:visible")
+    assert [b.inner_text().strip() for b in verts.all()] == ["Série faite"]
+    assert carte.get_by_role("button", name="Enregistrer").count() == 0
+    assert carte.get_by_role("button", name="Skip").is_visible()

@@ -241,7 +241,6 @@
     return {
       _cle: cle,
       open: !data.completed,
-      saving: false,
       // Révision des séries : `_rev` bouge à chaque modification,
       // `_revServeur` est la dernière que le serveur (ou la file) a reçue.
       _rev: 0,
@@ -883,31 +882,6 @@
         this.toutFait = false;
         this.open = false;
         openNextPending(this._carte());
-      },
-
-      // « Enregistrer » : gardé dans le téléphone, la carte se ferme et la
-      // suivante s'ouvre tout de suite. Elle attendait le serveur.
-      save: function (ev) {
-        var form = ev.target.closest("form");
-        if (!form) return;
-        ev.preventDefault();
-        var self = this;
-        var card = this._carte();
-        var envoi = this._envoyer("complet");
-        this.completed = true;
-        this.open = false;
-        if (card) card.classList.add("done");
-        refreshProgress();
-        if (!this.supersetAvec) this.startRestTimer();
-        openNextPending(card);
-        envoi.then(function (statut) {
-          if (statut === "attente") {
-            toast("Gardé sur l'appareil — envoi au retour du réseau.", "warn");
-          } else if (statut === "erreur") {
-            self.open = true;
-            toast("Pas enregistré — tes séries restent sur l'appareil.", "error");
-          }
-        });
       },
 
       // « Skip » sur un exercice qui a déjà des séries les effaçait sans
