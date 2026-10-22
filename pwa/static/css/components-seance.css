@@ -436,14 +436,14 @@
   font-size: var(--text-sm);
 }
 
+/* « Skip » seul, discret à droite : « Enregistrer » est parti (m8). */
 .exo-actions {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 6px;
+  display: flex;
+  justify-content: flex-end;
   margin-top: 6px;
 }
 .exo-actions form { margin: 0; }
-.exo-actions button { width: 100%; white-space: nowrap; }
+.exo-actions button { white-space: nowrap; }
 
 .vol-container {
   background: var(--bg-surface);

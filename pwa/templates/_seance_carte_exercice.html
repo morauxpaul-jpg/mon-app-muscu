@@ -223,8 +223,9 @@
            Une série remplie se replie donc en une ligne, et seule la
            courante reste ouverte, avec deux champs de 140 px.
 
-           « Série faite » enregistre (envoi partiel des séries remplies) ;
-           « Enregistrer » envoie tout et marque les séries vides SKIP. #}
+           « Série faite » enregistre (envoi partiel des séries remplies).
+           « Enregistrer » est parti (audit du 18/10, m8) : il doublait
+           « Série faite », en vert lui aussi, dans la même carte. #}
         <template x-if="!isIso">
           <div class="series">
             <template x-for="(s, i) in sets" :key="i">
@@ -338,7 +339,8 @@
         </template>
 
         <div class="exo-actions">
-          <form method="post" action="/seance/save-exo" @submit="save($event)">
+          {# Sans bouton : ses champs servent à chaque envoi de série (_form). #}
+          <form method="post" action="/seance/save-exo" hidden>
             <input type="hidden" name="mode" value="{{ mode }}">
             <input type="hidden" name="name" value="{{ seance_name }}">
             <input type="hidden" name="date" value="{{ date_iso }}">
@@ -350,11 +352,6 @@
             <input type="hidden" name="is_bw" :value="showWeight ? '0' : '1'">
             <input type="hidden" name="variant" :value="variant">
             <input type="hidden" name="sets_json" :value="serializedSets()">
-            <button type="submit" class="btn primary label-icon s-9f1047"
-                    data-haptic="1" :disabled="saving">
-              <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#save"/></svg>
-              <span x-text="saving ? 'Enregistrement…' : (completed ? 'Mettre à jour' : 'Enregistrer')"></span>
-            </button>
           </form>
           <form method="post" action="/seance/skip-exo" @submit="skip($event)">
             <input type="hidden" name="mode" value="{{ mode }}">
