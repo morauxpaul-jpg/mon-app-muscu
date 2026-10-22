@@ -58,10 +58,14 @@ def test_une_duree_illisible_est_refusee(fake_db, logged_in):
 
 
 def _reglages(fake):
-    return fake.tables["programs"][-1]["data"].get("_reglages_machines")
+    """Rangés dans l'état du compte depuis la v51 (audit du 18/10, m7), et
+    plus dans le programme."""
+    assert "_reglages_machines" not in fake.tables["programs"][-1]["data"]
+    [ligne] = fake.tables["etat_compte"]
+    return ligne["reglages_machines"]
 
 
-def test_les_reglages_d_une_machine_sont_gardes_dans_le_programme(fake_db, logged_in):
+def test_les_reglages_d_une_machine_sont_gardes(fake_db, logged_in):
     _programme(fake_db)
     r = logged_in.post("/seance/reglages", headers={"X-CSRFToken": CSRF}, json={
         "exo_id": COUCHE, "base": "Développé couché", "variant": "Machine",

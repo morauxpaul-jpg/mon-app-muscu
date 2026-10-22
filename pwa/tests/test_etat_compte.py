@@ -203,7 +203,11 @@ def test_plus_rien_ne_lit_larchive_heritee():
 
 def test_la_migration_cree_la_table_fermee_et_vide_le_programme():
     import re
-    sql = re.sub(r"--[^\n]*", "", SQL.read_text(encoding="utf-8").lower())
+    # Les colonnes venues après (v51 : réglages des machines) sont dans
+    # leur propre migration.
+    sql = re.sub(r"--[^\n]*", "", "\n".join(
+        f.read_text(encoding="utf-8").lower()
+        for f in (SQL, PWA / "supabase_schema_v51_reglages_machines.sql")))
     assert "create table if not exists public.etat_compte" in sql
     assert "references auth.users(id) on delete cascade" in sql
     for col in de.COLONNES:
@@ -317,3 +321,81 @@ def test_une_modification_non_enregistree_ne_touche_pas_le_cache(avec_ligne):
         db.get_prog(USER_ID)["_challenges_done"].append(999)
     with appmod.app.app_context():
         assert 999 not in db.get_prog(USER_ID)["_challenges_done"]
+
+
+# ── Les réglages des machines (v51, audit du 18/10, m7) ──────────────────
+#
+# « Siège 4 · goupille 7 » vivait dans le blob du programme. Il rejoint la
+# table. En production au 22/10 : un compte, 8 machines, et une ligne
+# d'état déjà là — le cas où la colonne neuve, vide, aurait effacé ses
+# réglages à la lecture puis à la première sauvegarde.
+
+HUIT = {f"exo-{i}": {"texte": f"Siège {i}", "maj": "2026-10-20"} for i in range(8)}
+
+
+def _noter(client, exo_id, texte):
+    return client.post("/seance/reglages", headers={"X-CSRFToken": CSRF},
+                       json={"exo_id": exo_id, "base": "Presse", "variant": "Standard", "texte": texte})
+
+
+def test_les_reglages_d_une_machine_vont_dans_la_table(avec_ligne, logged_in):
+    assert _noter(logged_in, "exo-1", "Siège 4 · goupille 7").get_json()["ok"] is True
+    assert _ligne(avec_ligne)["reglages_machines"]["exo-1"]["texte"] == "Siège 4 · goupille 7"
+    assert "_reglages_machines" not in _blob(avec_ligne)
+
+
+def test_tant_que_la_colonne_est_vide_le_programme_fait_foi(avec_ligne):
+    _blob(avec_ligne)["_reglages_machines"] = dict(HUIT)
+    db.vider_cache()
+    prog = db.get_prog(USER_ID)
+    assert prog["_reglages_machines"] == HUIT, "la colonne vide n'efface pas les réglages"
+    # Une sauvegarde pour autre chose (un badge) les range dans la table.
+    prog["_badges"] = ["first_session", "week_complete"]
+    db.save_prog(USER_ID, prog)
+    assert _ligne(avec_ligne)["reglages_machines"] == HUIT
+    assert "_reglages_machines" not in _blob(avec_ligne)
+    db.vider_cache()
+    assert db.get_prog(USER_ID)["_reglages_machines"] == HUIT
+
+
+def test_noter_une_machine_garde_celles_du_programme(avec_ligne, logged_in):
+    _blob(avec_ligne)["_reglages_machines"] = dict(HUIT)
+    db.vider_cache()
+    _noter(logged_in, "exo-9", "Dossier 2")
+    garde = _ligne(avec_ligne)["reglages_machines"]
+    assert set(garde) == set(HUIT) | {"exo-9"}
+
+
+def test_deux_requetes_notent_deux_machines_sans_s_ecraser(avec_ligne):
+    import app as appmod
+    avec_ligne.tables["etat_compte"][0]["reglages_machines"] = {"exo-0": HUIT["exo-0"]}
+    db.vider_cache()
+    a, b = appmod.app.app_context(), appmod.app.app_context()
+    a.push(); prog_a = db.get_prog(USER_ID); a.pop()
+    b.push(); prog_b = db.get_prog(USER_ID); b.pop()
+    a.push(); prog_a["_reglages_machines"]["exo-1"] = HUIT["exo-1"]; db.save_prog(USER_ID, prog_a); a.pop()
+    b.push(); prog_b["_reglages_machines"]["exo-2"] = HUIT["exo-2"]; db.save_prog(USER_ID, prog_b); b.pop()
+    assert set(_ligne(avec_ligne)["reglages_machines"]) == {"exo-0", "exo-1", "exo-2"}
+
+
+def test_effacer_la_derniere_machine_vide_la_colonne_sans_revenir_du_programme(avec_ligne, logged_in):
+    _noter(logged_in, "exo-1", "Siège 4")
+    _noter(logged_in, "exo-1", "")
+    assert _ligne(avec_ligne)["reglages_machines"] == {}
+    db.vider_cache()
+    assert db.get_prog(USER_ID).get("_reglages_machines") == {}
+
+
+def test_l_export_contient_toujours_les_reglages(avec_ligne, logged_in):
+    _noter(logged_in, "exo-1", "Siège 4")
+    export = logged_in.get("/gestion/export").get_json()
+    assert export["programme"]["_reglages_machines"]["exo-1"]["texte"] == "Siège 4"
+
+
+def test_la_migration_v51_ajoute_la_colonne_avant_de_vider_le_programme():
+    sql = (PWA / "supabase_schema_v51_reglages_machines.sql").read_text()
+    avant, apres = sql.split("── 2. APRÈS le déploiement")
+    assert "add column if not exists reglages_machines jsonb" in avant
+    assert "public.programs" not in avant, "la 1re partie ne touche pas aux programmes"
+    assert "where public.etat_compte.reglages_machines is null" in apres, "ne pas écraser une colonne remplie"
+    assert "data - '_reglages_machines'" in apres and "version = version + 1" in apres

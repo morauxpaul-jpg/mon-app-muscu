@@ -69,7 +69,7 @@ ATTENDU = {
     "etat_compte": ("user_id", "badges", "record_serie", "defis_faits", "defis_gagnes",
                     "upsell_vu", "debrief_gratuit", "decharge_semaine",
                     "decharge_ignoree", "plats_semaine", "nutrition_perso",
-                    "updated_at"),                             # v47
+                    "updated_at", "reglages_machines"),        # v47, v51
     "aliments_perso": ("id", "user_id", "nom", "food", "recette",
                        "created_at", "updated_at"),            # v49
     "photos_corps": ("id", "user_id", "date", "angle", "chemin", "miniature",
