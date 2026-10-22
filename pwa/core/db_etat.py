@@ -1,7 +1,8 @@
 """L'état du compte — la table `etat_compte` (migration v47).
 
 Badges, record de série, défis, « upsell vu », quota de debrief gratuit,
-semaine allégée, plats de la semaine et cibles nutrition perso ne sont pas
+semaine allégée, plats de la semaine, cibles nutrition perso et réglages
+des machines (v51) ne sont pas
 le programme. Ils vivaient pourtant dans son blob, et l'accueil réécrivait le
 programme entier quand un badge tombait. Une ligne par compte, une colonne
 par donnée.
@@ -40,7 +41,16 @@ CLES_BLOB = {
     "_decharge_ignoree": ("decharge_ignoree", None,  int),
     "_meal_plan":        ("plats_semaine",    None,  dict),
     "_nutrition":        ("nutrition_perso",  None,  dict),
+    "_reglages_machines": ("reglages_machines", None, dict),   # v51
 }
+# Colonnes arrivées après la v47 : vides (NULL) tant que le reste du
+# programme n'y a pas été rangé. Le programme fait alors foi, et la première
+# sauvegarde l'y range — sans cela, superposer effaçait les réglages d'un
+# compte qui avait déjà sa ligne, et la sauvegarde suivante les perdait.
+REPLI_PROGRAMME = {"reglages_machines"}
+# Un dictionnaire par machine : deux requêtes qui notent deux machines
+# différentes gardent les deux, comme la fusion du programme le faisait.
+FUSION_PAR_CLE = {"reglages_machines"}
 COLONNES = tuple(c for c, _v, _t in CLES_BLOB.values())
 REESSAI = 60
 _absente_depuis = None
@@ -119,6 +129,8 @@ def superposer(user_id: str, prog: dict) -> dict:
         return prog          # table absente ou pas de ligne : le programme fait foi
     for cle, (col, vide, type_) in CLES_BLOB.items():
         valeur = _propre(ligne.get(col), vide, type_)
+        if valeur is None and col in REPLI_PROGRAMME:
+            continue         # colonne pas encore remplie : le reste du programme fait foi
         if valeur is None:
             prog.pop(cle, None)
         else:
@@ -140,6 +152,25 @@ def etat_lu(prog: dict) -> dict:
     return copy.deepcopy(_depuis_prog(prog))
 
 
+def _a_ecrire(col, valeur, lue, actuelle):
+    """Ce que la colonne doit valoir après cette requête : sa valeur si la
+    requête l'a changée, sinon celle de la base (une autre requête a pu
+    l'écrire entre-temps)."""
+    if col in REPLI_PROGRAMME and actuelle is None:
+        return valeur                    # reste du programme : la seule copie
+    if valeur == lue:
+        return actuelle
+    if col in FUSION_PAR_CLE and all(isinstance(v, dict) for v in (valeur, lue, actuelle)):
+        fusion = dict(actuelle)
+        for k in set(lue) | set(valeur):
+            if k not in valeur:
+                fusion.pop(k, None)
+            elif valeur[k] != lue.get(k):
+                fusion[k] = valeur[k]
+        return fusion
+    return valeur
+
+
 def extraire(user_id: str, prog: dict, base: dict | None = None) -> dict:
     """Le programme à écrire, sans l'état du compte, qui part dans sa table.
 
@@ -158,7 +189,7 @@ def extraire(user_id: str, prog: dict, base: dict | None = None) -> dict:
     # la v47) : c'est la seule copie, elle s'écrit en entier. Sinon, seules
     # les colonnes changées depuis la lecture.
     if base is not None and ligne:
-        valeurs = {c: (valeurs[c] if valeurs[c] != base.get(c) else actuelles[c]) for c in valeurs}
+        valeurs = {c: _a_ecrire(c, valeurs[c], base.get(c), actuelles[c]) for c in valeurs}
     if valeurs != actuelles:
         try:
             get_client().table("etat_compte").upsert({
