@@ -38,7 +38,7 @@ from core.db import lire_fichier
 from core.limiter import limiter
 from core.photos_corps import (
     ANGLES, LIBELLES, OCTETS_MAX, PHOTOS_MAX, angle_valide, comparaison, date_valide,
-    est_jpeg, fiche, index_pesees, par_angle, pesee_manquante,
+    fiche, index_pesees, par_angle, pesee_manquante, sans_metadonnees,
 )
 from core.poids_courbe import carte_poids
 
@@ -116,7 +116,10 @@ def ajouter():
     image, miniature = [f.read(OCTETS_MAX + 1) if f else b"" for f in fichiers]
     if len(image) > OCTETS_MAX or len(miniature) > OCTETS_MAX:
         return _refus("Photo trop lourde, même réduite. Réessaie avec une autre.", 413)
-    if not est_jpeg(image) or not est_jpeg(miniature):
+    # Rien de ce que le téléphone a écrit autour de l'image n'est gardé :
+    # ni position GPS, ni appareil (audit du 18/10, m12).
+    image, miniature = sans_metadonnees(image), sans_metadonnees(miniature)
+    if image is None or miniature is None:
         return _refus("Ce fichier n'est pas une photo lisible.")
     try:
         photos = list_photos()
