@@ -16,8 +16,12 @@ from core import photos_corps as pc
 from core.dates import today_paris
 
 AUTRE = "u-autre-0002"
-JPEG = b"\xff\xd8\xff\xe0" + b"photo" * 40 + b"\xff\xd9"
-MINI = b"\xff\xd8\xff\xe0" + b"mini" * 10 + b"\xff\xd9"
+# Des JPEG minimaux mais bien formés (en-tête JFIF, début des données, fin) :
+# le serveur parcourt maintenant les segments pour retirer l'EXIF (m12).
+_JFIF = b"\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+_SOS = b"\xff\xda\x00\x08\x01\x01\x00\x00\x3f\x00"
+JPEG = b"\xff\xd8" + _JFIF + _SOS + b"photo" * 40 + b"\xff\xd9"
+MINI = b"\xff\xd8" + _JFIF + _SOS + b"mini" * 10 + b"\xff\xd9"
 EN_TETES = {"X-CSRFToken": CSRF, "Accept": "application/json"}
 
 
@@ -169,6 +173,69 @@ def test_reprendre_le_meme_angle_le_meme_jour_remplace_la_photo(fake_db, logged_
 def test_ce_qui_n_est_pas_une_photo_valable_est_refuse(fake_db, logged_in, champs, code):
     assert _envoyer(logged_in, **champs).status_code == code
     assert _lignes(fake_db) == [] and _fichiers(fake_db) == {}
+
+
+# ── Métadonnées (audit du 18/10, m12) ─────────────────────────────
+
+
+def _vraie_photo(gps=True, icc=None):
+    """Une vraie photo, comme un téléphone l'écrit : EXIF avec position."""
+    from PIL import Image
+    img = Image.new("RGB", (64, 48), (200, 80, 40))
+    exif = Image.Exif()
+    exif[0x010F] = "Telephone Exemple"                      # Make
+    if gps:
+        exif[0x8825] = {1: "N", 2: (48.0, 51.0, 24.0), 3: "E", 4: (2.0, 21.0, 7.0)}
+    tampon = io.BytesIO()
+    options = {"exif": exif.tobytes()}
+    if icc:
+        options["icc_profile"] = icc
+    img.save(tampon, "JPEG", quality=80, **options)
+    return tampon.getvalue()
+
+
+def test_la_position_gps_ne_reste_pas_dans_la_photo(fake_db, logged_in):
+    from PIL import Image
+    photo = _vraie_photo()
+    assert b"Exif" in photo and Image.open(io.BytesIO(photo)).getexif().get_ifd(0x8825)
+    r = _envoyer(logged_in, image=photo, mini=_vraie_photo())
+    assert r.status_code == 200
+    [ligne] = _lignes(fake_db)
+    for chemin in (ligne["chemin"], ligne["miniature"]):
+        garde = _fichiers(fake_db)[chemin]
+        assert b"Exif" not in garde and b"Telephone Exemple" not in garde
+        relue = Image.open(io.BytesIO(garde))
+        assert relue.size == (64, 48) and not relue.getexif()
+        relue.load()                                         # l'image elle-même est intacte
+    assert ligne["octets"] == len(_fichiers(fake_db)[ligne["chemin"]])
+
+
+def test_le_profil_couleur_reste(fake_db):
+    from PIL import Image
+    icc = b"\x00" * 128 + b"profil-de-test"
+    garde = pc.sans_metadonnees(_vraie_photo(icc=icc))
+    assert b"Exif" not in garde and Image.open(io.BytesIO(garde)).info.get("icc_profile") == icc
+
+
+def test_une_seconde_image_collee_apres_la_fin_part_aussi():
+    """MPF (Android, iPhone) : une seconde image, avec son propre EXIF, suit
+    la principale ; l'index qui la désigne est en APP2."""
+    mpf = b"\xff\xe2\x00\x0aMPF\x00\x00\x00\x00\x00"
+    principale = JPEG[:2] + mpf + JPEG[2:]
+    garde = pc.sans_metadonnees(principale + _vraie_photo())
+    assert garde == JPEG
+
+
+@pytest.mark.parametrize("octets", [
+    b"\xff\xd8\xff\xe0\x7f\xff" + b"court",               # longueur au-delà du fichier
+    b"\xff\xd8" + _JFIF + b"\xff\xd9",                      # fin avant toute image
+    b"\xff\xd8" + _JFIF + b"pas un segment",
+    b"<html>",
+])
+def test_un_jpeg_mal_forme_est_refuse(octets, fake_db, logged_in):
+    assert pc.sans_metadonnees(octets) is None
+    assert _envoyer(logged_in, image=octets).status_code == 400
+    assert _lignes(fake_db) == []
 
 
 def test_la_photo_d_un_autre_compte_reste_introuvable(fake_db, logged_in):

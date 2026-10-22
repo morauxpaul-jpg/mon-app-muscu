@@ -47,6 +47,53 @@ def est_jpeg(octets) -> bool:
     return isinstance(octets, (bytes, bytearray)) and len(octets) > 3 and octets[:3] == b"\xff\xd8\xff"
 
 
+# Segments retirés : APP1 (EXIF et XMP : position GPS, appareil, date
+# exacte), APP13 (IPTC) et les commentaires. Le profil couleur (APP2
+# « ICC_PROFILE ») reste ; l'index MPF (APP2 aussi) part avec les images
+# qu'il désigne, rangées après la fin de la principale.
+_SEGMENTS_RETIRES = {0xE1, 0xED, 0xFE}
+
+
+def sans_metadonnees(octets):
+    """Le JPEG sans ses métadonnées, ou None s'il est mal formé.
+
+    Le navigateur réduit déjà la photo et perd l'EXIF en la redessinant
+    (canvas), mais le serveur lui faisait confiance : un envoi hors de l'app
+    gardait la position de la prise de vue (audit du 18/10, m12). Pillow
+    n'est pas en production (requirements-dev.txt) : on parcourt les
+    segments à la main, jusqu'au début des données de l'image, recopiées
+    telles quelles jusqu'à la fin de l'image (FFD9 ne peut pas apparaître
+    dans les données : un octet FF y est toujours suivi de 00)."""
+    if not est_jpeg(octets):
+        return None
+    octets = bytes(octets)
+    n = len(octets)
+    sortie = bytearray(b"\xff\xd8")
+    i = 2
+    while i + 4 <= n:
+        if octets[i] != 0xFF:
+            return None
+        marqueur = octets[i + 1]
+        if marqueur == 0xFF:                       # octet de remplissage
+            i += 1
+            continue
+        if marqueur == 0xD9 or 0xD0 <= marqueur <= 0xD7 or marqueur in (0x00, 0x01):
+            return None                            # fin ou marqueur isolé avant l'image
+        longueur = (octets[i + 2] << 8) | octets[i + 3]
+        fin = i + 2 + longueur
+        if longueur < 2 or fin > n:
+            return None
+        if marqueur == 0xDA:                       # début des données de l'image
+            fin_image = octets.find(b"\xff\xd9", fin)
+            return bytes(sortie + (octets[i:] if fin_image < 0 else octets[i:fin_image + 2]))
+        corps = octets[i + 4:fin]
+        mpf = marqueur == 0xE2 and corps.startswith(b"MPF\x00")
+        if marqueur not in _SEGMENTS_RETIRES and not mpf:
+            sortie += octets[i:fin]
+        i = fin
+    return None
+
+
 def ecart(avant, apres) -> str:
     """« 3 jours », « 8 semaines », « 5 mois », « 1 an et 2 mois »."""
     jours = abs((apres - avant).days)
