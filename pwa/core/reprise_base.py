@@ -6,9 +6,14 @@ bout (`<ConnectionTerminated error_code:9 …>`). La première requête du matin
 échoué : `/seance` a répondu 503 et l'accueil s'est affiché vide. La même
 requête, sur une connexion neuve, passait.
 
-Toutes les requêtes du client Supabase passent par `postgrest.utils.SyncClient`
-(une sous-classe de `httpx.Client` propre à postgrest : le client HTTP du coach
-IA n'est pas touché). On y pose :
+Les requêtes vers les tables passent par le client HTTP que postgrest construit
+lui-même. Depuis supabase 2.33, c'est un `httpx.Client` ordinaire, nommé
+`Client` dans `postgrest._sync.client` : on y substitue `ClientAvecReprise`,
+et seul postgrest le voit (le client HTTP du coach IA n'est pas touché).
+Jusqu'à supabase 2.8, c'était `postgrest.utils.SyncClient`, toujours importable
+mais plus utilisé : modifié seul, il laissait tout passer sans reprise ni
+chronométrage, sans aucune erreur. Le test de bout en bout laisse donc
+postgrest construire son client, comme dans l'app. On y pose :
 
 * une seule nouvelle tentative, pour une LECTURE (GET, HEAD) et sur une coupure
   de connexion seulement. Une écriture coupée a pu aboutir avant la coupure :
@@ -17,6 +22,8 @@ IA n'est pas touché). On y pose :
 """
 import logging
 import time
+
+import httpx
 
 from core import chrono
 
@@ -29,13 +36,9 @@ _installe = False
 def est_coupure(e) -> bool:
     """Connexion fermée ou perdue avant la réponse — pas un délai dépassé
     (rejouer une requête lente doublerait l'attente) ni une erreur de la base."""
-    try:
-        import httpx
-        if isinstance(e, (httpx.RemoteProtocolError, httpx.ConnectError,
-                          httpx.ReadError, httpx.WriteError)):
-            return True
-    except ImportError:  # pragma: no cover
-        pass
+    if isinstance(e, (httpx.RemoteProtocolError, httpx.ConnectError,
+                      httpx.ReadError, httpx.WriteError)):
+        return True
     return "ConnectionTerminated" in repr(e)
 
 
@@ -55,21 +58,29 @@ def avec_reprise(envoyer, methode, *args, **kwargs):
         chrono.ajouter("base", time.perf_counter() - t0)
 
 
+class ClientAvecReprise(httpx.Client):
+    """Le client HTTP de postgrest, avec la reprise et le chronométrage."""
+
+    def request(self, method, url, *args, **kwargs):
+        envoyer = super().request
+        return avec_reprise(envoyer, method, url, *args, **kwargs)
+
+
 def installer() -> bool:
-    """Branche la reprise sur le client HTTP de postgrest (une fois)."""
+    """Branche la reprise sur le client HTTP de postgrest (une fois).
+
+    Rend False si postgrest ne construit plus son client sous ce nom : mieux
+    vaut ne rien poser que poser à côté (le test de bout en bout le signale)."""
     global _installe
     if _installe:
         return True
     try:
-        import httpx
-        from postgrest.utils import SyncClient
+        from postgrest._sync import client as module_postgrest
     except ImportError:  # pragma: no cover - postgrest absent
         return False
-
-    def request(self, method, url, *args, **kwargs):
-        return avec_reprise(lambda m, *a, **k: httpx.Client.request(self, m, *a, **k),
-                            method, url, *args, **kwargs)
-
-    SyncClient.request = request
+    if getattr(module_postgrest, "Client", None) is not httpx.Client:
+        logger.warning("base : client HTTP de postgrest introuvable, pas de reprise")
+        return False
+    module_postgrest.Client = ClientAvecReprise
     _installe = True
     return True
