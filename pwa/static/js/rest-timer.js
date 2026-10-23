@@ -41,10 +41,12 @@
   var _comp = null;       // compresseur de sortie (bip fort sans saturation)
   var _doneUntil = 0;     // fin de l'affichage « C'est reparti »
   var _origTitle = document.title;
-  // Qui retient une durée choisie dans la barre : la carte d'exercice qui a
-  // lancé ce repos (seance.js). Pas persisté : après un rechargement, un
-  // préréglage ne vaut plus que pour le repos en cours.
-  var _surChoix = null;
+  // L'exercice qui a lancé le repos (`cle`, posée par seance.js) part dans
+  // l'état gardé sur le téléphone : une durée choisie dans la barre lui
+  // revient, via `retenirReposExo(cle, sec)` que la page séance fournit.
+  // Elle se perdait après un rechargement, et Safari recharge souvent la
+  // page au retour dans l'app : « enregistre une fois sur deux » (23/10).
+  var _derniereCle = "";
 
   // ── Persistance ─────────────────────────────────────────────────
   function _load() {
@@ -526,11 +528,12 @@
   }
 
   // ── API publique ────────────────────────────────────────────────
-  function start(seconds, nom, surChoix) {
-    _surChoix = typeof surChoix === "function" ? surChoix : null;
+  function start(seconds, nom, cle) {
+    _derniereCle = cle ? String(cle) : "";
     var total = parseInt(seconds, 10) || _defaultDuration();
     nom = String(nom || _currentExerciseName() || "").slice(0, 60);
-    _state = { end: Date.now() + total * 1000, total: total, url: _sessionUrl(), nom: nom };
+    _state = { end: Date.now() + total * 1000, total: total, url: _sessionUrl(), nom: nom,
+               cle: _derniereCle };
     _finished = false;
     _save();
     _show();
@@ -546,11 +549,12 @@
     sec = parseInt(sec, 10);
     if (!(sec > 0)) return;
     try { localStorage.setItem(DEFAULT_KEY, String(sec)); } catch (e) {}
-    var retenir = _surChoix;
-    start(sec, _state && _state.nom, retenir);   // changer la durée garde l'exercice
+    var cle = _derniereCle;
+    start(sec, _state && _state.nom, cle);   // changer la durée garde l'exercice
     // …et l'exercice la garde pour la suite : la durée touchée ne valait que
     // pour ce repos-là, le suivant repartait à 90 s (retour du 14/10).
-    if (retenir) { try { retenir(sec); } catch (e) {} }
+    var retenir = window.retenirReposExo;
+    if (cle && typeof retenir === "function") { try { retenir(cle, sec); } catch (e) {} }
   }
 
   function skip() {
@@ -585,6 +589,7 @@
       return;
     }
     _state = stored;
+    _derniereCle = stored.cle || "";
     var left = stored.end - Date.now();
     if (left > 0) {
       _finished = false;

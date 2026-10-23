@@ -259,13 +259,15 @@ module.exports = ({ test, assert }) => {
   // préréglage touché ne valait que pour le repos en cours.
   const avecChrono = () => createEnv({ scripts: ['rest-timer.js', 'seance.js'],
                                        json: { 'seance-config': { seance: 'Push 1', autoRestTimer: true } } });
+  // Carte montée comme par Alpine : inscrite dans la page, le chrono la retrouve.
+  const monte = (b) => { b.$watch = () => {}; b.init(); return b; };
 
   test('une durée touchée pendant le repos devient celle de cet exercice', async () => {
     const e = avecChrono();
-    const squat = e.window.exoBlock(0, { base: 'Squat', exo_id: 'e_squat', exo_index: 0, sets: [S()],
-                                         variant: 'Standard', rest_seconds: 90, rest_prescrit: true });
-    const curl = e.window.exoBlock(1, { base: 'Curl', exo_id: 'e_curl', exo_index: 1, sets: [S()],
-                                        variant: 'Standard', rest_seconds: 180, rest_prescrit: true });
+    const squat = monte(e.window.exoBlock(0, { base: 'Squat', exo_id: 'e_squat', exo_index: 0, sets: [S()],
+                                         variant: 'Standard', rest_seconds: 90, rest_prescrit: true }));
+    const curl = monte(e.window.exoBlock(1, { base: 'Curl', exo_id: 'e_curl', exo_index: 1, sets: [S()],
+                                        variant: 'Standard', rest_seconds: 180, rest_prescrit: true }));
     squat.manualRestTimer();
     e.window.RestTimer.setDuration(120);
     await e.settle();
@@ -279,10 +281,29 @@ module.exports = ({ test, assert }) => {
     assert.equal(e.localStorage.getItem('repos_par_exo'), '{}', 'le programme fait foi');
   });
 
+  test('après un rechargement, la durée touchée revient encore à l\'exercice', async () => {
+    // Retour du 23/10 (iPhone) : « enregistre une fois sur deux ». Safari
+    // recharge la page au retour dans l'app ; le repos reprend depuis le
+    // téléphone, sans la carte qui l'avait lancé, et le choix se perdait.
+    const e = avecChrono();
+    const squat = monte(e.window.exoBlock(0, { base: 'Squat', exo_id: 'e_squat', exo_index: 0, sets: [S()],
+                                         variant: 'Standard', rest_seconds: 120, rest_prescrit: true }));
+    // Le repos repris : lancé par l'état gardé, pas par cette carte.
+    e.window.RestTimer.start(120, 'Squat', 'Push 1|e_squat');
+    e.window.RestTimer.setDuration(180);
+    await e.settle();
+    const envoi = e.calls.find((c) => c.url === '/seance/repos');
+    assert.ok(envoi, 'enregistrée dans le programme');
+    assert.equal(JSON.parse(envoi.body).rest_seconds, 180);
+    assert.equal(squat._dureeRepos(), 180);
+    assert.equal(JSON.parse(e.localStorage.getItem('rest_timer_state')).cle, 'Push 1|e_squat',
+                 "l'exercice part avec l'état gardé");
+  });
+
   test('un exercice absent du programme garde sa durée sur le téléphone', async () => {
     const e = avecChrono();
     e.setResponder(() => ({ ok: false, status: 404 }));
-    const extra = e.window.exoBlock(0, { base: 'Pull-over', exo_index: 0, sets: [S()], variant: 'Standard' });
+    const extra = monte(e.window.exoBlock(0, { base: 'Pull-over', exo_index: 0, sets: [S()], variant: 'Standard' }));
     extra.manualRestTimer();
     e.window.RestTimer.setDuration(60);
     await e.settle();
