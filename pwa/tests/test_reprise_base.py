@@ -74,13 +74,19 @@ def test_les_autres_coupures_sont_reconnues(erreur):
     assert reprise_base.est_coupure(erreur)
 
 
-def test_de_bout_en_bout_a_travers_le_vrai_client_postgrest():
-    """Le client postgrest réel, branché sur un transport simulé dont la
-    première réponse est une coupure : la lecture aboutit quand même."""
+def test_de_bout_en_bout_a_travers_le_vrai_client_postgrest(monkeypatch):
+    """Le client postgrest avec le client HTTP qu'il se construit lui-même
+    (ce que fait `create_client`, que conftest remplace), branché sur un
+    transport simulé dont la première réponse est une coupure : la lecture
+    aboutit quand même, l'écriture remonte, et chaque envoi est chronométré.
+
+    Ne pas lui poser soi-même un client HTTP : avec supabase 2.33, postgrest a
+    changé de client et le crochet posé sur l'ancien ne voyait plus rien
+    passer, sans aucune erreur."""
     from postgrest import SyncPostgrestClient
-    from postgrest.utils import SyncClient
     assert reprise_base.installer()
-    appels = []
+    appels, chronos = [], []
+    monkeypatch.setattr(chrono, "ajouter", lambda nom, duree: chronos.append(nom))
 
     def transport(requete):
         appels.append(requete.method)
@@ -88,15 +94,19 @@ def test_de_bout_en_bout_a_travers_le_vrai_client_postgrest():
             raise httpx.RemoteProtocolError("<ConnectionTerminated error_code:9>", request=requete)
         return httpx.Response(200, json=[{"id": 1}])
 
-    pg = SyncPostgrestClient("http://base.test/rest/v1")
-    pg.session = SyncClient(base_url="http://base.test/rest/v1",
-                            transport=httpx.MockTransport(transport))
-    assert pg.from_("history").select("id").execute().data == [{"id": 1}]
+    client = SyncPostgrestClient("http://base.test/rest/v1")
+    session = client.session
+    assert isinstance(session, reprise_base.ClientAvecReprise)
+    simule = httpx.MockTransport(transport)
+    monkeypatch.setattr(session, "_transport_for_url", lambda url: simule)
+
+    assert client.from_("history").select("id").execute().data == [{"id": 1}]
     assert appels == ["GET", "GET"]
+    assert chronos == ["base"]
 
     appels.clear()
     with pytest.raises(httpx.RemoteProtocolError):
-        pg.from_("history").insert({"id": 2}).execute()
+        client.from_("history").insert({"id": 2}).execute()
     assert appels == ["POST"]
 
 
