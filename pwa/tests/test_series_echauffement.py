@@ -62,9 +62,11 @@ def test_enregistrer_avec_un_echauffement(fake_db, logged_in):
     assert d["volume"] == 0 and d["volume_echauffement"] == 200
     d = _save(logged_in, [ECH, {"reps": 8, "poids": 60}]).get_json()
     assert d["completed"] is True
-    assert d["last_summary"] == "60\u00a0kg × 8"
     assert d["pr"] and d["pr"]["value"] == 60
     assert d["volume"] == 480 and d["volume_echauffement"] == 200
+    # « Dernière fois », la séance suivante : le travail seul.
+    d = _save(logged_in, [{"reps": 8, "poids": 62.5}], date=LUNDI + dt.timedelta(days=7)).get_json()
+    assert d["last_summary"] == "60\u00a0kg × 8"
 
 
 def test_la_carte_garde_lechauffement_et_le_reenregistrer_ne_lefface_pas(fake_db, logged_in):

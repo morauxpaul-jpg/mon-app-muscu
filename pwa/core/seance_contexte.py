@@ -40,9 +40,10 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         p_sets = max(1, -(-p_sets // 2))
     muscle = exo_obj.get("muscle", "Autre")
     rest_seconds = int(exo_obj.get("rest_seconds", 90))
-    # Le programme prescrit-il un repos ? Si oui, il passe avant le dernier
-    # préréglage touché dans la barre du chrono (audit du 30/09, R12).
-    rest_prescrit = "rest_seconds" in exo_obj
+    # Un repos prescrit passe avant le dernier préréglage de la barre (R12).
+    # Pas 90 s : l'éditeur l'inscrit partout où rien n'est choisi, et la durée
+    # choisie ne passait plus d'un exo à l'autre (retour du 23/10).
+    rest_prescrit = "rest_seconds" in exo_obj and rest_seconds != 90
     # Cible de répétitions du programme (« 8-12 ») : affichée en filigrane
     # dans les cases reps. Sans elle, un programme n'est qu'une liste de noms.
     target_reps = str(exo_obj.get("reps") or "").strip()[:20]

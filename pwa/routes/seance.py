@@ -480,8 +480,12 @@ def save_exo():
         "record": _best_record(hist, exo_final, is_bw),
         "suggestion": _suggestion_for(hist, exo_final, seance, date_str, is_bw,
                                       _cible_du_programme(get_prog(), seance, exo_base)),
+        # La séance PRÉCÉDENTE, comme à l'ouverture de la page : la carte
+        # l'affiche sous « Dernière fois ». C'était le résumé des séries du
+        # jour : après une série, « Dernière fois » montrait celle qu'on
+        # venait de faire, et l'on ne savait plus quoi charger (retour du 23/10).
         "last_summary": resume_series(
-            (r["Poids"], int(r["Reps"])) for r in travail if r["Reps"] > 0),
+            (s["poids"], s["reps"]) for s in _last_session_sets(hist, exo_final, seance, date_str)),
     })
 
 

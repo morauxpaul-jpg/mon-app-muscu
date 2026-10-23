@@ -108,3 +108,16 @@ def test_la_carte_affiche_les_reglages(fake_db, logged_in):
     html = logged_in.get("/seance", query_string={"mode": "prefaite", "name": "Push 1"}).get_data(as_text=True)
     assert "banc cran 2" in html
     assert 'x-if="reglages &amp;&amp; !editReglages"' in html or 'x-if="reglages && !editReglages"' in html
+
+
+def test_90_s_inscrites_ne_passent_pas_avant_la_barre(fake_db, logged_in):
+    """Retour du 23/10 : « le chrono ne garde pas entre deux exos ». Chaque
+    enregistrement du programme inscrit 90 s sur tous les exercices sans
+    durée : comptées comme prescrites, elles passaient avant la durée
+    choisie dans la barre, et celle-ci ne valait plus que pour un exercice."""
+    import re
+    _programme(fake_db)
+    _exos(fake_db)[1]["rest_seconds"] = 180          # une vraie prescription
+    html = logged_in.get("/seance?mode=prefaite&name=Push 1").get_data(as_text=True)
+    # Une carte par exercice, dans l'ordre du programme.
+    assert re.findall(r'"rest_prescrit":\s*(true|false)', html) == ["false", "true"]
