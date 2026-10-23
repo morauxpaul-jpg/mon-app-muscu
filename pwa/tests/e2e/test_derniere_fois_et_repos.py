@@ -3,7 +3,9 @@
 « Dernière fois affiche le poids de la dernière série : on ne voit pas ce
 qu'on a fait la dernière fois, compliqué pour charger plus. » Et « le chrono
 ne garde pas entre deux exos » : 90 s inscrites sur chaque exercice par
-l'éditeur passaient avant la durée choisie dans la barre.
+l'éditeur passaient avant la durée choisie dans la barre. Puis, précisé
+(iPhone) : « il enregistre une fois sur deux le temps qu'on met » : après un
+rechargement, le repos reprenait sans savoir à quel exercice il était.
 """
 import datetime as dt
 
@@ -84,4 +86,22 @@ def test_la_duree_choisie_passe_a_l_exercice_suivant(pg, serveur):
     pg.evaluate("Alpine.$data(document.querySelector('#exo-anchor-1')).open = true")
     _serie(pg, 1, 10, 30)
     assert _repos_en_cours(pg) == 180               # repartait à 90
+    assert pg.erreurs == []
+
+
+def test_la_duree_choisie_s_enregistre_aussi_apres_un_rechargement(pg, serveur):
+    """Safari recharge souvent la page au retour dans l'app."""
+    _ouvrir(pg, serveur)
+    assert pg.evaluate("""() => fetch('/seance/repos', {method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({seance: 'Push', base: 'Développé couché', rest_seconds: 120})})
+        .then(r => r.status)""") == 200
+    _ouvrir(pg, serveur)
+    _serie(pg, 0, 5, 60)
+    pg.reload()                                       # le repos reprend depuis le téléphone
+    pg.wait_for_selector("#exo-anchor-0")
+    with pg.expect_response(lambda r: "/seance/repos" in r.url):
+        pg.locator("#rest-timer .rest-timer-bar-presets button[data-sec='180']").click()
+    programme = pg.evaluate("fetch('/test-programme').then(r => r.json())")
+    assert programme["Push"][0]["rest_seconds"] == 180       # restait à 120
     assert pg.erreurs == []

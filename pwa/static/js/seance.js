@@ -52,6 +52,13 @@
   // Tous les blocs exercice de la page, pour que « Terminer » puisse
   // envoyer ce qui reste avant de clore la séance.
   var BLOCS = [];
+  // Durée choisie dans la barre du chrono : elle revient à l'exercice qui a
+  // lancé le repos (rest-timer.js garde sa clé, rechargement compris). Une
+  // fonction globale et non `RestTimer.retenir` : rest-timer.js est chargé
+  // après ce script dans la page.
+  window.retenirReposExo = function (cle, sec) {
+    BLOCS.forEach(function (b) { if (b._cleChrono() === cle) b.retenirRepos(sec); });
+  };
   var DELAI_ENVOI = 8000;
   // « Terminer » n'attend pas la file plus longtemps que ça.
   var DELAI_FIN = 6000;
@@ -745,9 +752,11 @@
       },
       manualRestTimer: function () {
         if (window.RestTimer) {
-          window.RestTimer.start(this._dureeRepos(), this._nomPourChrono(), this.retenirRepos.bind(this));
+          window.RestTimer.start(this._dureeRepos(), this._nomPourChrono(), this._cleChrono());
         }
       },
+      // Désigne cet exercice auprès du chrono, même après un rechargement.
+      _cleChrono: function () { return CONFIG.seance + "|" + this._cleRepos(); },
 
       // ── Enregistrement ──
       _carte: function () {
