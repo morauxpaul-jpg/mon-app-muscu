@@ -23,7 +23,11 @@ jobs:
   tests:
     name: Python + JavaScript
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Les tests prennent ~4 min ; c'est l'installation des paquets système de
+    # Chromium (apt) qui varie : elle a dépassé 9 min les 22 et 23/10, et la
+    # limite de 10 min coupait le job avant le premier test (main non testé,
+    # déploiement Railway parti quand même).
+    timeout-minutes: 20
 
     # Un vrai Redis : la suite est rejouée dessus (état partagé entre
     # instances, core/partage.py), comme en production à plusieurs processus.
