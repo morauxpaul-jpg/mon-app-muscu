@@ -216,9 +216,9 @@ pwa/
 ## Fonctionnalités clés
 
 ### Séance
-- Timer de repos auto (configurable, déclenché par « Série faite ») ; le repos prescrit par le programme passe avant le dernier préréglage touché
+- Timer de repos auto (configurable, déclenché par « Série faite ») ; le repos prescrit par le programme passe avant le dernier préréglage touché. 90 s ne comptent pas comme une prescription (`core/seance_contexte.py`) : l'éditeur les inscrit sur tout exercice sans durée, et la durée choisie dans la barre ne passait plus d'un exercice à l'autre (retour du 23/10)
 - **Bip léger** en fin de repos (sine 600 Hz, ~80 ms, gain 0.04, généré via Web Audio API)
-- Inline history (« Dernière fois : 80 kg × 8 »)
+- Inline history (« Dernière fois : 80 kg × 8 ») : toujours la séance précédente, y compris dans la réponse de `/seance/save-exo` après chaque série (elle renvoyait les séries du jour, retour du 23/10)
 - Pré-remplissage automatique des poids
 - Progression indicator (« EXERCICE 3/7 »)
 - Inline-confirm pour actions destructives (jamais `prompt()`/`confirm()`/`alert()`, jamais hors-carte)

@@ -55,7 +55,21 @@ def test_save_exo_repond_en_json_sans_redirection(fake_db, logged_in):
     assert d["completed"] is True
     assert d["volume"] == 640
     assert d["sets_done"] == 1
-    assert d["last_summary"] == "80\u00a0kg × 8"
+    assert d["last_summary"] == ""       # aucune séance avant celle-ci
+
+
+def test_derniere_fois_reste_la_seance_precedente_apres_une_serie(fake_db, logged_in):
+    """Retour du 23/10 : après « Série faite », « Dernière fois » montrait la
+    série qu'on venait de faire. On ne voyait plus ce qu'on avait soulevé la
+    fois d'avant, donc plus combien charger."""
+    _seed(fake_db)
+    avant = MONDAY - dt.timedelta(days=7)
+    _hist(fake_db, avant, reps=8, poids=80.0, serie=1)
+    _hist(fake_db, avant, reps=7, poids=80.0, serie=2)
+    d = json.loads(_save(logged_in, [{"reps": 8, "poids": 85}]).data)
+    assert d["last_summary"] == "80\u00a0kg × 8, 80\u00a0kg × 7"
+    d = json.loads(_save(logged_in, [{"reps": 8, "poids": 85}, {"reps": 6, "poids": 85}]).data)
+    assert d["last_summary"] == "80\u00a0kg × 8, 80\u00a0kg × 7"
 
 
 def test_save_exo_sans_json_redirige_comme_avant(fake_db, logged_in):
