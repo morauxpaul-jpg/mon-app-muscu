@@ -96,6 +96,7 @@ def finish():
         return redirect(url_for("accueil.index"))
     # L'accueil (écran suivant) propose le debrief de CETTE séance.
     session["last_workout"] = {"seance": seance_name, "date": date_str}
+    _ouvrir_essai()
     track("workout_finished", {
         "mode": mode, "seance": seance_name,
         "rating": note.get("rating", 0) if note else 0,
@@ -103,6 +104,24 @@ def finish():
         "duration_min": duration,
     })
     return redirect(url_for("accueil.index"))
+
+
+def _ouvrir_essai():
+    """Première séance d'un compte gratuit : l'essai PRO s'ouvre (core/essai.py),
+    à effet immédiat — le debrief de l'écran suivant est déjà le complet."""
+    import time
+    from core.data import get_profile
+    from core.essai import ESSAI_JOURS, ouvrir_premier_essai
+    try:
+        profil = get_profile() or {}
+    except Exception:
+        return
+    fin = ouvrir_premier_essai(getattr(g, "user_id", ""), profil)
+    if not fin:
+        return
+    session.update(is_vip=True, is_vip_full=False, vip_until=fin, is_vip_ts=time.time(),
+                   essai_ouvert=True)
+    track("trial_started", {"jours": ESSAI_JOURS, "source": "premiere_seance"})
 
 
 # ── Debrief de fin de séance ────────────────────────────────────
