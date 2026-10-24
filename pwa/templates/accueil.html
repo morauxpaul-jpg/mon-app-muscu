@@ -137,7 +137,7 @@
     </section>
   {% elif next_session %}
     <section class="acc-seance" aria-label="Prochaine séance">
-      <div class="acc-surtitre">PROCHAINE SÉANCE · {{ next_session.relative|upper }}{% if not next_session.is_today and next_session.relative != 'Demain' %} {{ next_session.date_short }}{% endif %}</div>
+      <div class="acc-surtitre">{% if not next_session.is_today %}REPOS AUJOURD'HUI · {% endif %}PROCHAINE SÉANCE · {{ next_session.relative|upper }}{% if not next_session.is_today and next_session.relative != 'Demain' %} {{ next_session.date_short }}{% endif %}</div>
       <div class="acc-seance-nom">{{ next_session.seance }}</div>
       {% if next_session.exercices %}
         <div class="acc-seance-contenu">
@@ -148,8 +148,10 @@
       {% endif %}
       {# Directement la séance, pas la liste des séances : un tap de moins, et
          pas de risque d'ouvrir la mauvaise (audit du 30/09, M8). #}
-      <a href="{{ next_session.lien }}" class="btn primary acc-demarrer next-session-card" data-haptic="1">
-        <span>{% if next_session.is_today %}Commencer{% else %}Faire maintenant{% endif %}</span>
+      {# Un jour de repos, la séance suivante reste à un tap, sans le vert
+         principal : il invitait à s'entraîner un jour prévu pour récupérer. #}
+      <a href="{{ next_session.lien }}" class="btn{% if next_session.is_today %} primary{% else %} acc-demarrer--second{% endif %} acc-demarrer next-session-card" data-haptic="1">
+        <span>{% if next_session.is_today %}Commencer{% else %}Faire en avance{% endif %}</span>
         <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
       </a>
     </section>

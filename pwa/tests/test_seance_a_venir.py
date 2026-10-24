@@ -6,7 +6,7 @@ seule action de l'accueil était « Prochaine séance · Demain », qui ouvrait 
 page datée du lendemain avec un bandeau « RATTRAPAGE ».
 
 Désormais :
-* la carte ouvre une séance datée d'aujourd'hui (« Faire maintenant »), avec un
+* la carte ouvre une séance datée d'aujourd'hui (« Faire en avance »), avec un
   bandeau « En avance » qui nomme le jour prévu ;
 * une page datée d'un jour à venir (gardée pour le hors-ligne) est ramenée à
   aujourd'hui par le navigateur (tests/js/test_jour_seance.js) ;
@@ -50,7 +50,7 @@ def _dates_en_base(fake_db):
 def _carte(html):
     """Le bloc « Prochaine séance » de l'accueil et le lien de son bouton."""
     bloc = re.search(r'<section class="acc-seance"[^>]*>(.*?)</section>', html, re.S).group(1)
-    lien = re.search(r'<a href="([^"]+)" class="btn primary acc-demarrer next-session-card"', bloc)
+    lien = re.search(r'<a href="([^"]+)" class="btn[^"]*next-session-card"', bloc)
     return lien.group(1).replace("&amp;", "&"), bloc
 
 
@@ -61,7 +61,26 @@ def test_un_jour_de_repos_la_carte_ouvre_la_seance_daujourdhui(fake_db, logged_i
     html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
     lien, bloc = _carte(html)
     assert f"date={auj.isoformat()}" in lien and f"prevue={demain.isoformat()}" in lien
-    assert "Faire maintenant" in bloc and "DEMAIN" in bloc
+    assert "Faire en avance" in bloc and "DEMAIN" in bloc
+
+
+def test_un_jour_de_repos_le_bouton_reste_secondaire(fake_db, logged_in):
+    """Un jour de repos, le vert « Faire maintenant » invitait à s'entraîner
+    quand même. Le bouton reste là, discret, et le repos est dit."""
+    auj = logical_today_paris()
+    _programme(fake_db, [auj + dt.timedelta(days=1)])
+    html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
+    _, bloc = _carte(html)
+    assert "REPOS AUJOURD&#39;HUI" in bloc or "REPOS AUJOURD'HUI" in bloc
+    assert "btn primary" not in bloc and "acc-demarrer--second" in bloc
+    assert "Faire maintenant" not in bloc
+
+
+def test_le_jour_prevu_le_bouton_reste_vert(fake_db, logged_in):
+    auj = logical_today_paris()
+    _programme(fake_db, [auj])
+    _, bloc = _carte(logged_in.get("/accueil").get_data(as_text=True))
+    assert "btn primary" in bloc and "REPOS" not in bloc
 
 
 def test_le_jour_prevu_la_carte_dit_commencer_sans_bandeau(fake_db, logged_in):
