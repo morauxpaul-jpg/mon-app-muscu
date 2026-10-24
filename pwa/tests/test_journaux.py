@@ -69,3 +69,62 @@ def test_gunicorn_aussi_info_sur_la_sortie_standard(monkeypatch):
     assert "Starting gunicorn" not in erreurs.getvalue()
     assert "Worker timeout" in erreurs.getvalue()
     assert "Worker timeout" not in sortie.getvalue()
+
+
+def _requete_simulee(module):
+    """Une vraie requête httpx (ou httpx2), servie sans réseau."""
+    simule = module.MockTransport(lambda r: module.Response(200, json=[]))
+    with module.Client(transport=simule) as client:
+        client.get("https://exemple.supabase.co/rest/v1/nutrition?user_id=eq.0000-uuid")
+
+
+def test_les_requetes_http_ne_sont_plus_journalisees():
+    """Une ligne INFO « HTTP Request: GET …&user_id=eq.<uuid> » par appel à
+    Supabase : du bruit, et l'identifiant de chaque compte dans les journaux.
+    httpx sert supabase, httpx2 anthropic 1.x."""
+    import httpx
+    import httpx2
+    anciens = (appmod._journal_sortie.stream, appmod._journal_erreurs.stream)
+    noms = ("httpx", "httpx2")
+    loggers = [logging.getLogger(n) for n in noms]
+    etats = [(lg.handlers, lg.propagate) for lg in loggers]
+    racine = logging.getLogger()
+    niveau_racine = racine.level
+    try:
+        # En production, la racine est en INFO (app.py). Sous pytest,
+        # basicConfig ne s'applique pas : on la remet comme en production.
+        racine.setLevel(logging.INFO)
+        sortie, erreurs = io.StringIO(), io.StringIO()
+        appmod._journal_sortie.setStream(sortie)
+        appmod._journal_erreurs.setStream(erreurs)
+        for lg in loggers:
+            lg.handlers = [appmod._journal_sortie, appmod._journal_erreurs]
+            lg.propagate = False
+        _requete_simulee(httpx)
+        _requete_simulee(httpx2)
+        assert "HTTP Request" not in sortie.getvalue()
+        assert "user_id" not in sortie.getvalue() + erreurs.getvalue()
+        # Une vraie erreur réseau doit encore se voir.
+        loggers[0].warning("connexion refusée")
+        loggers[1].error("délai dépassé")
+        assert "httpx WARNING connexion refusée" in erreurs.getvalue()
+        assert "httpx2 ERROR délai dépassé" in erreurs.getvalue()
+    finally:
+        appmod._journal_sortie.setStream(anciens[0])
+        appmod._journal_erreurs.setStream(anciens[1])
+        racine.setLevel(niveau_racine)
+        for lg, (handlers, propagate) in zip(loggers, etats):
+            lg.handlers, lg.propagate = handlers, propagate
+
+
+def test_httpcore_aussi_au_niveau_warning():
+    racine = logging.getLogger()
+    niveau_racine = racine.level
+    try:
+        racine.setLevel(logging.INFO)  # comme en production (app.py)
+        for nom in ("httpcore", "httpcore.http11", "httpcore2", "httpcore2.connection"):
+            lg = logging.getLogger(nom)
+            assert not lg.isEnabledFor(logging.INFO), nom
+            assert lg.isEnabledFor(logging.WARNING), nom
+    finally:
+        racine.setLevel(niveau_racine)

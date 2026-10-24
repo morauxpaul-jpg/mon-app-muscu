@@ -67,6 +67,12 @@ _journal_erreurs.setLevel(logging.WARNING)
 for _h in (_journal_sortie, _journal_erreurs):
     _h.setFormatter(_journal_format)
 logging.basicConfig(level=logging.INFO, handlers=[_journal_sortie, _journal_erreurs])
+# Chaque requête vers Supabase écrivait une ligne INFO « HTTP Request: GET
+# …&user_id=eq.<uuid> » : des centaines par séance, et l'identifiant de chaque
+# compte dans les journaux. httpx et httpcore servent supabase, httpx2 et
+# httpcore2 anthropic 1.x. Les WARNING et ERROR passent toujours.
+for _nom in ("httpx", "httpcore", "httpx2", "httpcore2"):
+    logging.getLogger(_nom).setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # Monitoring d'erreurs (Sentry) — actif uniquement si SENTRY_DSN est défini.
