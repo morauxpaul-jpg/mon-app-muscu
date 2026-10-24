@@ -94,7 +94,7 @@ def test_commencer_ouvre_la_seance_du_jour(fake_db, logged_in, monkeypatch):
 
 
 def test_hors_ligne_le_bouton_de_l_accueil_est_garde(fake_db, logged_in, monkeypatch):
-    """Un jour sans séance prévue, « Faire maintenant » ouvre la prochaine
+    """Un jour sans séance prévue, « Faire en avance » ouvre la prochaine
     séance datée d'aujourd'hui : cette adresse doit être dans les pages que
     le service worker garde, sinon hors ligne on tombe sur la liste."""
     import datetime as dt
