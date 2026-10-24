@@ -432,7 +432,10 @@ def save_exo():
     exo_final = f"{exo_base} ({variant})" if variant != "Standard" else exo_base
     if partiel and not sets:
         # Rien de rempli : on ne touche à rien (surtout pas aux séries déjà
-        # en base) — c'est un envoi vide, pas un effacement.
+        # en base) — c'est un envoi vide, pas un effacement. Sauf quand la
+        # carte vient d'en retirer la dernière série faite (`retire`).
+        if f.get("retire") == "1":
+            delete_exo_rows(date_str, seance, exo_final, exo_id=pour_serie(f.get("exo_id"), variant))
         return jsonify({"ok": True, "completed": False, "pr": None})
     new_rows = _rows_from_sets(sets, semaine=semaine, seance=seance,
                                exo_final=exo_final, muscle=muscle,

@@ -70,6 +70,28 @@ def test_les_envois_partiels_successifs_saccumulent(fake_db, logged_in):
     assert _lignes(fake_db) == [(1, 5, 100.0, ""), (2, 4, 100.0, "")]
 
 
+# ── Retrait d'une série faite (retour du 24/10) ──────────────────
+
+
+def test_retirer_une_serie_faite_la_retire_de_la_base(fake_db, logged_in):
+    _seed(fake_db)
+    _envoyer(logged_in, [{"reps": 5, "poids": 100}, {"reps": 4, "poids": 100},
+                         {"reps": 3, "poids": 100}], partiel="1")
+    _envoyer(logged_in, [{"reps": 5, "poids": 100}, {"reps": 4, "poids": 100}],
+             partiel="1", retire="1")
+    assert _lignes(fake_db) == [(1, 5, 100.0, ""), (2, 4, 100.0, "")]
+
+
+def test_retirer_la_seule_serie_faite_vide_lexercice(fake_db, logged_in):
+    """Plus aucune série remplie : sans `retire`, l'envoi ne touche à rien
+    (test plus haut) ; avec, la série retirée ne reste pas en base."""
+    _seed(fake_db)
+    _hist(fake_db, MONDAY, reps=5, poids=100.0)
+    r = _envoyer(logged_in, [{"reps": "", "poids": 100}], partiel="1", retire="1")
+    assert json.loads(r.data)["ok"] is True
+    assert _lignes(fake_db) == []
+
+
 # ── Réécriture sans trou ─────────────────────────────────────────
 
 

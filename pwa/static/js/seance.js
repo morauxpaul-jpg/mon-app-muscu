@@ -484,12 +484,20 @@
       },
       removeSet: function (i) {
         if (this.sets.length <= 1) return;
+        var etaitFaite = this.faits.indexOf(i) >= 0;
         this.sets.splice(i, 1);
         // Les index glissent après un retrait. Recalculer depuis les reps
         // repliait aussi une série seulement tapée, comme si elle était faite.
         this.faits = this.faits.filter(function (x) { return x !== i; })
           .map(function (x) { return x > i ? x - 1 : x; });
         this._saveDraft();
+        // Une série faite est en base : son retrait y part aussi. « Enregistrer »
+        // renvoyait toute la carte ; sans lui (m8), elle restait en base jusqu'à
+        // « Terminer », et pour de bon si l'app était fermée avant (24/10).
+        if (etaitFaite) this._envoyer("partiel", true);
+        // Plus rien à faire ici : « Exercice suivant », comme après la dernière
+        // série prévue (retour du 24/10 : « ça ne replie plus l'exo »).
+        if (this.indexCourant() === -1) this._termineLocalement();
       },
 
       // ── Saisie série par série ───────────────────────────────────
@@ -800,9 +808,11 @@
       // écrite AVANT de partir, la plus récente de l'exercice remplace celle
       // qui attendait, et la file réessaie seule. Fermer l'app pendant
       // l'envoi ne perd plus rien : tout repart au prochain lancement.
-      _envoyer: function (mode) {
+      // `retire` : une série faite vient d'être retirée ; même sans plus aucune
+      // série remplie, l'envoi part, pour que le serveur l'efface aussi.
+      _envoyer: function (mode, retire) {
         var self = this;
-        if (mode === "partiel" && !this._aDesSeries()) return Promise.resolve("ok");
+        if (mode === "partiel" && !this._aDesSeries() && !retire) return Promise.resolve("ok");
         var form = this._form();
         if (!form) return Promise.resolve("erreur");
         var Q = window.OfflineQueue;
@@ -811,6 +821,7 @@
         champs.sets_json = this.serializedSets();
         champs._csrf = csrf();
         if (mode === "partiel") champs.partiel = "1";
+        if (retire) champs.retire = "1";
         this.etatRefus = "";
         var envoi;
         if (Q && Q.envoyer) {
