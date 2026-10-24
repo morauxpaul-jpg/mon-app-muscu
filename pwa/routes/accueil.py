@@ -8,6 +8,7 @@ from flask import Blueprint, render_template, g, request, session
 
 from datetime import date as _date, datetime as _datetime
 
+from core.essai import ESSAI_JOURS
 from core.data import get_hist, get_prog, get_profile, get_onboarding, sum_nutrition_day, list_body_weight
 from core.dates import now_paris, today_paris, today_paris_str, logical_today_paris, logical_today_paris_str, monday_of, continuous_week, DAYS_FR, MONTHS_FR
 from core.muscu import get_base_name, fix_muscle
@@ -606,6 +607,11 @@ def index():
         session.pop("last_workout", None)
     elif not is_navigation:
         last_workout = None
+    # Essai PRO ouvert par cette première séance (core/essai.py) : annoncé
+    # une fois, au même moment et sous la même règle que le debrief.
+    essai_ouvert = bool(session.get("essai_ouvert")) and is_navigation
+    if essai_ouvert:
+        session.pop("essai_ouvert", None)
 
     # L'unique écriture de la page. Tolérante comme l'étaient les quatre :
     # un badge non gravé vaut mieux qu'un accueil en erreur.
@@ -654,6 +660,8 @@ def index():
         decharge_en_cours=decharge_en_cours,
         progres=progres,
         last_workout=last_workout,
+        essai_ouvert=essai_ouvert,
+        essai_jours=ESSAI_JOURS,
         challenge=challenge,
         challenge_just_won=challenge_just_won,
         challenges_won=challenges_won,

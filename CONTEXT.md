@@ -308,6 +308,7 @@ pwa/
 
 ### Essai PRO et bilan du mois
 - L'essai (`vip_until`, `g.is_vip` sans `is_vip_full`) ouvre le coach (5 messages/jour, `ESSAI_QUOTA`) et le debrief après chaque séance, en plus de la nutrition et des stats ; le générateur et les programmes avancés restent à l'abonnement.
+- **Essai de la première séance** (`core/essai.py`, 24/10, audit du 18/10 I-4) : un compte gratuit qui n'a jamais eu d'essai (`vip_until` vide) reçoit **3 jours** (`ESSAI_JOURS`) quand il termine une séance avec au moins une série (`/seance/finish`). Effet immédiat (session mise à jour : le debrief de l'écran suivant est le complet), carte « ESSAI PRO OFFERT » une fois sur l'accueil, event `trial_started` (`source: premiere_seance`). Un essai fini (parrainage compris) laisse sa date passée : il ne se rouvre pas. Avant, l'essai ne s'ouvrait que par parrainage : 0 essai, 0 paiement en production.
 - Effectif depuis le 09/10/2026 seulement (v29, voir « Parrainage »).
 - Page Plus, membre PRO : « Ce mois-ci avec PRO » (core/bilan_pro.py) — debriefs, messages au coach, programmes générés, séances refaites (événements sur 30 jours) et records battus (historique).
 

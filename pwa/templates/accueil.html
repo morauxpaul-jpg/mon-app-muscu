@@ -60,6 +60,19 @@
     </div>
   {% endif %}
 
+  {# ── Essai PRO ouvert par la première séance (core/essai.py) ── #}
+  {% if essai_ouvert %}
+  <div class="card debrief-card essai-card">
+    <div class="card-label label-icon s-fdf33f">
+      <svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#zap"/></svg>
+      ESSAI PRO OFFERT
+    </div>
+    <p class="debrief-text"><strong>Première séance faite : PRO est à toi pendant {{ essai_jours }} jours.</strong>
+      Coach IA (5 messages par jour), debrief après chaque séance, nutrition, statistiques détaillées et photos de progression. Ensuite, tu choisis.</p>
+    <a href="/premium" class="debrief-trial">Ce que comprend PRO</a>
+  </div>
+  {% endif %}
+
   {# ── Debrief de la séance qui vient d'être terminée ──────────── #}
   {% if last_workout %}
   {# Attribut délimité par des apostrophes : |tojson produit des guillemets

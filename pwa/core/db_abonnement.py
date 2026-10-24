@@ -152,11 +152,12 @@ def set_referred_by(user_id: str, referrer_id: str) -> None:
     _profile_upsert(user_id, {"referred_by": referrer_id})
 
 
-def grant_vip_days(user_id: str, days: int) -> None:
+def grant_vip_days(user_id: str, days: int) -> str | None:
     """Étend (cumulatif) le VIP à durée limitée : vip_until = max(now, vip_until
-    courant) + days. Utilisé par le parrainage (et réutilisable pour promos)."""
+    courant) + days. Utilisé par le parrainage et l'essai de la première
+    séance (core/essai.py). Rend la nouvelle fin (ISO)."""
     if days <= 0:
-        return
+        return None
     client = get_client()
     base = _dt.datetime.now(_dt.timezone.utc)
     try:
@@ -174,6 +175,7 @@ def grant_vip_days(user_id: str, days: int) -> None:
         logger.error("grant_vip_days read FAILED user=%s: %s", user_id, e)
     new_until = (base + _dt.timedelta(days=int(days))).isoformat()
     _profile_upsert(user_id, {"vip_until": new_until})
+    return new_until
 
 
 def count_referrals(user_id: str) -> int:
