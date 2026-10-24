@@ -113,7 +113,29 @@
   </div>
   {% endif %}
 
-  {% if next_session %}
+  {% if fait_auj %}
+    {# Séance du jour faite : la suivante est annoncée avec son jour, et le
+       bouton reste discret. Le vert « Faire maintenant » poussait à enchaîner
+       une deuxième séance le même jour (audit du 18/10). #}
+    <section class="acc-seance" aria-label="Séance du jour">
+      <div class="acc-surtitre label-icon"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#check"/></svg>SÉANCE DU JOUR FAITE</div>
+      <div class="acc-seance-nom">{{ seance_faite }}</div>
+      {% if next_session %}
+        <div class="acc-seance-contenu">
+          <span>Prochaine : <b>{{ next_session.seance }}</b> · {{ next_session.relative|lower }}{% if next_session.relative != 'Demain' %} {{ next_session.date_short }}{% endif %}</span>
+        </div>
+        <a href="{{ next_session.lien }}" class="btn acc-demarrer acc-demarrer--second" data-haptic="1">
+          <span>Faire en avance</span>
+          <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
+        </a>
+      {% else %}
+        <a href="/seance" class="btn acc-demarrer acc-demarrer--second" data-haptic="1">
+          <span>Choisir une séance</span>
+          <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
+        </a>
+      {% endif %}
+    </section>
+  {% elif next_session %}
     <section class="acc-seance" aria-label="Prochaine séance">
       <div class="acc-surtitre">PROCHAINE SÉANCE · {{ next_session.relative|upper }}{% if not next_session.is_today and next_session.relative != 'Demain' %} {{ next_session.date_short }}{% endif %}</div>
       <div class="acc-seance-nom">{{ next_session.seance }}</div>

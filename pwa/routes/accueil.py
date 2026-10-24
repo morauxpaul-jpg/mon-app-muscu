@@ -365,6 +365,12 @@ def index():
     # est un choix, et la carte renvoyait à la semaine suivante (retour du
     # 14/10 ; le test de « rattrapage » était en plus écrit à l'envers).
     from urllib.parse import quote as _q
+    # Une séance déjà faite aujourd'hui : la carte le dit, et la suivante
+    # n'est plus présentée comme la chose à faire. « Terminer la séance »
+    # ramenait sur « FAIRE MAINTENANT », en vert, pour celle de demain
+    # (audit du 18/10).
+    fait_auj = any(r for r in hist if r["Date"] == today_iso and _is_perf(r))
+    seance_faite = next((d["title"] for d in week if d["is_today"]), "") if fait_auj else ""
     next_session = None
     for offset in range(0, 14):
         d = today + timedelta(days=offset)
@@ -700,6 +706,8 @@ def index():
         badges=badges,
         badges_new=badges_new,
         next_session=next_session,
+        fait_auj=fait_auj,
+        seance_faite=seance_faite,
         precache_urls=precache_urls,
     )
 

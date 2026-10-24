@@ -766,6 +766,8 @@ a.btn.acc-demarrer {
   min-height: 56px; padding: 0 18px; text-decoration: none;
   font-family: var(--font-display); font-size: 1.4rem; text-transform: uppercase;
 }
+/* Séance du jour faite : la suivante reste possible, sans être poussée. */
+a.btn.acc-demarrer--second { min-height: 48px; font-size: 1.1rem; }
 
 .acc-semaine { margin-bottom: 28px; }
 .acc-semaine-tete {

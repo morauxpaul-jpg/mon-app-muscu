@@ -114,6 +114,47 @@ def test_une_seance_faite_la_veille_ne_cache_pas_celle_du_jour(fake_db, logged_i
     assert "Commencer" in bloc
 
 
+def _carte_faite(html):
+    return re.search(r'<section class="acc-seance" aria-label="Séance du jour">(.*?)</section>',
+                     html, re.S).group(1)
+
+
+def test_la_seance_du_jour_faite_ne_pousse_pas_a_la_suivante(fake_db, logged_in):
+    """Audit du 18/10 : séance du jour terminée, l'accueil proposait celle de
+    demain en vert, « Faire maintenant »."""
+    auj = logical_today_paris()
+    demain = auj + dt.timedelta(days=1)
+    _programme(fake_db, [auj, demain])
+    assert _serie(logged_in, auj).status_code == 200
+    html = logged_in.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"}).get_data(as_text=True)
+    bloc = _carte_faite(html)
+    assert "SÉANCE DU JOUR FAITE" in bloc and '<div class="acc-seance-nom">Push</div>' in bloc
+    assert "Prochaine : <b>Push</b> · demain" in bloc
+    assert "Faire maintenant" not in bloc and "btn primary" not in bloc
+    lien = re.search(r'<a href="([^"]+)" class="btn acc-demarrer acc-demarrer--second"', bloc)
+    assert f"date={auj.isoformat()}&prevue={demain.isoformat()}" in lien.group(1).replace("&amp;", "&")
+
+
+def test_un_jour_de_repos_entraine_compte_aussi_comme_fait(fake_db, logged_in):
+    """Séance faite un jour de repos : même carte, la suivante avec sa date."""
+    auj = logical_today_paris()
+    plus3 = auj + dt.timedelta(days=3)
+    _programme(fake_db, [plus3])
+    assert _serie(logged_in, auj).status_code == 200
+    bloc = _carte_faite(logged_in.get("/accueil").get_data(as_text=True))
+    assert f"· {JOURS[plus3.weekday()].lower()} {plus3.day:02d}/{plus3.month:02d}" in bloc
+    assert "btn primary" not in bloc
+
+
+def test_sans_planning_la_seance_faite_le_dit_aussi(fake_db, logged_in):
+    auj = logical_today_paris()
+    _programme(fake_db, [])
+    assert _serie(logged_in, auj).status_code == 200
+    bloc = _carte_faite(logged_in.get("/accueil").get_data(as_text=True))
+    assert "SÉANCE DU JOUR FAITE" in bloc and 'href="/seance"' in bloc
+    assert "btn primary" not in bloc and "AUCUNE SÉANCE PRÉVUE" not in bloc
+
+
 def test_le_streak_lit_le_rattrapage_dans_le_bon_sens(fake_db, logged_in, monkeypatch):
     """Faite en avance hier (jour sans Push) : pas « en danger ». Faite hier
     à SON jour prévu : celle d'aujourd'hui reste à faire, donc en danger.
