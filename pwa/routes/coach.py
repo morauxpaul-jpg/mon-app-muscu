@@ -17,7 +17,7 @@ from flask import (
     g, stream_with_context,
 )
 
-from core import db
+from core import db, ia
 
 from core.data import (
     get_prog, get_hist, get_profile, save_profile, get_onboarding,
@@ -49,11 +49,14 @@ def _coach_ouvert() -> bool:
 
 def _limite() -> int:
     return DAILY_QUOTA if getattr(g, "is_vip_full", False) else ESSAI_QUOTA
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = ia.MODEL
 # 500 tokens coupaient toute réponse un peu construite en plein milieu — le
 # défaut le plus visible du coach. La réponse étant désormais affichée au fil
-# de l'eau, une réponse plus longue ne fait pas attendre davantage.
-MAX_TOKENS = 1400
+# de l'eau, une réponse plus longue ne fait pas attendre davantage. 1 400 sous
+# Haiku 4.5 ; il faut maintenant aussi la place de réfléchir (core/ia.py).
+MAX_TOKENS = 4000
+# Refus de sécurité du modèle (core/ia.py) : la question n'est pas comptée.
+REFUS = "Je ne peux pas répondre à cette question. Reformule-la autrement."
 
 # Une réponse en flux tient un fil du serveur pendant toute sa durée (5 à 20 s).
 # Sans plafond, une rafale de questions pouvait occuper les 16 fils d'une
@@ -472,7 +475,7 @@ def _stream_reply(api_key, system_prompt, api_messages, message,
         try:
             client = anthropic.Anthropic(api_key=api_key)
             with client.messages.stream(
-                model=MODEL,
+                **ia.options("low"),
                 max_tokens=MAX_TOKENS,
                 system=system_prompt,
                 messages=api_messages,
@@ -481,11 +484,20 @@ def _stream_reply(api_key, system_prompt, api_messages, message,
                     if text:
                         chunks.append(text)
                         yield _sse("delta", {"text": text})
+                final = stream.get_final_message()
         except Exception as e:
             err_type = type(e).__name__
             logger.error("/coach/ask stream FAILED (%s): %s", err_type, str(e)[:300])
             _revert_quota_for(user_id)
             yield _sse("error", {"error": _user_error(str(e))})
+            return
+
+        ia.journaliser("coach", final)
+        if ia.refuse("coach", final):
+            # Un refus peut tomber en cours de réponse : `retirer` efface
+            # le début déjà affiché, qui n'est pas gardé non plus.
+            _revert_quota_for(user_id)
+            yield _sse("error", {"error": REFUS, "retirer": True})
             return
 
         reply = "".join(chunks).strip()
@@ -643,17 +655,15 @@ def ask():
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model=MODEL,
+            **ia.options("low"),
             max_tokens=MAX_TOKENS,
             system=system_prompt,
             messages=api_messages,
         )
-        # Concatène les blocs text (Anthropic renvoie une liste de content blocks)
-        reply_parts = []
-        for block in response.content or []:
-            text = getattr(block, "text", None)
-            if text:
-                reply_parts.append(text)
+        reply_parts = ia.textes("coach", response)
+        if reply_parts is None:
+            _revert_quota()
+            return jsonify({"error": REFUS}), 422
         reply = "\n".join(reply_parts).strip() or "Désolé, je n'ai pas pu répondre."
     except Exception as e:
         # L'appel API a échoué : on reverse l'incrément de quota pour ne pas

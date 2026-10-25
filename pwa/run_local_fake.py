@@ -37,8 +37,15 @@ if os.environ.get("FAUX_IA") == "lent":
                       "- Ajoute une rep par séance\n", "- Revois ton [programme](/programme)"]
 
     class _Flux:
-        def __init__(self):
-            self.text_stream = iter(_REPONSE_COACH)
+        def __init__(self, **k):
+            # « refus-test » dans la question : refus de sécurité après le
+            # premier morceau, comme Haiku 5.5 peut le faire (core/ia.py).
+            self._refus = "refus-test" in k["messages"][-1]["content"]
+            self.text_stream = iter(_REPONSE_COACH[:1] if self._refus else _REPONSE_COACH)
+
+        def get_final_message(self):
+            return types.SimpleNamespace(content=[],
+                                         stop_reason="refusal" if self._refus else "end_turn")
 
         def __enter__(self):
             return self
@@ -48,7 +55,7 @@ if os.environ.get("FAUX_IA") == "lent":
 
     class _FauxClient:
         def __init__(self, **k):
-            self.messages = types.SimpleNamespace(create=self._create, stream=lambda **k: _Flux())
+            self.messages = types.SimpleNamespace(create=self._create, stream=lambda **k: _Flux(**k))
 
         def _create(self, **k):
             _time.sleep(3)

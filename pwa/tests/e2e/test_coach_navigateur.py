@@ -54,3 +54,19 @@ def test_une_question_recoit_une_reponse_lisible(serveur, navigateur):
     assert "Ajoute une rep par séance" in texte and "programme" in texte, texte
     assert lien == "/programme"
     assert erreurs == []
+
+
+def test_un_refus_efface_le_debut_de_reponse(serveur, navigateur):
+    """Haiku 5.5 peut refuser une demande après avoir commencé à répondre
+    (25/10) : le début affiché disparaît, le message de refus le remplace."""
+    ctx, pg, erreurs, _ = _page(navigateur, serveur)
+    pg.goto(serveur + "/coach", wait_until="networkidle")
+    pg.click("textarea")
+    pg.keyboard.type("refus-test")
+    pg.keyboard.press("Enter")
+    refus = pg.locator(".msg-error", has_text="Reformule-la")
+    refus.wait_for(timeout=10000)
+    bulles = pg.locator(".msg-group .msg-bot .msg-bubble").all_inner_texts()
+    ctx.close()
+    assert not any("Pour progresser" in t for t in bulles), bulles
+    assert erreurs == []

@@ -29,14 +29,17 @@ from core.limiter import limiter
 from core.analytics import track, paywall
 from core.exercises_data import EXERCISES_INFO
 from core.muscu import MUSCLE_LIST
-from core import taches_ia
+from core import ia, taches_ia
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("generator", __name__)
 
-MODEL = "claude-haiku-4-5-20251001"
-MAX_TOKENS = 2600
+MODEL = ia.MODEL
+# Le programme en JSON, plus la place de réfléchir à l'effort « medium »
+# (core/ia.py). Sous Haiku 4.5 : 2 600, sans réflexion et avec un découpage
+# plus court du même texte.
+MAX_TOKENS = 12000
 TIMEOUT_IA = 90  # s : au-delà, l'appel est abandonné (la tâche rend une erreur)
 WEEKLY_GEN_QUOTA = 3  # générations / semaine glissante (7 j) / VIP — protège le coût API
 
@@ -415,10 +418,13 @@ def _appeler_ia(prompt: str, max_tokens: int = MAX_TOKENS):
     try:
         client = anthropic.Anthropic(api_key=api_key, timeout=TIMEOUT_IA)
         response = client.messages.create(
-            model=MODEL, max_tokens=max_tokens,
+            **ia.options("medium"), max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
-        parts = [getattr(b, "text", "") for b in (response.content or []) if getattr(b, "text", "")]
+        parts = ia.textes("générateur", response)
+        if parts is None:
+            return None, ({"error": "Cette demande n'a pas pu être traitée. Reformule tes "
+                                    "contraintes et réessaie — ton quota n'a pas été entamé."}, 422)
         return "\n".join(parts).strip(), None
     except Exception as e:
         err_msg = str(e)[:300]
@@ -464,7 +470,7 @@ def _travail_generation(user_id: str, params: dict):
 # une des trois générations de la semaine (audit du 03/10). Une séance coûte
 # peu de jetons : quota à part, par jour.
 SEANCE_QUOTA_JOUR = 10
-MAX_TOKENS_SEANCE = 900
+MAX_TOKENS_SEANCE = 4000  # une séance ; 900 sous Haiku 4.5 (voir MAX_TOKENS)
 
 
 def _prompt_seance(params: dict, program: dict, seance: str, consigne: str) -> str:
