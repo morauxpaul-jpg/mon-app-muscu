@@ -23,7 +23,7 @@ PAGES = ["/accueil", "/seance", "/seance?mode=prefaite&name=Push", "/seance?mode
          "/nutrition/aliments?nouveau=recette", "/nutrition/aliments?nouveau=aliment",
          "/progres", "/progres/exercice?exo=Squat", "/progres/corps",
          "/programme", "/plus", "/gestion", "/gestion/import-muscu", "/coach", "/generator",
-         "/parrainage", "/premium", "/plaques", "/faq", "/cgv", "/confidentialite",
+         "/parrainage", "/amis", "/premium", "/plaques", "/faq", "/cgv", "/confidentialite",
          "/mentions-legales"]
 # (profil, connexion, pages)
 PROFILS = [

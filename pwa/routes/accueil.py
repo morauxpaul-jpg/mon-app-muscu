@@ -4,7 +4,7 @@ Logique portée depuis app.py (lignes 1499-1865).
 """
 import logging
 from datetime import timedelta
-from flask import Blueprint, render_template, g, request, session
+from flask import Blueprint, render_template, g, request, session, redirect, url_for
 
 from datetime import date as _date, datetime as _datetime
 
@@ -246,6 +246,10 @@ def index():
     # d'en-tête (vieux navigateur) compte comme une navigation : mieux vaut
     # écrire une fois de trop que perdre un badge.
     is_navigation = request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
+    # Lien d'ami ouvert sans être connecté, par un compte déjà inscrit : il
+    # arrive ici après la connexion. La page Amis lui propose la demande (v52).
+    if is_navigation and request.cookies.get("pending_ami"):
+        return redirect(url_for("amis.index"))
     # Afficher l'accueil pouvait déclencher jusqu'à QUATRE sauvegardes du
     # programme — badges, record de streak, bandeau PRO, défi gagné — chacune
     # relisant et réécrivant tout le blob sous verrou optimiste. Elles posent

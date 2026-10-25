@@ -334,6 +334,13 @@ def delete_user_account(user_id: str) -> None:
     # (ON DELETE CASCADE) ; le delete coach_messages qui suit couvre les
     # éventuels messages legacy sans conversation_id.
     for table, key in (
+        # Amis (v52) : les encouragements avant le fil qu'ils visent (clé
+        # étrangère), donnés comme reçus ; les amitiés des deux côtés.
+        ("encouragements", "auteur"),
+        ("encouragements", "destinataire"),
+        ("fil_seances", "user_id"),
+        ("amities", "demandeur"),
+        ("amities", "destinataire"),
         ("coach_conversations", "user_id"),
         ("coach_messages", "user_id"),
         ("nutrition", "user_id"),

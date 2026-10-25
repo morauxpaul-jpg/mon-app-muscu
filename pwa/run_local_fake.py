@@ -81,6 +81,7 @@ appmod._PUBLIC_PATHS.add("/test-vierge")
 appmod._PUBLIC_PATHS.add("/test-historique")
 appmod._PUBLIC_PATHS.add("/test-programme")
 appmod._PUBLIC_PATHS.add("/test-nutrition")
+appmod._PUBLIC_PATHS.add("/test-compte")
 
 
 @appmod.app.route("/test-login")
@@ -317,6 +318,30 @@ def test_vierge():
     session["is_vip_ts"] = time.time()
     session["onboarded"] = True
     return jsonify({"ok": True})
+
+
+@appmod.app.route("/test-compte")
+@limiter.exempt
+def test_compte():
+    """Se connecter sous un AUTRE compte (tests navigateur des amis) :
+    ?uid=…&prenom=…&code=… crée le compte s'il n'existe pas, sans rien
+    effacer, avec un programme « Push » et le code d'ami donné."""
+    import time
+    uid = request.args["uid"]
+    c = core_db.current_client()
+    if not any(p.get("id") == uid for p in c.tables.get("profiles", [])):
+        c.table("profiles").insert({"id": uid, "tier": "free", "prenom": request.args.get("prenom", "Ami"),
+                                    "referral_code": request.args.get("code")}).execute()
+        c.table("onboarding").insert({"user_id": uid, "completed_at": "2026-01-01"}).execute()
+        c.table("programs").insert({"user_id": uid, "data": {
+            "Push": [{"name": "Développé couché", "sets": 2, "muscle": "Pecs", "reps": "5"}],
+            "_planning": {j: "Push" for j in ("Lundi", "Mardi", "Mercredi", "Jeudi",
+                                              "Vendredi", "Samedi", "Dimanche")},
+            "_settings": {}}}).execute()
+    session.clear()
+    session.update(user_id=uid, email=f"{uid}@example.com", is_vip=False, is_vip_full=False,
+                   is_vip_ts=time.time(), onboarded=True)
+    return redirect(request.args.get("to") or "/amis")
 
 
 @appmod.app.route("/test-historique")

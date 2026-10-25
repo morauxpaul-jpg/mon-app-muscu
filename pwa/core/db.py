@@ -18,6 +18,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_nutrition    les repas et les sommes de macros
     db_aliments     mes aliments et mes recettes (table `aliments_perso`, v49)
     db_photos       les photos de progression et leurs fichiers (table `photos_corps`, v50)
+    db_amis         les amis, le fil de leurs séances et les encouragements (v52)
     db_bilans       les bilans de séance
     db_abonnement   tier PRO, Stripe, parrainage
     db_push         notifications, newsletter, relance des inactifs
@@ -111,6 +112,15 @@ from core.db_photos import (
     PhotosIndisponibles, dernieres_photos_par_compte, enregistrer_photo, get_photo,
     lire_fichier, list_photos, supprimer_photo, supprimer_toutes_les_photos,
     COLONNES_PHOTOS, DOSSIER, TABLE_PHOTOS, _absente, _dossier, _requete, _retirer_fichiers,
+)
+
+# ── les amis ────────────────────────────────────────────────────
+from core.db_amis import (
+    AmisIndisponibles, accepter, amities_de, annuler, demander, effacer_fil, encourager,
+    encouragements_pour, export_amis, fil, masquer_seances, profils, publier_seance,
+    refuser, retirer, retirer_du_fil, visibles_par,
+    COLONNES_AMITIES, COLONNES_FIL, TABLE_AMITIES, TABLE_ENCOURAGEMENTS, TABLE_FIL,
+    _NOMS, _doublon, _effacer, _entre,
 )
 
 # ── tier PRO, Stripe, parrainage ────────────────────────────────

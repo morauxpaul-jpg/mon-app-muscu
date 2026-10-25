@@ -148,13 +148,20 @@ class FakeQuery:
     # échouerait en production — ou l'inverse, un code qui suppose l'index
     # ne serait jamais confronté à son refus.
     UNIQUE = {"history": ("user_id", "date", "seance", "exercice", "serie"),
-              "photos_corps": ("user_id", "date", "angle")}            # v50
+              "photos_corps": ("user_id", "date", "angle"),            # v50
+              "fil_seances": ("user_id", "session_id"),                # v52
+              "encouragements": ("auteur", "session_id"),              # v52
+              "amities": ("demandeur", "destinataire")}                # v52, paire sans ordre
+
+    # Index sur une expression : (least, greatest) — A→B et B→A sont la même paire.
+    PAIRE_SANS_ORDRE = {"amities"}
 
     def _cle_unique(self, row):
         cols = self.UNIQUE.get(self._table)
         if not cols or any(row.get(c) is None for c in cols):
             return None  # NULL n'entre jamais en collision (comme PostgreSQL)
-        return tuple(row.get(c) for c in cols)
+        cle = tuple(row.get(c) for c in cols)
+        return tuple(sorted(cle)) if self._table in self.PAIRE_SANS_ORDRE else cle
 
     def _verifier_unicite(self, rows):
         vues = set()

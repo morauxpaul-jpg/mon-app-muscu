@@ -21,15 +21,17 @@
   </div>
 
   {# ── Lien d'invitation ── #}
-  <div class="card">
+  <div class="card" data-invitation data-chemin="/?ref={{ referral_code|urlencode }}"
+       data-texte="Rejoins-moi sur Muscu Tracker : on gagne chacun des jours PRO !">
     <div class="card-label">Ton lien d'invitation</div>
     <div class="s-f12844">
-      <input id="ref-link" type="text" class="field s-77df1c" readonly value="">
-      <button type="button" class="btn s-6ee066" id="ref-copy" data-haptic="1">Copier</button>
+      <input id="ref-link" type="text" class="field s-77df1c inv-lien" readonly value="" aria-label="Ton lien d'invitation">
+      <button type="button" class="btn s-6ee066 inv-copier" id="ref-copy" data-haptic="1">Copier</button>
     </div>
-    <button type="button" class="btn primary label-icon s-d5b41c" id="ref-share" data-haptic="1">
+    <button type="button" class="btn primary label-icon s-d5b41c inv-partager" id="ref-share" data-haptic="1">
       <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>Partager mon lien
     </button>
+    <p class="s-6ef023">Pour ajouter un ami et voir vos séances : <a href="/amis">page Amis</a>.</p>
   </div>
 
   {# ── Compteur ── #}
@@ -48,46 +50,5 @@
     Crédité quand ton ami termine son inscription. L'essai donne accès à la nutrition et aux stats détaillées.
   </p>
 
-  <script nonce="{{ csp_nonce() }}">
-    (function () {
-      var code = {{ referral_code|tojson }};
-      var link = location.origin + '/?ref=' + encodeURIComponent(code);
-      var input = document.getElementById('ref-link');
-      if (input) input.value = link;
-
-      function toast(msg) {
-        var t = document.createElement('div');
-        t.textContent = msg;
-        t.style.cssText = 'position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1b1f27;color:#fff;border:1px solid rgba(255,255,255,0.12);padding:12px 18px;border-radius:12px;font-size:14px;z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
-        document.body.appendChild(t);
-        setTimeout(function(){ t.style.transition='opacity .4s'; t.style.opacity='0'; }, 2200);
-        setTimeout(function(){ t.remove(); }, 2700);
-      }
-      function trackShare(method) {
-        try { fetch('/parrainage/share', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({method:method}), keepalive:true }).catch(function(){}); } catch(e){}
-      }
-
-      window.copyRefLink = function () {
-        if (input) { input.select(); }
-        (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
-          .then(function(){ toast('Lien copié'); trackShare('copy'); })
-          .catch(function(){ try { document.execCommand('copy'); toast('Lien copié'); trackShare('copy'); } catch(e){} });
-      };
-
-      window.shareRefLink = async function () {
-        var text = 'Rejoins-moi sur Muscu Tracker : on gagne chacun des jours PRO !';
-        if (navigator.share) {
-          try { await navigator.share({ title: 'Muscu Tracker', text: text, url: link }); trackShare('share'); return; }
-          catch (e) { if (e && e.name === 'AbortError') return; }
-        }
-        window.copyRefLink();
-      };
-
-      // Branchés ici : la CSP refuse les onclick écrits dans le HTML.
-      var copier = document.getElementById('ref-copy');
-      if (copier) copier.addEventListener('click', function () { window.copyRefLink(); });
-      var partager = document.getElementById('ref-share');
-      if (partager) partager.addEventListener('click', function () { window.shareRefLink(); });
-    })();
-  </script>
+  <script src="/static/js/invitation.js"></script>
 {% endblock %}

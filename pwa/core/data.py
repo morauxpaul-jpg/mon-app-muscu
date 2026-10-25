@@ -139,7 +139,10 @@ def delete_exo_rows(date_str, seance, exercice, serie=None, exo_id=None):
 
 
 def delete_session_rows(date_str, seance):
-    return db.delete_session_rows(_uid(), date_str, seance)
+    out = db.delete_session_rows(_uid(), date_str, seance)
+    # Une séance effacée ne reste pas dans le fil des amis (v52).
+    db.retirer_du_fil(_uid(), db.session_id_for(_uid(), str(date_str), seance))
+    return out
 
 
 
@@ -258,6 +261,15 @@ def enregistrer_photo(date_iso, angle, image, miniature):
 
 def supprimer_photo(photo_id):
     return db.supprimer_photo(_uid(), photo_id)
+
+
+# ── Amis (v52) : le reste passe par routes/amis.py ──────────────────────
+def export_amis():
+    return db.export_amis(_uid())
+
+
+def effacer_fil():
+    return db.effacer_fil(_uid())
 
 
 

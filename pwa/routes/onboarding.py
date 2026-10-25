@@ -212,4 +212,12 @@ def submit():
             # Le filleul passe en essai VIP immédiatement (revalidation forcée).
             session.pop("is_vip", None)
             session.pop("is_vip_full", None)
+    # Arrivé par un lien d'ami (v52) : la demande part, l'ami l'acceptera.
+    from core.amis_liens import COOKIE_AMI, demande_apres_inscription
+    ami = (request.cookies.get(COOKIE_AMI) or "").strip()
+    if ami:
+        resp.delete_cookie(COOKIE_AMI)
+        envoyee = demande_apres_inscription(g.user_id, ami) in ("envoyee", "acceptee")
+        if envoyee and programme_id != "custom":
+            resp.location = url_for("amis.index", m="envoyee")   # cookies gardés
     return resp
