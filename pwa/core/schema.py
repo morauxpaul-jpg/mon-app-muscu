@@ -46,6 +46,7 @@ ATTENDU = {
         "referral_code", "referred_by", "vip_until",           # v29
         "newsletter_opt_in", "newsletter_opt_in_at", "newsletter_email",  # v31
         "coach_memory",                                        # v36
+        "seances_masquees",                                    # v52
     ),
     "onboarding": ("user_id", "prenom", "age", "sexe", "niveau", "frequence",
                    "objectif", "equipement", "completed_at"),
@@ -74,6 +75,12 @@ ATTENDU = {
                        "created_at", "updated_at"),            # v49
     "photos_corps": ("id", "user_id", "date", "angle", "chemin", "miniature",
                      "octets", "created_at"),                  # v50
+    "amities": ("id", "demandeur", "destinataire", "etat", "created_at",
+                "acceptee_le"),                                # v52
+    "fil_seances": ("id", "user_id", "session_id", "date", "seance", "duree_min",
+                    "tonnage", "records", "created_at"),       # v52
+    "encouragements": ("id", "auteur", "destinataire", "session_id",
+                       "created_at"),                          # v52
     # Vues (lecture seule, côté serveur)
     "user_last_activity": ("user_id", "last_date"),            # v37, v44
     "admin_history_stats": ("total_rows", "total_tonnage", "total_seances",
@@ -220,7 +227,7 @@ def verifier_et_enregistrer(get_client) -> dict:
 
 
 def verifier_au_demarrage(get_client) -> threading.Thread:
-    """Lance le contrôle en tâche de fond : ~17 requêtes, le démarrage n'attend pas."""
+    """Lance le contrôle en tâche de fond : ~21 requêtes, le démarrage n'attend pas."""
     t = threading.Thread(target=verifier_et_enregistrer, args=(get_client,),
                          name="controle-schema", daemon=True)
     t.start()

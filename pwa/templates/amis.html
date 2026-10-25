@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Amis · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="/plus" class="btn label-icon s-86c142 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Plus</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#users"/></svg>Amis</h1>
+
+  {% if message %}<div class="card amis-message" role="status" id="amis-message">{{ message }}</div>{% endif %}
+
+  {% if not indisponible %}
+
+  {# ── Invitation reçue par un lien ────────────────────────────── #}
+  {% if invitation %}
+    <div class="card amis-invitation" id="amis-invitation">
+      <p class="amis-texte"><b>{{ invitation.nom }}</b> t'invite à devenir amis. Une fois ta demande acceptée, vous verrez chacun les séances terminées de l'autre.</p>
+      <div class="amis-boutons">
+        <form method="post" action="/amis/demande">
+          <input type="hidden" name="code" value="{{ invitation.code }}">
+          <button type="submit" class="btn primary" data-haptic="1">Envoyer une demande à {{ invitation.nom }}</button>
+        </form>
+        <form method="post" action="/amis/ignorer">
+          <button type="submit" class="btn">Pas maintenant</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── Demandes reçues ─────────────────────────────────────────── #}
+  {% if recues %}
+    <section class="card" aria-label="Demandes reçues" id="amis-recues">
+      <div class="card-label">Demandes reçues</div>
+      {% for d in recues %}
+        <div class="amis-ligne">
+          <span class="amis-nom">{{ d.nom }}</span>
+          <form method="post" action="/amis/accepter"><input type="hidden" name="id" value="{{ d.id }}"><button type="submit" class="btn primary" data-haptic="1" aria-label="Accepter {{ d.nom }}">Accepter</button></form>
+          <form method="post" action="/amis/refuser"><input type="hidden" name="id" value="{{ d.id }}"><button type="submit" class="btn" aria-label="Refuser {{ d.nom }}">Refuser</button></form>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {# ── Le fil ──────────────────────────────────────────────────── #}
+  <section aria-label="Séances des amis" id="amis-fil">
+    <h2 class="amis-titre">Le fil</h2>
+    {% if not fil %}
+      <div class="card amis-texte">{% if amis %}Pas de séance terminée ces 30 derniers jours.{% else %}Ajoute un ami : ses séances terminées apparaîtront ici, et les tiennes chez lui.{% endif %}</div>
+    {% endif %}
+    {% for s in fil %}
+      <article class="card amis-seance" id="s-{{ s.session_id }}">
+        <div class="amis-entete">
+          <span class="amis-nom">{{ s.nom }}</span>
+          <span class="amis-date">{{ s.date|jour_mois }}</span>
+        </div>
+        <div class="amis-seance-nom">{{ s.seance }}</div>
+        <div class="amis-chiffres">
+          {% if s.duree_min %}<span><b>{{ s.duree_min }}</b> min</span>{% endif %}
+          <span><b>{{ s.tonnage }}</b> kg soulevés</span>
+          {% if s.records %}<span class="amis-records-nb"><b>{{ s.records|length }}</b> record{{ 's' if s.records|length > 1 else '' }}</span>{% endif %}
+        </div>
+        {% if s.records %}
+          <ul class="amis-records">
+            {% for r in s.records %}<li><svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#trophy"/></svg>{{ r.exo }} · {{ r.poids }} kg</li>{% endfor %}
+          </ul>
+        {% endif %}
+        {% if s.moi %}
+          <div class="amis-recus" aria-label="Encouragements reçus">
+            <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#biceps"/></svg>
+            {% if s.encouragements %}<b>{{ s.encouragements }}</b> encouragement{{ 's' if s.encouragements > 1 else '' }}{% else %}Pas encore d'encouragement{% endif %}
+          </div>
+        {% elif s.deja %}
+          <div class="amis-recus amis-donne"><svg class="icon icon-md icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#biceps"/></svg>Encouragé</div>
+        {% else %}
+          <form method="post" action="/amis/encourager">
+            <input type="hidden" name="compte" value="{{ s.compte }}">
+            <input type="hidden" name="session" value="{{ s.session_id }}">
+            <button type="submit" class="btn label-icon amis-encourager" data-haptic="1" aria-label="Encourager {{ s.nom }} pour {{ s.seance }}"><svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#biceps"/></svg>Encourager</button>
+          </form>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+
+  {# ── Ajouter un ami ──────────────────────────────────────────── #}
+  <section class="card" aria-label="Ajouter un ami" id="amis-ajouter">
+    <div class="card-label">Ajouter un ami</div>
+    <p class="amis-texte">Envoie ton lien sur WhatsApp. Ton ami t'envoie une demande, tu l'acceptes ici. Pas encore inscrit, il crée son compte d'abord, et reçoit un jour d'essai PRO.</p>
+    <div data-invitation data-chemin="/?ref={{ code|urlencode }}&amp;ami=1"
+         data-texte="Ajoute-moi en ami sur Muscu Tracker pour suivre nos séances !" data-suivi="ami">
+      <div class="s-f12844">
+        <input type="text" class="field s-77df1c inv-lien" readonly value="" aria-label="Ton lien d'ami">
+        <button type="button" class="btn s-6ee066 inv-copier" data-haptic="1">Copier</button>
+      </div>
+      <button type="button" class="btn primary label-icon s-d5b41c inv-partager" data-haptic="1">
+        <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>Partager mon lien
+      </button>
+    </div>
+    <p class="amis-texte">Ton code : <b class="amis-code" id="amis-code">{{ code|upper }}</b></p>
+    <form method="post" action="/amis/demande" class="amis-form-code">
+      <label class="field-label" for="amis-code-ami">Le code d'un ami</label>
+      <div class="s-f12844">
+        <input type="text" id="amis-code-ami" name="code" class="field s-77df1c" autocomplete="off" autocapitalize="characters" maxlength="200" required placeholder="ABCD2345">
+        <button type="submit" class="btn s-6ee066" data-haptic="1">Envoyer</button>
+      </div>
+    </form>
+  </section>
+
+  {% if envoyees %}
+    <section class="card" aria-label="Demandes envoyées" id="amis-envoyees">
+      <div class="card-label">En attente de réponse</div>
+      {% for d in envoyees %}
+        <div class="amis-ligne">
+          <span class="amis-nom">{{ d.nom }}</span>
+          <form method="post" action="/amis/annuler"><input type="hidden" name="id" value="{{ d.id }}"><button type="submit" class="btn" aria-label="Annuler la demande à {{ d.nom }}">Annuler</button></form>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {# ── Mes amis ────────────────────────────────────────────────── #}
+  {% if amis %}
+    <section class="card" aria-label="Mes amis" id="amis-liste">
+      <div class="card-label">Mes amis · {{ amis|length }}</div>
+      {% for a in amis %}
+        <div class="amis-ligne">
+          <span class="amis-nom">{{ a.nom }}</span>
+          {# Confirmation dans la ligne, sans confirm() natif. #}
+          <details class="amis-retirer">
+            <summary class="btn" aria-label="Retirer {{ a.nom }}">Retirer</summary>
+            <form method="post" action="/amis/retirer">
+              <input type="hidden" name="id" value="{{ a.id }}">
+              <button type="submit" class="btn amis-danger">Oui, retirer {{ a.nom }}</button>
+            </form>
+          </details>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {# ── Réglage ─────────────────────────────────────────────────── #}
+  <section class="card" aria-label="Ce que voient mes amis" id="reglage">
+    <div class="card-label">Ce que voient mes amis</div>
+    <p class="amis-texte">Tes séances terminées : nom, date, durée, tonnage et records. Jamais ton poids, tes photos, ta nutrition, ton coach ni tes notes de séance.</p>
+    <form method="post" action="/amis/masquer" class="amis-ligne">
+      <span class="amis-nom">{% if masquees %}Tes séances sont masquées{% else %}Tes amis voient tes séances{% endif %}</span>
+      <input type="hidden" name="masquer" value="{{ '0' if masquees else '1' }}">
+      <button type="submit" class="btn" id="amis-masquer">{% if masquees %}Montrer mes séances{% else %}Masquer mes séances{% endif %}</button>
+    </form>
+  </section>
+
+  {% endif %}
+
+  <style>
+    .amis-titre { font-family: var(--font-display); font-weight: 600; font-size: 1rem; text-transform: uppercase; color: var(--text-2); margin: 16px 0 8px; }
+    .amis-texte { color: var(--text-2); font-size: .92rem; margin: 0 0 10px; }
+    .amis-message { color: var(--text-1); }
+    .amis-boutons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .amis-ligne { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border-default); }
+    .card-label + .amis-ligne, form.amis-ligne { border-top: 0; }
+    .amis-ligne form { margin: 0; }
+    .amis-nom { flex: 1; min-width: 0; font-weight: 600; color: var(--text-1); overflow-wrap: anywhere; }
+    .amis-entete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .amis-date { color: var(--text-2); font-size: .85rem; white-space: nowrap; }
+    .amis-seance-nom { font-family: var(--font-display); font-size: 1.35rem; text-transform: uppercase; color: var(--text-1); margin: 2px 0 6px; overflow-wrap: anywhere; }
+    .amis-chiffres { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--text-2); font-size: .9rem; }
+    .amis-chiffres b { color: var(--text-1); font-family: var(--font-display); font-size: 1.1rem; }
+    .amis-records { list-style: none; padding: 0; margin: 8px 0 0; color: var(--text-1); font-size: .9rem; }
+    .amis-records li { display: flex; align-items: center; gap: 6px; }
+    .amis-recus { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--text-2); }
+    .amis-donne { color: var(--accent); }
+    .amis-encourager { margin-top: 10px; }
+    .amis-code { font-family: var(--font-display); font-size: 1.15rem; color: var(--text-1); letter-spacing: 0; }
+    .amis-form-code { margin-top: 4px; }
+    .amis-retirer summary { list-style: none; cursor: pointer; }
+    .amis-retirer summary::-webkit-details-marker { display: none; }
+    .amis-retirer[open] summary { display: none; }
+    .amis-danger { color: var(--danger); border-color: var(--danger); }
+  </style>
+  <script src="/static/js/invitation.js"></script>
+{% endblock %}

@@ -12,6 +12,7 @@ from core.data import (
 from core.dates import logical_today_paris, now_paris
 from core.limiter import limiter
 from core.analytics import track
+from core.amis_liens import publier_fin_de_seance
 from core.bilans_seance import _save_session_note, _load_session_note
 from core.seance_semaine import _normalize_hist
 from core.seance_calques import purger_les_calques
@@ -94,6 +95,9 @@ def finish():
     if not series:
         track("workout_finished_empty", {"mode": mode, "seance": seance_name})
         return redirect(url_for("accueil.index"))
+    # Le fil des amis (v52) : nom, date, durée, tonnage, records.
+    publier_fin_de_seance(g.user_id, seance_name, date_str,
+                          _normalize_hist(get_hist(), prog)[0], duration)
     # L'accueil (écran suivant) propose le debrief de CETTE séance.
     session["last_workout"] = {"seance": seance_name, "date": date_str}
     _ouvrir_essai()

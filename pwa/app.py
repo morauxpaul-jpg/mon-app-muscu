@@ -39,6 +39,7 @@ from routes.admin import bp as admin_bp
 from routes.generator import bp as generator_bp
 from routes.share import bp as share_bp
 from routes.parrainage import bp as parrainage_bp
+from routes.amis import bp as amis_bp
 from routes.push import bp as push_bp
 from routes.csp import bp as csp_bp
 
@@ -197,6 +198,7 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(generator_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(parrainage_bp)
+app.register_blueprint(amis_bp)
 app.register_blueprint(push_bp)
 app.register_blueprint(csp_bp)
 
@@ -526,14 +528,23 @@ def _inject_user():
 
 @app.route("/")
 def landing():
+    ref = (request.args.get("ref") or "").strip()[:32]
+    # Lien d'ami (v52) : `?ref=CODE&ami=1`, le lien de parrainage plus la
+    # demande d'ami. Déjà connecté : la page Amis propose d'envoyer la demande.
+    ami = bool(ref) and request.args.get("ami") == "1"
     if session.get("user_id"):
+        if ami:
+            return redirect(url_for("amis.index", code=ref))
         return redirect(url_for("accueil.index"))
     resp = make_response(render_template("landing.html"))
     # Parrainage : mémorise le code ?ref= dans un cookie qui survit au round-trip
     # OAuth Google. Crédité plus tard à l'onboarding du filleul.
-    ref = (request.args.get("ref") or "").strip()[:32]
     if ref:
         resp.set_cookie("pending_ref", ref, max_age=30 * 24 * 3600,
+                        samesite="Lax", httponly=True,
+                        secure=bool(os.getenv("FLASK_SECRET_KEY")))
+    if ami:
+        resp.set_cookie("pending_ami", ref, max_age=30 * 24 * 3600,
                         samesite="Lax", httponly=True,
                         secure=bool(os.getenv("FLASK_SECRET_KEY")))
     return resp

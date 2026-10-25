@@ -15,7 +15,7 @@ import pytest
 from conftest import USER_ID
 
 PAGES = ["/accueil", "/programme", "/progres", "/gestion", "/nutrition",
-         "/cardio", "/premium", "/plus", "/coach"]
+         "/cardio", "/premium", "/plus", "/coach", "/amis"]
 
 # Attributs qui fabriquent un nom au moment de l'exécution (Alpine).
 _DYNAMIC_NAME = ("x-text", ":aria-label", "x-bind:aria-label",
