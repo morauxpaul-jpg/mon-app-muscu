@@ -13,7 +13,7 @@
       <div>
         <div class="s-571945">Goûtez au PRO à deux</div>
         <div class="s-cc94e0">
-          Ton ami reçoit <strong class="s-38f301">{{ referee_days }} jour{{ 's' if referee_days > 1 else '' }} d'essai PRO</strong> à l'inscription, et toi
+          Ton ami a <strong class="s-38f301">{{ essai_jours }} jours de PRO</strong> après sa première séance, et toi
           <strong class="s-38f301">{{ referrer_days }} jour{{ 's' if referrer_days > 1 else '' }}</strong> par ami qui rejoint.
         </div>
       </div>
@@ -22,7 +22,7 @@
 
   {# ── Lien d'invitation ── #}
   <div class="card" data-invitation data-chemin="/?ref={{ referral_code|urlencode }}"
-       data-texte="Rejoins-moi sur Muscu Tracker : on gagne chacun des jours PRO !">
+       data-texte="Rejoins-moi sur Muscu Tracker : {{ essai_jours }} jours de PRO offerts après ta première séance !">
     <div class="card-label">Ton lien d'invitation</div>
     <div class="s-f12844">
       <input id="ref-link" type="text" class="field s-77df1c inv-lien" readonly value="" aria-label="Ton lien d'invitation">

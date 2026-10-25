@@ -94,3 +94,17 @@ def test_une_seance_sans_serie_n_ouvre_rien(fake_db, gratuit):
     _terminer(gratuit)
     assert _profil(fake_db).get("vip_until") is None
     assert _essais(fake_db) == []
+
+
+def test_un_ami_invite_a_l_essai_apres_sa_premiere_seance(fake_db):
+    """25/10 : le jour offert au filleul à l'inscription posait `vip_until`
+    et lui fermait cet essai. Il a maintenant les 3 jours de tout le monde."""
+    import core.db as core_db
+    from core.essai import ESSAI_JOURS, ouvrir_premier_essai
+    from routes.parrainage import apply_referral
+    fake_db.table("profiles").insert({"id": "u-parrain", "tier": "free"}).execute()
+    fake_db.table("profiles").insert({"id": "u-filleul", "tier": "free"}).execute()
+    assert apply_referral("u-filleul", core_db.get_or_create_referral_code("u-parrain"))
+    fin = ouvrir_premier_essai("u-filleul", core_db.get_profile("u-filleul"))
+    assert fin and core_db.vip_until_active(core_db.get_profile("u-filleul")["vip_until"])
+    assert ESSAI_JOURS == 3

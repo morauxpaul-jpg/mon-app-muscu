@@ -2,13 +2,20 @@
 
 Boucle : chaque user a un `referral_code` → lien `/?ref=CODE`. Un nouvel
 arrivant qui complète l'onboarding via ce lien déclenche `apply_referral` :
-parrain et filleul reçoivent des jours de VIP à durée limitée (`vip_until`).
+le parrain reçoit des jours de VIP à durée limitée (`vip_until`).
+
+Le filleul ne reçoit plus rien à l'inscription (25/10). Son jour offert
+posait `vip_until` avant même sa première séance et lui fermait l'essai de
+3 jours (core/essai.py), ouvert seulement à qui n'en a jamais eu : un ami
+invité était moins bien traité qu'un inconnu. Il a désormais l'essai de
+tout le monde, après sa première séance.
 """
 import logging
 
 from flask import Blueprint, render_template, request, jsonify, g
 
 from core import db as core_db
+from core.essai import ESSAI_JOURS
 from core.analytics import track
 from core.limiter import limiter
 
@@ -20,11 +27,10 @@ bp = Blueprint("parrainage", __name__)
 # détaillées seulement, cf. gates g.is_vip_full) : assez pour goûter, trop court
 # pour tout extraire et ne plus payer.
 REFERRER_VIP_DAYS = 3    # parrain : par filleul qui complète l'onboarding
-REFEREE_VIP_DAYS = 1     # filleul : à l'arrivée via un lien d'invitation
 
 
 def apply_referral(user_id: str, ref_code: str) -> bool:
-    """Crédite parrain + filleul UNE seule fois. Retourne True si crédité.
+    """Crédite le parrain UNE seule fois par filleul. Retourne True si crédité.
 
     Garde-fous : code valide, pas d'auto-parrainage, filleul pas déjà parrainé.
     """
@@ -38,7 +44,6 @@ def apply_referral(user_id: str, ref_code: str) -> bool:
         if not referrer_id or referrer_id == user_id:
             return False  # code inconnu ou auto-parrainage
         core_db.set_referred_by(user_id, referrer_id)
-        core_db.grant_vip_days(user_id, REFEREE_VIP_DAYS)
         core_db.grant_vip_days(referrer_id, REFERRER_VIP_DAYS)
         track("referral_signup", {"referrer": referrer_id}, user_id=user_id)
         return True
@@ -59,7 +64,7 @@ def index():
     return render_template(
         "parrainage.html", active="plus",
         referral_code=code, referral_count=count,
-        referrer_days=REFERRER_VIP_DAYS, referee_days=REFEREE_VIP_DAYS,
+        referrer_days=REFERRER_VIP_DAYS, essai_jours=ESSAI_JOURS,
     )
 
 

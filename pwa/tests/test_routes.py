@@ -760,7 +760,7 @@ def test_referral_credits_both_once(fake_db):
     fake_db.table("profiles").insert({"id": "new-1", "tier": "free"}).execute()
 
     assert apply_referral("new-1", code) is True
-    assert db.vip_until_active(db.get_profile("new-1").get("vip_until"))   # filleul
+    assert not db.get_profile("new-1").get("vip_until")   # filleul : l'essai l'attend
     assert db.vip_until_active(db.get_profile("ref-1").get("vip_until"))   # parrain
     assert db.get_profile("new-1").get("referred_by") == "ref-1"
     # Une seule fois : 2e tentative ignorée.
