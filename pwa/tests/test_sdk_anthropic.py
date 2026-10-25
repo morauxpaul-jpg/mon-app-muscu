@@ -26,10 +26,18 @@ ERREURS = {
 }
 
 
+# Haiku 5.5 réfléchit par défaut : sa réponse commence par un bloc `thinking`,
+# dont le texte est vide (seule la signature revient). Le faux serveur fait de
+# même, pour que chaque test vérifie que ce bloc n'entre pas dans la réponse.
+REFLEXION = {"type": "thinking", "thinking": "", "signature": "sig_test"}
+REFUS = {"type": "refusal", "category": "general_harms", "explanation": None}
+
+
 class _Serveur(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     requetes: list = []
     erreur = None
+    refus = False        # refus de sécurité, après le début du texte
 
     def log_message(self, *a):
         pass
@@ -54,22 +62,31 @@ class _Serveur(BaseHTTPRequestHandler):
             # Sans `x-should-retry: false`, le SDK réessaierait 2 fois avec attente.
             return self._envoyer(code, {"type": "error", "error": {"type": type_, "message": msg}},
                                  extra={"x-should-retry": "false", "request-id": "req_test"})
+        fin = {"stop_reason": "refusal" if _Serveur.refus else "end_turn", "stop_sequence": None,
+               "stop_details": REFUS if _Serveur.refus else None}
+        morceaux = MORCEAUX[:1] if _Serveur.refus else MORCEAUX
         message = {"id": "msg_test", "type": "message", "role": "assistant",
-                   "model": corps["model"], "stop_reason": "end_turn", "stop_sequence": None,
+                   "model": corps["model"], **fin,
                    "usage": {"input_tokens": 10, "output_tokens": 12}}
         if not corps.get("stream"):
-            return self._envoyer(200, {**message, "content": [{"type": "text", "text": "".join(MORCEAUX)}]})
+            return self._envoyer(200, {**message, "content": [
+                REFLEXION, {"type": "text", "text": "".join(morceaux)}]})
         evenements = [("message_start", {"type": "message_start", "message": {
-                          **message, "content": [], "stop_reason": None,
+                          **message, "content": [], "stop_reason": None, "stop_details": None,
                           "usage": {"input_tokens": 10, "output_tokens": 1}}}),
                       ("content_block_start", {"type": "content_block_start", "index": 0,
+                                               "content_block": {**REFLEXION, "signature": ""}}),
+                      ("content_block_delta", {"type": "content_block_delta", "index": 0,
+                                               "delta": {"type": "signature_delta",
+                                                         "signature": "sig_test"}}),
+                      ("content_block_stop", {"type": "content_block_stop", "index": 0}),
+                      ("content_block_start", {"type": "content_block_start", "index": 1,
                                                "content_block": {"type": "text", "text": ""}})]
-        evenements += [("content_block_delta", {"type": "content_block_delta", "index": 0,
+        evenements += [("content_block_delta", {"type": "content_block_delta", "index": 1,
                                                 "delta": {"type": "text_delta", "text": m}})
-                       for m in MORCEAUX]
-        evenements += [("content_block_stop", {"type": "content_block_stop", "index": 0}),
-                       ("message_delta", {"type": "message_delta",
-                                          "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                       for m in morceaux]
+        evenements += [("content_block_stop", {"type": "content_block_stop", "index": 1}),
+                       ("message_delta", {"type": "message_delta", "delta": fin,
                                           "usage": {"output_tokens": 12}}),
                        ("message_stop", {"type": "message_stop"})]
         sse = "".join(f"event: {e}\ndata: {json.dumps(d)}\n\n" for e, d in evenements)
@@ -80,7 +97,7 @@ class _Serveur(BaseHTTPRequestHandler):
 def api(monkeypatch):
     serveur = ThreadingHTTPServer(("127.0.0.1", 0), _Serveur)
     threading.Thread(target=serveur.serve_forever, daemon=True).start()
-    _Serveur.requetes, _Serveur.erreur = [], None
+    _Serveur.requetes, _Serveur.erreur, _Serveur.refus = [], None, False
     monkeypatch.setenv("ANTHROPIC_BASE_URL", f"http://127.0.0.1:{serveur.server_port}")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     yield _Serveur
@@ -161,7 +178,7 @@ def test_le_bilan_et_la_memoire_passent_par_le_vrai_sdk(api):
         [{"role": "user", "content": "J'ai mal au genou."},
          {"role": "assistant", "content": "Évite les squats lourds."}])
     assert note == "".join(MORCEAUX)
-    assert api.requetes[1]["corps"]["max_tokens"] == 250
+    assert api.requetes[1]["corps"]["max_tokens"] == coach_memory.MAX_TOKENS
 
 
 def test_le_generateur_passe_par_le_vrai_sdk(api):
@@ -170,3 +187,78 @@ def test_le_generateur_passe_par_le_vrai_sdk(api):
     api.erreur = "surcharge"
     texte, (corps, code) = _appeler_ia("Un programme push/pull/legs.")
     assert texte is None and code == 502 and "très sollicité" in corps["error"]
+
+
+# ── Passage à Haiku 5.5 (25/10) ──────────────────────────────────
+
+
+def test_chaque_appel_part_avec_les_reglages_de_haiku_5_5(api, fake_db, logged_in):
+    """Modèle, effort, plafonds : ce qui part réellement dans la requête."""
+    from core import coach_memory, debrief, ia
+    from routes import coach, generator
+    _seed(fake_db)
+    _evenements(_demander(logged_in))
+    _demander(logged_in, stream=False)
+    debrief.generate("sk-test", {"seance": "Push", "date": "2026-10-25", "volume": 1, "sets": 1,
+                                 "reps": 1, "exos": {}})
+    coach_memory.build_summary(anthropic.Anthropic(api_key="sk-test"), coach.MODEL, "",
+                               [{"role": "user", "content": "J'ai mal au genou."}])
+    generator._appeler_ia("Un programme.")
+    corps = [r["corps"] for r in api.requetes]
+    assert [c["model"] for c in corps] == ["claude-haiku-5-5"] * 5
+    assert [c["output_config"] for c in corps] == [{"effort": "low"}] * 4 + [{"effort": "medium"}]
+    assert [c["max_tokens"] for c in corps] == [coach.MAX_TOKENS, coach.MAX_TOKENS,
+                                                debrief.MAX_TOKENS, coach_memory.MAX_TOKENS,
+                                                generator.MAX_TOKENS]
+    for c in corps:
+        # Refusés par Haiku 5.5 : budget de réflexion, échantillonnage, réponse amorcée.
+        assert "thinking" not in c and not {"temperature", "top_p", "top_k"} & set(c)
+        assert c["messages"][-1]["role"] == "user"
+    assert ia.MODEL == coach.MODEL == debrief.MODEL == generator.MODEL
+
+
+def test_les_tokens_de_chaque_appel_sont_journalises(api, fake_db, logged_in, caplog):
+    _seed(fake_db)
+    with caplog.at_level("INFO", logger="core.ia"):
+        _evenements(_demander(logged_in))
+        _demander(logged_in, stream=False)
+    lignes = [r.getMessage() for r in caplog.records if r.name == "core.ia"]
+    assert lignes == ["ia coach : 10 tokens en entrée, 12 en sortie, fin=end_turn"] * 2
+
+
+def _quota(fake_db):
+    profil = next(p for p in fake_db.tables["profiles"] if p["id"] == USER_ID)
+    return int(profil.get("coach_quota_count") or 0)
+
+
+def test_un_refus_en_cours_de_flux_efface_le_debut_et_rend_la_question(api, fake_db, logged_in):
+    from routes.coach import REFUS
+    _seed(fake_db)
+    api.refus = True
+    evenements = _evenements(_demander(logged_in))
+    assert [e for e, _ in evenements] == ["delta", "error"]
+    assert evenements[-1][1] == {"error": REFUS, "retirer": True}
+    assert _quota(fake_db) == 0
+    assert not fake_db.tables.get("coach_messages")       # rien n'est gardé
+
+
+def test_un_refus_sans_flux_rend_la_question(api, fake_db, logged_in):
+    from routes.coach import REFUS
+    _seed(fake_db)
+    api.refus = True
+    r = _demander(logged_in, stream=False)
+    assert r.status_code == 422 and r.get_json() == {"error": REFUS}
+    assert _quota(fake_db) == 0
+    assert not fake_db.tables.get("coach_messages")
+
+
+def test_un_refus_ne_donne_ni_bilan_ni_memoire_ni_programme(api):
+    from core import coach_memory, debrief
+    from routes.generator import _appeler_ia
+    api.refus = True
+    assert debrief.generate("sk-test", {"seance": "Push", "date": "2026-10-25", "volume": 1,
+                                        "sets": 1, "reps": 1, "exos": {}}) is None
+    assert coach_memory.build_summary(anthropic.Anthropic(api_key="sk-test"), debrief.MODEL,
+                                      "note", [{"role": "user", "content": "Bonjour"}]) is None
+    texte, (corps, code) = _appeler_ia("Un programme.")
+    assert texte is None and code == 422 and "Reformule" in corps["error"]

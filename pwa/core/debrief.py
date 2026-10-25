@@ -4,7 +4,7 @@ Le coach IA est une page qu'il faut penser à ouvrir : la plupart des gens ne
 l'ouvrent jamais. Ce debrief va au-devant, au seul moment où l'on est certain
 d'avoir l'attention de l'utilisateur — l'écran qui suit sa séance.
 
-Il coûte ~250 tokens (moins d'un dixième de centime par séance) et donne au
+Il coûte quelques centaines de tokens (bien moins d'un centime par séance) et donne au
 PRO une raison de rester visible à chaque entraînement, pas seulement quand
 il pense à consulter le coach.
 
@@ -13,13 +13,16 @@ comparaison à la dernière fois) : l'IA rédige, elle n'invente pas les donnée
 """
 import logging
 
+from core import ia
 from core.hist import is_muscu_perf, tonnage
 from core.muscu import calc_1rm
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-haiku-4-5-20251001"
-MAX_TOKENS = 260
+MODEL = ia.MODEL
+# 3 phrases, plus la place de réfléchir (core/ia.py) : à 260, comme sous
+# Haiku 4.5, la réflexion pouvait épuiser le plafond avant le texte.
+MAX_TOKENS = 1500
 
 PROMPT = (
     "Tu es le coach de cette personne. Elle vient de terminer sa séance.\n"
@@ -148,11 +151,13 @@ def generate(api_key: str, facts: dict) -> str | None:
         import anthropic  # type: ignore
         client = anthropic.Anthropic(api_key=api_key)
         resp = client.messages.create(
-            model=MODEL,
+            **ia.options("low"),
             max_tokens=MAX_TOKENS,
             messages=[{"role": "user", "content": PROMPT.format(facts=format_facts(facts))}],
         )
-        parts = [getattr(b, "text", "") for b in (resp.content or []) if getattr(b, "text", "")]
+        parts = ia.textes("bilan", resp)
+        if parts is None:
+            return None
         text = " ".join(p.strip() for p in parts).strip()
     except Exception as e:
         logger.warning("debrief generation failed: %s", e)

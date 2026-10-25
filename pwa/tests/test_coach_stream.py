@@ -18,6 +18,9 @@ class _FakeStream:
     def __init__(self, parts):
         self.text_stream = iter(parts)
 
+    def get_final_message(self):
+        return types.SimpleNamespace(stop_reason="end_turn", content=[])
+
     def __enter__(self):
         return self
 

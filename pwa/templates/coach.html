@@ -347,7 +347,7 @@
                   }
                 } else if (event === 'error') {
                   this.errorMsg = data.error || "Le coach n'a pas pu répondre.";
-                  if (bubbleAdded && !bubble.content) {
+                  if (bubbleAdded && (!bubble.content || data.retirer)) {
                     this.messages.splice(this.messages.indexOf(bubble), 1);
                   }
                 } else if (event === 'done') {

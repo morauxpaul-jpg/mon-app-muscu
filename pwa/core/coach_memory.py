@@ -15,9 +15,13 @@ contraintes, préférences, objectif du moment) pour un coût dérisoire.
 """
 import logging
 
+from core import ia
+
 logger = logging.getLogger(__name__)
 
 MAX_CHARS = 700
+# La note, plus la place de réfléchir (core/ia.py) ; 250 sous Haiku 4.5.
+MAX_TOKENS = 1500
 # On ne résume qu'après quelques échanges : condenser un « bonjour » n'apporte
 # rien et coûte un appel API.
 MIN_TURNS_BEFORE_SUMMARY = 4
@@ -72,7 +76,7 @@ def should_update(messages: list[dict]) -> bool:
 def build_summary(client, model: str, memory: str, messages: list[dict]) -> str | None:
     """Nouvelle note, ou None si l'appel échoue (la note actuelle est gardée).
 
-    L'appel est court (200 tokens) et se fait APRÈS la réponse envoyée à
+    L'appel est court (une note de 700 caractères) et se fait APRÈS la réponse envoyée à
     l'utilisateur : il n'allonge jamais l'attente perçue.
     """
     transcript = _transcript(messages)
@@ -80,15 +84,17 @@ def build_summary(client, model: str, memory: str, messages: list[dict]) -> str 
         return None
     try:
         resp = client.messages.create(
-            model=model,
-            max_tokens=250,
+            model=model, output_config={"effort": "low"},
+            max_tokens=MAX_TOKENS,
             messages=[{
                 "role": "user",
                 "content": SUMMARY_PROMPT.format(
                     memory=memory or "(vide)", transcript=transcript),
             }],
         )
-        parts = [getattr(b, "text", "") for b in (resp.content or []) if getattr(b, "text", "")]
+        parts = ia.textes("mémoire", resp)
+        if parts is None:
+            return None
         note = "\n".join(parts).strip()
     except Exception as e:
         logger.warning("coach memory summary failed: %s", e)

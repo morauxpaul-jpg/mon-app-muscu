@@ -158,7 +158,8 @@ def test_refaire_une_seance_seulement(fake_db, logged_in, monkeypatch):
     assert r.status_code == 200 and d["ok"] and d["exercices"][0]["name"] == "Pompes"
     prompt = appels[0]["messages"][0]["content"]
     assert "« Haut »" in prompt and "sans machine" in prompt and "Bas : Squat" in prompt
-    assert appels[0]["max_tokens"] < 2600                    # une séance, pas un programme
+    from routes.generator import MAX_TOKENS
+    assert appels[0]["max_tokens"] < MAX_TOKENS              # une séance, pas un programme
 
 
 def test_refaire_seance_entrees_invalides(fake_db, logged_in, monkeypatch):
