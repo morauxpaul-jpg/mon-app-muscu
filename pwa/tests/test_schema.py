@@ -248,7 +248,7 @@ def test_admin_relance_le_controle_apres_une_migration(monkeypatch):
 
 def test_le_parrainage_credite_filleul_et_parrain(fake_db):
     import core.db as core_db
-    from routes.parrainage import apply_referral, REFEREE_VIP_DAYS, REFERRER_VIP_DAYS
+    from routes.parrainage import apply_referral, REFERRER_VIP_DAYS
     parrain, filleul = "u-parrain-0001", "u-filleul-0002"
     fake_db.table("profiles").insert({"id": parrain, "tier": "free"}).execute()
     fake_db.table("profiles").insert({"id": filleul, "tier": "free"}).execute()
@@ -256,11 +256,11 @@ def test_le_parrainage_credite_filleul_et_parrain(fake_db):
     assert core_db.get_user_by_referral_code(code) == parrain   # le code est bien en base
     assert apply_referral(filleul, code) is True
     profils = {p["id"]: p for p in fake_db.tables["profiles"]}
-    assert core_db.vip_until_active(profils[filleul]["vip_until"])
+    assert not profils[filleul].get("vip_until")                 # l'essai l'attend (core/essai.py)
     assert core_db.vip_until_active(profils[parrain]["vip_until"])
     assert profils[filleul]["referred_by"] == parrain
     assert apply_referral(filleul, code) is False                # une seule fois
-    assert REFEREE_VIP_DAYS == 1 and REFERRER_VIP_DAYS == 3
+    assert REFERRER_VIP_DAYS == 3
 
 
 # ── Un repli « base en retard » ne cache plus le manque (audit du 06/10, 4.3) ──
