@@ -14,7 +14,7 @@ pytest==8.3.4
 Pillow==12.3.0
 # Tests navigateur (pwa/tests/e2e) : la séance jouée de bout en bout dans
 # Chromium. La CI installe le navigateur (`playwright install chromium`).
-playwright==1.64.0
+playwright==1.64.1
 # Redis simulé (avec Lua, pour la libération sûre des verrous) : tests de
 # l'état partagé entre instances, pwa/tests/test_partage.py.
 fakeredis[lua]==2.40.0
