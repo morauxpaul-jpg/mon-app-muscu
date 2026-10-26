@@ -1,0 +1,15 @@
+{# Le classement d'un défi (v53) : rang, prénom, score. Le nombre de
+   séances n'est montré que pour soi et pour un ami qui n'a pas masqué
+   ses séances (`l.seances` vaut None sinon : core/defis.classement). #}
+{% macro classement(d) %}
+  <ol class="defi-classement" aria-label="Classement">
+    {% for l in d.classement %}
+      <li class="defi-ligne{% if l.moi %} defi-moi{% endif %}">
+        <span class="defi-rang">{{ l.rang or '–' }}</span>
+        <span class="amis-nom">{{ l.nom }}</span>
+        {% if l.seances is not none and d.type != 'regularite' %}<span class="defi-detail">{{ l.seances }} séance{{ 's' if l.seances > 1 else '' }}</span>{% endif %}
+        <span class="defi-score">{{ l.texte }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+{% endmacro %}

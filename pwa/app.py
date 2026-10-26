@@ -40,6 +40,7 @@ from routes.generator import bp as generator_bp
 from routes.share import bp as share_bp
 from routes.parrainage import bp as parrainage_bp
 from routes.amis import bp as amis_bp
+from routes.defis import bp as defis_bp
 from routes.push import bp as push_bp
 from routes.csp import bp as csp_bp
 
@@ -199,6 +200,7 @@ app.register_blueprint(generator_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(parrainage_bp)
 app.register_blueprint(amis_bp)
+app.register_blueprint(defis_bp)
 app.register_blueprint(push_bp)
 app.register_blueprint(csp_bp)
 

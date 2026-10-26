@@ -22,7 +22,7 @@
   var COMPOSANTS = [
     "exoBlock", "seanceReorder", "cardioBlock", "cardioForm", "coachChat",
     "debriefCard", "gen", "mealForm", "onboardingFlow", "plaqueCalc",
-    "programmeApp", "bandeauRetour", "ajoutExoSeance", "recetteForm",
+    "programmeApp", "bandeauRetour", "ajoutExoSeance", "recetteForm", "defiForm",
   ];
 
   // Alpine refuse de rendre un objet posé sur `window` : chaque appel rend

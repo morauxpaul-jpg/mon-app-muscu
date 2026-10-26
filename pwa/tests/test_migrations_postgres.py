@@ -94,3 +94,53 @@ def test_personne_ne_peut_appeler_la_fonction_dinscription(base):
     for role in ("anon", "authenticated", "public"):
         assert _psql(base, f"select has_function_privilege('{role}', "
                            "'public.handle_new_user()', 'execute')") == "f", role
+
+
+def _refuse(url, sql, motif):
+    with pytest.raises(AssertionError, match=motif):
+        _psql(url, sql)
+
+
+def test_les_defis_v53_tiennent_leurs_regles_en_base(base):
+    """v53 : la durée et les dates se tiennent, l'exercice n'existe que pour
+    une progression, un compte une fois par défi, le navigateur n'a accès à
+    rien, et tout part avec le compte."""
+    a, b = (_psql(base, "set role supabase_auth_admin; insert into auth.users (email) "
+                        f"values ('{n}@exemple.fr') returning id").splitlines()[-1] for n in ("a", "b"))
+    defi = _psql(base, "insert into public.defis (createur, type, semaines, debut, fin) values "
+                       f"('{a}', 'volume', 2, '2026-11-02', '2026-11-15') returning id").splitlines()[-1]
+    for valeurs, contrainte in (
+            ("'volume', 3, '2026-11-02', '2026-11-22', null", "defis_semaines_check"),
+            ("'volume', 1, '2026-11-02', '2026-11-09', null", "defis_fin_selon_duree"),
+            ("'progression', 1, '2026-11-02', '2026-11-08', null", "defis_exercice_si_progression"),
+            ("'regularite', 1, '2026-11-02', '2026-11-08', 'Squat'", "defis_exercice_si_progression"),
+            ("'tricher', 1, '2026-11-02', '2026-11-08', null", "defis_type_check")):
+        _refuse(base, "insert into public.defis (createur, type, semaines, debut, fin, exercice) "
+                      f"values ('{a}', {valeurs})", contrainte)
+    _psql(base, "insert into public.defis (createur, type, semaines, debut, fin, exercice) values "
+                f"('{a}', 'progression', 4, '2026-11-02', '2026-11-29', 'Développé couché')")
+    _psql(base, "insert into public.defis_participants (defi_id, user_id, etat, repondu_le) values "
+                f"({defi}, '{a}', 'acceptee', now()), ({defi}, '{b}', 'invite', null)")
+    _refuse(base, f"insert into public.defis_participants (defi_id, user_id) values ({defi}, '{b}')",
+            "defis_participants_un_par_defi")
+    _refuse(base, f"update public.defis_participants set etat = 'acceptee' where user_id = '{b}'",
+            "defis_participants_acceptee_datee")
+    # Aucun score en base : rien à modifier pour tricher.
+    colonnes = _psql(base, "select string_agg(column_name, ',' order by column_name) from "
+                           "information_schema.columns where table_name in ('defis', 'defis_participants')")
+    assert "score" not in colonnes and "valeur" not in colonnes
+    # Fermées au navigateur : RLS active, aucune règle, aucun droit.
+    assert _psql(base, "select string_agg(relrowsecurity::text, ',') from pg_class "
+                       "where relname in ('defis', 'defis_participants')") == "true,true"
+    assert _psql(base, "select count(*) from pg_policies "
+                       "where tablename in ('defis', 'defis_participants')") == "0"
+    for role in ("anon", "authenticated"):
+        _refuse(base, f"set role {role}; select * from public.defis", "permission denied")
+        _refuse(base, f"set role {role}; select * from public.defis_participants", "permission denied")
+    assert _psql(base, "set role service_role; select count(*) from public.defis_participants") == "2"
+    # Le compte supprimé : ses défis et ses participations partent avec.
+    _psql(base, f"delete from auth.users where id = '{b}'")
+    assert _psql(base, f"select count(*) from public.defis_participants where defi_id = {defi}") == "1"
+    _psql(base, f"delete from auth.users where id = '{a}'")
+    assert _psql(base, "select count(*) from public.defis") == "0"
+    assert _psql(base, "select count(*) from public.defis_participants") == "0"
