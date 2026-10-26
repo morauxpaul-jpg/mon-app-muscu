@@ -28,6 +28,7 @@ from core.dates import DAYS_FR, MONTHS_FR, logical_today_paris, today_paris_str
 from core.db import _env
 from core.limiter import limiter
 from core import catalog
+from core.coach_progression import progression_par_exercice
 from core.analytics import track, paywall
 from core import coach_memory
 
@@ -107,13 +108,18 @@ SYSTEM_PROMPT_TMPL = (
     "{programme_detail}\n\n"
     "## 14 DERNIÈRES SÉANCES\n"
     "{dernieres_seances}\n\n"
+    "## PROGRESSION PAR EXERCICE (ses 4 dernières séances, la plus récente d'abord)\n"
+    "{progression}\n\n"
     "## RÈGLES DE FORMULATION\n"
     "- Utilise du markdown : **gras**, listes à puce, titres avec ##.\n"
     "- Quand tu mentionnes un programme du catalogue, fais-en un lien cliquable "
     "[Titre du programme](/programme?apply=ID) pour que l'utilisateur puisse y aller en un clic.\n"
     "- Quand tu suggères de consulter une section de l'app, mets un lien [nom onglet](/chemin).\n"
     "- Reste bref : 3-6 phrases max par réponse, sauf si l'utilisateur demande un plan détaillé.\n"
-    "- Pas d'emoji : l'app n'en affiche plus nulle part."
+    "- Pas d'emoji : l'app n'en affiche plus nulle part.\n"
+    "- Chiffres : ne cite une charge, des reps ou une date que s'ils figurent "
+    "tels quels dans les données ci-dessus. Pour l'évolution d'un exercice, lis "
+    "sa ligne dans « PROGRESSION PAR EXERCICE » : chaque charge y porte sa date."
 )
 
 def _date_du_jour():
@@ -237,7 +243,8 @@ def _dernieres_seances(hist, bilans=None):
     lines = []
     for (d, s), e in items:
         parts = []
-        for ename, x in list(e["exos"].items())[:6]:
+        # Tous les exercices : à 6, le 7e d'une séance n'arrivait jamais (26/10).
+        for ename, x in e["exos"].items():
             best = f" @{x['best']:g}kg" if x["best"] > 0 else ""
             rpe = f" RPE {sum(x['rpe']) / len(x['rpe']):.1f}" if x["rpe"] else ""
             parts.append(f"{ename} {x['sets']}s{best}{rpe}")
@@ -629,6 +636,7 @@ def ask():
         equipement=equipement,
         programme_detail=_programme_detail(prog),
         dernieres_seances=_dernieres_seances(hist, _bilans_par_seance()),
+        progression=progression_par_exercice(hist),
         catalog_list=_catalog_list_for_prompt(),
     )
 
