@@ -2,6 +2,7 @@
 {% block title %}Amis · Muscu Tracker{% endblock %}
 
 {% block content %}
+  {% from "_defi_classement.html" import classement %}
   <a href="/plus" class="btn label-icon s-86c142 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Plus</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#users"/></svg>Amis</h1>
@@ -40,6 +41,9 @@
     </section>
   {% endif %}
 
+  {# ── Défis entre amis (v53) ──────────────────────────────────── #}
+  {% include "_amis_defis.html" %}
+
   {# ── Le fil ──────────────────────────────────────────────────── #}
   <section aria-label="Séances des amis" id="amis-fil">
     <h2 class="amis-titre">Le fil</h2>
@@ -47,6 +51,18 @@
       <div class="card amis-texte">{% if amis %}Pas de séance terminée ces 30 derniers jours.{% else %}Ajoute un ami : ses séances terminées apparaîtront ici, et les tiennes chez lui.{% endif %}</div>
     {% endif %}
     {% for s in fil %}
+      {% if s.genre == 'defi' %}
+      {# Résultat d'un défi fini (v53), visible de ses participants seulement. #}
+      <article class="card defi defi-resultat" id="defi-{{ s.id }}">
+        <div class="amis-entete">
+          <span class="amis-nom">Défi terminé</span>
+          <span class="amis-date">{{ s.date|jour_mois }}</span>
+        </div>
+        <div class="amis-seance-nom">{{ s.titre }}</div>
+        <p class="defi-annonce"><svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#trophy"/></svg>{{ s.annonce }}</p>
+        {{ classement(s) }}
+      </article>
+      {% else %}
       <article class="card amis-seance" id="s-{{ s.session_id }}">
         <div class="amis-entete">
           <span class="amis-nom">{{ s.nom }}</span>
@@ -78,6 +94,7 @@
           </form>
         {% endif %}
       </article>
+      {% endif %}
     {% endfor %}
   </section>
 
@@ -177,4 +194,5 @@
     .amis-danger { color: var(--danger); border-color: var(--danger); }
   </style>
   <script src="/static/js/invitation.js"></script>
+  <script src="/static/js/defis.js"></script>
 {% endblock %}

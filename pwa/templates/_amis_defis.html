@@ -1,0 +1,102 @@
+{# Défis entre amis (v53) — inclus par amis.html. Attend `defis`
+   (core/defis_liens.pour_la_page), `amis`, `types_defi`, `semaines_defi`,
+   `departs_defi`, `exercices_defi`. Le score n'est jamais stocké : chaque
+   ligne du classement est recalculée depuis l'historique. #}
+
+{% from "_defi_classement.html" import classement %}
+{% if amis or defis.invitations or defis.actifs %}
+<section aria-label="Défis" id="defis">
+  <h2 class="amis-titre">Défis</h2>
+  {% if defis.indisponible %}
+    <div class="card amis-texte">Les défis arrivent bientôt.</div>
+  {% else %}
+
+  {% for d in defis.invitations %}
+    <article class="card defi defi-invitation" id="defi-{{ d.id }}">
+      <div class="card-label">{{ d.createur }} te lance un défi</div>
+      <div class="amis-seance-nom">{{ d.titre }}</div>
+      <p class="amis-texte">{{ d.but|capitalize }}. Du {{ d.debut|jour_mois }} au {{ d.fin|jour_mois }} ({{ d.semaines }} semaine{{ 's' if d.semaines > 1 else '' }}).{% if d.avec %} Avec {{ d.avec|join(', ') }}.{% endif %} Les participants verront ton score, rien d'autre.</p>
+      <div class="amis-boutons">
+        <form method="post" action="/amis/defis/accepter"><input type="hidden" name="defi" value="{{ d.id }}"><button type="submit" class="btn primary" data-haptic="1" aria-label="Accepter le défi de {{ d.createur }}">Accepter</button></form>
+        <form method="post" action="/amis/defis/refuser"><input type="hidden" name="defi" value="{{ d.id }}"><button type="submit" class="btn" aria-label="Refuser le défi de {{ d.createur }}">Refuser</button></form>
+      </div>
+    </article>
+  {% endfor %}
+
+  {% for d in defis.actifs %}
+    <article class="card defi" id="defi-{{ d.id }}">
+      <div class="amis-entete">
+        <span class="card-label">{% if d.phase == 'a_venir' %}Commence le {{ d.debut|jour_mois }}{% elif d.jours_restants %}En cours · encore {{ d.jours_restants }} jour{{ 's' if d.jours_restants > 1 else '' }}{% else %}En cours · dernier jour{% endif %}</span>
+        <span class="amis-date">{{ d.debut|jour_mois }} → {{ d.fin|jour_mois }}</span>
+      </div>
+      <div class="amis-seance-nom">{{ d.titre }}</div>
+      <p class="amis-texte">{{ d.but|capitalize }}. Lancé par {{ 'toi' if d.lance_par_moi else d.createur }}.</p>
+      {{ classement(d) }}
+      {% if d.en_attente %}<p class="amis-texte">Pas encore répondu : {{ d.en_attente|join(', ') }}</p>{% endif %}
+      {% if d.lance_par_moi and d.peut_repondre %}
+        {% set dispo = amis|rejectattr('compte', 'in', d.comptes)|list %}
+        {% if dispo %}
+          <details class="amis-retirer">
+            <summary class="btn">Inviter d'autres amis</summary>
+            <form method="post" action="/amis/defis/inviter">
+              <input type="hidden" name="defi" value="{{ d.id }}">
+              {% for a in dispo %}<label class="defi-choix"><input type="checkbox" name="amis" value="{{ a.compte }}"> {{ a.nom }}</label>{% endfor %}
+              <button type="submit" class="btn primary">Inviter</button>
+            </form>
+          </details>
+        {% endif %}
+      {% endif %}
+      {% if d.lance_par_moi and d.phase == 'a_venir' %}
+        <details class="amis-retirer">
+          <summary class="btn">Annuler le défi</summary>
+          <form method="post" action="/amis/defis/annuler">
+            <input type="hidden" name="defi" value="{{ d.id }}">
+            <button type="submit" class="btn amis-danger">Oui, annuler pour tout le monde</button>
+          </form>
+        </details>
+      {% endif %}
+    </article>
+  {% endfor %}
+
+  {% if amis %}
+    <details class="card defi-lancer" id="defi-lancer"{% if not defis.actifs and not defis.invitations %} open{% endif %}>
+      <summary class="btn primary label-icon" data-haptic="1"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#trophy"/></svg>Lancer un défi</summary>
+      <form method="post" action="/amis/defis/lancer" x-data="defiForm">
+        <fieldset class="defi-groupe">
+          <legend class="field-label">Le défi</legend>
+          {% for cle, t in types_defi.items() %}{% if cle != 'progression' or exercices_defi %}
+            <label class="defi-choix"><input type="radio" name="type" value="{{ cle }}" x-model="type"{% if loop.first %} checked{% endif %}> <span><b>{{ t.nom }}</b> : {{ t.but }}</span></label>
+          {% endif %}{% endfor %}
+        </fieldset>
+        {% if exercices_defi %}
+          <div class="defi-groupe" x-show="estProgression()">
+            <label class="field-label" for="defi-exercice">Exercice</label>
+            <select id="defi-exercice" name="exercice" class="field">
+              {% for e in exercices_defi %}<option value="{{ e }}">{{ e }}</option>{% endfor %}
+            </select>
+            <p class="amis-texte">Chacun part de sa meilleure charge des 4 semaines avant le début. Qui n'a pas fait l'exercice ces 4 semaines est classé à part.</p>
+          </div>
+        {% endif %}
+        <fieldset class="defi-groupe">
+          <legend class="field-label">Durée</legend>
+          {% for n in semaines_defi %}<label class="defi-choix"><input type="radio" name="semaines" value="{{ n }}"{% if n == 2 %} checked{% endif %}> {{ n }} semaine{{ 's' if n > 1 else '' }}</label>{% endfor %}
+        </fieldset>
+        <div class="defi-groupe">
+          <label class="field-label" for="defi-depart">Début</label>
+          <select id="defi-depart" name="depart" class="field">
+            {% for cle in departs_defi %}<option value="{{ cle }}"{% if cle == 'demain' %} selected{% endif %}>{{ {'aujourdhui': "Aujourd'hui", 'demain': 'Demain', 'lundi': 'Lundi prochain'}[cle] }}</option>{% endfor %}
+          </select>
+          <p class="amis-texte">Tes amis peuvent accepter jusqu'au jour du début.</p>
+        </div>
+        <fieldset class="defi-groupe">
+          <legend class="field-label">Avec</legend>
+          {% for a in amis %}<label class="defi-choix"><input type="checkbox" name="amis" value="{{ a.compte }}"> {{ a.nom }}</label>{% endfor %}
+        </fieldset>
+        <button type="submit" class="btn primary" data-haptic="1">Lancer le défi</button>
+      </form>
+    </details>
+  {% endif %}
+
+  {% endif %}
+</section>
+{% endif %}

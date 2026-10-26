@@ -849,3 +849,24 @@ a.btn.acc-demarrer--second { min-height: 48px; font-size: 1.1rem; }
 .prg-onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 18px; }
 .prg-onglet { display: block; text-align: center; padding: 10px 6px; border: 1px solid var(--border-default); border-radius: 4px; color: var(--text-2); text-decoration: none; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; text-transform: uppercase; }
 .prg-onglet[aria-current="page"] { background: var(--text-1); border-color: var(--text-1); color: var(--bg-base); }
+
+/* ── Défis entre amis (v53) : page Amis et accueil ── */
+.defi-classement { list-style: none; padding: 0; margin: 8px 0 0; }
+.defi-ligne { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border-default); }
+.defi-ligne:first-child { border-top: 0; }
+.defi-rang { width: 1.4em; flex-shrink: 0; font-family: var(--font-display); font-weight: 700; color: var(--text-2); }
+.defi-ligne .amis-nom, .defi-acc-nom { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.defi-detail { font-size: 0.8rem; color: var(--text-2); white-space: nowrap; }
+.defi-score { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--text-1); white-space: nowrap; }
+.defi-moi .defi-rang, .defi-moi .defi-score { color: var(--accent); }
+.defi-annonce { display: flex; align-items: center; gap: 6px; margin: 4px 0 2px; color: var(--text-1); font-weight: 600; }
+.defi-choix { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; color: var(--text-2); font-size: 0.92rem; }
+.defi-choix b { color: var(--text-1); }
+.defi-groupe { border: 0; padding: 0; margin: 0 0 12px; min-width: 0; }
+.defi-groupe legend { padding: 0; margin-bottom: 4px; }
+.defi-lancer > summary { list-style: none; cursor: pointer; }
+.defi-lancer > summary::-webkit-details-marker { display: none; }
+.defi-lancer[open] > summary { margin-bottom: 12px; }
+.defi-acc-titre { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; text-transform: uppercase; color: var(--text-1); }
+.defi-acc-ligne { display: flex; align-items: baseline; gap: 10px; font-size: 0.95rem; }
+.defi-acc-invit { color: var(--accent); font-size: 0.9rem; }

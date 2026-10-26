@@ -19,6 +19,7 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
     db_aliments     mes aliments et mes recettes (table `aliments_perso`, v49)
     db_photos       les photos de progression et leurs fichiers (table `photos_corps`, v50)
     db_amis         les amis, le fil de leurs séances et les encouragements (v52)
+    db_defis        les défis entre amis et leurs participants (v53, score jamais stocké)
     db_bilans       les bilans de séance
     db_abonnement   tier PRO, Stripe, parrainage
     db_push         notifications, newsletter, relance des inactifs
@@ -28,7 +29,8 @@ modules qui se partagent le travail. Les routes continuent donc à écrire
 Leurs dépendances forment un arbre : tous s'appuient sur `db_base`, et
 quelques-uns sur un autre module (`db_abonnement`, `db_admin` et `db_push`
 lisent le profil ; `db_push` et `db_bilans` normalisent une date avec
-l'historique ; `db_historique` et `db_push` consultent `db_colonnes`).
+l'historique ; `db_historique`, `db_push` et `db_defis` consultent `db_colonnes` ;
+`db_defis` lit les prénoms par `db_amis`).
 Aucun cycle.
 
 **Choix d'archi (Phase 3).** Le backend utilise la clé `service_role`, qui
@@ -121,6 +123,14 @@ from core.db_amis import (
     refuser, retirer, retirer_du_fil, visibles_par,
     COLONNES_AMITIES, COLONNES_FIL, TABLE_AMITIES, TABLE_ENCOURAGEMENTS, TABLE_FIL,
     _NOMS, _doublon, _effacer, _entre,
+)
+
+# ── les défis entre amis ────────────────────────────────────────
+from core.db_defis import (
+    DefisIndisponibles, amis_de, annuler_defi, creer_defi, defis_en_cours,
+    effacer_defis_du_compte, export_defis, inviter_au_defi, lignes_des_defis, lire_defis,
+    repondre_au_defi, COLONNES_DEFIS, COLONNES_PARTICIPANTS, TABLE_DEFIS, TABLE_PARTICIPANTS,
+    _LOT_DEFIS, _amis_acceptes_de, _defi_par_id, _maintenant_utc, _participants_du_defi,
 )
 
 # ── tier PRO, Stripe, parrainage ────────────────────────────────

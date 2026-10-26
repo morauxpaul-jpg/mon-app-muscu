@@ -266,6 +266,22 @@
     </div>
   {% endif %}
 
+  {# Défis entre amis (v53) : classement en direct, invitations à régler. #}
+  {% if defis_amis %}
+    <a href="/amis#defis" class="acc-liste" id="defis-accueil" aria-label="Défis entre amis">
+      <span class="acc-surtitre acc-surtitre--gris">DÉFIS ENTRE AMIS</span>
+      {% for d in defis_amis.actifs %}
+        <span class="defi-acc-titre">{{ d.titre }} · {% if d.jours_restants %}encore {{ d.jours_restants }} jour{{ 's' if d.jours_restants > 1 else '' }}{% else %}dernier jour{% endif %}</span>
+        {% for l in d.tete %}
+          <span class="defi-acc-ligne{% if l.moi %} defi-moi{% endif %}"><span class="defi-rang">{{ l.rang or '–' }}</span><span class="defi-acc-nom">{{ l.nom }}</span><span class="defi-score">{{ l.texte }}</span></span>
+        {% endfor %}
+      {% endfor %}
+      {% if defis_amis.invitations %}
+        <span class="defi-acc-invit">{{ defis_amis.invitations[0].createur }} te lance un défi{% if defis_amis.invitations|length > 1 %} (et {{ defis_amis.invitations|length - 1 }} autre{{ 's' if defis_amis.invitations|length > 2 else '' }}){% endif %} : réponds au plus tard le {{ defis_amis.invitations[0].debut|jour_mois }}</span>
+      {% endif %}
+    </a>
+  {% endif %}
+
   {# Régularité : semaines d'affilée avec au moins une séance. #}
   <section class="acc-liste" aria-label="Régularité">
     <div class="acc-ligne">

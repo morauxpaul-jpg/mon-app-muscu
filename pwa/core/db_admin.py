@@ -330,6 +330,13 @@ def delete_user_account(user_id: str) -> None:
     # étrangère) et la photo resterait sur le serveur, plus rattachée à rien.
     from core.db_photos import supprimer_toutes_les_photos
     supprimer_toutes_les_photos(user_id)
+    # Défis (v53) : ceux que ce compte a lancés partent avec leurs
+    # participants, puis ses participations aux défis des autres.
+    from core.db_defis import effacer_defis_du_compte as effacer_defis
+    try:
+        effacer_defis(user_id)
+    except Exception as e:
+        logger.error("delete_user_account defis FAILED user=%s: %s", user_id, e)
     # coach_conversations en premier : supprime aussi coach_messages liés
     # (ON DELETE CASCADE) ; le delete coach_messages qui suit couvre les
     # éventuels messages legacy sans conversation_id.

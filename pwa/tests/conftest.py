@@ -151,7 +151,8 @@ class FakeQuery:
               "photos_corps": ("user_id", "date", "angle"),            # v50
               "fil_seances": ("user_id", "session_id"),                # v52
               "encouragements": ("auteur", "session_id"),              # v52
-              "amities": ("demandeur", "destinataire")}                # v52, paire sans ordre
+              "amities": ("demandeur", "destinataire"),                # v52, paire sans ordre
+              "defis_participants": ("defi_id", "user_id")}            # v53
 
     # Index sur une expression : (least, greatest) — A→B et B→A sont la même paire.
     PAIRE_SANS_ORDRE = {"amities"}

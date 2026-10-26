@@ -272,6 +272,11 @@ def effacer_fil():
     return db.effacer_fil(_uid())
 
 
+# ── Défis (v53) : le reste passe par routes/defis.py ────────────────────
+def export_defis():
+    return db.export_defis(_uid())
+
+
 
 # ── Coach IA (historique + conversations) ───────────────────────────────
 def list_coach_messages(conversation_id=None, limit=50):

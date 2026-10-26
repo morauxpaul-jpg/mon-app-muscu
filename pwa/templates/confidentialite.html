@@ -5,7 +5,7 @@
   <a href="{% if is_authenticated %}/plus{% else %}/{% endif %}" class="btn label-icon s-86c142 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Retour</a>
 
   <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#lock"/></svg>Politique de confidentialité</h1>
-  <p class="s-970e44">Dernière mise à jour : 25 octobre 2026</p>
+  <p class="s-970e44">Dernière mise à jour : 26 octobre 2026</p>
 
   <div class="card privacy-card">
     <h3>1. Qui est responsable de tes données ?</h3>
@@ -21,6 +21,7 @@
       <li><strong>Nutrition</strong> : repas et macros que tu enregistres.</li>
       <li><strong>Coach IA</strong> : tes messages et les réponses du coach.</li>
       <li><strong>Amis</strong> (si tu en ajoutes) : tes demandes et tes amitiés, les encouragements donnés et reçus, et, pour chaque séance terminée, son nom, sa date, sa durée, son tonnage et tes records battus.</li>
+      <li><strong>Défis entre amis</strong> (si tu en lances ou en acceptes) : le type de défi, l'exercice choisi, la durée, les dates, qui est invité et qui a accepté. Le score n'est pas enregistré : il est recalculé à chaque affichage depuis tes séances.</li>
       <li><strong>Notifications</strong> : si tu les actives, l'adresse technique d'abonnement de ton navigateur ou de ton téléphone, pour t'envoyer les rappels.</li>
       <li><strong>Newsletter</strong> : ton e-mail, seulement si tu as coché l'inscription dans Gestion (retirable à tout moment).</li>
       <li><strong>Paiement</strong> (membres PRO) : l'identifiant client attribué par Stripe. L'app ne voit jamais ton numéro de carte.</li>
@@ -51,11 +52,12 @@
     </ul>
     <p>Seul toi (via ton compte) et l'administrateur de l'app (à des fins de maintenance) peuvent accéder à tes données. Les échanges sont chiffrés (HTTPS).</p>
     <p><strong>Tes amis</strong> : seulement ceux dont tu as accepté la demande, ou qui ont accepté la tienne. Ils voient ton prénom et tes séances terminées (nom, date, durée, tonnage, records battus), et toi les leurs. Jamais ton poids, tes photos, ta nutrition, ton coach ni tes notes et commentaires de séance. « Masquer mes séances » (page Amis) leur cache tout sans retirer l'amitié ; retirer un ami vaut tout de suite, des deux côtés. Un encouragement est vu par la personne encouragée, sous forme de nombre.</p>
+    <p><strong>Les défis entre amis</strong> : seuls leurs participants les voient, et on n'invite que ses amis acceptés. Les participants voient ton prénom et ton score du défi (nombre de séances, kilos soulevés ou pourcentage de progression sur l'exercice choisi), même s'ils ne sont pas tes amis entre eux ; jamais ton poids, tes photos, ta nutrition, ton coach ni tes notes de séance. Avec « Masquer mes séances », tu restes classé, mais sans aucun autre détail. Si toi ou le créateur du défi retirez l'amitié, tu sors du défi.</p>
   </div>
 
   <div class="card privacy-card">
     <h3>5. Combien de temps sont-elles conservées ?</h3>
-    <p>Tant que ton compte existe. Si tu supprimes ton compte, <strong>toutes</strong> tes données sont effacées immédiatement et définitivement, y compris la mesure d'usage, et un abonnement PRO en cours est résilié. Les données de paiement conservées par Stripe le sont selon ses propres obligations légales (comptabilité).</p>
+    <p>Tant que ton compte existe. Si tu supprimes ton compte, <strong>toutes</strong> tes données sont effacées immédiatement et définitivement, y compris la mesure d'usage et les défis que tu as lancés (ils disparaissent aussi pour leurs participants), et un abonnement PRO en cours est résilié. Les données de paiement conservées par Stripe le sont selon ses propres obligations légales (comptabilité).</p>
   </div>
 
   <div class="card privacy-card">

@@ -15,7 +15,7 @@ from core.data import (
     get_onboarding, delete_user_account, set_newsletter_optin, list_body_weight,
     upsert_body_weight, rename_exercise_rows, donner_materiel, list_session_notes,
     list_all_nutrition, list_all_aliments_perso, export_coach, get_reglages, save_reglages,
-    effacer_tous_calques, list_photos, effacer_fil, export_amis,
+    effacer_tous_calques, list_photos, effacer_fil, export_amis, export_defis,
 )
 
 logger = logging.getLogger(__name__)
@@ -411,7 +411,7 @@ def export_data():
     optionnels = {}
     for nom, lire in (("nutrition", list_all_nutrition), ("coach", export_coach),
                       ("aliments_perso", list_all_aliments_perso), ("photos", list_photos),
-                      ("amis", export_amis)):
+                      ("amis", export_amis), ("defis", export_defis)):
         try:
             optionnels[nom] = lire()
         except Exception as e:  # table absente : export sans elle
@@ -437,6 +437,8 @@ def export_data():
                    for p in optionnels["photos"]],
         # Amis (v52) : de l'autre compte, seulement le prénom qu'il me montre.
         "amis": optionnels["amis"],
+        # Défis (v53) : mes défis et ma réponse ; des autres, le prénom seulement.
+        "defis": optionnels["defis"],
     }
     filename = f"muscu-tracker-backup-{date.today().isoformat()}.json"
     return Response(

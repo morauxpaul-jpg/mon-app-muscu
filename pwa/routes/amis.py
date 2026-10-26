@@ -22,8 +22,11 @@ from flask_limiter.util import get_remote_address
 
 from core import amis as calc
 from core import db as core_db
+from core import defis_liens
 from core.amis_liens import COOKIE_AMI, compte_du_code
 from core.analytics import track
+from core.data import get_hist
+from core.defis import DEPARTS, SEMAINES, TYPES, exercices_proposes
 from core.dates import logical_today_paris
 from core.limiter import limiter
 
@@ -46,6 +49,7 @@ MESSAGES = {
     "masquees": "Tes séances sont masquées. Tes amis ne voient plus rien.",
     "visibles": "Tes amis voient de nouveau tes séances terminées.",
     "indisponible": "Les amis arrivent bientôt.",
+    **defis_liens.MESSAGES,      # défis (v53, routes/defis.py)
 }
 
 
@@ -76,7 +80,8 @@ def index():
         logger.error("/amis code FAILED: %s", e)
     contexte = {"active": "plus", "code": code, "message": message, "indisponible": False,
                 "invitation": None, "amis": [], "recues": [], "envoyees": [], "fil": [],
-                "masquees": False}
+                "masquees": False, "defis": None, "types_defi": TYPES, "semaines_defi": SEMAINES,
+                "departs_defi": DEPARTS, "exercices_defi": []}
     try:
         lignes = core_db.amities_de(uid)
         profils = core_db.profils([calc.autre(l, uid) for l in lignes] + [uid])
@@ -86,8 +91,13 @@ def index():
         lignes_fil = core_db.fil(uid, visibles, depuis)
         cartes = calc.fil_affiche(lignes_fil, profils,
                                   core_db.encouragements_pour(lignes_fil), uid)
-        contexte.update(classes, fil=cartes,
+        # Défis (v53) : invitations, classements en direct, résultats dans le fil.
+        defis = defis_liens.pour_la_page(uid, logical_today_paris())
+        contexte.update(classes, fil=defis_liens.cartes_du_fil(cartes, defis["termines"]),
+                        defis=defis,
                         masquees=bool((profils.get(uid) or {}).get("seances_masquees")))
+        if classes["amis"] and not defis["indisponible"]:
+            contexte["exercices_defi"] = exercices_proposes(get_hist())
     except core_db.AmisIndisponibles:
         contexte.update(indisponible=True, message=MESSAGES["indisponible"])
         return render_template("amis.html", **contexte)

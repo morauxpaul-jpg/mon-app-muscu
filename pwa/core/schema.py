@@ -81,6 +81,10 @@ ATTENDU = {
                     "tonnage", "records", "created_at"),       # v52
     "encouragements": ("id", "auteur", "destinataire", "session_id",
                        "created_at"),                          # v52
+    "defis": ("id", "createur", "type", "exercice", "semaines", "debut", "fin",
+              "created_at"),                                   # v53
+    "defis_participants": ("id", "defi_id", "user_id", "etat", "created_at",
+                           "repondu_le"),                      # v53
     # Vues (lecture seule, côté serveur)
     "user_last_activity": ("user_id", "last_date"),            # v37, v44
     "admin_history_stats": ("total_rows", "total_tonnage", "total_seances",

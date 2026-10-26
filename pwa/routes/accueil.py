@@ -607,6 +607,12 @@ def index():
     except Exception:
         challenge = None
 
+    # Défis entre amis (v53) : le classement en direct des défis en cours,
+    # recalculé depuis l'historique (core/defis_liens.py). Une lecture pour
+    # qui n'a aucun défi.
+    from core.defis_liens import pour_accueil
+    defis_amis = pour_accueil(g.user_id, today)
+
     # Séance tout juste terminée : l'accueil propose le debrief une fois.
     # Consommé UNIQUEMENT sur une vraie navigation : le prefetch des liens
     # (prefetch.js, au survol) chargerait l'accueil en arrière-plan et
@@ -675,6 +681,7 @@ def index():
         challenge=challenge,
         challenge_just_won=challenge_just_won,
         challenges_won=challenges_won,
+        defis_amis=defis_amis,
         show_upsell=show_upsell,
         upsell_sessions=upsell_sessions,
         show_reactivation=show_reactivation,
