@@ -53,8 +53,11 @@ def test_aujourd_hui_ne_compte_qu_une_fois_la_seance_faite(fake_db, logged_in):
     today, debut = _compte(fake_db, [])
     html = logged_in.get("/progres").get_data(as_text=True)
     passes = (today - debut).days
-    # Rien de fait : 0 % s'il y avait des jours dus, sinon 0 par défaut.
-    assert _taux(html) == 0
+    # Rien de fait : 0 % s'il y avait des jours dus ; le 1er, rien n'est dû.
+    if passes:
+        assert _taux(html) == 0
+    else:
+        assert "aucune séance due" in html
     fake_db.table("history").insert({"user_id": USER_ID, "date": today.isoformat(), "semaine": 1,
         "seance": "Full", "exercice": "Squat", "muscle": "Quadriceps",
         "serie": 1, "reps": 5, "poids": 60.0}).execute()
@@ -62,3 +65,45 @@ def test_aujourd_hui_ne_compte_qu_une_fois_la_seance_faite(fake_db, logged_in):
     db.vider_cache()
     html = logged_in.get("/progres").get_data(as_text=True)
     assert _taux(html) == round(100 / (passes + 1))
+
+
+# ── Le 1er du mois (audit du 28/10, m1) ─────────────────────────
+
+
+def _novembre_complet(fake_db):
+    """Programme tous les jours depuis septembre, chaque jour de novembre 2026 fait."""
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "vip"}).execute()
+    fake_db.table("onboarding").insert({"user_id": USER_ID, "completed_at": "2026-09-01"}).execute()
+    fake_db.table("programs").insert({"user_id": USER_ID, "data": {
+        "Full": [{"name": "Squat", "sets": 3, "muscle": "Quadriceps"}],
+        "_planning": {j: "Full" for j in JOURS}, "_started_at": "2026-09-01"}}).execute()
+    for i in range(30):
+        fake_db.table("history").insert({"user_id": USER_ID, "date": (dt.date(2026, 11, 1) + dt.timedelta(days=i)).isoformat(),
+            "semaine": 1, "seance": "Full", "exercice": "Squat", "muscle": "Quadriceps",
+            "serie": 1, "reps": 5, "poids": 60.0}).execute()
+
+
+def _heure_de_paris(monkeypatch, *quand):
+    import core.dates as dates
+    monkeypatch.setattr(dates, "now_paris", lambda: dt.datetime(*quand, tzinfo=dates.PARIS_TZ))
+
+
+def test_le_1er_du_mois_rien_n_est_du_donc_pas_de_zero(fake_db, logged_in, monkeypatch):
+    """Mardi 1er décembre, 10 h, la séance du jour pas encore faite, après
+    un mois de novembre parfait : l'app affichait « Assiduité : 0 % »."""
+    _novembre_complet(fake_db)
+    _heure_de_paris(monkeypatch, 2026, 12, 1, 10, 0)
+    html = logged_in.get("/progres").get_data(as_text=True)
+    assert "Décembre 2026" in html
+    assert "Assiduité : 0 %" not in html
+    assert "aucune séance due" in html
+
+
+def test_a_0_h_30_le_1er_le_calendrier_reste_sur_le_mois_d_avant(fake_db, logged_in, monkeypatch):
+    """Jusqu'à 4 h, c'est encore la veille pour la séance : le calendrier
+    suit le même jour. Il ouvrait décembre, vide, à 0 h 30 le 1er."""
+    _novembre_complet(fake_db)
+    _heure_de_paris(monkeypatch, 2026, 12, 1, 0, 30)
+    html = logged_in.get("/progres").get_data(as_text=True)
+    assert "Novembre 2026" in html
+    assert _taux(html) == 100
