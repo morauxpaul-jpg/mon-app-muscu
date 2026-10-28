@@ -4,8 +4,11 @@
 # tests ne protègent que celui qui pense à les lancer — et quatre défauts ont
 # atteint l'utilisateur en trois jours faute de les exécuter au bon moment.
 #
-# C'est une vraie barrière : « Wait for CI » est actif dans Railway (constaté
-# à l'audit du 06/10) ; un commit dont ces tests échouent n'est pas déployé.
+# « Wait for CI » est actif dans Railway (constaté à l'audit du 06/10) : un
+# commit dont ces tests ÉCHOUENT n'est pas déployé. Mais un job ANNULÉ (délai
+# dépassé) n'est pas un échec pour Railway : le 23/10, le commit 07a1987 a été
+# déployé alors que ses tests avaient été coupés à 10 min (audit du 28/10,
+# I-1). D'où le job « verdict » en fin de fichier.
 name: Tests
 
 on:
@@ -127,3 +130,24 @@ jobs:
       - name: Tests JavaScript
         working-directory: pwa
         run: node tests/js/run.js
+
+  # La barrière elle-même. Railway ne bloque qu'un échec : un job annulé (délai
+  # dépassé, runner perdu) ou ignoré laissait passer le commit sans un seul
+  # test. Ce job tourne quoi qu'il arrive et échoue si les tests n'ont pas
+  # RÉUSSI ; son échec est vu par Railway comme celui des tests.
+  verdict:
+    name: Verdict
+    needs: [tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Les tests ont-ils réussi ?
+        env:
+          RESULTAT: ${{ needs.tests.result }}
+        run: |
+          echo "Tests : $RESULTAT"
+          if [ "$RESULTAT" != "success" ]; then
+            echo "Les tests n'ont pas réussi ($RESULTAT) : ce commit ne doit pas être déployé."
+            exit 1
+          fi

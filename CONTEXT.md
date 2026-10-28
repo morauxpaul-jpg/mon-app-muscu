@@ -817,7 +817,7 @@ L'ancien habillage « verre » (dégradés, flous, bleu électrique, pilules, li
 - `.github/workflows/tests.yml` — à chaque push sur `main` et sur chaque PR : `pytest` (dont les tests navigateur, Chromium installé par la CI) puis `node tests/js/run.js`, sur **Python 3.11** comme en production. Une étape refuse de démarrer si `runtime.txt` et le workflow ne sont plus d'accord sur la version.
 - Les dépendances sont installées depuis `requirements.txt` **tel quel** : une dépendance oubliée fait échouer la CI au lieu du serveur.
 - La suite JS a **sa propre étape** : `tests/test_js.py` s'ignore quand Node est absent, et un test ignoré passerait pour un succès.
-- **C'est une barrière** : « Wait for CI » est actif côté Railway (constaté à l'audit du 06/10) ; un commit sur `main` dont la CI échoue n'est pas déployé.
+- **C'est une barrière** : « Wait for CI » est actif côté Railway (constaté à l'audit du 06/10) ; un commit sur `main` dont la CI échoue n'est pas déployé. Railway ne bloque qu'un **échec** : un job **annulé** (délai dépassé) laissait passer le commit — `07a1987` déployé le 23/10 sans ses tests (audit du 28/10, I-1). Le job `verdict` (`if: always()`, après `tests`) échoue dès que `tests` n'a pas réussi : annulé, ignoré ou en échec, le commit n'est pas déployé.
 
 ## Git
 - **Travail par PR** depuis la PR #6 : une branche, une PR, fusion sur `main` ; Railway redéploie après la CI.
