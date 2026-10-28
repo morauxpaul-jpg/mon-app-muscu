@@ -60,7 +60,9 @@
 
   {% if amis %}
     <details class="card defi-lancer" id="defi-lancer"{% if not defis.actifs and not defis.invitations %} open{% endif %}>
-      <summary class="btn primary label-icon" data-haptic="1"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#trophy"/></svg>Lancer un défi</summary>
+      {# Un seul vert par vue (style « Instrument », audit du 28/10, m6) : l'ouvrir
+         n'est pas l'action, « Lancer le défi » dans le formulaire l'est. #}
+      <summary class="btn label-icon" data-haptic="1"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#trophy"/></svg>Lancer un défi</summary>
       <form method="post" action="/amis/defis/lancer" x-data="defiForm">
         <fieldset class="defi-groupe">
           <legend class="field-label">Le défi</legend>

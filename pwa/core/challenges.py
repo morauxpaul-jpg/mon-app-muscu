@@ -171,10 +171,24 @@ def current_week_index(today=None):
 ICONES = {"💪": "dumbbell", "🏋️": "dumbbell", "🏃": "activity", "✨": "sparkle", "📈": "chart-line"}
 
 
+def _fait_du_cardio(hist, prog) -> bool:
+    """Le cardio a sa place chez ce compte : prévu au programme, ou déjà fait."""
+    if prog and prog.get("_cardio"):
+        return True
+    return any(_is_cardio(r) for r in hist or [])
+
+
 def weekly_challenge(hist, today=None, prog=None):
-    """Défi de la semaine + progression de l'utilisateur (dict pour le template)."""
+    """Défi de la semaine + progression de l'utilisateur (dict pour le template).
+
+    La semaine du défi cardio, un compte qui n'en fait pas et n'en a pas au
+    programme passe au défi suivant : « 1 séance de cardio » au premier jour
+    d'un Full Body était infaisable (audit du 28/10, m5)."""
     w = current_week_index(today)
-    cid, fn = CHALLENGES[w % len(CHALLENGES)]
+    i = w % len(CHALLENGES)
+    if CHALLENGES[i][0] == "cardio1" and not _fait_du_cardio(hist, prog):
+        i = (i + 1) % len(CHALLENGES)
+    cid, fn = CHALLENGES[i]
     ctx = {}
     if prog:
         from core.rotation import planning_semaine

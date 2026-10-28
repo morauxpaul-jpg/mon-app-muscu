@@ -108,7 +108,9 @@
         <input type="text" class="field s-77df1c inv-lien" readonly value="" aria-label="Ton lien d'ami">
         <button type="button" class="btn s-6ee066 inv-copier" data-haptic="1">Copier</button>
       </div>
-      <button type="button" class="btn primary label-icon s-d5b41c inv-partager" data-haptic="1">
+      {# Vert seulement sans ami : c'est alors l'action de la page. Avec des
+         amis, l'action est le défi (audit du 28/10, m6). #}
+      <button type="button" class="btn{% if not amis %} primary{% endif %} label-icon s-d5b41c inv-partager" data-haptic="1">
         <svg class="icon icon-sm"><use href="/static/img/icons.svg#send"/></svg>Partager mon lien
       </button>
     </div>
