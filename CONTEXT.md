@@ -48,6 +48,9 @@ pwa/
 │   ├── db_historique_lots.py      # save_hist (sauvegarde, reset) et ajouter_lignes (import), par clé
 │   ├── db_renommage.py            # Renommer séance / exercice dans l'historique, sans collision
 │   ├── db_programme.py            # Blob programs.data : verrou optimiste, fusion 3 voies, corps vs données perso
+│   ├── programmes_dossiers.py     # Dossiers de programmes (multi-programmes) : n'en remplacer que le programme en cours
+│   ├── legal.py                   # Infos d'éditeur des pages légales (adresse, SIRET), lues dans l'environnement
+│   ├── stripe_client.py           # Client Stripe et résiliation avant suppression du compte (sorti de routes/billing.py)
 │   ├── db_profil.py               # profiles : profil, onboarding, poids de corps
 │   ├── db_nutrition.py            # nutrition : repas du jour (une ligne par aliment), sommes de macros, récents
 │   ├── nutrition_cibles.py        # Cibles : protéines g/kg, cible du jour (entraînement / repos)
@@ -82,6 +85,7 @@ pwa/
 │   ├── seance_calques.py          # Applique substituts et ordre des cartes ; purge des restes d'avant la v46 dans le blob
 │   ├── seance_saisie.py           # Le formulaire devient des lignes d'historique + détection de record
 │   ├── seance_cardio.py           # Unités cardio, et passage colonnes en base (v44) ↔ forme de l'app (Reps/Poids/Remarque)
+│   ├── seance_charges.py          # Boutons − / + de la séance : pas de charge par exercice (2 kg haltères, 2,5 kg ailleurs)
 │   ├── cardio_duree.py            # Durée cardio en minutes + secondes (lire_duree, format_duree, filtre duree_cardio)
 │   ├── hist.py                    # Prédicats UNIQUES sur l'historique (is_perf, is_muscu_perf, is_session_marker, tonnage) — une seule définition de « séance faite »
 │   ├── strength.py                # Standards de force relatifs au poids de corps (ratios par muscle × sexe, niveaux)
@@ -106,6 +110,7 @@ pwa/
 │   ├── auth.py                    # Login Google, bridge JWT, logout, /auth/debug
 │   ├── accueil.py                 # Dashboard (/accueil) — planning hebdo, streak, badges, défi, "Prochaine séance" (résumé : core/accueil_resume.py)
 │   ├── seance.py                  # Séance du jour (saisie, skip, reset, finish + bilan, extras, cardio inline, suggestion de surcharge)
+│   ├── seance_fin.py              # Fin de séance : bilan (note, commentaire, durée), nettoyage des calques, debrief IA
 │   ├── seance_exo.py              # Ce qu'on retient d'un exercice depuis sa carte : repos (/seance/repos), réglages machine (/seance/reglages)
 │   ├── programme.py               # CRUD programme + planning + import/export
 │   ├── progres.py                 # Progression — body map, calendrier, volume, zoom mouvement, poids corporel (/progres/poids)
