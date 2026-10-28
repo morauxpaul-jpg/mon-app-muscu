@@ -457,7 +457,7 @@
         {% set bar_h = (v / vol_max * 110) if vol_max > 0 else 0 %}
         {% set x = loop.index0 * 50 + 8 %}
         <rect class="vol-bar" x="{{ x }}" y="{{ 130 - bar_h }}" width="34" height="{{ bar_h }}" rx="4" fill="#c8f031" opacity="0.7"/>
-        <text x="{{ x + 17 }}" y="{{ 125 - bar_h }}" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="9" font-weight="500">{{ (v / 1000)|round(1) }}k</text>
+        <text x="{{ x + 17 }}" y="{{ 125 - bar_h }}" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="9" font-weight="500">{{ (v / 1000)|fr }} t</text>
         <text x="{{ x + 17 }}" y="148" text-anchor="middle" fill="rgba(255,255,255,0.30)" font-size="9">{{ vol_labels[loop.index0] }}</text>
       {% endfor %}
     </svg>

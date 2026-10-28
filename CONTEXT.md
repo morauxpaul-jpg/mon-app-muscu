@@ -810,7 +810,7 @@ L'ancien habillage « verre » (dégradés, flous, bleu électrique, pilules, li
 - **Carte de partage** (`static/js/share-card.js`) : fond noir, blocs #111, chiffres en Barlow Condensed (polices chargées avant de dessiner), le chiffre héros en vert.
 - Icônes : sprite SVG `static/img/icons.svg` consommé via `<svg><use href="/static/img/icons.svg#name"/></svg>` ; `.icon-accent` prend la couleur du texte qui la porte.
 - **Pages publiques** (14/10/2026) : la connexion (`login.html`) est centrée dans la hauteur, ouverte par l'haltère de l'icône de l'app (symbole `#logo` du sprite, même géométrie que `tools/dessiner_icone.py`, testé). La page publique (`landing.html`) montre un croquis SVG de l'accueil, dessiné à la main : **à redessiner si l'accueil change de forme** ; son bouton principal est plein, texte noir, comme « Continuer avec Google ».
-- Nombres au format français (« 82,5 kg », `resume_series` dans `core/seance_historique.py`, filtre `|fr`).
+- Nombres au format français (« 82,5 kg », `resume_series` dans `core/seance_historique.py`, filtre `|fr`, et `fmt` de `static/js/seance.js` côté navigateur) : volume de la séance « 6 616 / 13 100 kg », volume par semaine de Progrès en tonnes (« 6,2 t ») ; `tests/test_formats_fr.py` (audit du 28/10, m2).
 - Contraste vérifié par calcul (`tests/test_accessibilite.py`) : texte sur les trois fonds, et noir sur vert.
 
 ## Intégration continue
