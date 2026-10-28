@@ -71,9 +71,9 @@ def politique(nonce: str = "", supabase_url: str = "") -> str:
     return (
         "default-src 'self'; "
         f"script-src {scripts}; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob:; "
-        "font-src 'self' data: https://fonts.gstatic.com; "
+        "font-src 'self' data:; "
         f"connect-src {connexions}; "
         f"{COUCHE_SURE}; "
         f"report-uri {RAPPORT}"

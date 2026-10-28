@@ -61,6 +61,18 @@ module.exports = ({ test, assert }) => {
     assert.equal(envois[0].corps.message, 'réseau');
   });
 
+  test('erreurs.js : une transition de page interrompue n\'est pas une erreur', () => {
+    const { ecouteurs, envois } = charger('jeton');
+    const rejet = (name, message) => Object.assign(new Error(message), { name });
+    ecouteurs.unhandledrejection({ reason: rejet('InvalidStateError',
+      'Transition was aborted because of invalid state. Viewport size changed') });
+    ecouteurs.unhandledrejection({ reason: rejet('AbortError', 'Transition was skipped') });
+    assert.equal(envois.length, 0);
+    // Une autre InvalidStateError, elle, part toujours.
+    ecouteurs.unhandledrejection({ reason: rejet('InvalidStateError', 'The object is in an invalid state.') });
+    assert.equal(envois.length, 1);
+  });
+
   test('erreurs.js : rien ne part sans compte connecté', () => {
     for (const jeton of [null, '']) {
       const { ecouteurs, envois } = charger(jeton);
