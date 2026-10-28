@@ -93,6 +93,27 @@ def _entre(lignes, debut, fin):
     return [l for l in lignes or [] if d <= str(l.get("date") or "")[:10] <= f]
 
 
+def _instant(x):
+    try:
+        t = _dt.datetime.fromisoformat(str(x).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=_dt.timezone.utc)
+
+
+def _apres_lancement(lignes, defi: dict) -> list:
+    """Le jour du début, seules comptent les séries enregistrées APRÈS le
+    lancement : une séance faite le matin ne compte pas dans un défi lancé
+    l'après-midi « à partir d'aujourd'hui » (choix du propriétaire, audit du
+    28/10, m10). Un défi ou une série sans heure (base ancienne) compte."""
+    lance = _instant(defi.get("created_at")) if defi.get("created_at") else None
+    if lance is None:
+        return lignes
+    jour = str(defi["debut"])[:10]
+    return [l for l in lignes if str(l.get("date") or "")[:10] != jour
+            or (_instant(l.get("created_at")) if l.get("created_at") else lance) >= lance]
+
+
 def seances(lignes) -> int:
     return len({(str(l.get("date"))[:10], l.get("seance")) for l in lignes or []
                 if l.get("date") and perf_brute(l)})
@@ -136,7 +157,7 @@ def score(defi: dict, lignes, aujourdhui: _dt.date) -> dict:
     il n'y a pas de score (pas de référence, exercice pas encore fait)."""
     debut = _date(defi["debut"])
     fin = min(_date(defi["fin"]), aujourdhui)
-    pendant = _entre(lignes, debut, fin) if fin >= debut else []
+    pendant = _apres_lancement(_entre(lignes, debut, fin), defi) if fin >= debut else []
     nb = seances(pendant)
     if defi.get("type") == "regularite":
         return {"valeur": nb, "texte": f"{nb} séance{'s' if nb > 1 else ''}", "seances": nb}

@@ -123,7 +123,8 @@ def lignes_des_defis(comptes, debut, fin) -> dict:
 
         def requete(cols):
             extra = ",type_serie" if _COLONNES["type_serie"] else ""
-            return (client.table("history").select("user_id,date,seance,exercice" + extra + "," + cols)
+            # created_at : le jour du début, une série d'avant le lancement ne compte pas.
+            return (client.table("history").select("user_id,date,seance,exercice,created_at" + extra + "," + cols)
                     .in_("user_id", lot).gte("date", str(debut)[:10])
                     .lte("date", str(fin)[:10]).order("id"))
         while True:

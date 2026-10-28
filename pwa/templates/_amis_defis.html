@@ -86,7 +86,7 @@
           <select id="defi-depart" name="depart" class="field">
             {% for cle in departs_defi %}<option value="{{ cle }}"{% if cle == 'demain' %} selected{% endif %}>{{ {'aujourdhui': "Aujourd'hui", 'demain': 'Demain', 'lundi': 'Lundi prochain'}[cle] }}</option>{% endfor %}
           </select>
-          <p class="amis-texte">Tes amis peuvent accepter jusqu'au jour du début.</p>
+          <p class="amis-texte">Tes amis peuvent accepter jusqu'au jour du début. Aujourd'hui : seules comptent les séances enregistrées après le lancement.</p>
         </div>
         <fieldset class="defi-groupe">
           <legend class="field-label">Avec</legend>
