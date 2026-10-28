@@ -148,6 +148,9 @@ def test_plusieurs_processus_seulement_avec_redis(monkeypatch, redis, demandes, 
     faite ailleurs. Le cache est maintenant cohérent via Redis
     (`core/partage.py`) ; sans Redis, gunicorn.conf.py garde UN processus, et
     une variable d'environnement seule ne peut pas changer ça."""
+    # gunicorn ne s'importe que sous Unix (fcntl, grp) : la production et la CI
+    # tournent sous Linux ; sous Windows, ce test n'a rien à vérifier.
+    pytest.importorskip("fcntl", reason="gunicorn : Unix seulement")
     import json
     import runpy
     from pathlib import Path

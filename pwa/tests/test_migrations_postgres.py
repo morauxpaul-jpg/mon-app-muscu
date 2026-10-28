@@ -37,9 +37,14 @@ MIGRATIONS = sorted(PWA.glob("supabase_schema_v*.sql"), key=_numero)
 
 
 def _psql(url, sql=None, fichier=None) -> str:
-    cmd = ["psql", url, "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1"]
-    cmd += ["-f", str(fichier)] if fichier else ["-c", sql]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    # L'URL en dernier : le psql de Windows ne lit plus d'option après elle.
+    # La requête passe par l'entrée standard, en UTF-8 : en argument (-c),
+    # Windows la recodait dans sa page de code et les accents cassaient.
+    cmd = ["psql", "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1"]
+    cmd += ["-f", str(fichier)] if fichier else []
+    cmd.append(url)
+    r = subprocess.run(cmd, input=None if fichier else sql, capture_output=True, text=True,
+                       encoding="utf-8", env={**os.environ, "PGCLIENTENCODING": "UTF8"})
     if r.returncode:
         raise AssertionError(f"{fichier.name if fichier else sql}\n{r.stderr}")
     return r.stdout.strip()
