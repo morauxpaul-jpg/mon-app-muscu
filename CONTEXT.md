@@ -391,7 +391,7 @@ pwa/
 
 ### Progression
 - **Calendrier mensuel** : cases colorées (vert plein = fait, pointillés orange = manqué, gris clair = à venir), navigation mois, taux d'assiduité, tolérance + rattrapage des séances ratées
-- **Taux d'assiduité** : séances faites ÷ séances **échues** (passées, ou faites d'avance). Avant le 18/10, le dénominateur comptait tout le mois : le 1er, un mois parfait affichait 7 % (audit du 18/10, m1).
+- **Taux d'assiduité** : séances faites ÷ séances **échues** (passées, ou faites d'avance). Avant le 18/10, le dénominateur comptait tout le mois : le 1er, un mois parfait affichait 7 % (audit du 18/10, m1). Rien d'échu (le 1er avant la séance) : « aucune séance due pour l'instant », plus « 0 % ». Le calendrier prend le **jour logique** (`logical_today_paris`, bascule à 4 h), comme la séance : au jour calendaire, il ouvrait le mois suivant, vide, à 0 h 30 le 1er (audit du 28/10, m1).
 - **Volume par semaine** : graphique SVG verrouillé (8 dernières semaines)
 - **Body map** : carte musculaire SVG interactive (polygones depuis `core/body_map.py`) avec % de standard
 - **Standards de force relatifs au gabarit** (`core/strength.py`) : les paliers sont des multiples du poids de corps par muscle et par sexe (bornés 35–200 kg), pas des valeurs absolues — 60 kg au développé ne veut pas dire la même chose à 55 kg qu'à 95 kg. Repli absolu si le poids est inconnu.

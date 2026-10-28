@@ -151,7 +151,7 @@
       <span><span class="s-d53781"></span>Rattrapée</span>
       <span><span class="s-00a7ee"></span>Prévue</span>
     </div>
-    <div class="s-b577c8">Touche un jour pour voir la séance. Assiduité : {{ cal_rate }} %.</div>
+    <div class="s-b577c8">Touche un jour pour voir la séance. {% if cal_rate is none %}Assiduité : aucune séance due pour l'instant ce mois-ci.{% else %}Assiduité : {{ cal_rate }} %.{% endif %}</div>
   </section>
 
   {% if not has_data %}

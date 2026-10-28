@@ -14,7 +14,7 @@ from core.data import (
     get_hist, get_prog, get_onboarding, get_profile, save_profile,
     list_body_weight, upsert_body_weight, delete_body_weight,
 )
-from core.dates import today_paris, today_paris_str
+from core.dates import logical_today_paris, today_paris, today_paris_str
 from core.limiter import limiter
 from core.rotation import seance_prevue
 from core.muscu import calc_1rm, get_base_name, fix_muscle, get_rep_table, separer_variante
@@ -500,7 +500,11 @@ def progres():
                 if (r := exercise_stats.resume_mouvement(df_p, b))]
 
     # ── Calendrier mensuel ──────────────────────────────────
-    today = today_paris()
+    # Jour LOGIQUE, comme la séance qu'on enregistre : jusqu'à 4 h, c'est
+    # encore la veille. Le jour calendaire ouvrait le mois suivant à 0 h 30
+    # le 1er, vide, pendant que la séance de la nuit comptait pour le mois
+    # d'avant (audit du 28/10, m1).
+    today = logical_today_paris()
     try:
         cal_year = int(request.args.get("cy", today.year))
         cal_month = int(request.args.get("cm", today.month))
@@ -617,7 +621,9 @@ def progres():
     if any(c is not None for c in week_row):
         cal_weeks.append(week_row)
 
-    cal_rate = round(done_count / echues * 100) if echues > 0 else 0
+    # Rien de dû (le 1er du mois avant la séance, un début de mois en repos) :
+    # pas de taux, plutôt qu'un « 0 % » après un mois parfait (audit du 28/10, m1).
+    cal_rate = round(done_count / echues * 100) if echues > 0 else None
     MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
                  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
     prev_m, prev_y = (cal_month - 1, cal_year) if cal_month > 1 else (12, cal_year - 1)
