@@ -178,9 +178,11 @@
     return "";
   }
 
+  // Nombres affichés au format français : « 6 616 », « 82,5 » (audit du
+  // 28/10, m2 : « 6616 / 13100 kg », « Record : 82.5 kg »).
   function fmt(n) {
-    var x = Number(n) || 0;
-    return String(Math.round(x * 100) / 100);
+    var x = Math.round((Number(n) || 0) * 100) / 100;
+    return x.toLocaleString("fr-FR", {maximumFractionDigits: 2});
   }
 
   function showPr(card, pr) {
