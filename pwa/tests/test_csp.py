@@ -48,6 +48,15 @@ def test_la_politique_bloque_et_refuse_unsafe_pour_les_scripts(client):
     assert "Content-Security-Policy-Report-Only" not in r.headers
 
 
+def test_aucun_domaine_de_polices_externe(client):
+    """Les polices sont servies par l'app (static/fonts) depuis le 13/10 :
+    plus aucune page ne charge Google Fonts. La politique les autorisait
+    encore (audit du 28/10, m7)."""
+    politique = client.get("/").headers["Content-Security-Policy"]
+    assert "googleapis" not in politique and "gstatic" not in politique
+    assert "font-src 'self' data:;" in politique
+
+
 def test_chaque_script_de_la_page_porte_le_jeton_de_la_reponse(client):
     r1, r2 = client.get("/login"), client.get("/login")
     n1 = NONCE.search(r1.headers["Content-Security-Policy"]).group(1)

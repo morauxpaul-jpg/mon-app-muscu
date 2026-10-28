@@ -35,8 +35,19 @@
     if (!ev || !ev.message) return;   // ressource non chargée (image…) : pas une erreur de code
     envoyer("erreur", ev.message, ev.filename, ev.lineno);
   });
+  // Une transition de page (`@view-transition`, theme.css) interrompue par le
+  // clavier ou une rotation rejette sa promesse : « Transition was aborted
+  // because of invalid state. Viewport size changed ». La page suivante
+  // s'affiche quand même ; ces rejets étaient les seules « erreurs JS » du
+  // journal (24 et 26/10, audit du 28/10, m3) et noyaient les vraies.
+  function transitionInterrompue(r) {
+    var nom = r && r.name, msg = String((r && r.message) || "");
+    return (nom === "InvalidStateError" || nom === "AbortError") && /^Transition was (aborted|skipped)/.test(msg);
+  }
+
   window.addEventListener("unhandledrejection", function (ev) {
     var r = ev && ev.reason;
+    if (transitionInterrompue(r)) return;
     envoyer("promesse", (r && (r.message || r)) || "rejet", "", null);
   });
   window.__erreursJs = { envoyer: envoyer };   // tests
