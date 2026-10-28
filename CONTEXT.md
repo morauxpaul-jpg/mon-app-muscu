@@ -609,7 +609,7 @@ pwa/
 
 ### Import Hevy / Strong (core/import_muscu.py, /gestion/import-muscu)
 - Pour tout le monde (c'est ce qui permet de venir sans repartir de zéro). Même parcours que Strava : déposer le CSV, aperçu (rien n'est écrit), confirmer. Rien n'est jamais effacé.
-- En-têtes comparés normalisés contre des alias ; séparateur `,` `;` ou tabulation ; dates ISO ou locales anglaises ; livres converties en kg (colonne `weight_lbs` ou `Weight Unit`). Échauffements (`set_type=warmup`, `Set Order=W`) et lignes sans reps (cardio, chrono) écartés et comptés.
+- En-têtes comparés normalisés contre des alias ; séparateur `,` `;` ou tabulation ; dates ISO ou locales anglaises ; livres converties en kg (colonne `weight_lbs` ou `Weight Unit`). Échauffements (`set_type=warmup`, `Set Order=W`) **importés comme tels** (`history.type_serie = 'echauffement'`, hors records, volume et suggestion, comme dans l'app ; écartés avant l'audit du 28/10, m8) et comptés ; lignes sans reps (cardio, chrono) écartées et comptées. Les séries dégressives (`dropset`) restent importées comme des séries normales.
 - Noms anglais → catalogue via `resoudre` (table `_ANGLAIS` complétée) ; le matériel entre parenthèses devient la variante sauf s'il est déjà supposé par l'exercice (« Lat Pulldown (Cable) » → « Tirage vertical »). Un exercice inconnu garde son nom d'origine.
 - Doublon = même jour + même nom de séance : réimporter le même fichier ne double rien. Écriture par paquets de séances entières (`ajouter_lignes`, lots de 500), donc jamais de séance à moitié écrite. Remarque « Import Hevy » / « Import Strong ».
 
