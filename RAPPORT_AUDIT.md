@@ -1,5 +1,467 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
+## Audit complet du 28/10/2026 · commit `1fc565b` · **6,8 / 10** (136 / 20)
+
+**Commit audité** : `1fc565b` (tête de `main`, PR #90), CI verte (run 317, 28/10 10:04 UTC), déployé sur Railway (`34b88557`, SUCCESS, démarré à 10:07 UTC).
+**Audit précédent** : audit complet du 18/10, commit `722ff67`, **6,7** (134 / 20). Depuis : 28 PR fusionnées (#59 → #90), 112 fichiers, +7 177 / −429 lignes.
+**Historique** : 4,9 (30/09) → 5,6 (03/10) → 6,6 (06/10) → 6,7 (18/10) → **6,8** (28/10, cet audit).
+**Méthode** : lecture seule partout. Aucune écriture en base, aucune migration, aucun déploiement, rien sur `main`, aucune PR touchée (Dependabot #87 comprise). Supabase : `list_tables`, `list_migrations`, `get_advisors` et requêtes `select`. Railway : déploiements, service, noms des variables, journaux, métriques. Les alertes Supabase acceptées dans `CONTEXT.md` ne sont pas relevées : leur justification tient toujours (aucune connexion par mot de passe dans le code, tables fermées au navigateur).
+
+> **Verdict.** Le travail des dix derniers jours a fermé tout ce que l'audit du 18/10 avait ouvert côté technique, preuves en production : C1 corrigé et compteurs recalculés (`defis_gagnes` 17 → 3), 0 avis de sécurité sur les dépendances (22 le 18/10), Sentry actif, EXIF retiré par le serveur, HSTS en ligne, « Série faite » à 513 ms de médiane, 0 réponse 5xx sur 8 734 requêtes en 7 jours. Amis, fil et défis entre amis sont livrés proprement : les autorisations tiennent, un non-ami ne voit rien et reçoit un 404. Mais l'app n'a presque plus d'utilisateurs : **1 compte actif sur 7 jours, 0 inscription depuis le 14/10, 0 essai, 0 paiement**, et le seul « ami » est le second compte du propriétaire. Aucun défaut critique. Deux importants : la barrière CI laisse passer un run annulé (constaté le 23/10), et l'essai comme le paiement n'ont toujours jamais été vécus. La note monte de 0,1 (nutrition et tests) ; elle ne montera plus beaucoup sans vrais utilisateurs.
+
+| Bloc | 30/09 | 03/10 | 06/10 | 18/10 | **28/10** | Écart |
+|---|---:|---:|---:|---:|---:|---:|
+| Produit (axes 1 à 8) | 5,0 | 5,4 | 6,75 | 6,75 | **6,88** | +0,13 |
+| Plateforme (axes 9 à 12) | 4,8 | 5,5 | 6,5 | 7,0 | **7,0** | 0 |
+| Technique (axes 13 à 17) | 5,0 | 5,6 | 6,6 | 6,8 | **7,0** | +0,2 |
+| Business (axes 18 à 20) | 4,7 | 6,0 | 6,33 | 6,0 | **6,0** | 0 |
+| **Global (20 axes)** | 4,9 | 5,6 | 6,6 | 6,7 | **6,8** | **+0,1** |
+
+**Constats** : 0 critique · 2 importants · 10 mineurs, chacun avec sa preuve (annexe Y). Des 17 constats du 18/10 : 13 corrigés (dont 6 constatés en production), 3 en partie (I-4, m1, m4), 1 accepté par le propriétaire (m5, sans objet).
+
+### Lexique minimal
+
+- **Barrière CI** : Railway attend que les tests GitHub passent avant de déployer un commit de `main` (« Wait for CI »).
+- **Run annulé** : une exécution des tests arrêtée avant la fin (délai dépassé, ou remplacée par un commit plus récent). Ce n'est ni un succès ni un échec.
+- **Jour logique** : le jour de la séance pour l'app ; jusqu'à 4 h du matin, c'est encore la veille.
+- **Essai PRO** : 3 jours de PRO restreint (`vip_until`), offerts à la fin de la première séance d'un compte gratuit.
+- **Fil** : la liste des séances terminées de ses amis (nom, date, durée, tonnage, records).
+- **Médiane / p90** : la valeur du milieu / celle sous laquelle tombent 90 % des mesures.
+- **Avis de sécurité** : faille publiée pour une version de bibliothèque (base OSV / PyPI).
+- **Fausse base** : la base simulée en mémoire des tests.
+
+---
+
+### Y.0 Corrections des audits précédents (règle 6)
+
+| # | Ce qui était écrit | Ce qui est vrai | Preuve | Gravité |
+|---|---|---|---|---|
+| Y0-1 | Audit du 18/10, § X.2-7 : « Le déploiement `db6f5e14` (PR #56) a été sauté (CI rouge) : « Wait for CI » fonctionne. » Repris dans CONTEXT.md (« C'est une barrière »). | Vrai pour une CI **en échec**. Une CI **annulée** ne bloque rien : le 23/10, le run 273 du commit `07a1987` (PR #70, redis 7) est annulé à 12:02:58 UTC (délai de 10 min dépassé), et Railway le déploie quand même (`618e0a39`, « Starting gunicorn 26.2.0 » à 12:05:14). Ce déploiement embarquait aussi les PR #62 → #68, dont le dernier run (269, PR #68) avait lui aussi été annulé. | API GitHub (runs 269, 273) ; journal Railway `618e0a39` ; message de la PR #71 | Moyenne (→ I-1) |
+| Y0-2 | Audit du 18/10, bibliothèques : PR #4 « redis 5.0.8 → 8.1.0 … risque à fusionner : moyen », et `redis` dans l'ordre de fusion proposé. | La PR #4 ne devait pas être fusionnée : `limits` (le stockage de flask-limiter) déclare `redis < 8`. La montée s'est faite en 7.4.1 (PR #70). | `requirements.txt:3` ; PR #70 | Précision |
+| Y0-3 | Audit du 18/10, partie 5-1 : « production non joignable d'ici ; HSTS et CSP réelle non lus ». | Joignable le 28/10 : `strict-transport-security: max-age=31536000`, CSP bloquante avec jeton, `robots.txt` public. Limite levée, pas une erreur. | `curl -sI https://muscu-tracker.up.railway.app/` (28/10 12:16 UTC) | Précision |
+
+Revérifiés et exacts : les chiffres d'usage du 18/10 (22 rappels envoyés pour 27 passages, 8 relances, 14 séances sur 30 jours, 5 sur 7 jours, 16 validations de défi), requête Y.4-h.
+
+---
+
+### Y.1 Méthode et exécution
+
+- **Environnement** : Windows 11, Python 3.11.18 (comme `runtime.txt`) dans un environnement isolé, Node 24. Chromium 1248 installé pour Playwright 1.64. PostgreSQL 16.2 local (paquet `pgserver`).
+
+| Commande | Résultat | 18/10 |
+|---|---|---|
+| `python -c "import app"`, aucune variable, dépendances de production seules | **OK** (CRITICAL « FLASK_SECRET_KEY absente », mémoire, 1 processus, contrôle du schéma ignoré) | OK |
+| `python -m pytest tests -q --ignore=tests/e2e --cov=core --cov=routes` | **1 820 passés, 8 échoués, 7 ignorés** en 141 s. Les 8 échecs viennent de Windows (m4) ; la même suite est verte en CI Linux (run 317) | 1 681 passés |
+| `python -m pytest tests/e2e` | **59 passés** en 266 s | 44 |
+| `node tests/js/run.js` | **169 passés** | 153 |
+| `tests/test_migrations_postgres.py` sur PostgreSQL 16 local | **6 passés** (v00 + v23 → v53 rejouées deux fois, colonnes, inscription, règles v53), avec deux adaptations Windows de `psql` hors dépôt (m4) | 5 |
+| Couverture `--cov=core --cov=routes` | **87 %** (12 283 lignes, 1 614 non couvertes) | 86 % |
+| Suite figée (`time-machine`) du lundi 2/11 au dimanche 8/11 à 10:00 UTC | **1 821 passés** chaque jour ; mêmes 7 échecs Windows ; jour vu par l'app vérifié (2/11 → 8/11) | 1 681 × 7 |
+| Suite figée à 02:30 UTC (3/11) et 01:30 UTC le 28/03/2027 (passage à l'heure d'été) | 1 821 passés ; jour logique vu : 2/11 et 27/03 | — |
+| Suite figée à 23:30 UTC le 31/12 | **2 échecs de plus** : `tests/test_assiduite.py:49` et `:64` (m1) | vert |
+| `pip-audit -r requirements.txt` | **0 avis** | 22 avis |
+
+- **Les moins couverts** : `core/catalog.py` 53 %, `core/bilans_seance.py` 64 %, `core/push.py` 66 %, `core/db_aliments.py` 68 %, `core/db_push.py` 70 %, `core/essai.py` 71 %. Nouveaux modules : `core/amis.py` 98 %, `core/defis.py` 96 %, `core/db_defis.py` 90 %, `core/db_amis.py` 82 %, `routes/amis.py` 88 %, `routes/defis.py` 87 %, `core/ia.py` 100 %.
+- **Parcours** : serveur de démonstration (`run_local_fake.py` + un décor par profil daté d'aujourd'hui, scripts hors dépôt), Chromium 375 × 812, `fr-FR`, fuseau `Europe/Paris` ; 46 captures.
+- **Production, lecture seule** : Supabase (14 requêtes `select`, `list_tables`, `list_migrations`, `get_advisors` ×2), Railway (25 déploiements, variables par nom, journaux applicatifs et HTTP depuis le 21/10, métriques HTTP sur 7 jours), GitHub (API publique : runs, PR ouvertes, contrôles), en-têtes de production.
+
+---
+
+### Y.2 Vérifications en production (chiffres réels, 28/10 vers 10:30-12:30 UTC)
+
+**1. Schéma**
+- 21 tables et 2 vues. RLS active sur les 21, 0 règle, 0 droit `anon` / `authenticated` / `public`. Vues `user_last_activity` et `admin_history_stats` en `security_invoker=true`. Contrôle au démarrage : « schéma : 23 tables et vues vérifiées, rien ne manque » (déploiement du 28/10).
+- `list_migrations` : 16 entrées (v40 → v53, plus v29, v25, v48). v51 : partie 1 seule enregistrée ; la partie 2 est sans objet (0 programme avec `_reglages_machines`, 1 ligne `etat_compte.reglages_machines`).
+- Alertes de performance (INFO, négligeables à ce volume) : clé étrangère `encouragements_seance_du_fil` sans index, 5 index jamais utilisés (dont `defis_createur_idx`).
+
+**2. Intégrité**
+- 0 doublon de série ; 0 ligne d'historique orpheline ; 0 bilan sans séance ; 0 ligne du fil sans séries ; 0 série sans `session_id` depuis le 01/10 ; 0 série datée du futur ; 199 lignes « 0 × 0 » (voulu).
+- Depuis le code v42 : 115 séries de musculation, **115 avec `exercise_id`**, 0 avec `type_serie` (aucun échauffement saisi).
+- Photos : 5 lignes, 10 fichiers, 0 ligne sans fichier.
+- **C1 réparé en base** : compte A `defis_faits = [142, 144, 146]`, `defis_gagnes = 3` (17 le 18/10). 2 validations de défi depuis le 18/10, 0 en double. 0 debrief en double depuis le 18/10 (3 debriefs pour 3 séances).
+
+**3. Usage**
+- 15 comptes. **1 inscription en 30 jours (14/10), 0 depuis.**
+- Comptes avec une séance : **1 sur 7 jours, 3 sur 30 jours**. Séances : 1 sur 7 jours, 13 sur 30 jours. Depuis le 18/10 : 3 séances (20, 21 et 26/10), un seul compte, 49 séries. Comptes avec un événement : 2 sur 7 jours, 4 sur 30 jours.
+- **Essais : 0** (`vip_until` posé 0 fois, `trial_started` 0). Le chemin est en production depuis le 24/10 (PR #77), mais aucun compte gratuit n'a terminé de séance depuis. `tier` : 8 `vip`, 7 `free` ; 2 clients Stripe. `checkout_started` : 0 sur 30 jours (dernier le 18/06). Webhook Stripe : 0 appel en 7 jours.
+- **Coach** : 10 messages sur 30 jours (2 comptes), dont 7 depuis le 18/10. **Générateur** : 1 génération sur 30 jours (03/10), 0 adoption. **Debriefs** : 12 sur 30 jours. Repas : dernier noté le 05/10 ; recettes et aliments perso : 0.
+- **Amis** : 1 amitié (demandée le 26/10 à 19:06, acceptée 13 s plus tard), 1 séance dans le fil, 1 encouragement, 1 défi (régularité, 2 semaines, 27/10 → 09/11, 2 participants acceptés). Les deux comptes sont les deux seuls actifs : selon toute vraisemblance le propriétaire et un compte de test (non vérifiable d'ici).
+- **Notifications** (30 jours) : 33 passages du rappel, 44 rappels envoyés ; 30 passages de la relance, 12 relances envoyées. 6 abonnements push.
+
+**4. Railway**
+- Déploiement `34b88557` (commit `1fc565b`), SUCCESS le 28/10. gunicorn 26.2.0, `gthread`, 1 processus, Redis. **Sentry actif** à chaque démarrage depuis le 23/10 12:05 UTC. Variables : 22 définies par l'app, dont `SENTRY_DSN` ; ni `WEB_CONCURRENCY` (1 processus, sans effet à ce trafic) ni `HIDE_NATIVE_BILLING` (normal hors Play Store).
+- **HTTP sur 7 jours : 8 734 requêtes, 0 réponse 5xx**, 4 réponses 4xx (toutes des 499 : le client a fermé avant la réponse). Médiane par jour : 6 à 41 ms ; p95 : 124 à 1 212 ms.
+- **« Série faite »** (`/seance/save-exo`), 47 envois réels du 21 au 26/10 : **médiane 513 ms**, p90 871 ms, min 154, max 1 305 ; 15 sous 300 ms, 3 au-dessus d'1 s (18/10 : médiane 593, p90 1 119). `/accueil` : médiane 166 à 261 ms selon la semaine.
+- Cron `/tasks/reminders` : **168 appels en 7 jours, tous en 2xx**. `/push/repos` (fin du repos en push) : **54 appels** (0 le 18/10). `/erreurs/js` : 2. `/csp/rapport` : 0. `/billing/webhook` : 0.
+- Journaux depuis le 21/10 : 0 ligne `warn` ; 4 lignes `error` : 2 erreurs JS « Transition was aborted because of invalid state. Viewport size changed » sur `/seance` (24/10 et 26/10, m3) et 2 coupures Supabase le 26/10 à 22:14, retentées avec succès par `core/reprise_base.py`.
+- **Coût de l'IA** (Haiku 5.5 depuis le 25/10, lignes « ia … tokens ») : 9 appels (7 coach, 1 mémoire, 1 bilan), **35 903 tokens en entrée, 5 499 en sortie, soit 0,0063 $** (0,10 $ / 0,50 $ le million). Un message au coach coûte 0,00085 $ en moyenne ; un PRO au plafond (15 messages par jour) coûterait environ 0,38 $ par mois.
+
+**5. Alertes Supabase** : sécurité, uniquement les deux alertes acceptées dans CONTEXT.md (non relevées, justification vérifiée) ; performance, ci-dessus.
+
+---
+
+### Partie 1 — Les 20 axes
+
+| # | Axe | 18/10 | **28/10** | Écart | En une phrase |
+|---|---|---:|---:|---:|---|
+| 1 | Onboarding | 7 | **7** | 0 | 4 bulles au lieu de 14, essai offert dès la première séance ; 0 inscription réelle depuis le 14/10. |
+| 2 | Saisie de séance | 7 | **7** | 0 | Un seul vert sur la carte, trois retours d'usage corrigés ; 3 séances réelles en 10 jours. |
+| 3 | Programme et planning | 7 | **7** | 0 | Rien de neuf ; ni blocs ni cycles. |
+| 4 | Progression et statistiques | 7 | **7** | 0 | Assiduité juste en cours de mois, mais « 0 % » le 1er et « 6.2k » à l'anglaise. |
+| 5 | Coach IA | 7 | **7** | 0 | Haiku 5.5 à 0,00085 $ le message, progression datée par exercice ; 2 comptes s'en servent. |
+| 6 | Générateur IA | 7 | **7** | 0 | 0 génération depuis le 03/10. |
+| 7 | Nutrition | 6 | **7** | +1 | C1 corrigé, cible perso de nouveau écrite ; aucun repas noté depuis le 05/10. |
+| 8 | Cardio | 6 | **6** | 0 | Aucun cardio depuis le 05/10. |
+| 9 | Hors-ligne | 7 | **7** | 0 | « Commencer » hors ligne ouvre la séance en 0,4 s ; jamais prouvé dans une vraie salle. |
+| 10 | Notifications et relances | 7 | **7** | 0 | Cron 168/168, fin de repos en push enfin utilisée (54) ; effet non mesuré. |
+| 11 | Design et cohérence UI | 7 | **7** | 0 | Un vert par carte de séance ; deux verts pleins sur /amis, deux formats anglais. |
+| 12 | Performance ressentie | 7 | **7** | 0 | Médiane 513 ms (593), p90 871 ms (1 119) ; toujours au-dessus de 300 ms. |
+| 13 | Architecture du code | 7 | **7** | 0 | État lu par copie ; toujours 5 imports entre blueprints. |
+| 14 | Modèle de données | 7 | **7** | 0 | C1 réparé et compteurs recalculés, v52/v53 propres ; 0 échauffement réel. |
+| 15 | Sécurité | 7 | **7** | 0 | 0 avis, HSTS, EXIF retiré par le serveur, amis étanches ; pas de test d'intrusion documenté. |
+| 16 | Robustesse | 7 | **7** | 0 | 0 5xx sur 8 734 requêtes, Sentry actif ; la barrière CI a laissé passer un commit non testé. |
+| 17 | Tests | 6 | **7** | +1 | Fausse base qui copie, 59 tests navigateur, vrai SDK Anthropic ; rouge le 1er du mois la nuit. |
+| 18 | Monétisation et paywall | 5 | **5** | 0 | Essai ouvert à tous depuis le 24/10, jamais déclenché ; 0 paiement. |
+| 19 | Rétention | 6 | **6** | 0 | Défis réparés, amis et défis entre amis livrés ; 1 compte actif sur 7 jours. |
+| 20 | Accessibilité | 7 | **7** | 0 | Inchangé ; jamais essayé au lecteur d'écran. |
+
+Total **136 / 20 = 6,8**. Produit 55/8 = 6,88 · Plateforme 28/4 = 7,0 · Technique 35/5 = 7,0 · Business 18/3 = 6,0.
+
+#### Détail, preuves et écart
+
+**1. Onboarding — 7 (=)**
+- **Pour** : P1 joué : 4 étapes, **10 taps et 4 champs, 5,3 s** ; 6 programmes, 3 « recommandés » ; **4 bulles** au moment du geste (m9 corrigé) ; 20 kg pré-remplis, « Série faite » sans rien taper enregistre (0 → 1 ligne) ; après « Terminer » : « Séance du jour faite », « Faire en avance » en secondaire, carte « ESSAI PRO OFFERT » (`trial_started`, `vip_until` + 3 jours).
+- **Contre** : défi de la semaine « 1 séance de cardio » dès le jour 1, pour un programme sans cardio (m5) ; Google seul ; **0 inscription depuis le 14/10**.
+- **Pour 8** : 5 vraies inscriptions qui finissent leur première séance le jour même.
+
+**2. Saisie de séance — 7 (=)**
+- **Pour** : un seul bouton vert sur la carte (« Série faite », m8 corrigé, P1 et P4) ; « Dernière fois » garde la séance précédente, durée de repos retenue après rechargement, retirer une série termine l'exercice (PR #75, #76, #83, toutes nées de retours d'usage, chacune avec un test qui échouait avant) ; 115 / 115 séries avec identifiant.
+- **Contre** : 3 séances réelles en 10 jours ; trois accrocs rapportés par l'utilisateur entre le 23 et le 24/10 ; la carte ouverte compte 19 commandes visibles (P4) ; « 6616 / 13100 kg » sans espace des milliers (m2).
+- **Pour 8** : 10 séances réelles sans accroc rapporté.
+
+**3. Programme et planning — 7 (=)**
+- **Pour** : « Faire en avance » un jour de repos (PR #79), rotation A/B.
+- **Contre** : ni blocs, ni cycles, ni % de la force estimée (P4).
+- **Pour 8** : blocs ou cycles simples, utilisés par un vrai compte.
+
+**4. Progression et statistiques — 7 (=)**
+- **Pour** : assiduité sur les séances échues (P2 : 100 % au lieu de 31 % le 18/10) ; poids au format français (« 61,5 kg », « −0,33 kg / semaine ») ; courbe de force.
+- **Contre** : **« Assiduité : 0 % » le 1er du mois** après un mois parfait, et le mois suivant affiché entre 0 h et 4 h (m1, capture `d_assiduite`) ; « 3.9k / 6.2k / 7.1k » dans « Volume par semaine » (m2) ; deux blocs floutés à la suite pour un gratuit.
+- **Pour 8** : m1 et m2 corrigés.
+
+**5. Coach IA — 7 (=)**
+- **Pour** : Haiku 5.5 (PR #84), journal des tokens, refus géré ; bloc « progression par exercice » daté (PR #88) après une erreur de charge rapportée le 26/10 ; test contre le vrai SDK (PR #74) ; coût mesuré : 0,00085 $ le message.
+- **Contre** : 10 messages en 30 jours, 2 comptes ; qualité non mesurée hors du retour du 26/10.
+- **Pour 8** : un PRO payant qui s'en sert chaque semaine, un retour qualitatif écrit.
+
+**6. Générateur IA — 7 (=)**
+- **Pour** : fermé pendant l'essai, comme prévu (P6).
+- **Contre** : 0 génération depuis le 03/10, 0 adoption.
+- **Pour 8** : un programme généré suivi 4 semaines par un vrai compte.
+
+**7. Nutrition — 7 (+1)**
+- **Pour** : C1 corrigé (état lu par copie, `core/db_etat.py:140`) : une cible modifiée est écrite, « Ton rythme réel » aussi (5 tests qui échouaient sans la correction) ; ouverte pendant l'essai (P6).
+- **Contre** : aucun repas noté depuis le 05/10, 0 recette en base ; aucune proposition de cible appliquée en vrai.
+- **Écart** : +1. La régression qui coûtait le point est réparée et tenue par des tests.
+- **Pour 8** : deux semaines de saisie réelle avec recettes, une proposition appliquée et relue en base.
+
+**8. Cardio — 6 (=)**
+- **Contre** : aucun cardio depuis le 05/10 ; GPS écran allumé seulement ; pas de zones cardiaques.
+- **Pour 7** : un cardio réel avec secondes en base ; **pour 8** : zones cardiaques.
+
+**9. Hors-ligne — 7 (=)**
+- **Pour** : P9 rejoué : pastille « prêtes hors-ligne », **« Commencer » en mode avion ouvre la séance en 0,4 s** (m2 du 18/10 corrigé), 3 séries, « Terminer » en 1,1 s, retour du réseau : 81 → 84 lignes.
+- **Contre** : jamais prouvé dans une vraie salle.
+- **Pour 8** : une séance réelle complète sans réseau, constatée en base.
+
+**10. Notifications et relances — 7 (=)**
+- **Pour** : cron horaire 168 / 168 ; 44 rappels et 12 relances envoyés sur 30 jours ; `/push/repos` appelé 54 fois.
+- **Contre** : aucun push pour les amis (demande, encouragement, défi) ; effet des rappels non mesuré (1 compte actif).
+- **Pour 8** : effet mesuré sur 20 abonnés.
+
+**11. Design et cohérence UI — 7 (=)**
+- **Pour** : un vert par carte de séance ; tutoriel court ; captures cohérentes à 375 px.
+- **Contre** : deux boutons verts pleins sur /amis (« Lancer un défi », « Partager mon lien ») et le rang « Toi » en vert (m6) ; « 6.2k », « 6616 / 13100 kg » (m2) ; deux blocs floutés à la suite dans Progrès.
+- **Pour 8** : une revue avec utilisateurs, un vert par vue, formats français partout.
+
+**12. Performance ressentie — 7 (=)**
+- **Pour** : médiane 513 ms, p90 871 ms sur 47 envois réels (593 / 1 119 le 18/10) ; série confirmée sur le téléphone avant la réponse.
+- **Contre** : 32 envois sur 47 au-dessus de 300 ms ; accueil à 12 requêtes base à froid et 5 à chaud (10 / 3 le 18/10, sur un décor plus petit ; la carte des défis entre amis en ajoute au moins une) ; JavaScript 350 ko non compressé.
+- **Pour 8** : médiane serveur sous 300 ms.
+
+**13. Architecture du code — 7 (=)**
+- **Pour** : état du compte lu par copie (moitié de la condition du 8) ; amis et défis en couches séparées (calcul pur `core/amis.py`, `core/defis.py` ; accès `core/db_amis.py`, `core/db_defis.py`) ; 96 modules `core/` (17 823 lignes), 26 fichiers `routes/` (8 397 lignes).
+- **Contre** : toujours 5 imports entre blueprints (`routes/gestion.py:355`, `routes/onboarding.py:210`, `routes/premium.py:15`, `routes/programme.py:269`, `routes/progres.py:340`) ; la page Progrès prend le jour calendaire quand le reste de l'app prend le jour logique (m1).
+- **Pour 8** : 0 import entre blueprints.
+
+**14. Modèle de données — 7 (=)**
+- **Pour** : C1 réparé, compteur faux recalculé (17 → 3) ; v52 et v53 : contraintes, cascades, index de paire, score jamais stocké ; base = code (23 tables et vues).
+- **Contre** : 0 `type_serie` réel (aucun échauffement saisi, l'import Hevy les écarte, m8).
+- **Pour 8** : un échauffement réel en base.
+
+**15. Sécurité — 7 (=)**
+- **Pour** : **0 avis** (`pyjwt` 2.15.1, `cryptography` 50.0.1) ; HSTS lu en production ; EXIF et GPS retirés par le serveur même sur un envoi direct (P7 : 3 000 × 4 000 avec GPS → servi sans EXIF ni GPS, `private, no-cache`) ; amis et défis : chaque action filtrée par le compte (`core/db_amis.py:129`, `:136`, `core/db_defis.py:201`, `:222`, `:240`), invitation limitée aux amis acceptés, un non-ami reçoit 404 (P10) ; Sentry sans données personnelles (`send_default_pii=False`).
+- **Contre** : la CSP autorise encore Google Fonts, que plus aucune page n'utilise (m7) ; aucun test d'intrusion documenté.
+- **Pour 8** : un test d'intrusion simple documenté (0 avis : fait ; la seule alerte WARN de Supabase est acceptée et sans objet).
+
+**16. Robustesse — 7 (=)**
+- **Pour** : 0 5xx sur 8 734 requêtes en 7 jours ; deux coupures Supabase rattrapées le 26/10 ; limiteur qui retombe sur la mémoire quand Redis tombe (PR #82) ; Sentry actif.
+- **Contre** : **un commit non testé déployé le 23/10** (I-1) ; les erreurs JS arrivent dans les journaux sans alerte, et les deux reçues sont du bruit (m3).
+- **Pour 8** : 30 jours sans 5xx prouvés, barrière CI fermée, alerte sur erreur navigateur.
+
+**17. Tests — 7 (+1)**
+- **Pour** : la fausse base rend des copies (`tests/conftest.py:235`) ; 59 tests navigateur (44), dont amis, défis, essai, premier jour ; 7 tests contre le vrai SDK Anthropic ; 6 tests PostgreSQL ; couverture 87 %.
+- **Contre** : rouge à 23:30 UTC le 31/12 (m1) ; 8 échecs d'environnement sous Windows, la machine du propriétaire (m4) ; une CI annulée vaut un feu vert pour Railway (I-1).
+- **Écart** : +1. Les trois conditions du 8 posées le 18/10 sont remplies ou presque ; le créneau de nuit et la barrière retiennent le 8.
+- **Pour 8** : suite verte sur tous les créneaux et sous Windows, barrière fermée.
+
+**18. Monétisation et paywall — 5 (=)**
+- **Pour** : essai de 3 jours à la fin de la première séance (PR #77, #86), joué de bout en bout (P1, P6) : coach, nutrition, Progrès, Corps ouverts, générateur fermé.
+- **Contre** : **0 essai, 0 paiement, 0 page de paiement ouverte en 30 jours** (I-2).
+- **Pour 7** : un essai réel suivi jusqu'au bout ; **pour 8** : un paiement réel et un taux de conversion.
+
+**19. Rétention — 6 (=)**
+- **Pour** : défi hebdo réparé (0 validation en double depuis le 18/10) ; amis, fil, encouragements, défis entre amis (P10 : de bout en bout en 8 s, sans erreur) ; rappel photo.
+- **Contre** : **1 compte actif sur 7 jours** (2 le 18/10) ; les seuls amis sont les deux comptes actifs ; pas de push pour les amis.
+- **Écart** : 0. Le mécanisme social demandé pour le 8 existe, mais l'usage a encore baissé.
+- **Pour 8** : J7 / J30 mesurés sur 20 inscrits.
+
+**20. Accessibilité — 7 (=)**
+- **Pour** : `tests/test_accessibilite.py` ; boutons d'amis nommés (« Accepter Marc », « Accepter le défi de Paul »).
+- **Contre** : jamais essayé avec TalkBack.
+- **Pour 8** : une séance complète au lecteur d'écran.
+
+---
+
+### Partie 2 — Les 10 parcours (joués dans Chromium, 375 × 812, `fr-FR`, heure de Paris)
+
+| # | Profil | 18/10 | **28/10** | Ce qui marche | Ce qui coince (écran, action) |
+|---|---|---:|---:|---|---|
+| 1 | Débutant jour 1 | 7 | **8** | 10 taps + 4 champs en 5,3 s ; 4 bulles ; 20 kg pré-remplis ; « Série faite » enregistre ; après « Terminer » : « Séance du jour faite » et « ESSAI PRO OFFERT » | Accueil : défi « 1 séance de cardio » pour un programme sans cardio |
+| 2 | Débutant semaine 3 | 7 | **7** | « +5 kg en 3 semaines », assiduité 100 % juste, poids « 61,5 kg » | Progrès : « 6.2k » ; deux blocs floutés ; accueil : fenêtre PRO (« 9 séances au compteur ») alors que l'essai arrive à la séance suivante |
+| 3 | Venant de Hevy | 7 | **7** | 6 lignes lues, noms traduits, RPE gardés, 5 séries en 0,8 s | Échauffement écarté au lieu d'être importé comme tel ; série dégressive aplatie |
+| 4 | Avancé | 6 | **6** | 87 kg pré-remplis, « Monte à 89,5 kg (+2,5) » au format français, échauffement, un seul vert | « 6616 / 13100 kg » ; ni blocs ni % de force estimée ; 19 commandes sur la carte |
+| 5 | Gratuit | 7 | **7** | Export JSON gratuit (14 sections, amis et défis compris) ; essai offert à la fin de la séance | Progrès : deux blocs floutés à la suite |
+| 6 | Essai | 5 | **6** | Entrée enfin sans parrainage : première séance → 3 jours ; coach, nutrition, Progrès, Corps ouverts ; générateur fermé | Jamais vécu en production (0 essai) |
+| 7 | PRO payant (photos) | 7 | **7** | Photo 3 000 × 4 000 avec GPS envoyée hors app → servie sans EXIF ni GPS ; bilan PRO du mois | Aucun payant réel ; l'envoi hors app n'est pas réduit (2 Mo au plus) |
+| 8 | App Android (webview) | 6 | **6** | Marqueur `MuscuTrackerApp/1` reconnu ; `ads.js` chargé pour un gratuit | 6 prix visibles (normal hors Play Store) ; rien vérifiable sur téléphone |
+| 9 | Salle sans réseau | 7 | **8** | « Commencer » hors ligne → séance en 0,4 s ; 3 séries ; « Terminer » en 1,1 s ; 81 → 84 lignes au retour | Jamais joué dans une vraie salle |
+| 10 | Deux amis (nouveau) | — | **7** | Lien copié, demande, acceptation, fil (« 300 kg soulevés · 1 record »), encouragement vu par l'auteur seul, non-ami : rien visible et 404 ; défi lancé, accepté, classement en direct sur /amis et l'accueil | Deux verts pleins sur /amis ; une séance faite le matin compte dans un défi lancé l'après-midi (m10) ; aucun push ; jamais vécu entre deux vraies personnes |
+
+Moyenne : 69 / 10 = **6,9**. Sur les 9 parcours comparables : 62 / 9 = 6,9 (18/10 : 6,6).
+
+---
+
+### Partie 3 — Audit technique
+
+#### Critique
+
+Aucun. Rien n'a été trouvé qui perde des données ou ouvre l'accès d'un compte à un autre.
+
+#### Importants
+
+| # | Constat | Preuve et reproduction | Impact | Correction | Effort |
+|---|---|---|---|---|---|
+| I-1 | **La barrière CI laisse passer un run annulé.** Railway ne déploie pas un commit dont la CI échoue, mais déploie celui dont la CI est annulée. | 23/10 : run 273 (`07a1987`, PR #70) annulé à 12:02:58 UTC (délai de 10 min dépassé) ; déploiement `618e0a39` démarré à 12:05:14 (« Starting gunicorn 26.2.0 »), en ligne jusqu'à 13:00. Il portait aussi les PR #62 → #68, dont le run 269 avait été annulé. Contre-exemple : run 276 en échec → déploiement SKIPPED. | Du code jamais testé en production (ici gunicorn 26 et redis 7 ensemble) ; CONTEXT.md dit le contraire. La limite portée à 20 min (PR #71) rend le cas plus rare, pas impossible | Ajouter un dernier job `if: always()` qui échoue si un job requis n'a pas réussi, ou déclencher le déploiement depuis GitHub après un succès | S |
+| I-2 | **Essai et paiement jamais vécus ; plus d'acquisition.** Le chemin de l'essai est en production depuis le 24/10, mais aucun compte gratuit n'a terminé de séance depuis. | SQL Y.4-c : `vip_until` 0, `trial_started` 0, `checkout_started` 0 sur 30 jours, webhook 0 en 7 jours ; 0 inscription depuis le 14/10 ; 1 compte actif sur 7 jours | On ne sait toujours pas si l'app encaisse ; les axes 18 et 19 ne peuvent plus monter sur le code seul | Faire entrer 10 vraies personnes par le lien d'ami (Partie 4.5) et suivre un essai jusqu'au bout | M |
+
+#### Mineurs
+
+| # | Constat | Preuve | Impact | Correction | Effort |
+|---|---|---|---|---|---|
+| m1 | **Assiduité « 0 % » quand rien n'est encore dû**, et mois suivant affiché entre 0 h et 4 h le 1er : Progrès prend le jour calendaire (`today_paris`, `routes/progres.py:503`), le reste de l'app le jour logique | Serveur figé au mardi 1er/12 à 10 h, novembre complet : « Assiduité : 0 % » (novembre : 100 %), capture `d_assiduite` ; suite figée à 23:30 UTC le 31/12 : `tests/test_assiduite.py:49` et `:64` rouges ; `routes/progres.py:620` (`else 0`) | Chiffre décourageant chaque début de mois ; CI rouge si un commit part la nuit du 1er (déjà vu le 18/10 à 04:02) | Jour logique, et « — » quand rien n'est dû | S |
+| m2 | Formats anglais restants : « 3.9k / 6.2k / 7.1k », « 6616 / 13100 kg » | `templates/progres.html:460` (`round(1)` puis « k ») ; `templates/seance_edit.html:65` ; captures `d_volume_k`, `d_tonnage` | Incohérence visible, contre la règle « format français » | Le filtre `|fr` et l'espace des milliers | S |
+| m3 | Une transition de page interrompue remonte comme erreur JS | 2 lignes « Transition was aborted … Viewport size changed » sur `/seance` (24 et 26/10) ; cause probable : `@view-transition` (`static/css/theme.css:432`) quand le clavier ou la rotation change la taille de l'écran. **Non reproduit** | Bruit dans les journaux d'erreurs, qui masquera une vraie panne | Ignorer ces rejets dans `static/js/erreurs.js` | S |
+| m4 | La suite n'est pas verte sous Windows (la machine du propriétaire) : 8 échecs d'environnement | `fcntl` / `grp` absents (gunicorn importé, 5 tests), fichier SQL lu sans `encoding` (`test_etat_compte`), horloge Windows à 15 ms (`test_schema`), délai de 0,5 s dépassé (`test_limiteur_panne`, instable) ; `test_migrations_postgres` : `psql` Windows exige l'URL en dernier, accents passés en cp1252 | Le propriétaire ne peut pas valider une correction chez lui avant la CI | Marquer ces tests Linux seulement ou les rendre portables | S |
+| m5 | Le défi de la semaine tourne pour tout le monde, sans regarder le programme : « 1 séance de cardio » à un programme sans cardio | `core/challenges.py:177` (`CHALLENGES[w % 5]`) ; P1 et P2, capture `d_defi_cardio` | Défi infaisable au jour 1 | Sauter le défi cardio sans cardio au programme | S |
+| m6 | Deux boutons verts pleins sur /amis, et le rang « Toi » en vert | Capture `d_deux_verts` ; règle « une seule couleur vive, la sélection en blanc » (CONTEXT.md, Thème) | Hiérarchie floue sur la page sociale | Un seul bouton plein ; « Toi » en blanc | S |
+| m7 | La CSP autorise encore Google Fonts, que plus aucune page n'utilise | `core/csp.py:74`, `:76` ; aucune référence dans `static/` ni `templates/` ; en-tête de production du 28/10 | Surface inutile | Retirer les deux domaines | S |
+| m8 | Import Hevy : l'échauffement est écarté, la série dégressive importée comme normale | P3 : 6 lignes → 5 séries, `type_serie` vide ; `core/import_muscu.py:201` | Historique incomplet pour qui vient de Hevy, alors que `type_serie` existe depuis la v43 | Importer l'échauffement comme tel | S |
+| m9 | Doc en retard : barrière CI, Google Fonts, liste des migrations | Voir « Écarts doc / code » | Induit en erreur | Mise à jour | S |
+| m10 | Une séance faite avant le lancement d'un défi « à partir d'aujourd'hui » compte dans ce défi | P10 : Marc s'entraîne, Paul lance ensuite le défi : « Marc · 1 séance » ; conforme à `defis.bornes` (début inclus) | Avantage à qui lance après s'être entraîné | À décider : compter à partir du lancement, ou le dire dans le formulaire | S |
+
+#### Synthèse par sujet
+- **Sécurité** : CSRF partout sauf les chemins signés ou à secret ; CSP bloquante avec jeton ; HSTS ; cookies `HttpOnly`, `Secure`, `SameSite=Lax` ; 0 avis sur les dépendances ; photos privées sans métadonnées ; **amis et défis** : chaque écriture filtrée par le compte qui agit (accepter : destinataire ; annuler : demandeur ; retirer : l'un des deux ; défi : créateur, ou invité ami du créateur), lecture d'un défi par les seules lignes de participant, données partagées limitées (prénom, nombre de séances, tonnage, records, % de progression), limites par compte (demandes 20/h, encouragements 60/h). Rien ne fuit entre non-amis (P10, `tests/test_amis.py`, `tests/test_defis.py`).
+- **Intégrité** : 0 doublon, 0 orphelin ; C1 réparé ; fil supprimé avec la séance ; scores jamais stockés.
+- **Performance** (fausse base, compte PRO de 1 082 séries, requêtes base à froid / à chaud) : accueil 12 / 5, choix de séance 6 / 1, séance 8 / 3, Progrès 6 / 0, Corps 3 / 2, fiche exercice 5 / 0, programme 5 / 1, nutrition 9 / 4, cardio 1 / 0, gestion 6 / 1, coach 3 / 1, Plus 5 / 1, **Amis 8 / 6** (rien n'y est mis en cache). Aucun N+1 : les séries des participants d'un défi sont lues en une requête par lot de 100 comptes. Poids compressés : accueil 8,3 ko, séance 21,0, Progrès 18,1, programme 24,2, nutrition 22,2, Amis 7,0.
+- **Dette** : 5 imports entre blueprints ; jour calendaire et jour logique mêlés (m1) ; `app.py` 752 lignes.
+
+#### Bibliothèques et PR Dependabot
+
+`pip-audit` : 0 avis. Toutes les montées proposées le 18/10 sont faites (PR #65 → #74), chacune vérifiée sur la CI de son jour. Une seule PR ouverte, non touchée :
+
+| PR | Mise à jour | CI | Risque à laisser | Risque à fusionner |
+|---|---|---|---|---|
+| #87 | `cryptography` 50.0.1 → 50.0.2, `sentry-sdk` 2.72.0 → 2.73.0, `playwright` 1.64.0 → 1.64.1 | verte le 26/10, fusionnable | Faible (aucun avis connu sur 50.0.1) | Faible : correctifs de version |
+
+#### Écarts doc / code (CONTEXT.md)
+
+| La doc dit | La réalité |
+|---|---|
+| « Intégration continue » : « C'est une barrière : un commit sur `main` dont la CI échoue n'est pas déployé » | Vrai pour un échec, faux pour une annulation (I-1) |
+| « Sécurité du navigateur » : « Google Fonts aussi (`theme.css`) » | Le thème dit « plus d'appel à Google Fonts » ; aucune page n'en charge ; la CSP les autorise encore (m7) |
+| « Migrations Supabase » : « Puis v40 à v47 …, toutes appliquées » | v48 → v53 sont décrites ailleurs ; v51 n'a que sa partie 1 dans `list_migrations` (partie 2 sans objet) |
+| « Tests » : « Aucune date écrite en dur … un test daté devient rouge un jour donné » | `tests/test_assiduite.py` devient rouge à 23:30 UTC le 31/12 (m1) |
+| « Thème » : « Nombres au format français » ; « une sélection est blanche, jamais verte » | « 6.2k », « 6616 / 13100 kg » (m2) ; rang « Toi » en vert (m6) |
+
+#### Suivi des constats du 18/10
+
+| Repère | Statut au 28/10 | Preuve |
+|---|---|---|
+| C1 État du compte modifié en place | **Corrigé et constaté en production** : défi validé une fois par semaine, compteur recalculé | `core/db_etat.py:140` (copie) ; 5 tests ; SQL Y.4-f (`defis_gagnes` 17 → 3, 0 doublon depuis le 18/10) |
+| I-1 `pyjwt` / `cryptography` | **Corrigé** | `pip-audit` : 0 avis ; `requirements.txt` |
+| I-2 Aucune surveillance d'erreurs | **Corrigé** côté serveur (Sentry actif depuis le 23/10) ; erreurs JS au journal, sans alerte | Journaux « Sentry actif » ; `/erreurs/js` : 2 appels en 7 jours |
+| I-3 Fausse base sans copies | **Corrigé** | `tests/conftest.py:235` |
+| I-4 Essai et paiement jamais vécus | **En partie** : chemin d'essai en production le 24/10, jamais déclenché (I-2 de cet audit) | P1, P6 ; SQL Y.4-c |
+| m1 Assiduité avec les séances à venir | **En partie** : juste en cours de mois ; « 0 % » quand rien n'est dû (m1 de cet audit) | P2 (100 %) ; serveur figé au 1er/12 |
+| m2 « Faire maintenant » hors ligne | **Corrigé** | P9 : séance ouverte en 0,4 s |
+| m3 Debrief régénéré | **Corrigé et constaté** | 0 debrief en double depuis le 18/10 |
+| m4 Formats décimaux | **En partie** : poids et surcharge corrigés ; « 6.2k » et milliers restent (m2) | P2, P4, P7 |
+| m5 Mots de passe fuités | **Accepté** (sans objet : offre gratuite, aucune connexion par mot de passe) | CONTEXT.md, alertes acceptées ; `grep` du code |
+| m6 HSTS | **Corrigé et constaté en production** | en-tête du 28/10 |
+| m7 `_reglages_machines` dans le blob | **Corrigé** (v51) | 0 programme avec la clé ; 1 ligne en table |
+| m8 Trois verts dans la séance | **Corrigé** | P1 : un seul vert, « Série faite » |
+| m9 14 bulles | **Corrigé** (4) | P1 |
+| m10 `robots.txt` | **Corrigé et constaté en production** | `robots.txt` du 28/10 |
+| m11 Doc en retard | **Corrigé** ; nouveaux écarts (m9 de cet audit) | CONTEXT.md:9, tests |
+| m12 EXIF côté serveur | **Corrigé** | P7 : envoi direct avec GPS → servi sans EXIF ni GPS |
+
+---
+
+### Partie 4 — Améliorations
+
+#### 4.1 Les 10 améliorations à impact maximal (impact / effort)
+
+| # | Amélioration | Effort | Impact | Axes |
+|---|---|---|---|---|
+| 1 | Faire entrer 10 vraies personnes par le lien d'ami, et suivre un essai jusqu'au paiement ou au refus | M | Fort : seul levier des axes 18 et 19 | 1, 18, 19 |
+| 2 | Fermer la barrière CI (job final requis) | S | Fort : plus de code non testé en production | 16, 17 |
+| 3 | Push pour les amis : demande reçue, encouragement, défi lancé, « ton ami t'a dépassé » | M | Fort : l'aspect social ne vit que si on en est prévenu | 10, 19 |
+| 4 | Assiduité au jour logique, « — » quand rien n'est dû | S | Moyen : chiffre juste chaque 1er du mois, CI stable la nuit | 4, 17 |
+| 5 | Formats français partout (« 6,2 k », « 6 616 kg ») | S | Moyen | 4, 11 |
+| 6 | Défi de la semaine adapté au programme | S | Moyen : défi faisable dès le jour 1 | 1, 19 |
+| 7 | Pas de fenêtre « Passe en PRO » avant que l'essai ait été vécu | S | Moyen : l'essai d'abord, l'achat ensuite | 18 |
+| 8 | Filtrer le bruit de `erreurs.js` et brancher une alerte Sentry côté navigateur | S | Moyen : une panne du coach se verrait en minutes | 5, 16 |
+| 9 | Import Hevy : échauffements et séries dégressives gardés comme tels | S | Faible à moyen | 2, 14 |
+| 10 | Suite portable sous Windows | S | Faible : vérifier chez soi avant la CI | 17 |
+
+#### 4.2 Idées face à Hevy, Strong et Strava
+Fonctions des concurrents citées **de mémoire**, non vérifiables d'ici (Partie 5).
+
+| # | Idée | Face à | Pourquoi |
+|---|---|---|---|
+| 1 | Défi entre amis proposé à la fin d'une séance (« défie Marc sur 2 semaines ») | Strava | Le défi naît au moment de la motivation |
+| 2 | Routine partagée par lien, importable en un tap | Hevy | Acquisition gratuite, réutilise le lien d'ami |
+| 3 | Bilan du mois en image partageable | Strava | Le bilan PRO existe déjà |
+| 4 | Calcul des disques dans la carte d'exercice | Strong | Le calculateur existe à part |
+| 5 | Blocs de progression (% de la force estimée) | Strong | Attendu par l'avancé (P4) |
+| 6 | Health Connect : poids et fréquence cardiaque | Strava, Strong | Données sans saisie, zones cardio |
+
+#### 4.3 Trois choses à supprimer
+1. **La fenêtre « 9 séances au compteur ! Passe en PRO »** pour un compte qui n'a jamais eu l'essai : l'essai arrive à la séance suivante.
+2. **Le second bouton vert plein de /amis** : « Partager mon lien » peut être secondaire.
+3. **Les deux blocs floutés à la suite** dans Progrès pour un gratuit : un seul encart PRO suffit.
+
+#### 4.4 Ce qui manque pour atteindre 8/10
+
+| Axe | Note | Condition exacte pour 8 |
+|---|---:|---|
+| 1 Onboarding | 7 | 5 vraies inscriptions qui finissent leur première séance le jour même |
+| 2 Saisie | 7 | 10 séances réelles sans accroc rapporté |
+| 3 Programme | 7 | Blocs ou cycles, utilisés par un vrai compte |
+| 4 Progression | 7 | m1 et m2 corrigés |
+| 5 Coach | 7 | Usage hebdomadaire d'un PRO payant + retour qualitatif écrit |
+| 6 Générateur | 7 | Un programme généré suivi 4 semaines |
+| 7 Nutrition | 7 | 2 semaines de saisie réelle avec recettes ; une proposition de cible appliquée et relue |
+| 8 Cardio | 6 | Secondes réelles en base (7) ; zones cardiaques (8) |
+| 9 Hors-ligne | 7 | Une séance réelle complète sans réseau |
+| 10 Notifications | 7 | Effet mesuré sur 20 abonnés ; push pour les amis |
+| 11 Design | 7 | Revue avec utilisateurs ; un vert par vue ; formats français |
+| 12 Performance | 7 | Médiane serveur de « Série faite » < 300 ms |
+| 13 Architecture | 7 | 0 import entre blueprints ; un seul « aujourd'hui » |
+| 14 Données | 7 | Un échauffement réel en base |
+| 15 Sécurité | 7 | Un test d'intrusion simple documenté |
+| 16 Robustesse | 7 | 30 jours sans 5xx prouvés ; barrière CI fermée ; alerte navigateur |
+| 17 Tests | 7 | Suite verte sur tous les créneaux et sous Windows ; barrière fermée |
+| 18 Monétisation | 5 | Un essai réel suivi jusqu'au bout (7) ; un paiement réel et un taux de conversion (8) |
+| 19 Rétention | 6 | J7 / J30 mesurés sur 20 inscrits |
+| 20 Accessibilité | 7 | Une séance complète avec TalkBack |
+
+Sur les 20 axes, neuf et demi ne demandent que des utilisateurs réels (1, 2, 5, 6, 7, 9, 10, 18, 19 et la moitié du 11). Le code seul ne peut plus porter la note au-delà de 7,1 environ.
+
+#### 4.5 Une seule action pour les 30 prochains jours
+**Faire entrer dix vraies personnes**, par le lien d'ami (il porte déjà le parrainage, l'essai de 3 jours et le défi entre amis), et suivre leurs deux premières semaines : première séance, essai, défi accepté, paiement ou refus, relevés en base.
+**Pourquoi** : la technique a rattrapé ses dettes ; ce qui retient la note, ce sont les axes qu'aucune PR ne peut prouver (essai, paiement, rétention, coach, générateur, nutrition). Avec 1 compte actif, chaque nouvelle fonction est jugée sur zéro usage. Fermer la barrière CI (I-1, effort S) peut se faire le même jour.
+
+---
+
+### Partie 5 — Non vérifiable d'ici
+
+1. **Stripe** : paiements, abonnements, événements ; d'où viennent les 8 comptes `vip` (2 clients Stripe seulement).
+2. **Sentry** : ce qu'il a reçu, et si une alerte est configurée.
+3. **Configuration Auth Supabase** : fournisseur e-mail fermé (déclaré par le propriétaire).
+4. **Valeurs des variables** (lues par nom) : validité de `ANTHROPIC_API_KEY`, `CRON_SECRET`, identifiants AdMob.
+5. **Cron externe** : sa configuration (seuls ses appels se voient, 168 / 168).
+6. **Sur le téléphone** : notifications réellement affichées, connexion Google native, AdMob, batterie, webview hors réseau, TalkBack.
+7. **Qui sont les deux comptes amis** (vraisemblablement le propriétaire et un compte de test) ; satisfaction et rétention réelles.
+8. **Concurrents** : fonctions citées de mémoire.
+9. **Une vraie salle en sous-sol** (seul le mode avion a été joué).
+10. **30 jours sans 5xx** : les métriques Railway couvrent 7 jours ; les journaux HTTP remontent au 21/10.
+
+---
+
+### Annexe Y — Reproductions, commandes, requêtes et mesures
+
+#### Y.3 Parcours (scripts hors dépôt ; serveur `run_local_fake.py` + décors datés du jour ; extraits des notes)
+```
+P1 jour 1 : 6 programmes, 3 recommandés · 10 taps + 4 champs · 5.3 s → /accueil
+  bulles : 'Ta première séance est prête' (Commencer), 'Une série à la fois', 'Série enregistrée', 'Premier exercice terminé'
+  séance : /seance?mode=prefaite&name=Full%20Body%20A&date=2026-10-28 · poids prérempli 20 · reps placeholder 12
+  boutons verts visibles : ['Série faite'] · « Série faite » sans rien taper : 200, 0.31 s, lignes 0 → 1
+  « Terminer » → accueil en 0.28 s : ESSAI PRO OFFERT ; vip_until = +3 jours ; events onboarding_completed, trial_started, workout_finished
+P2 semaine 3 : 81 séries · « Squat : +5 kg en 3 semaines » · Assiduité : 100 % · « 61,5 kg » · Volume par semaine : 3.9k 6.2k 7.1k 2.2k
+P3 Hevy : « Fichier Hevy, 6 lignes lues. 1 série d'échauffement écartée » · 5 lignes en 0.8 s :
+  (Développé couché 1×8 80 kg RPE 8) (Développé couché 2×10 60 kg [dropset]) (Élévations latérales 15×10) (Rowing barre 8×70 RPE 9) (Tirage vertical 10×55) · type_serie : aucun
+P4 avancé : 1 082 séries · « Dernière fois : 87 kg × 8 ×4 » · « Monte à 89,5 kg (+2,5) » · 19 commandes visibles · bandeau « 6616 / 13100 kg »
+P5 gratuit : export 200 application/json, 14 clés (… amis, defis, photos …)
+P6 essai : /coach avant : mur PRO · après la séance : /nutrition /coach /progres /progres/corps ouverts, /generator : mur PRO
+P7 PRO : envoi direct 3000×4000 + EXIF GPS → 200 ; servie image/jpeg, private, no-cache, 3000×4000, EXIF False, GPS False
+P8 Android (UA MuscuTrackerApp/1) : ads.js chargé ; /premium : 6 prix
+P9 : pastille oui · hors ligne : séance ouverte en 0.4 s · 3 séries, file 1 envoi · « Terminer » 1.1 s · retour réseau 81 → 84
+P10 : lien /?ref=paulpaul&ami=1 copié · demande envoyée · « Vous êtes amis. » · fil : « Marc | PUSH | 300 kg soulevés | 1 record »
+  encouragement : Paul voit « Encouragé », Marc voit « 1 encouragement » · Zoé (non-amie) : 0 séance visible, encourager → 404
+  défi régularité 1 semaine, Marc accepte · classement : 1 Marc 1 séance, 2 Toi 0 séance · carte accueil identique · Zoé : 0 défi
+Erreurs console : 0 sur les 10 parcours (hors ressources hors ligne et le 404 voulu de Zoé) ; 1 avertissement de préchargement (`icons.svg`) hors ligne
+m1 : serveur figé au 2026-12-01T09:00Z : « Assiduité : 0 % » ; novembre : « 9 séances sur 9 prévues · Assiduité : 100 % »
+```
+
+#### Y.4 Requêtes SQL (Supabase, `select` uniquement)
+- **a. Sécurité des tables** : `pg_class` × `pg_policies` × `role_table_grants` → 21 tables `rls = true`, `policies = 0`, `client_grants = null` ; 2 vues `security_invoker=true`.
+- **b. Cohérence** : `doublons 0, hist_orph 0, fil_sans_series 0, bilans_sans_seance 0, series_sans_session (depuis 01/10) 0, series_0_0 199, photo_sans_fichier 0, series_futures 0, cardio_depuis_1810 0, durees_decimales 0` ; `muscu_depuis_v42 115, muscu_sans_id_depuis_v42 0, type_serie_total 0`.
+- **c. Usage** : `comptes 15, inscrits_30j 1, inscrits_depuis_1810 0, actifs_seance_7j 1, actifs_seance_30j 3, seances_7j 1, seances_30j 13, seances_depuis_1810 3, actifs_evenement_7j 2, actifs_evenement_30j 4, vip_until_poses 0, essais_actifs 0, tiers vip:8 free:7, clients_stripe 2, filleuls 0, masques 0` ; `trial_started_total 0`.
+- **d. Événements** (30 j / depuis le 18/10) : `coach_message 10 / 7, debrief_generated 12 / 3, workout_finished 10 / 3, program_generated 1 / 0, checkout_started 0 / 0, premium_viewed 4 / 0, challenge_completed 18 / 2, ami_demande 1, ami_encourage 1, defi_lance 1, defi_accepte 1, photo_ajoutee 7 / 2`.
+- **e. Amis et défis** : `amities` 1 ligne acceptée (26/10 19:06:00 → 19:06:13) ; `fil_seances` 1 (26/10, Push 1, 117 min, 2 392 kg, 1 record) ; `encouragements` 1 ; `defis` 1 (régularité, 2 semaines, 27/10 → 09/11) ; `defis_participants` 2 acceptés.
+- **f. État du compte** : compte A `defis_faits [142, 144, 146], defis_gagnes 3` ; compte B `defis_faits [133 … 147], defis_gagnes 7, nutrition_perso {"calories_custom": 2400}` ; `defis_en_double_depuis_1810 0`, `debrief_doubles_depuis_1810 0`.
+- **g. Programmes** : clés `_planning 14, _started_at 14, _origin 10, _programmes 9, _seance_prog 9, _equipement 6, _equipment_details 6, _name 6, _rotation 1` ; `_reglages_machines` 0 ; `etat_compte.reglages_machines` 1.
+- **h. Revérification du 18/10** (fenêtre du 18/09 16:00 au 18/10 16:00 UTC) : `rappels_envoyes 22, passages_rappel 27, relances_envoyees 8, seances_30j 14, seances_7j 5, defis_valides 16`. 30 jours au 28/10 : `passages_rappel 33, rappels_envoyes 44, passages_relance 30, relances_envoyees 12`.
+
+#### Y.5 Railway et GitHub
+- Déploiements : `34b88557` (28/10, SUCCESS, en ligne) ; `618e0a39` (23/10 11:52, commit `07a1987`, run 273 « cancelled » 11:52:38 → 12:02:58, gunicorn 26.2.0 démarré 12:05:14) ; `f696732c` (`1e8f1f8`, run 276 « failure ») et `86028ac4` (`e125c6a`, run 296 annulé, remplacé 3 s après par `7cf8986`) : SKIPPED. Aucun déploiement entre le 19/10 13:00 et le 23/10 11:52 (PR #62 → #68 fusionnées le 22/10).
+- HTTP 7 jours : `2xx 5152, 3xx 3578, 4xx 4, 5xx 0, total 8734`. 4xx : 4 × 499 (« client has closed the request »).
+- `/seance/save-exo`, durées (ms), 47 envois : 21/10 iPhone (24) ; 24-25/10 Android (5) ; 26/10 iPhone (18) ; **médiane 513, p90 871, min 154, max 1 305 ; 15 < 300 ms ; 3 > 1 s**.
+- Routes : `/tasks/reminders` 168 (2xx) ; `/push/repos` 54 ; `/erreurs/js` 2 ; `/csp/rapport` 0 ; `/billing/webhook` 0.
+- Lignes IA : `ia coach : 4528/1234, 4763/136, 4920/214, 5162/645, 5493/1473, 4529/1072, 4778/279` ; `ia mémoire : 1091/217` ; `ia bilan : 639/229` (entrée / sortie) → 35 903 / 5 499 tokens → 0,0036 $ + 0,0027 $ = **0,0063 $**.
+- Variables (noms, hors `RAILWAY_*`) : `ADMIN_EMAILS, ADMOB_BANNER_ID, ADMOB_INTERSTITIAL_ID, ANTHROPIC_API_KEY, CRON_SECRET, EDITEUR_ADRESSE, FLASK_SECRET_KEY, GOOGLE_CREDENTIALS, GOOGLE_WEB_CLIENT_ID, REDIS_URL, SENTRY_DSN, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_ANON_KEY, SUPABASE_JWT_SECRET, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, TWA_PACKAGE_NAME, TWA_SHA256_FINGERPRINT, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, VAPID_SUBJECT`.
+- En-têtes de production (28/10 12:16 UTC) : `content-security-policy: default-src 'self'; script-src 'self' 'nonce-…'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; … font-src 'self' data: https://fonts.gstatic.com; … report-uri /csp/rapport` · `strict-transport-security: max-age=31536000` · `x-frame-options: SAMEORIGIN` · `x-content-type-options: nosniff`.
+
+#### Y.6 Mesures locales
+- Poids HTML brut / compressé (compte PRO, 1 082 séries) : accueil 28,7 / 8,3 ko · choix de séance 24,9 / 7,2 · séance 134,2 / 21,0 · Progrès 84,5 / 18,1 · Corps 31,7 / 8,4 · fiche exercice 108,2 / 12,0 · programme 201,0 / 24,2 · nutrition 112,1 / 22,2 · cardio 41,4 / 11,0 · gestion 40,2 / 11,0 · coach 43,1 / 12,1 · Plus 23,7 / 6,7 · Amis 22,2 / 7,0. `static/js` : 350 ko non compressé.
+- Échecs sous Windows (identiques sur toutes les dates figées) : `test_db_prog.py::test_plusieurs_processus_seulement_avec_redis` ×4 et `test_journaux.py::test_gunicorn_aussi_info_sur_la_sortie_standard` (`ModuleNotFoundError: fcntl` / `grp`) ; `test_etat_compte.py::test_la_migration_v51_ajoute_la_colonne_avant_de_vider_le_programme` (`UnicodeDecodeError`, passe avec `PYTHONUTF8=1`) ; `test_schema.py::test_admin_relance_le_controle_apres_une_migration` (`time.time()` à 15 ms) ; `test_limiteur_panne.py::test_redis_arrete_une_page_repond_vite` (0,52-0,56 s > 0,3 s, instable).
+
+---
+
+# Historique : audit du 18/10 et précédents (conservés tels quels)
+
 ## Audit complet du 18/10/2026 · commit `722ff67` · **6,7 / 10** (134 / 20)
 
 **Commit audité** : `722ff67` (tête de `main`, PR #58), CI verte (run 241, 14:51 UTC), déployé sur Railway (`bf48f08e`, SUCCESS à 14:53 UTC).
