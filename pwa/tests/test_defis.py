@@ -554,3 +554,42 @@ def test_la_page_est_ouverte_aux_comptes_gratuits(trois):
     page = _page(paul)
     assert 'action="/amis/defis/lancer"' in page and 'x-data="defiForm"' in page
     assert "Lancer un défi" in page
+
+
+# ── Le jour du début, rien d'avant le lancement (audit du 28/10, m10) ──
+
+
+def _a(heures):
+    """Un instant ISO, `heures` après maintenant (négatif : avant)."""
+    return (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=heures)).isoformat()
+
+
+def test_le_jour_du_debut_une_seance_d_avant_le_lancement_ne_compte_pas():
+    d = {**_defi("regularite", debut=AUJ), "created_at": _a(-1)}
+    matin = [_ligne(PAUL, AUJ, created_at=_a(-3))]
+    assert calc.score(d, matin, AUJ)["valeur"] == 0
+    soir = matin + [_ligne(PAUL, AUJ, seance="Pull", created_at=_a(0))]
+    assert calc.score(d, soir, AUJ)["valeur"] == 1
+    # Le volume suit la même règle ; une série sans heure (base ancienne) compte.
+    v = {**_defi("volume", debut=AUJ), "created_at": _a(-1)}
+    assert calc.score(v, [_ligne(PAUL, AUJ, reps=10, poids=50, created_at=_a(-3)),
+                          _ligne(PAUL, AUJ, reps=10, poids=40)], AUJ)["valeur"] == 400
+
+
+def test_les_jours_suivants_tout_compte():
+    d = {**_defi("regularite", debut=AUJ - J), "created_at": _a(-30)}
+    assert calc.score(d, [_ligne(PAUL, AUJ, created_at=_a(-25))], AUJ)["valeur"] == 1
+
+
+def test_sur_la_page_la_seance_du_matin_ne_compte_pas(trois, fake_db):
+    paul, marc, _zoe = trois
+    _devenir_amis(paul, marc)
+    _serie(fake_db, MARC, AUJ)                                   # séance du matin
+    fake_db.tables["history"][-1]["created_at"] = _a(-3)
+    did = _inserer_defi(fake_db, AUJ)                            # lancé une heure après
+    next(x for x in _defis(fake_db) if x["id"] == did)["created_at"] = _a(-2)
+    assert "1 séance" not in _carte(_page(paul), did)
+    _serie(fake_db, MARC, AUJ, seance="Pull")                    # après le lancement
+    fake_db.tables["history"][-1]["created_at"] = _a(0)
+    core_db.vider_cache()
+    assert "1 séance" in _carte(_page(paul), did)
