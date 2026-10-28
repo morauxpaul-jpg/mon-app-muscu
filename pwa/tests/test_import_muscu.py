@@ -23,7 +23,7 @@ STRONG = '''Date;Workout Name;Duration;Exercise Name;Set Order;Weight;Reps;Dista
 '''
 
 
-def test_hevy_lu_echauffements_et_cardio_ecartes():
+def test_hevy_lu_echauffement_garde_et_cardio_ecarte():
     seances, rapport = lire_export(HEVY.encode())
     assert rapport["source"] == "Hevy"
     assert rapport["echauffements"] == 1 and rapport["sans_reps"] == 1
@@ -31,7 +31,9 @@ def test_hevy_lu_echauffements_et_cardio_ecartes():
         ("2026-09-28", "Push Day"), ("2026-09-30", "Leg Day")]
     push = seances[0]["exercices"]
     assert push[0]["nom"] == "Développé couché"
-    assert push[0]["series"] == [{"reps": 8, "poids": 80.0, "rpe": 8.0},
+    # L'échauffement est gardé, marqué comme tel (audit du 28/10, m8).
+    assert push[0]["series"] == [{"reps": 10, "poids": 40.0, "rpe": None, "echauffement": True},
+                                 {"reps": 8, "poids": 80.0, "rpe": 8.0},
                                  {"reps": 7, "poids": 80.0, "rpe": 10.0}]
     assert push[1]["nom"] == "Élévations latérales"
     assert push[0]["muscle"] == "Pecs"
@@ -43,7 +45,8 @@ def test_strong_point_virgule_et_livres_converties():
     (s,) = seances
     sdt, tirage = s["exercices"]
     assert sdt["nom"] == "Soulevé de terre"
-    assert sdt["series"][0]["poids"] == 102.0          # 225 lbs, au quart de kg
+    assert sdt["series"][0] == {"reps": 5, "poids": 61.25, "rpe": None, "echauffement": True}   # 135 lbs, « W »
+    assert sdt["series"][1]["poids"] == 102.0          # 225 lbs, au quart de kg
     assert tirage["nom"] == "Tirage vertical" and tirage["series"][0]["poids"] == 50.0
 
 
@@ -96,11 +99,15 @@ def test_apercu_n_ecrit_rien_puis_confirmation_ecrit(fake_db, logged_in):
     assert not fake_db.tables.get("history")
 
     fin = _confirmer(logged_in, html).get_data(as_text=True)
-    assert "2 séances importées (4 séries)" in fin
+    assert "2 séances importées (5 séries)" in fin
     rows = fake_db.tables["history"]
-    assert {(r["user_id"], r["exercice"], r["poids"], r["reps"]) for r in rows} == {
-        (USER_ID, "Développé couché", 80.0, 8), (USER_ID, "Développé couché", 80.0, 7),
-        (USER_ID, "Élévations latérales", 10.0, 15), (USER_ID, "Squat", 100.0, 5)}
+    assert {(r["user_id"], r["exercice"], r["poids"], r["reps"], r.get("type_serie")) for r in rows} == {
+        (USER_ID, "Développé couché", 40.0, 10, "echauffement"),
+        (USER_ID, "Développé couché", 80.0, 8, None), (USER_ID, "Développé couché", 80.0, 7, None),
+        (USER_ID, "Élévations latérales", 10.0, 15, None), (USER_ID, "Squat", 100.0, 5, None)}
+    # Gardé, mais hors de ce que lisent records, volume et suggestion de charge.
+    from core import db
+    assert all(r.get("Type") is None for r in db.get_hist(USER_ID))
     assert {r["rpe"] for r in rows if r["reps"] == 7} == {10.0}
 
 
@@ -122,4 +129,6 @@ def test_compte_gratuit_peut_importer_et_page_accessible(fake_db, logged_in):
 def test_compacter_aller_retour():
     seances, _ = lire_export(HEVY.encode())
     lignes = lignes_historique(compacter(seances), "Hevy")
-    assert len(lignes) == 4 and {l["Série"] for l in lignes if l["Exercice"] == "Développé couché"} == {1, 2}
+    assert len(lignes) == 5 and {l["Série"] for l in lignes if l["Exercice"] == "Développé couché"} == {1, 2, 3}
+    (echauffement,) = [l for l in lignes if l.get("Type")]
+    assert (echauffement["Série"], echauffement["Poids"], echauffement["RPE"]) == (1, 40.0, None)

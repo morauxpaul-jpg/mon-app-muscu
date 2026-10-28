@@ -32,6 +32,7 @@ import re
 import unicodedata
 
 from core.dates import continuous_week
+from core.hist import TYPE_ECHAUFFEMENT
 from core.exercises_data import required_equipment, resoudre
 from core.muscu import fix_muscle
 
@@ -198,9 +199,11 @@ def lire_export(brut: bytes):
             continue
         type_serie = str(ligne.get(col.get("type", ""), "") or "").strip().lower()
         ordre = str(ligne.get(col.get("ordre", ""), "") or "").strip().upper()
-        if type_serie.startswith("warm") or ordre == "W":
-            rapport["echauffements"] += 1
-            continue
+        # Échauffement : gardé comme tel (history.type_serie, v43), hors
+        # records, volume et suggestion de charge, comme dans l'app. Il était
+        # écarté : l'historique d'un compte venu de Hevy en perdait la trace
+        # (audit du 28/10, m8).
+        echauffement = type_serie.startswith("warm") or ordre == "W"
         reps = int(_nombre(ligne.get(col["reps"])))
         if reps <= 0:
             # Cardio, chrono, série notée vide : rien qu'une ligne de
@@ -228,8 +231,12 @@ def lire_export(brut: bytes):
         s = seances.setdefault(cle, {"date": cle[0], "seance": titre, "exercices": {}})
         e = s["exercices"].setdefault(nom, {"nom": nom, "muscle": fix_muscle(nom, None),
                                             "series": []})
-        e["series"].append({"reps": min(reps, 999), "poids": poids,
-                            "rpe": rpe if 1 <= rpe <= 10 else None})
+        serie = {"reps": min(reps, 999), "poids": poids,
+                 "rpe": None if echauffement else (rpe if 1 <= rpe <= 10 else None)}
+        if echauffement:
+            serie["echauffement"] = True
+            rapport["echauffements"] += 1
+        e["series"].append(serie)
 
     out = []
     for s in seances.values():
@@ -251,7 +258,8 @@ def marquer_doublons(seances, historique):
 def compacter(seances) -> list:
     """Forme courte pour l'aller-retour par le formulaire de confirmation."""
     return [[s["date"], s["seance"],
-             [[e["nom"], e["muscle"], [[x["reps"], x["poids"], x["rpe"]] for x in e["series"]]]
+             [[e["nom"], e["muscle"], [[x["reps"], x["poids"], x["rpe"]] + ([1] if x.get("echauffement") else [])
+                                        for x in e["series"]]]
               for e in s["exercices"]]]
             for s in seances]
 
@@ -282,6 +290,7 @@ def lignes_historique(charge, source: str) -> list[dict]:
                     reps = max(0, min(999, int(x[0])))
                     poids = max(0.0, min(1000.0, float(x[1] or 0)))
                     rpe = float(x[2]) if x[2] not in (None, "") else None
+                    echauffement = len(x) > 3 and x[3] == 1
                 except (TypeError, ValueError, IndexError):
                     continue
                 if reps <= 0:
@@ -291,6 +300,7 @@ def lignes_historique(charge, source: str) -> list[dict]:
                     "Exercice": nom, "Série": i, "Reps": reps, "Poids": poids,
                     "Remarque": remarque, "Muscle": muscle,
                     "Date": date.isoformat(),
-                    "RPE": rpe if rpe is not None and 1 <= rpe <= 10 else None,
+                    "RPE": rpe if rpe is not None and 1 <= rpe <= 10 and not echauffement else None,
+                    **({"Type": TYPE_ECHAUFFEMENT} if echauffement else {}),
                 })
     return out

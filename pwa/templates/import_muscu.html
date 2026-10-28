@@ -71,7 +71,7 @@
       <ul class="ecartes">
         <li>Fichier {{ rapport.source }}, {{ rapport.lignes }} lignes lues.</li>
         {% if rapport.echauffements %}
-          <li>{{ rapport.echauffements }} série{{ "s" if rapport.echauffements > 1 }} d'échauffement écartée{{ "s" if rapport.echauffements > 1 }} : elles fausseraient tes records.</li>
+          <li>{{ rapport.echauffements }} série{{ "s" if rapport.echauffements > 1 }} d'échauffement, importée{{ "s" if rapport.echauffements > 1 }} comme telle{{ "s" if rapport.echauffements > 1 }} : hors records et volume.</li>
         {% endif %}
         {% if rapport.sans_reps %}
           <li>{{ rapport.sans_reps }} ligne{{ "s" if rapport.sans_reps > 1 }} sans répétitions (cardio, chrono) ignorée{{ "s" if rapport.sans_reps > 1 }}.</li>
