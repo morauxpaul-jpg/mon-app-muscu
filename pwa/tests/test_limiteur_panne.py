@@ -21,6 +21,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 
@@ -282,6 +283,9 @@ def test_redis_en_panne_une_page_repond_vite(panne, request):
             "chaque requête retente Redis")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason=(
+    "sous Windows, un port fermé ne refuse la connexion qu'au bout de 2 s (mesuré) : "
+    "le client expire à 0,5 s ; ce test décrit le refus immédiat de Linux, celui de la production"))
 def test_redis_arrete_une_page_repond_vite():
     client = _app(f"redis://127.0.0.1:{_port_libre()}/0")
     for _ in range(5):

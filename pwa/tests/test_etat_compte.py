@@ -393,7 +393,7 @@ def test_l_export_contient_toujours_les_reglages(avec_ligne, logged_in):
 
 
 def test_la_migration_v51_ajoute_la_colonne_avant_de_vider_le_programme():
-    sql = (PWA / "supabase_schema_v51_reglages_machines.sql").read_text()
+    sql = (PWA / "supabase_schema_v51_reglages_machines.sql").read_text(encoding="utf-8")
     avant, apres = sql.split("── 2. APRÈS le déploiement")
     assert "add column if not exists reglages_machines jsonb" in avant
     assert "public.programs" not in avant, "la 1re partie ne touche pas aux programmes"

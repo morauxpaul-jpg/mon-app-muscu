@@ -239,7 +239,9 @@ def test_admin_relance_le_controle_apres_une_migration(monkeypatch):
     schema.enregistrer(schema.verifier(base))
     assert schema.etat()["alerte"]
     base.absentes = {}
-    monkeypatch.setattr(schema, "REVERIFIER_APRES", 0)
+    # -1 et non 0 : sous Windows, time.time() avance par pas de 15 ms et
+    # « écoulé > 0 » restait faux dans la même milliseconde.
+    monkeypatch.setattr(schema, "REVERIFIER_APRES", -1)
     assert schema.etat_a_jour(lambda: base)["alerte"] == ""
 
 

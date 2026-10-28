@@ -6,6 +6,8 @@ seul flux, chaque INFO y passait (audit du 06/10, m5).
 import io
 import logging
 
+import pytest
+
 import app as appmod
 
 
@@ -48,6 +50,9 @@ def test_warning_et_erreur_vont_sur_la_sortie_d_erreur_seulement():
 
 def test_gunicorn_aussi_info_sur_la_sortie_standard(monkeypatch):
     """« Starting gunicorn », « Booting worker » sortaient en « error »."""
+    # gunicorn ne s'importe que sous Unix (fcntl, grp) : la production et la CI
+    # tournent sous Linux ; sous Windows, ce test n'a rien à vérifier.
+    pytest.importorskip("fcntl", reason="gunicorn : Unix seulement")
     import importlib.util
     import pathlib
     import sys
