@@ -95,3 +95,31 @@ def test_tonnage_au_poids_du_corps_relatif():
             _row("2025-01-06", "Home", "Pompes", 0, 50, w)]
     *_, cur, target, unit = ch._ch_tonnage(rows, w)
     assert (cur, target, unit) == (50, 210, "reps")
+
+
+# ── Le défi cardio seulement pour qui fait du cardio (audit du 28/10, m5) ──
+
+
+def _une_semaine_cardio():
+    """Un lundi dont la semaine est celle du défi cardio (aucune date en dur)."""
+    d = dt.date(2026, 1, 5)
+    while ch.CHALLENGES[ch.current_week_index(d) % len(ch.CHALLENGES)][0] != "cardio1":
+        d += dt.timedelta(days=7)
+    return d
+
+
+def test_pas_de_defi_cardio_sans_cardio_au_programme_ni_dans_l_historique():
+    lundi = _une_semaine_cardio()
+    prog = {"Full Body A": [{"name": "Squat", "sets": 3}]}
+    hist = [_row((lundi - dt.timedelta(days=2)).isoformat(), "Full Body A", "Squat", 60, 10, 1)]
+    c = ch.weekly_challenge(hist, today=lundi, prog=prog)
+    assert c["id"] != "cardio1" and "cardio" not in c["title"].lower()
+    assert ch.weekly_challenge([], today=lundi)["id"] != "cardio1"          # compte neuf
+
+
+def test_le_defi_cardio_reste_pour_qui_en_fait_ou_en_prevoit():
+    lundi = _une_semaine_cardio()
+    avec_programme = {"Full Body A": [], "_cardio": [{"activite": "Course", "jour": "Mardi"}]}
+    assert ch.weekly_challenge([], today=lundi, prog=avec_programme)["id"] == "cardio1"
+    deja = [_row((lundi - dt.timedelta(days=20)).isoformat(), "Cardio", "CARDIO:Course", 5, 30, 1)]
+    assert ch.weekly_challenge(deja, today=lundi, prog={"Full Body A": []})["id"] == "cardio1"

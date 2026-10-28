@@ -858,7 +858,9 @@ a.btn.acc-demarrer--second { min-height: 48px; font-size: 1.1rem; }
 .defi-ligne .amis-nom, .defi-acc-nom { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .defi-detail { font-size: 0.8rem; color: var(--text-2); white-space: nowrap; }
 .defi-score { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: var(--text-1); white-space: nowrap; }
-.defi-moi .defi-rang, .defi-moi .defi-score { color: var(--accent); }
+/* Soi-même : en blanc et en gras, jamais en vert (une sélection est blanche ; audit du 28/10, m6). */
+.defi-moi .defi-rang, .defi-moi .defi-score { color: var(--text-1); }
+.defi-moi .amis-nom, .defi-moi .defi-acc-nom { font-weight: 700; color: var(--text-1); }
 .defi-annonce { display: flex; align-items: center; gap: 6px; margin: 4px 0 2px; color: var(--text-1); font-weight: 600; }
 .defi-choix { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; color: var(--text-2); font-size: 0.92rem; }
 .defi-choix b { color: var(--text-1); }

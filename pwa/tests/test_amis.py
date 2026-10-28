@@ -451,3 +451,19 @@ def test_la_limite_compte_par_compte_et_pas_par_adresse(deux):
     paul, marc = deux
     assert [_post(paul, "/amis/demande", code="zzzzzzzz").status_code for _ in range(21)][-1] == 429
     assert _post(marc, "/amis/demande", code="zzzzzzzz").status_code == 302
+
+
+def _verts(html):
+    """Boutons pleins (verts) de la page, hors fenêtres cachées."""
+    import re
+    return re.findall(r'class="btn primary[^"]*"[^>]*>\s*(?:<svg.*?</svg>)?\s*([^<]+)', html, re.S)
+
+
+def test_un_seul_vert_sur_la_page_amis(deux):
+    """Audit du 28/10, m6 : « Lancer un défi » et « Partager mon lien » étaient
+    deux boutons verts pleins dans la même vue. Sans ami, l'action est de
+    partager son lien ; avec un ami, de lancer le défi."""
+    paul, marc = deux
+    assert [v.strip() for v in _verts(paul.get("/amis").get_data(as_text=True))] == ["Partager mon lien"]
+    _devenir_amis(paul, marc)
+    assert [v.strip() for v in _verts(paul.get("/amis").get_data(as_text=True))] == ["Lancer le défi"]

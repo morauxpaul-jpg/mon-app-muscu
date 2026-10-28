@@ -432,7 +432,7 @@ pwa/
 
 ### Défis hebdo (rétention, 2026-06-16)
 - `core/challenges.py` : un défi **tournant** choisi par l'index de semaine continu (`continuous_week`) → identique pour tous, change chaque lundi. Évalué **depuis l'historique normalisé** (clés Date/Séance/Exercice/Poids/Reps/Semaine), aucune donnée stockée pour l'évaluation. `weekly_challenge(hist, today, prog)` → dict {id, title, emoji, desc, current/target(+_fmt), pct, done}.
-- Cycle actuel : séances / volume / nouvel exercice / 1 cardio / battre le volume de la semaine passée.
+- Cycle actuel : séances / volume / nouvel exercice / 1 cardio / battre le volume de la semaine passée. **La semaine du cardio**, un compte sans cardio au programme (`_cardio`) ni dans l'historique passe au défi suivant : « 1 séance de cardio » au premier jour d'un Full Body était infaisable (audit du 28/10, m5).
 - **Cibles relatives** : le défi des séances vise les séances prévues de la semaine (planning + rotation) ; le volume, la moyenne des semaines actives parmi les 4 précédentes + 5 % (arrondi 500 kg, ou 10 reps au poids du corps). Repli sur 3 séances / 10 000 kg / 300 reps sans planning ni historique.
 - **Accueil** (`routes/accueil.py`) : carte « Défi de la semaine » avec barre de progression. Validation consommée **uniquement sur vraie navigation** (pas prefetch) → incrémente `prog._challenges_won`, mémorise la semaine dans `prog._challenges_done`, émet l'event `challenge_completed`, affiche l'état « ✅ Défi validé ». Aucune migration.
 - Suite : relance push « plus qu'1 séance pour valider », objectifs perso. Le classement entre amis existe depuis la v53 (« Défis entre amis »).
