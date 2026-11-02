@@ -272,6 +272,18 @@ def test_les_series_de_l_exercice_echange_restent_sur_sa_carte(fake_db, logged_i
     sets = json.loads(re.search(r'"sets": (\[[^\]]*\])', html.split('data-exo-base="Curl marteau"')[1]).group(1))
     assert [(s["poids"], s["reps"], s.get("type", "")) for s in sets[:3]] == [
         (8.0, 10, "echauffement"), (12.0, 10, "echauffement"), (16.0, 10, "")]
+    # Le bilan de fin de séance (core/debrief.py) lit le même historique : il
+    # parlait de l'exercice remplacé (retour du 02/11, « le bilan reprend
+    # l'autre exo de base »).
+    import app as appmod
+    from flask import g
+    from core.data import get_hist
+    from core.debrief import collect_facts
+    with appmod.app.test_request_context():
+        g.user_id = USER_ID
+        faits = collect_facts(get_hist(), "Push", JOUR)
+    assert list(faits["exos"]) == ["Curl marteau"]
+    assert [r["exo"] for r in faits["records"]] in ([], ["Curl marteau"])
     # La cause : la carte de remplacement n'a plus l'identifiant de
     # l'exercice remplacé, et ses séries partent sans lui.
     assert {(l["exercice"], l.get("exercise_id")) for l in lignes} == {("Curl marteau", None)}
