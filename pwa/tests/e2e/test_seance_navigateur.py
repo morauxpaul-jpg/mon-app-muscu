@@ -571,3 +571,34 @@ def test_la_carte_n_a_qu_un_verbe_vert(page):
     assert [b.inner_text().strip() for b in verts.all()] == ["Série faite"]
     assert carte.get_by_role("button", name="Enregistrer").count() == 0
     assert carte.get_by_role("button", name="Skip").is_visible()
+
+
+def test_l_echauffement_d_un_exercice_echange_reste_apres_rechargement(page, serveur):
+    """Retour du 02/11 : exercice échangé pour la journée, série
+    d'échauffement enregistrée, retour sur la page : la carte était vide.
+    Ses séries partaient avec l'identifiant de l'exercice remplacé et
+    revenaient sous son nom, sur une autre carte."""
+    carte = page.locator("#exo-anchor-0")
+    page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).showVariantes = true")
+    carte.locator(".exo-variante").first.click()
+    page.wait_for_load_state()
+    page.wait_for_selector("#exo-anchor-0 .serie-valider")
+    echange = page.locator("#exo-anchor-0").get_attribute("data-exo-base")
+    assert echange and echange != EXO
+    page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).open = true")
+    carte = page.locator("#exo-anchor-0")
+    carte.locator(".serie-encours").nth(0).locator(".serie-puce").first.click()
+    carte.locator(".serie-echauff").first.click()
+    carte.get_by_label("Répétitions série 1", exact=True).fill("10")
+    carte.get_by_label("Poids série 1", exact=True).fill("20")
+    carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
+    assert _attendre(lambda: [(r["exercice"], r["serie"], r.get("type_serie"), r.get("exercise_id"))
+                              for r in _historique(serveur)] == [(echange, 1, "echauffement", None)])
+
+    page.reload()
+    page.wait_for_selector("#exo-anchor-0")
+    assert page.locator("#exo-anchor-0").get_attribute("data-exo-base") == echange
+    assert page.locator("[data-exo-base]").count() == 2          # pas de carte fantôme
+    premiere = page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).sets[0]")
+    assert (premiere["reps"], premiere["poids"], premiere["type"]) == (10, 20, "echauffement")
+    sync_api.expect(page.locator("#exo-anchor-0 .serie-faite").first).to_contain_text("Échauff.")
