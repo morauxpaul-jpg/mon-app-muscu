@@ -9,6 +9,7 @@ La règle qui tient tout : le PROGRAMME NE BOUGE PAS. La semaine suivante,
 l'exercice d'origine revient sans que personne ait à y penser.
 """
 import datetime as dt
+import json
 import re
 
 import pytest
@@ -229,3 +230,49 @@ def test_un_exercice_inconnu_ne_propose_rien(programme, logged_in):
     """Mieux vaut pas de bouton qu'un bouton qui propose n'importe quoi."""
     from core.exercises_data import variantes
     assert _tous(variantes("Zumba intergalactique")) == []
+
+
+# ── Les séries de l'exercice échangé (retour du 02/11) ───────────
+
+
+def test_les_series_de_l_exercice_echange_restent_sur_sa_carte(fake_db, logged_in):
+    """Retour du 02/11 : « Développé incliné haltères » échangé contre
+    « Développé haltères », deux séries d'échauffement puis des séries de
+    travail ; à chaque retour sur la page, la carte était vide.
+
+    La carte échangée portait l'identifiant de l'exercice d'origine : ses
+    séries partaient en base avec cet identifiant, et la lecture les
+    remettait sous le nom du programme (core/exercice_ids.py), donc sur une
+    autre carte. La carte qui les avait saisies ne les retrouvait plus, et la
+    série suivante les effaçait en réécrivant l'exercice."""
+    fake_db.table("programs").insert({"user_id": USER_ID, "data": {
+        "Push": [{"name": "Curl incliné haltères", "sets": 3, "muscle": "Biceps", "id": "e_f843f496"}],
+        "_planning": {"Lundi": "Push"}, "_settings": {}, "_started_at": MONDAY.isoformat()}}).execute()
+    _echanger(logged_in, "Curl incliné haltères", "Curl marteau")
+    html = _seance(logged_in)
+    for serie, poids, reps, genre in ((1, 8, 10, "echauffement"), (2, 12, 10, "echauffement"), (3, 16, 10, "")):
+        champs = {"seance_name": "Push", "exo_base": "Curl marteau", "variant": "Standard",
+                  "muscle": "Biceps", "date": JOUR, "mode": "prefaite", "partiel": "1",
+                  "exo_id": re.search(r'name="exo_id" value="([^"]*)"',
+                                      html.split('data-exo-base="Curl marteau"')[1]).group(1),
+                  "sets_json": json.dumps([{"reps": r, "poids": p, "type": t, "remarque": "", "rpe": ""}
+                                           for _s, p, r, t in [(1, 8, 10, "echauffement"),
+                                                               (2, 12, 10, "echauffement"),
+                                                               (3, 16, 10, "")][:serie]])}
+        r = logged_in.post("/seance/save-exo", data=champs,
+                           headers={"X-CSRFToken": CSRF, "Accept": "application/json"})
+        assert r.status_code == 200
+    lignes = fake_db.tables["history"]
+    # Revenir sur la page : les trois séries sont sur la carte échangée, et
+    # aucune carte fantôme « Curl incliné haltères » n'apparaît.
+    import core.db as core_db
+    core_db.vider_cache()
+    html = _seance(logged_in)
+    assert _exos_affiches(html) == ["Curl marteau"]
+    sets = json.loads(re.search(r'"sets": (\[[^\]]*\])', html.split('data-exo-base="Curl marteau"')[1]).group(1))
+    assert [(s["poids"], s["reps"], s.get("type", "")) for s in sets[:3]] == [
+        (8.0, 10, "echauffement"), (12.0, 10, "echauffement"), (16.0, 10, "")]
+    # La cause : la carte de remplacement n'a plus l'identifiant de
+    # l'exercice remplacé, et ses séries partent sans lui.
+    assert {(l["exercice"], l.get("exercise_id")) for l in lignes} == {("Curl marteau", None)}
+    assert re.search(r'name="exo_id" value=""', html.split('data-exo-base="Curl marteau"')[1])

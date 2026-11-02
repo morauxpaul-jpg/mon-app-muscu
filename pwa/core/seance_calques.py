@@ -34,7 +34,10 @@ def _appliquer_substituts(remplacements, exos_prog):
     à la volée et l'ordre des cartes (`calques_seance`, v46).
 
     Le créneau garde ses séries et ses reps cibles : c'est tout l'intérêt
-    de l'échange, on ne resaisit rien.
+    de l'échange, on ne resaisit rien. Pas son identifiant, en revanche
+    (core/exercice_ids.py) : les séries de l'exercice échangé partaient avec
+    celui de l'exercice remplacé, la lecture les remettait sous le nom du
+    programme, et la carte échangée revenait vide (retour du 02/11).
     """
     if not remplacements:
         return exos_prog
@@ -46,7 +49,7 @@ def _appliquer_substituts(remplacements, exos_prog):
             continue
         fiche = get_exercise_info(nouveau) or {}
         muscles = fiche.get("muscles") or []
-        sortie.append({**exo,
+        sortie.append({**{k: v for k, v in exo.items() if k != "id"},
                        "name": nouveau,
                        "muscle": muscles[0] if muscles else exo.get("muscle"),
                        "remplace": exo.get("name") or ""})
