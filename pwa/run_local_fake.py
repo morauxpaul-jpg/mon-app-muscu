@@ -32,6 +32,11 @@ if os.environ.get("FAUX_IA") == "lent":
         {"name": "Développé couché", "sets": 4, "reps": "6-8", "rest_seconds": 150, "muscle": "Pecs"}]},
         "planning": {"Lundi": "Haut du corps"}})
 
+    _SEANCE = _json.dumps({"nom": "Reprise", "notes": "On reprend en douceur.", "exercices": [
+        {"name": "Développé couché", "sets": 3, "reps": "8-10", "rest_seconds": 120, "muscle": "Pecs"},
+        {"name": "Tractions", "sets": 3, "reps": "5-8", "rest_seconds": 120, "muscle": "Dos"},
+        {"name": "Gainage", "sets": 2, "reps": "30 s", "rest_seconds": 60, "muscle": "Abdos"}]})
+
     # Le coach lit sa réponse en flux, morceau par morceau.
     _REPONSE_COACH = ["Pour progresser, ", "passe à **4 × 6** à 82,5 kg.\n\n",
                       "- Ajoute une rep par séance\n", "- Revois ton [programme](/programme)"]
@@ -59,7 +64,9 @@ if os.environ.get("FAUX_IA") == "lent":
 
         def _create(self, **k):
             _time.sleep(3)
-            return types.SimpleNamespace(content=[types.SimpleNamespace(text=_PROG)])
+            # Séance créée par le coach (routes/coach_seance.py) : une séance, pas un programme.
+            texte = _SEANCE if "SES EXERCICES HABITUELS" in k["messages"][-1]["content"] else _PROG
+            return types.SimpleNamespace(content=[types.SimpleNamespace(text=texte)])
 
     sys.modules["anthropic"] = types.SimpleNamespace(Anthropic=_FauxClient)
     os.environ.setdefault("ANTHROPIC_API_KEY", "cle-factice")

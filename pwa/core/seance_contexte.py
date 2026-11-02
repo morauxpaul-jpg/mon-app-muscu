@@ -13,9 +13,8 @@ Les noms gardent leur préfixe `_` : ils viennent tels quels de
 `routes/seance.py`, et le déplacement a été fait sans en renommer un seul
 pour que chaque corps de fonction reste comparable au caractère près.
 """
-import logging
-
 from core.exercises_data import detect_isometric, get_exercise_info, variantes
+from core.coach_seance import suggestion_du_coach
 from core.decharge import suggestion_allegee
 from core.muscu import (BW_EXOS, auto_muscles, charge_de_depart, conseil_depart, est_a_la_barre,
                         get_base_name, series_echauffement)
@@ -25,15 +24,14 @@ from core.seance_historique import (_all_used_variants, _best_record, _exo_compl
                                     _suggestion_for, resume_series)
 from core.seance_charges import echelle_charges
 
-logger = logging.getLogger(__name__)
-
 def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
                        prefill_weight=True, forced_variant=None, exo_index=0,
-                       show_overload_hint=True, decharge=False, echauffements=()):
+                       show_overload_hint=True, decharge=False, echauffements=(), conseil=None):
     """Construit le dict passé au template pour un exercice.
 
     `decharge` : semaine allégée acceptée (core/decharge.py) — moitié des
-    séries prévues, charges suggérées et pré-remplies à −10 %."""
+    séries prévues, charges suggérées et pré-remplies à −10 %. `conseil` : séance du
+    coach pas encore faite (core/coach_seance.py), charge allégée sur chaque série."""
     base = exo_obj["name"]
     p_sets = int(exo_obj.get("sets", 3))
     if decharge:
@@ -71,6 +69,8 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
     poids_allege = None
     if decharge and last_sets and not is_iso:
         suggestion, poids_allege = suggestion_allegee(last_sets, is_bw)
+    elif conseil and not is_iso:
+        suggestion, poids_allege = suggestion_du_coach(conseil)
 
     # Sets à afficher dans l'éditeur : au moins p_sets, ou autant que déjà saisis
     n_rows = max(p_sets + len(echauff), len(curr_carte)) if curr_carte else p_sets
@@ -92,7 +92,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
         else:
             poids_val = (charge_de_depart(base, is_bw, is_iso)  # cellule vide, 1re fois
                          if prefill_weight and not (completed or last_sets) else None)
-            if prefill_weight and not completed and i <= len(last_sets):
+            if prefill_weight and not completed and (i <= len(last_sets) or (conseil and poids_allege)):
                 poids_val = poids_allege if poids_allege is not None else last_sets[i - 1]["poids"]
             sets.append({
                 "serie": i,
@@ -163,7 +163,7 @@ def _build_exo_context(hist, exo_obj, seance, s_act, date_str, is_extra=False,
 
 
 def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefill_weight,
-                            show_overload_hint=True, decharge=False, echauffements=()):
+                            show_overload_hint=True, decharge=False, echauffements=(), conseils=None):
     """Construit les contextes pour tous les exercices d'une séance, en
     assignant des variantes distinctes quand le même base name apparaît
     plusieurs fois (ex : 'Développé incliné' en Haltères ET en Barre)."""
@@ -188,7 +188,7 @@ def _build_all_exo_contexts(hist, all_exos, seance_name, s_act, date_str, prefil
             hist, e, seance_name, s_act, date_str, is_extra=is_extra,
             prefill_weight=prefill_weight, forced_variant=forced, exo_index=idx,
             show_overload_hint=show_overload_hint, decharge=decharge,
-            echauffements=echauffements,
+            echauffements=echauffements, conseil=(conseils or {}).get(e["name"]),
         ))
     # Supersets : « enchaîné avec le suivant » se lit dans le programme ; on
     # nomme le partenaire des deux côtés pour que chaque carte le dise.

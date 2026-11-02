@@ -257,12 +257,15 @@ def seance():
         extras = calque["extras"]
         all_exos = [(e, False) for e in exos_prog] + [(e, True) for e in extras]
 
+        from core.coach_seance import conseils_actifs
         from core.decharge import semaine_allegee
         echauff = echauffements_du_jour(date_iso)
+        # Séance créée par le coach, pas encore faite : charges allégées.
         exos_ctx = _build_all_exo_contexts(hist, all_exos, name, s_act, date_iso,
                                            auto_prefill_weight, show_overload_hint,
                                            decharge=semaine_allegee(prog, s_act),
-                                           echauffements=echauff)
+                                           echauffements=echauff,
+                                           conseils=conseils_actifs(prog, name, hist, date_iso))
 
         # Reconstruit depuis l'historique les exos faits ce jour-là mais absents
         # de la liste (extras effacés au finish, exo retiré du programme…).

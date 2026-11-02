@@ -93,6 +93,7 @@ pwa/
 │   ├── reminders.py               # Rappel de séance à l'heure choisie (ciblage, payload, run_reminders)
 │   ├── coach_memory.py            # Note persistante du coach sur l'utilisateur (700 car. max)
 │   ├── coach_progression.py       # Contexte du coach : une ligne par exercice, ses 4 dernières séances datées
+│   ├── coach_seance.py            # Séance créée par le coach : pause, facteur de reprise, charge habituelle, conseils, lecture de la réponse IA
 │   ├── debrief.py                 # Debrief de fin de séance : collecte des chiffres réels + rédaction IA
 │   ├── openfoodfacts.py           # Produit emballé par code-barres (kJ→kcal, portion, cache mémoire)
 │   ├── catalog.py                 # Catalogue de 20 programmes prédéfinis (5 gratuits)
@@ -121,6 +122,7 @@ pwa/
 │   ├── nutrition_recettes.py      # Page « Mes recettes et aliments » : créer, corriger, supprimer (/nutrition/aliments)
 │   ├── corps.py                   # Onglet « Corps » de Progrès (/progres/corps) : poids + photos (PRO), ajout, image, suppression
 │   ├── coach.py                   # Chat IA (Claude Haiku 5.5) en flux SSE, réservé VIP, quota 15 msg/jour, mémoire entre conversations
+│   ├── coach_seance.py            # « Créer une séance » (/coach/seance) : création en tâche de fond, suivi, ajout au programme
 │   ├── premium.py                 # Page de présentation des tiers (pré-paywall)
 │   ├── billing.py                 # Stripe Checkout / webhook / portal (source de vérité du tier)
 │   ├── generator.py               # Générateur de programme IA (VIP) — tâche de fond → JSON validé → save_prog
@@ -153,6 +155,7 @@ pwa/
 │   ├── _amis_defis.html / _defi_classement.html  # Défis (v53) : invitations, classements en direct, « Lancer un défi » ; le classement
 │   ├── plaques.html               # Calculateur de plaques
 │   ├── coach.html                 # Chat IA
+│   ├── coach_seance.html          # « Créer une séance » : reprise, courte, légère ou demande libre ; aperçu puis ajout au programme
 │   ├── generator.html             # Générateur de programme IA (form + preview + adopter)
 │   ├── cardio.html                # Saisie cardio
 │   ├── nutrition.html             # Profil + journal repas + carte « Ton rythme réel »
@@ -185,6 +188,7 @@ pwa/
 │   │   ├── rest-timer.js          # Chrono de repos global et persistant (barre injectée par base.html)
 │   │   ├── share-card.js          # Carte de progression (canvas → PNG) + Web Share
 │   │   ├── invitation.js          # Lien d'invitation : copier ou partager (Web Share) ; pages Parrainage et Amis
+│   │   ├── coach-seance.js        # Page « Créer une séance » : lance, suit la tâche de fond, montre la proposition, l'ajoute
 │   │   ├── defis.js               # Composant Alpine `defiForm` (« Lancer un défi » : l'exercice n'apparaît qu'en progression)
 │   │   ├── tuto-engine.js         # Moteur de tutoriel partagé (spotlight + bulle)
 │   │   ├── tutorial.js / tuto-seance.js  # Aide du premier jour : 1 bulle accueil, 3 en séance au fil des gestes
@@ -278,6 +282,20 @@ pwa/
 - Le system prompt inclut le profil utilisateur, le programme, l'historique récent, la note de mémoire et la date du jour (sans elle, il comptait mal les jours depuis la dernière séance) ; consigne : pas d'emoji
 - **Affichage des réponses** : directive `x-md` (`alpine-composants.js`), qui pose le HTML déjà échappé par `renderMd`. **Jamais `x-html`** : la version CSP d'Alpine le refuse et la bulle reste vide (panne du 10 au 14/10 ; `test_aucun_gabarit_n_utilise_x_html`). Entrée envoie, Maj+Entrée va à la ligne (`envoyerSiPret`)
 - Les erreurs techniques ne remontent plus au client (avant : « Vérifie ANTHROPIC_API_KEY dans Railway »)
+
+### Séance créée par le coach (02/11/2026)
+- **Demande du propriétaire** : « je reprends la salle après longtemps, crée-moi une séance adaptée, avec des charges conseillées d'après ce que je fais d'habitude, mais plus légères ». Page `/coach/seance` (`routes/coach_seance.py`), liens depuis le coach et Plus › Coach.
+- **Choix du propriétaire (02/11)** : ouverte **comme le coach** (PRO et essai PRO ; mur PRO sinon) ; la séance entre **dans le programme, hors planning** (on la retrouve dans « Quelle séance aujourd'hui ? », on peut la refaire ou la supprimer) ; l'allègement de reprise **dépend de la pause**.
+- **Quatre demandes** : reprise après une pause, séance courte, séance légère, autre demande ; durée 30 à 75 min ; précisions libres (300 caractères).
+- **L'IA choisit les exercices, jamais les charges** (règle des chiffres). Elle reçoit les exercices habituels (nom et matériel, nombre de séances, dernière date) sans aucun kilo, et rend un JSON lu et borné par `coach_seance.lire_reponse` (10 exercices, 1 à 5 séries, repos 45 à 180 s, muscle connu sinon « Autre », un mouvement une fois). Une charge écrite par l'IA est ignorée.
+- **Charges conseillées** (`core/coach_seance.py`, calculées par le serveur à l'aperçu PUIS de nouveau à l'ajout ; rien de ce que renvoie le navigateur n'est cru) :
+  - charge habituelle = la série la plus lourde des **3 dernières séances** de l'exercice, au **même matériel**, séries de travail faites avant aujourd'hui (ni échauffement, ni cardio) ;
+  - pause = jours depuis la dernière séance faite (cardio compris). **Reprise** : < 14 j −10 %, < 28 j −15 %, < 56 j −25 %, < 120 j −35 %, au-delà −45 % ; **légère** : −20 % ; courte et libre : charges habituelles (pas de conseil). Sans historique : pas d'allègement, la carte donne sa méthode « première fois » ;
+  - arrondi 2,5 kg à partir de 20 kg, 1 kg en dessous ; au poids du corps, le même facteur sur les répétitions.
+- **Rangement** : la séance (`_exo_entry`, matériel compris) entre au programme sous un nom libre (« Reprise », « Reprise 2 »…), 40 séances au plus ; les conseils dans la clé personnelle `prog._seances_coach` ({séance : type, facteur, pause, date, conseils par exercice}), conservée par l'éditeur (`replace_program_body`) et nettoyée des séances disparues à chaque ajout. Aucune migration.
+- **En séance** (`coach_seance.conseils_actifs` → `seance_contexte`, comme la semaine allégée) : tant que la séance n'a jamais été faite un autre jour, chaque série est pré-remplie à la charge conseillée et le bandeau dit d'où elle vient (« Reprise : 45 kg, −45 % de tes 82,5 kg habituels. Garde 2 à 3 reps en réserve. ») ; l'échauffement monte vers elle. Ensuite, la progression ordinaire reprend depuis ces charges.
+- **Tâche de fond** (`core/taches_ia.py`, comme le générateur) : 202 puis `GET /coach/seance/tache/<id>` toutes les 1,5 s. IA : Haiku 5.5, effort `medium`, 4 000 jetons. **Quota** : 5 créations réussies par jour (événement `coach_seance_creee`, compté par `core/analytics.compter`, partagé avec le générateur), limiteur 10/h ; un refus (422) ou une réponse illisible (502) ne compte pas. Événement `coach_seance_ajoutee`.
+- Tests : `tests/test_coach_seance.py` (27), `tests/e2e/test_coach_seance_navigateur.py` (compte en pause depuis plus de 120 jours : −45 %, proposition, ajout, carte pré-remplie à 45 kg au lieu de 82,5).
 
 ### Debrief de fin de séance
 - Le coach est une page qu'il faut **penser** à ouvrir. Le debrief va au-devant, sur l'écran qui suit la séance : `/seance/finish` mémorise la séance en session, l'accueil affiche une carte qui appelle `POST /seance/debrief`.
@@ -555,7 +573,7 @@ pwa/
 - **v49** (`supabase_schema_v49_aliments_perso.sql`, 12/10) : table `aliments_perso` (nom, `food` pour 100 g, `recette` facultative), index `(user_id, updated_at desc)`, fermée au navigateur, effacée avec le compte (clé étrangère + `delete_user_account`). Rejouée deux fois sur un PostgreSQL 16 local : `service_role` écrit, `anon` et `authenticated` refusés, nom vide refusé, cascade à la suppression du compte. **Appliquée le 13/10/2026** (accord du propriétaire) et vérifiée : 7 colonnes, RLS active sans politique, droits à `service_role` seul, 0 ligne ; le contrôle du schéma au démarrage compte 17 tables.
 
 ### Tests (pwa/tests)
-- `cd pwa && python -m pytest tests -q` — **1 894 tests** au 26/10/2026, défis compris (dont 59 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent, et 6 sur un vrai PostgreSQL avec `PG_TEST_URL` ; la suite JS compte 169 tests). Le décor des tests navigateur (serveur, Chromium **à l'heure de Paris** : le jour de la séance vient du téléphone, un Chromium à l'heure UTC contredisait le serveur entre 4 h et 6 h) est dans `tests/e2e/conftest.py` ; `tests/e2e` est un paquet, sinon son `conftest` masquerait celui de `tests/`. Playwright : `wait_for_function` reçoit une **fonction** (`"() => …"`), une expression passerait par `eval`, que la CSP refuse. Le serveur des tests navigateur tourne avec `SANS_LIMITE=1` : sans cela, la limite de 60 requêtes par minute répondait 429 au milieu de la suite.
+- `cd pwa && python -m pytest tests -q` — **1 938 tests** au 02/11/2026, séance du coach comprise (dont 60 tests navigateur dans `tests/e2e/`, Playwright + Chromium, ignorés s'ils manquent, et 6 sur un vrai PostgreSQL avec `PG_TEST_URL` ; la suite JS compte 170 tests). Le décor des tests navigateur (serveur, Chromium **à l'heure de Paris** : le jour de la séance vient du téléphone, un Chromium à l'heure UTC contredisait le serveur entre 4 h et 6 h) est dans `tests/e2e/conftest.py` ; `tests/e2e` est un paquet, sinon son `conftest` masquerait celui de `tests/`. Playwright : `wait_for_function` reçoit une **fonction** (`"() => …"`), une expression passerait par `eval`, que la CSP refuse. Le serveur des tests navigateur tourne avec `SANS_LIMITE=1` : sans cela, la limite de 60 requêtes par minute répondait 429 au milieu de la suite.
 - **Fausse base stricte** (depuis le 09/10) : une colonne inconnue de `core/schema.ATTENDU` en lecture, filtre, tri ou écriture fait échouer la requête comme PostgREST (42703 / PGRST204). `db.schema_libre = True` la rend permissive pour un test qui simule une base en retard. **Aucune date écrite en dur** relative à « aujourd'hui » : un test daté devient rouge un jour donné (trois l'étaient, audit du 03/10), fausse base Supabase en mémoire (`conftest.py`, alignée sur PostgREST : les insertions renvoient les lignes écrites, PK uuid pour `coach_conversations`, **plafond `max-rows` à 1000 lignes** — sans ce plafond, aucun test ne peut repérer une lecture non paginée).
 - **Stockage partagé** : `PARTAGE_TEST=fakeredis` (Redis simulé neuf par test) ou `PARTAGE_TEST=redis://…` (vrai serveur, vidé avant chaque test) rejoue toute la suite avec cache, verrous, quotas et tâches IA dans Redis. La CI le fait sur un service `redis:7-alpine` (étape « Tests Python sur Redis »).
 - **Tests JavaScript** : `pwa/tests/js/` — lanceur maison sous Node nu (`node tests/js/run.js`), sans npm install ni jsdom ; `harness.js` fournit un DOM/localStorage/fetch minimal. Couvre la **file hors-ligne** (ordre d'envoi, reprise après échec, session expirée, double synchronisation, phase d'écoute). `tests/test_js.py` le branche sur pytest (ignoré si Node manque).

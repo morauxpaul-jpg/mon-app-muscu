@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Séance du coach · Muscu Tracker{% endblock %}
+
+{% block content %}
+  <a href="/coach" class="btn label-icon s-86c142 lien-retour"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-left"/></svg>Coach</a>
+
+  <h1 class="label-icon"><svg class="icon icon-lg icon-accent"><use href="/static/img/icons.svg#dumbbell"/></svg>Créer une séance</h1>
+  <p class="cs-texte">Le coach choisit les exercices. Les charges conseillées viennent de ton historique, jamais de l'IA.</p>
+
+  <form class="card" id="cs-form">
+    <fieldset class="cs-groupe">
+      <legend class="field-label">Pour quoi ?</legend>
+      {% for cle, t in types.items() %}
+        <label class="cs-choix"><input type="radio" name="type" value="{{ cle }}"{% if loop.first %} checked{% endif %}> {{ t.nom }}</label>
+      {% endfor %}
+    </fieldset>
+    <p class="cs-texte" id="cs-pause">
+      {% if pause is none %}Aucune séance enregistrée : pas de charge de référence, la séance te donnera une méthode pour trouver la tienne.
+      {% else %}Ta dernière séance date de {{ pause }} jour{{ 's' if pause > 1 else '' }}. En reprise, les charges conseillées seront à −{{ baisse }} % de tes charges habituelles ; en séance légère, à −20 %.{% endif %}
+    </p>
+    <div class="cs-groupe">
+      <label class="field-label" for="cs-duree">Durée</label>
+      <select id="cs-duree" name="duree" class="field">
+        {% for d in durees %}<option value="{{ d }}"{% if d == 45 %} selected{% endif %}>{{ d }} min</option>{% endfor %}
+      </select>
+    </div>
+    <div class="cs-groupe">
+      <label class="field-label" for="cs-demande">Précisions (facultatif)</label>
+      <textarea id="cs-demande" name="demande" class="field" rows="3" maxlength="300"
+                placeholder="Ex. : épaule fragile, haut du corps seulement, pas de squat"></textarea>
+    </div>
+    <button type="submit" class="btn primary" id="cs-creer" data-haptic="1"{% if not restantes %} disabled{% endif %}>Créer la séance</button>
+    <p class="cs-texte cs-quota">{% if restantes %}Encore {{ restantes }} création{{ 's' if restantes > 1 else '' }} aujourd'hui.{% else %}Limite du jour atteinte ({{ quota }} séances). Reviens demain.{% endif %}</p>
+    <p class="cs-etat" id="cs-etat" role="status" aria-live="polite"></p>
+  </form>
+
+  <section class="card" id="cs-resultat" aria-label="Séance proposée" hidden>
+    <div class="card-label">Proposition du coach</div>
+    <h2 class="cs-nom" id="cs-nom"></h2>
+    <p class="cs-texte" id="cs-notes"></p>
+    <ol class="cs-exos" id="cs-exos"></ol>
+    <div class="cs-boutons">
+      <button type="button" class="btn primary" id="cs-ajouter" data-haptic="1">Ajouter à mon programme</button>
+      <button type="button" class="btn" id="cs-refaire">Recommencer</button>
+    </div>
+    <p class="cs-texte">Elle s'ajoute à ton programme, hors planning. Les charges conseillées valent pour la première fois ; ensuite, ta progression habituelle reprend.</p>
+  </section>
+
+  <style>
+    .cs-texte { color: var(--text-2); font-size: .92rem; margin: 0 0 12px; }
+    .cs-groupe { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+    .cs-groupe legend { padding: 0; margin-bottom: 4px; }
+    .cs-choix { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--text-1); }
+    .cs-groupe textarea { width: 100%; resize: vertical; }
+    .cs-quota { margin: 10px 0 0; font-size: .85rem; }
+    .cs-etat { margin: 8px 0 0; color: var(--text-1); }
+    .cs-etat:empty { display: none; }
+    .cs-nom { font-family: var(--font-display); font-size: 1.6rem; text-transform: uppercase; margin: 2px 0 6px; overflow-wrap: anywhere; }
+    .cs-exos { padding-left: 1.2em; margin: 0 0 14px; }
+    .cs-exos li { padding: 6px 0; border-top: 1px solid var(--border-default); }
+    .cs-exos li:first-child { border-top: 0; }
+    .cs-exo-nom { font-weight: 600; color: var(--text-1); overflow-wrap: anywhere; }
+    .cs-exo-series { color: var(--text-2); font-size: .9rem; }
+    .cs-exo-conseil { display: block; color: var(--accent); font-size: .88rem; margin-top: 2px; }
+    .cs-boutons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  </style>
+  <script src="/static/js/coach-seance.js"></script>
+{% endblock %}

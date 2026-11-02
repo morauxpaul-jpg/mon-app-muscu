@@ -50,6 +50,21 @@ def track(event: str, props: dict | None = None, *,
         logger.warning("analytics track(%s) failed: %s", event, e)
 
 
+def compter(user_id: str, event: str, jours: float) -> int:
+    """Nb d'événements `event` de ce compte sur les `jours` derniers jours :
+    les quotas du générateur et des séances du coach. Best-effort : sans la
+    table (migration v28), 0 — le limiteur protège alors seul de l'abus."""
+    import datetime as _dt
+    since = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=jours)).isoformat()
+    try:
+        resp = (core_db.get_client().table("events").select("id", count="exact")
+                .eq("user_id", user_id).eq("event", event).gte("created_at", since).execute())
+        return int(getattr(resp, "count", None) or 0)
+    except Exception as e:
+        logger.warning("quota : lecture des événements %s impossible : %s", event, e)
+        return 0
+
+
 def paywall(feature: str, status: int = 200):
     """Rend le mur VIP plein écran en loggant un `paywall_viewed`.
 
