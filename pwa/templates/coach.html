@@ -68,6 +68,7 @@
       <svg class="icon icon-sm s-6ee066"><use href="/static/img/icons.svg#info"/></svg>
       <span>Cet assistant est un outil d'aide — il ne remplace pas un coach certifié ni un avis médical.</span>
     </div>
+    <a href="/coach/seance" class="coach-seance-lien label-icon" id="coach-seance-lien"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#dumbbell"/></svg>Créer une séance adaptée : reprise, courte, légère</a>
 
     <div class="coach-messages" x-ref="scroll">
       <!-- Message d'accueil (chat vide seulement) -->
@@ -406,6 +407,7 @@
     .coach-icon-btn:active { background: var(--bg-elevated); }
     /* Une précision, pas une alerte : en gris (l'orange est réservé au
        retard). */
+    .coach-seance-lien { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--accent); font-size: .9rem; text-decoration: none; }
     .coach-disclaimer {
       display: flex;
       align-items: center;

@@ -70,6 +70,9 @@
              droite='15 messages / jour' if is_vip_full else '',
              verrou=not is_vip_full and not is_trial,
              badge='' if is_vip_full else ('ESSAI' if is_trial else 'PRO')) }}
+    {{ ligne('/coach/seance', 'dumbbell', 'Créer une séance (reprise, courte…)',
+             verrou=not is_vip_full and not is_trial,
+             badge='' if is_vip_full else ('ESSAI' if is_trial else 'PRO')) }}
     {{ ligne('/generator', 'sparkle', 'Générer un programme', verrou=not is_vip_full, badge='' if is_vip_full else 'PRO') }}
   </section>
 

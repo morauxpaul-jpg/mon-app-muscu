@@ -26,7 +26,7 @@ from core.dates import DAYS_FR, today_paris_str
 from core.db import _env
 from core import db as core_db
 from core.limiter import limiter
-from core.analytics import track, paywall
+from core.analytics import compter, track, paywall
 from core.exercises_data import EXERCISES_INFO
 from core.muscu import MUSCLE_LIST
 from core import ia, taches_ia
@@ -291,21 +291,8 @@ def _build_prompt(params: dict) -> str:
 # ────────────────────────────────────────────────────────────────
 def _evenements_recents(user_id: str, event: str, jours: float) -> int:
     """Nb d'événements `event` de ce compte sur les `jours` derniers jours
-    (table events). Best-effort : sans la table (migration v28), renvoie 0 —
-    le backstop Flask-Limiter protège alors seul contre l'abus."""
-    import datetime as _dt
-    since = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=jours)).isoformat()
-    try:
-        client = core_db.get_client()
-        resp = (
-            client.table("events").select("id", count="exact")
-            .eq("user_id", user_id).eq("event", event)
-            .gte("created_at", since).execute()
-        )
-        return int(getattr(resp, "count", None) or 0)
-    except Exception as e:
-        logger.warning("generator quota lookup failed: %s", e)
-        return 0
+    (table events, `core.analytics.compter`)."""
+    return compter(user_id, event, jours)
 
 
 def _gen_used_week(user_id: str) -> int:

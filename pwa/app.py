@@ -33,6 +33,7 @@ from routes.cardio import bp as cardio_bp
 from routes.nutrition import bp as nutrition_bp
 from routes.nutrition_recettes import bp as nutrition_recettes_bp
 from routes.coach import bp as coach_bp
+from routes.coach_seance import bp as coach_seance_bp
 from routes.premium import bp as premium_bp
 from routes.billing import bp as billing_bp
 from routes.admin import bp as admin_bp
@@ -193,6 +194,7 @@ app.register_blueprint(cardio_bp)
 app.register_blueprint(nutrition_bp)
 app.register_blueprint(nutrition_recettes_bp)
 app.register_blueprint(coach_bp)
+app.register_blueprint(coach_seance_bp)
 app.register_blueprint(premium_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(admin_bp)
