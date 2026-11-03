@@ -537,7 +537,13 @@ def index():
     # de /accueil (prefetch.js, au survol du lien nav) ferait sinon "brûler"
     # l'affichage unique en arrière-plan, sans que l'user le voie. Les fetch de
     # prefetch envoient Sec-Fetch-Mode: same-origin/cors, pas 'navigate'.
-    if is_navigation and not getattr(g, "is_vip", False) and not prog.get("_upsell_seen"):
+    # Audit du 28/10 (4.3-1, axe 18) : pas d'invitation à payer avant d'avoir
+    # vécu l'essai. Un compte gratuit sans `vip_until` n'en a jamais eu :
+    # sa prochaine séance terminée l'ouvre (core/essai.py). La fenêtre n'est
+    # alors ni montrée ni consommée ; elle viendra après l'essai.
+    essai_vecu = bool(profile.get("vip_until"))
+    if is_navigation and not getattr(g, "is_vip", False) and essai_vecu \
+            and not prog.get("_upsell_seen"):
         done_sessions = {(r.get("Date"), r.get("Séance")) for r in hist
                          if r.get("Date") and _is_perf(r)}
         upsell_sessions = len(done_sessions)

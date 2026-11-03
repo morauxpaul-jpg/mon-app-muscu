@@ -665,8 +665,16 @@ def _free_session(client):
     return client
 
 
+def _essai_fini(fake_db):
+    """Compte gratuit dont l'essai PRO est terminé (`vip_until` passé)."""
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free",
+                                      "vip_until": "2026-01-01T00:00:00+00:00"}).execute()
+
+
 def test_upsell_post_win_shown_once_for_free(fake_db, client):
-    """Un free atteignant 3 séances distinctes voit l'upsell UNE fois, puis plus."""
+    """Un free atteignant 3 séances distinctes, essai vécu, voit l'upsell UNE
+    fois, puis plus."""
+    _essai_fini(fake_db)
     _seed_prog(fake_db, planning={"Lundi": "Push"})
     for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01):  # 3 dates distinctes
         _hist_row(fake_db, d, poids=80.0, reps=8)
@@ -683,7 +691,28 @@ def test_upsell_post_win_shown_once_for_free(fake_db, client):
     assert "séances au compteur" not in r2.data.decode("utf-8")
 
 
+def test_upsell_jamais_avant_d_avoir_vecu_l_essai(fake_db, client):
+    """Audit du 28/10 (4.3-1, axe 18) : « 9 séances au compteur ! Passe en
+    PRO » s'affichait à un compte qui n'avait jamais eu l'essai, alors que sa
+    séance suivante l'ouvre. Ni montrée ni consommée : elle vient après."""
+    fake_db.table("profiles").insert({"id": USER_ID, "tier": "free"}).execute()
+    _seed_prog(fake_db, planning={"Lundi": "Push"})
+    for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01):
+        _hist_row(fake_db, d, poids=80.0, reps=8)
+    _free_session(client)
+    r = client.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"})
+    assert r.status_code == 200 and "séances au compteur" not in r.data.decode("utf-8")
+    assert prog_lu().get("_upsell_seen") is not True
+    # L'essai vécu (date passée), la fenêtre s'affiche, une fois.
+    fake_db.tables["profiles"][0]["vip_until"] = "2026-01-01T00:00:00+00:00"
+    import core.db as core_db
+    core_db.vider_cache()
+    r = client.get("/accueil", headers={"Sec-Fetch-Mode": "navigate"})
+    assert "séances au compteur" in r.data.decode("utf-8")
+
+
 def test_upsell_not_shown_below_threshold(fake_db, client):
+    _essai_fini(fake_db)
     _seed_prog(fake_db, planning={"Lundi": "Push"})
     for d in (MONDAY_W51, MONDAY_W52):  # 2 séances seulement
         _hist_row(fake_db, d, poids=80.0, reps=8)
@@ -703,6 +732,7 @@ def test_upsell_never_shown_for_vip(fake_db, logged_in):
 def test_upsell_not_consumed_by_prefetch(fake_db, client):
     """Un prefetch de /accueil (Sec-Fetch-Mode != navigate) ne doit PAS brûler
     le one-shot : l'upsell reste dispo pour la vraie navigation qui suit."""
+    _essai_fini(fake_db)
     _seed_prog(fake_db, planning={"Lundi": "Push"})
     for d in (MONDAY_W51, MONDAY_W52, MONDAY_W01):
         _hist_row(fake_db, d, poids=80.0, reps=8)
