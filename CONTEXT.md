@@ -1,5 +1,7 @@
 # Muscu Tracker PRO — CONTEXT.md
 
+> Règles de travail du propriétaire (langue, preuves, production en lecture seule, PR et « oui » avant fusion) : **`CLAUDE.md`**, à la racine, lu automatiquement par Claude Code.
+
 ## Architecture
 
 PWA Flask (Python) avec Supabase (PostgreSQL) en backend, déployée sur Railway depuis `main`.
