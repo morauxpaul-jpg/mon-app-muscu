@@ -441,6 +441,7 @@ pwa/
 - Le message ne dit que le prénom et l'événement : ni charge, ni détail de séance. Limites « une fois » dans `core/partage` (`fenetre`), donc communes aux instances avec Redis.
 - **En tâche de fond** (`push_amis._en_fond`, 2 fils) : la route n'attend pas l'envoi ; une panne du service de push ne la fait jamais échouer ; un abonnement mort (404/410) est effacé.
 - **Base en retard** (`core/db_reglages.OPTIONNELS`) : une colonne de `reglages` arrivée après la v45 est lue et écrite seulement si la base l'a. Avant, une colonne manquante faisait prendre TOUTE la table pour absente (l'erreur cite « reglages ») et chaque réglage retombait sur le programme. Sans la v54 : réglages intacts, notifications selon le défaut, colonne signalée à /admin.
+- **v54 appliquée le 03/11/2026** (14:59 UTC, `20261103145946 v54_notifs_amis`, accord du propriétaire) et vérifiée : `reglages.notifs_amis` booléen non nul, `true` par défaut, les 2 lignes existantes à `true`.
 - Tests : `tests/test_push_amis.py` (10).
 
 ### Notifications
