@@ -316,7 +316,19 @@ def test_vierge():
         "_settings": {},
         **({"Pull": [{"name": "Rowing barre", "sets": 3, "muscle": "Dos"}]}
            if request.args.get("ab") else {}),
+        # ?rang=1 : le Push du 03/11, à ranger dans Gestion (test_noms_exercices).
+        **({"Bras": [{"name": "Pec deck (machine)", "sets": 3, "muscle": "Pecs", "id": "e_4324ee90"},
+                     {"name": "Overhead triceps extension", "sets": 3, "muscle": "Triceps",
+                      "id": "e_285abcd0"}]} if request.args.get("rang") else {}),
     }}).execute()
+    if request.args.get("rang"):
+        for i, (nom, eid) in enumerate((("Pec deck (machine)", "e_4324ee90"),
+                                        ("Overhead triceps extension", "e_285abcd0"),
+                                        ("Extension triceps haltère", None))):
+            c.table("history").insert({"user_id": USER_ID, "date": "2026-11-02", "semaine": "2026-W45",
+                                       "seance": "Bras", "exercice": nom, "muscle": "Pecs", "serie": i + 1,
+                                       "reps": 10, "poids": 20.0, "remarque": "",
+                                       **({"exercise_id": eid} if eid else {})}).execute()
     session.clear()
     session["user_id"] = USER_ID
     session["email"] = "test@example.com"

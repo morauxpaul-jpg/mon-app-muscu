@@ -42,6 +42,37 @@ def _enregistrer_reglages(prog, s):
         save_prog(prog)
 
 
+# « Laisser » (retour du 03/11) : une proposition que l'utilisateur refuse ne
+# revient plus. Gardée avec sa cible : si l'app propose un jour autre chose
+# pour ce nom, elle se montre de nouveau. Donnée personnelle du programme
+# (core/db_programme.PROG_BODY_KEYS ne la cite pas : elle survit).
+CLE_LAISSES = "_rangements_laisses"
+MAX_LAISSES = 200
+
+
+def _series_par_nom(hist) -> dict:
+    """{nom d'exercice : nombre de séries}, hors marqueurs SESSION et cardio."""
+    comptes = {}
+    for r in hist:
+        ex = (r.get("Exercice") or "").strip()
+        if ex and ex != "SESSION" and not ex.startswith("CARDIO:"):
+            comptes[ex] = comptes.get(ex, 0) + 1
+    return comptes
+
+
+def _laisses(prog) -> set:
+    return {(str(x.get("depuis")), str(x.get("vers")))
+            for x in prog.get(CLE_LAISSES) or [] if isinstance(x, dict)}
+
+
+def _propositions(exo_counts, prog):
+    """(propositions à montrer, nombre de propositions laissées de côté)."""
+    laisses = _laisses(prog)
+    toutes = ranger(exo_counts)
+    vues = [p for p in toutes if (p["depuis"], p["vers"]) not in laisses]
+    return vues, len(toutes) - len(vues)
+
+
 @bp.route("/gestion")
 def gestion():
     prog = get_prog()
@@ -56,17 +87,13 @@ def gestion():
     # Noms d'exercices distincts présents dans l'historique (hors marqueurs
     # SESSION / cardio), avec le nombre de séries enregistrées pour chacun.
     # Sert à l'outil « Renommer un exercice dans l'historique ».
-    exo_counts = {}
-    for r in hist:
-        ex = (r.get("Exercice") or "").strip()
-        if not ex or ex == "SESSION" or ex.startswith("CARDIO:"):
-            continue
-        exo_counts[ex] = exo_counts.get(ex, 0) + 1
+    exo_counts = _series_par_nom(hist)
     hist_exercises = [
         {"name": name, "count": cnt}
         for name, cnt in sorted(exo_counts.items(), key=lambda kv: kv[0].lower())
     ]
 
+    rangements, nb_laisses = _propositions(exo_counts, prog)
     newsletter_opt_in = bool((get_profile() or {}).get("newsletter_opt_in"))
 
     return render_template(
@@ -78,7 +105,8 @@ def gestion():
         nb_hist=nb_hist,
         custom_exercises=custom_exercises,
         hist_exercises=hist_exercises,
-        rangements=ranger(exo_counts),
+        rangements=rangements,
+        rangements_laisses=nb_laisses,
         muscle_list=MUSCLE_LIST,
         profil_options=PROFIL_OPTIONS,
         newsletter_opt_in=newsletter_opt_in,
@@ -172,7 +200,8 @@ def _ranger_programme(propositions):
     Un exercice du programme change de nom seulement si toutes les
     propositions cochées pour ce nom vont au même mouvement. Le matériel
     retiré du nom devient son équipement par défaut (`materiel`), et ses
-    séries identifiées sans matériel le reçoivent (core/db_identite.py)."""
+    séries identifiées sans matériel le reçoivent (core/db_identite.py).
+    Rend le nombre d'exercices du programme renommés."""
     vers = {}
     for p in propositions:
         ancien, _m = separer_variante(p["depuis"])
@@ -180,6 +209,11 @@ def _ranger_programme(propositions):
         mots = ancien.split()
         sorti = materiel if mots and _cle(mots[-1]) in MOTS_MATERIEL and ancien != nouveau else None
         vers.setdefault(ancien, set()).add((nouveau, sorti))
+        if p["depuis"] != ancien:
+            # Le programme peut écrire le matériel dans le nom (« Pec deck
+            # (machine) », retour du 03/11) : ce nom-là suit aussi, et son
+            # matériel devient l'équipement par défaut.
+            vers.setdefault(p["depuis"], set()).add((nouveau, materiel))
     vers = {a: next(iter(v)) for a, v in vers.items() if len(v) == 1}
     if not vers:
         return 0
@@ -223,28 +257,49 @@ def aligner_exercices():
     if not choisis:
         return redirect(url_for("gestion.gestion") + "?align=noop#aligner")
 
-    hist = get_hist()
-    exo_counts = {}
-    for r in hist:
-        ex = (r.get("Exercice") or "").strip()
-        if not ex or ex == "SESSION" or ex.startswith("CARDIO:"):
-            continue
-        exo_counts[ex] = exo_counts.get(ex, 0) + 1
-
-    propositions = [p for p in ranger(exo_counts) if p["depuis"] in choisis]
+    exo_counts = _series_par_nom(get_hist())
+    propositions = [p for p in _propositions(exo_counts, get_prog())[0] if p["depuis"] in choisis]
     total = 0
     try:
         for p in propositions:
             total += rename_exercise_rows([p["depuis"]], p["vers"],
                                           auto_muscles(get_base_name(p["vers"])))
-        _ranger_programme(propositions)
+        touches = _ranger_programme(propositions)
     except Exception as e:
         logger.error("aligner_exercices FAILED user=%s: %s",
                      getattr(g, "user_id", "?"), e)
         return redirect(url_for("gestion.gestion") + "?align=error#aligner")
     if not total:
-        return redirect(url_for("gestion.gestion") + "?align=none#aligner")
+        # Séries déjà rangées, programme resté à l'ancien nom : il a suivi.
+        etat = "programme" if touches else "none"
+        return redirect(url_for("gestion.gestion") + f"?align={etat}#aligner")
     return redirect(url_for("gestion.gestion") + f"?align=ok&n={total}#aligner")
+
+
+@bp.route("/gestion/exercice/laisser", methods=["POST"])
+@limiter.limit("30 per minute")
+def laisser_rangement():
+    """« Laisser » : la proposition ne revient plus, rien n'est renommé (ni
+    les cases cochées du même formulaire). « Les revoir » les remet toutes.
+    La proposition est recalculée ici : on ne garde que ce que l'app a
+    réellement proposé."""
+    prog = get_prog()
+    retour = url_for("gestion.gestion")
+    if request.form.get("revoir"):
+        if prog.get(CLE_LAISSES):
+            prog[CLE_LAISSES] = []
+            save_prog(prog)
+        return redirect(retour + "#aligner")
+    depuis = (request.form.get("laisser") or "").strip()
+    p = next((p for p in ranger(_series_par_nom(get_hist())) if p["depuis"] == depuis), None)
+    if not p:
+        return redirect(retour + "?align=noop#aligner")
+    if (p["depuis"], p["vers"]) not in _laisses(prog):
+        liste = [x for x in prog.get(CLE_LAISSES) or [] if isinstance(x, dict)]
+        liste.append({"depuis": p["depuis"], "vers": p["vers"]})
+        prog[CLE_LAISSES] = liste[-MAX_LAISSES:]
+        save_prog(prog)
+    return redirect(retour + "?align=laisse#aligner")
 
 
 @bp.route("/gestion/settings", methods=["POST"])
