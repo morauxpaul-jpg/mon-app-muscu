@@ -68,7 +68,7 @@ def test_l_accueil_des_nouveaux_est_en_mots(fake_db, client):
 def test_les_reglages_sont_des_interrupteurs(fake_db, logged_in):
     html = logged_in.get("/gestion").get_data(as_text=True)
     reglages = re.findall(r'<label class="reglage">.*?</label>', html, re.S)
-    assert len(reglages) == 7
+    assert len(reglages) == 8          # 8e : notifications des amis (v54)
     for r in reglages:
         assert 'role="switch"' in r
     # Les cases « Je comprends » des zones dangereuses restent des cases.

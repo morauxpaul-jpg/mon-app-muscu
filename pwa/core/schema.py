@@ -64,7 +64,8 @@ ATTENDU = {
                       "created_at", "updated_at", "duration_min"),  # v35
     "reglages": ("user_id", "auto_rest_timer", "auto_prefill_weight", "show_rpe",
                  "show_overload_hint", "notifications", "reminder_hour",
-                 "recap_hebdo", "updated_at"),                 # v45
+                 "recap_hebdo", "updated_at",                  # v45
+                 "notifs_amis"),                               # v54
     "calques_seance": ("user_id", "seance", "date", "extras", "brouillon",
                        "substituts", "ordre", "updated_at"),   # v46
     "etat_compte": ("user_id", "badges", "record_serie", "defis_faits", "defis_gagnes",

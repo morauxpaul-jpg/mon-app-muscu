@@ -287,6 +287,10 @@
         </label>
       </div>
       <label class="reglage">
+        <span>Notifications des amis : demande reçue, défi, ami qui te dépasse, encouragement</span>
+        <input type="checkbox" role="switch" name="notifs_amis" {% if settings.notifs_amis %}checked{% endif %}>
+      </label>
+      <label class="reglage">
         <span>Recevoir les nouveautés par e-mail (mises à jour, nouveaux programmes)</span>
         <input type="checkbox" role="switch" name="newsletter" {% if newsletter_opt_in %}checked{% endif %}>
       </label>

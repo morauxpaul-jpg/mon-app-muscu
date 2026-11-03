@@ -12,6 +12,7 @@ from flask_limiter.util import get_remote_address
 
 from core import db as core_db
 from core import defis as calc
+from core import push_amis
 from core.analytics import track
 from core.data import get_hist
 from core.dates import logical_today_paris
@@ -59,12 +60,14 @@ def lancer():
     debut, fin = calc.bornes(depart, semaines, aujourdhui)
     invites = [str(i)[:64] for i in f.getlist("amis")][:50]
     try:
-        resultat, _ = core_db.creer_defi(g.user_id, type_, exercice, semaines, debut, fin,
-                                         invites, aujourdhui)
+        resultat, defi_id = core_db.creer_defi(g.user_id, type_, exercice, semaines, debut, fin,
+                                               invites, aujourdhui)
     except core_db.DefisIndisponibles:
         return _retour("defi_indisponible")
     if resultat == "cree":
         track("defi_lance", {"type": type_, "semaines": semaines, "invites": len(set(invites))})
+        push_amis.invitation_defi(g.user_id, invites, defi_id,
+                                  calc.titre({"type": type_, "exercice": exercice}), semaines)
     return _retour(f"defi_{resultat}")
 
 
@@ -76,6 +79,8 @@ def inviter():
         resultat = core_db.inviter_au_defi(g.user_id, _id(), invites, logical_today_paris())
     except core_db.DefisIndisponibles:
         return _retour("defi_indisponible")
+    if resultat == "invites":
+        push_amis.invitation_ajoutee(g.user_id, invites, _id())
     return _retour(f"defi_{resultat}" if resultat else "")
 
 
