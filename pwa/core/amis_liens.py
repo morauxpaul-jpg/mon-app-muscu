@@ -34,13 +34,23 @@ def publier_fin_de_seance(user_id: str, seance: str, date_str: str, hist, duree_
         core_db.publier_seance(user_id, ligne)
     except Exception as e:
         logger.error("fil : séance non publiée user=%s : %s", user_id, e)
+    # Défis en cours : prévenir ceux que cette séance vient de dépasser.
+    try:
+        from core import push_amis
+        push_amis.apres_la_seance(user_id, date_str, seance)
+    except Exception as e:
+        logger.error("défis : dépassements non annoncés user=%s : %s", user_id, e)
 
 
 def demande_apres_inscription(user_id: str, code: str) -> str:
     """La demande part vers le titulaire du code, qui l'accepte ou non."""
     try:
         autre = compte_du_code(code)
-        return core_db.demander(user_id, autre) if autre else "inconnu"
+        resultat = core_db.demander(user_id, autre) if autre else "inconnu"
+        if resultat == "envoyee":
+            from core import push_amis
+            push_amis.demande_recue(user_id, autre)
+        return resultat
     except Exception as e:
         logger.error("demande d'ami après inscription FAILED user=%s : %s", user_id, e)
         return ""

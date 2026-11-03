@@ -134,14 +134,14 @@ def test_la_seance_applique_les_reglages_de_la_table(fake_db, logged_in):
 
 
 def test_sans_ligne_les_valeurs_par_defaut(fake_db):
-    assert db.lire_reglages(USER_ID) == dr.DEFAUTS
+    assert db.lire_reglages(USER_ID) == {**dr.DEFAUTS, **dr.OPTIONNELS}
 
 
 def test_un_ancien_reglage_du_programme_sert_tant_quil_ny_a_pas_de_ligne(fake_db):
     """Entre le déploiement et la migration, rien ne doit revenir aux valeurs
     par défaut : l'heure choisie hier tient toujours."""
     assert db.lire_reglages(USER_ID, {"_settings": {"reminder_hour": 7, "show_1rm": False}}) \
-        == {**dr.DEFAUTS, "reminder_hour": 7}
+        == {**dr.DEFAUTS, **dr.OPTIONNELS, "reminder_hour": 7}
 
 
 # ── Base en retard ───────────────────────────────────────────────────────

@@ -263,6 +263,8 @@ def update_settings():
     s["reminder_hour"] = clean_hour(request.form.get("reminder_hour"),
                                     s.get("reminder_hour", 18))
     s["recap_hebdo"] = request.form.get("recap_hebdo") == "on"
+    # Amis : demande reçue, défi, dépassement, encouragement (core/push_amis.py).
+    s["notifs_amis"] = request.form.get("notifs_amis") == "on"
     # Le pré-remplissage des charges n'est PAS une option payante : c'est la
     # fonction la plus utilisée de la saisie. La couper aux comptes gratuits
     # dès qu'ils touchaient un réglage ne faisait pas payer, ça faisait partir

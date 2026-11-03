@@ -22,7 +22,7 @@ from flask_limiter.util import get_remote_address
 
 from core import amis as calc
 from core import db as core_db
-from core import defis_liens
+from core import defis_liens, push_amis
 from core.amis_liens import COOKIE_AMI, compte_du_code
 from core.analytics import track
 from core.data import get_hist
@@ -130,6 +130,8 @@ def demande():
             resultat = "indisponible"
     if resultat in ("envoyee", "acceptee"):
         track("ami_demande", {"resultat": resultat})
+    if resultat == "envoyee":
+        push_amis.demande_recue(g.user_id, autre)
     resp = _retour(resultat)
     resp.delete_cookie(COOKIE_AMI)
     return resp
@@ -200,4 +202,5 @@ def encourager():
         return ("", 404)
     if resultat == "ok":
         track("ami_encourage", {})
+        push_amis.encouragement_recu(g.user_id, compte, session_id)
     return _retour("", f"s-{session_id}")

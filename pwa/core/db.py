@@ -77,7 +77,8 @@ from core.db_calques import (
     _completer as _completer_calque, _depuis_prog, _enregistrer, _ligne, _table, _vide
 )
 from core.db_reglages import (
-    DEFAUTS, REESSAI, ecrire_reglages, lire_reglages, reglages_pour,
+    DEFAUTS, OPTIONNELS, REESSAI, ecrire_reglages, lire_reglages, reglages_pour,
+    _OPTIONNELS_OK, _colonnes_lues, _optionnelle_absente,
     _completer, _disponible, _lignes, _marquer_absente, _oublier_absence, _table_absente
 )
 from core.db_identite import donner_materiel, marquer_series, _variante
