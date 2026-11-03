@@ -120,33 +120,40 @@
   {% set _rang = request.args.get('align') %}
   {% if _rang == 'ok' %}
     <div class="card rang-retour" role="status">✓ {{ request.args.get('n', 0)|int }} séries rangées. Ton programme a suivi.</div>
+  {% elif _rang == 'programme' %}
+    <div class="card rang-retour" role="status">✓ Tes séries étaient déjà rangées. Ton programme a suivi.</div>
+  {% elif _rang == 'laisse' %}
+    <div class="card rang-retour" role="status">✓ Proposition laissée : ces exercices restent séparés.</div>
   {% elif _rang == 'error' %}
     <div class="card rang-retour rang-erreur" role="alert">Le rangement a échoué. Rien n'a été modifié, réessaie dans un instant.</div>
   {% endif %}
 
-  {% if rangements %}
+  {% if rangements or rangements_laisses %}
   {# Un mouvement, un nom ; l'équipement à côté (core/noms_exercices.py).
      Remplace « Doublons détectés » et « Aligner sur les noms de l'app » :
      les deux rataient l'équipement écrit dans le nom, et le premier
      rapprochait « adducteurs » et « abducteurs ». #}
   <div class="card s-0e1618" id="aligner" x-data="{ open: true, confirm: false }">
     <h3 class="s-a0dcef" @click="open = !open">
-      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Ranger mes exercices ({{ rangements|length }})</span>
+      <span class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#sparkle"/></svg>Ranger mes exercices{% if rangements %} ({{ rangements|length }}){% endif %}</span>
       <span x-text="open ? '−' : '+'"></span>
     </h3>
     <div x-show="open" x-transition.duration.200ms>
+      {% if rangements %}
       <p class="s-7e1751">
-        Un mouvement, un seul nom, et l'équipement à côté entre parenthèses,
-        comme dans Hevy et Strong : « Développé incliné (Haltères) ». Les
-        séries d'un même mouvement se retrouvent ensemble, ton programme suit.
-        <b>C'est définitif</b> : décoche ce que tu veux garder à part.
+        Un mouvement, un seul nom, et l'équipement à côté entre parenthèses :
+        « Développé incliné (Haltères) ». Les séries d'un même mouvement se
+        retrouvent ensemble, ton programme suit. <b>C'est définitif</b> :
+        décoche ce que tu veux garder à part, ou « Laisser » si ce sont deux
+        exercices différents.
       </p>
       <form method="post" action="/gestion/exercice/aligner">
         {% for mouvement, props in rangements|groupby('mouvement') %}
         <div class="rang-groupe">
           <div class="rang-titre">{{ mouvement }}</div>
           {% for p in props %}
-          <label class="rang-ligne">
+          <div class="rang-ligne">
+          <label class="rang-choix">
             <input class="s-7dda2a" type="checkbox" name="aligner" value="{{ p.depuis }}" {% if p.sur %}checked{% endif %}>
             <span class="s-7f784d">
               <span class="s-198075">{{ p.depuis }}</span>
@@ -158,6 +165,9 @@
               </span>
             </span>
           </label>
+          <button type="submit" class="btn rang-laisser" formaction="/gestion/exercice/laisser"
+                  name="laisser" value="{{ p.depuis }}" aria-label="Laisser {{ p.depuis }} tel quel">Laisser</button>
+          </div>
           {% endfor %}
         </div>
         {% endfor %}
@@ -170,13 +180,23 @@
           <button type="submit" class="btn primary s-69eb87">Confirmer</button>
         </div>
       </form>
+      {% endif %}
+      {% if rangements_laisses %}
+      <form method="post" action="/gestion/exercice/laisser" class="rang-revoir">
+        <span>{{ rangements_laisses }} proposition{{ 's' if rangements_laisses > 1 }} laissée{{ 's' if rangements_laisses > 1 }} de côté.</span>
+        <button type="submit" class="btn rang-laisser" name="revoir" value="1">Les revoir</button>
+      </form>
+      {% endif %}
     </div>
   </div>
   <style>
     .rang-groupe { padding: 8px 0; border-bottom: 1px solid var(--border-default); }
     .rang-groupe:last-of-type { border-bottom: 0; }
     .rang-titre { font-size: 0.78rem; letter-spacing: 0; text-transform: uppercase; color: var(--text-2); margin-bottom: 4px; }
-    .rang-ligne { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; cursor: pointer; }
+    .rang-ligne { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; }
+    .rang-choix { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+    .rang-laisser { flex: none; padding: 6px 12px; font-size: 0.82rem; min-height: 36px; }
+    .rang-revoir { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; font-size: 0.85rem; color: var(--text-2); }
   </style>
   {% endif %}
   {% if _rang %}
@@ -350,7 +370,7 @@
 
   {# Venir d'une autre app sans repartir de zéro : pour tout le monde. #}
   <div class="card">
-    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Venir de Hevy ou Strong</h3>
+    <h3 class="label-icon"><svg class="icon icon-md icon-accent"><use href="/static/img/icons.svg#download"/></svg>Importer mon historique</h3>
     <p class="s-434391">Importe ton historique de musculation (séances, séries, charges, RPE). Rien n'est effacé, rien n'est doublé.</p>
     <a href="/gestion/import-muscu" class="btn label-icon s-b8db1d"><svg class="icon icon-sm"><use href="/static/img/icons.svg#download"/></svg>Importer un export CSV</a>
   </div>

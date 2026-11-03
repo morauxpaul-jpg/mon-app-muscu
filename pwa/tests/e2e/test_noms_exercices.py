@@ -36,3 +36,44 @@ def test_un_nouvel_exercice_est_range_dans_l_editeur(serveur, navigateur):
     assert (push[-1]["name"], push[-1].get("materiel")) == ("Développé incliné", "Haltères")
     assert erreurs == []
     ctx.close()
+
+
+def test_ranger_et_laisser_dans_gestion(serveur, navigateur):
+    """Retour du 03/11 : « Pec deck (machine) » restait proposé après le
+    rangement, et rien ne permettait d'écarter « Overhead triceps extension »
+    → « Extension triceps haltère » (deux exercices). Dans un vrai
+    navigateur : « Laisser » part du même formulaire (formaction), avec son
+    jeton CSRF, puis le rangement coché passe et la liste se vide."""
+    ctx = navigateur.new_context(viewport={"width": 375, "height": 812}, locale="fr-FR")
+    ctx.add_init_script("localStorage.setItem('tutoSeen','true');")
+    pg = ctx.new_page()
+    erreurs = []
+    pg.on("console", lambda m: erreurs.append(m.text)
+          if ("Alpine" in m.text or "Content Security Policy" in m.text) else None)
+    pg.on("pageerror", lambda e: erreurs.append(str(e)))
+    pg.goto(serveur + "/test-vierge?rang=1")
+    pg.goto(serveur + "/gestion")
+    carte = pg.locator("#aligner")
+    sync_api.expect(carte).to_contain_text("Ranger mes exercices (2)")
+    assert "Hevy" not in pg.content() and "Strong" not in pg.content()
+
+    carte.get_by_role("button", name="Laisser Overhead triceps extension tel quel").click()
+    sync_api.expect(pg.locator(".rang-retour")).to_contain_text("Proposition laissée")
+    sync_api.expect(carte).to_contain_text("Ranger mes exercices (1)")
+    sync_api.expect(carte).to_contain_text("1 proposition laissée de côté")
+
+    case = carte.locator('input[name="aligner"][value="Pec deck (machine)"]')
+    case.check()
+    carte.get_by_role("button", name="Ranger les exercices cochés").click()
+    carte.get_by_role("button", name="Confirmer").click()
+    sync_api.expect(pg.locator(".rang-retour")).to_contain_text("séries rangées")
+    sync_api.expect(carte.locator('input[name="aligner"]')).to_have_count(0)
+    with urllib.request.urlopen(serveur + "/test-programme") as r:
+        bras = json.loads(r.read())["Bras"]
+    assert [(e["name"], e.get("materiel")) for e in bras] == [
+        ("Écarté machine", "Machine"), ("Overhead triceps extension", None)]
+
+    carte.get_by_role("button", name="Les revoir").click()
+    sync_api.expect(carte.locator('input[name="aligner"][value="Overhead triceps extension"]')).to_have_count(1)
+    assert erreurs == []
+    ctx.close()

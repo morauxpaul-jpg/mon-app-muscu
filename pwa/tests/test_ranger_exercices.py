@@ -235,6 +235,107 @@ def test_les_series_identifiees_gardent_leur_materiel(fake_db, logged_in):
     assert ligne["exercice"] == "Développé décliné (Barre)"
 
 
+# Retour d'usage du 03/11 : le programme écrit le matériel dans le nom
+# (« Pec deck (machine) »). Les séries étaient renommées, pas le programme :
+# elles s'affichaient de nouveau sous l'ancien nom, et la proposition restait.
+PEC, OVERHEAD = "e_4324ee90", "e_285abcd0"
+
+
+@pytest.fixture()
+def push_du_03_11(fake_db):
+    _programme(fake_db, [{"name": "Pec deck (machine)", "sets": 3, "muscle": "Pecs", "id": PEC},
+                         {"name": "Overhead triceps extension", "sets": 3, "muscle": "Triceps",
+                          "id": OVERHEAD}])
+    _serie(fake_db, "Pec deck (machine)", exo_id=PEC)
+    _serie(fake_db, "Pec deck (machine)", serie=2, exo_id=PEC)
+    _serie(fake_db, "Écarté machine (Machine)", jour=1)
+    _serie(fake_db, "Overhead triceps extension", exo_id=OVERHEAD)
+    _serie(fake_db, "Extension triceps haltère", jour=2)
+    return fake_db
+
+
+def _proposes(client):
+    html = client.get("/gestion").get_data(as_text=True)
+    return [d for d in ("Pec deck (machine)", "Overhead triceps extension")
+            if f'name="aligner" value="{d}"' in html]
+
+
+def test_une_proposition_rangee_disparait_meme_au_nom_du_programme(push_du_03_11, logged_in):
+    assert _proposes(logged_in) == ["Pec deck (machine)", "Overhead triceps extension"]
+    r = logged_in.post("/gestion/exercice/aligner", headers={"X-CSRFToken": CSRF},
+                       data={"aligner": ["Pec deck (machine)"]})
+    assert "align=ok&n=2" in r.headers["Location"]
+    prog = push_du_03_11.table("programs").select("*").eq("user_id", USER_ID).execute().data[0]["data"]
+    assert prog["Push"][0]["name"] == "Écarté machine" and prog["Push"][0]["materiel"] == "Machine"
+    lignes = [l for l in push_du_03_11.tables["history"] if l.get("exercise_id", "").startswith(PEC)]
+    assert {(l["exercice"], l["exercise_id"]) for l in lignes} == {("Écarté machine (Machine)", PEC + "~Machine")}
+    assert _proposes(logged_in) == ["Overhead triceps extension"]
+
+
+def test_un_rangement_a_moitie_fait_se_termine(push_du_03_11, logged_in):
+    """L'état du compte du propriétaire après le 03/11 : séries déjà renommées,
+    programme resté « Pec deck (machine) ». Ranger de nouveau le termine."""
+    for l in push_du_03_11.tables["history"]:
+        if l.get("exercise_id") == PEC:
+            l["exercice"] = "Écarté machine (Machine)"
+    assert "Pec deck (machine)" in _proposes(logged_in)
+    r = logged_in.post("/gestion/exercice/aligner", headers={"X-CSRFToken": CSRF},
+                       data={"aligner": ["Pec deck (machine)"]})
+    assert "align=programme" in r.headers["Location"]
+    assert "Ton programme a suivi" in logged_in.get(r.headers["Location"]).get_data(as_text=True)
+    assert _proposes(logged_in) == ["Overhead triceps extension"]
+
+
+def test_laisser_une_proposition_ne_touche_rien_et_la_retire(push_du_03_11, logged_in):
+    """« Overhead triceps extension » et « Extension triceps haltère » partagent
+    une fiche, mais ce sont deux exercices pour le propriétaire : « Laisser »."""
+    avant = sorted((l["exercice"], l.get("exercise_id")) for l in push_du_03_11.tables["history"])
+    r = logged_in.post("/gestion/exercice/laisser", headers={"X-CSRFToken": CSRF},
+                       data={"laisser": "Overhead triceps extension",
+                             "aligner": ["Pec deck (machine)"]})       # la case cochée ne s'applique pas
+    assert "align=laisse" in r.headers["Location"]
+    assert sorted((l["exercice"], l.get("exercise_id")) for l in push_du_03_11.tables["history"]) == avant
+    prog = push_du_03_11.table("programs").select("*").eq("user_id", USER_ID).execute().data[0]["data"]
+    assert [e["name"] for e in prog["Push"]] == ["Pec deck (machine)", "Overhead triceps extension"]
+    assert _proposes(logged_in) == ["Pec deck (machine)"]
+    html = logged_in.get("/gestion").get_data(as_text=True)
+    assert "Ranger mes exercices (1)" in html and "1 proposition laissée" in html
+    # Cochée en douce, elle ne s'applique pas non plus.
+    logged_in.post("/gestion/exercice/aligner", headers={"X-CSRFToken": CSRF},
+                   data={"aligner": ["Overhead triceps extension"]})
+    assert sorted((l["exercice"], l.get("exercise_id")) for l in push_du_03_11.tables["history"]) == avant
+    # « Les revoir » les remet.
+    logged_in.post("/gestion/exercice/laisser", headers={"X-CSRFToken": CSRF}, data={"revoir": "1"})
+    assert _proposes(logged_in) == ["Pec deck (machine)", "Overhead triceps extension"]
+
+
+def test_tout_laisser_garde_l_entree_pour_les_revoir(push_du_03_11, logged_in):
+    for d in ("Pec deck (machine)", "Overhead triceps extension"):
+        logged_in.post("/gestion/exercice/laisser", headers={"X-CSRFToken": CSRF}, data={"laisser": d})
+    html = logged_in.get("/gestion").get_data(as_text=True)
+    assert 'name="aligner"' not in html and "2 propositions laissées" in html
+
+
+def test_l_app_ne_cite_aucune_autre_app_hors_des_imports():
+    """Retour du 03/11 : « comme dans Hevy et Strong » dans Gestion, c'est la
+    page de Netflix qui dirait « comme Amazon Prime ». Seules les pages
+    d'import nomment l'app d'où vient le fichier : sans ce nom, on ne trouve
+    pas l'export."""
+    import pathlib
+    import re
+    racine = pathlib.Path(__file__).resolve().parent.parent
+    imports = {"import_muscu.html", "cardio_import.html"}
+    fautes = []
+    for f in sorted((racine / "templates").glob("*.html")):
+        if f.name in imports:
+            continue
+        texte = re.sub(r"\{#.*?#\}", "", f.read_text(encoding="utf-8"), flags=re.S)
+        for n, ligne in enumerate(texte.splitlines(), 1):
+            if re.search(r"\b(Hevy|Strava|MyFitnessPal|Fitbod|Jefit)\b|\bStrong\b(?![^<]*>)", ligne):
+                fautes.append(f"{f.name}:{n}: {ligne.strip()}")
+    assert fautes == []
+
+
 # ── À la saisie ──────────────────────────────────────────────────
 
 
