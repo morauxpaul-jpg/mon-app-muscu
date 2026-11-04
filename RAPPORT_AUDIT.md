@@ -1,29 +1,31 @@
 # RAPPORT D'AUDIT — Muscu Tracker PRO
 
-## Audit avant publication du 04/11/2026 · commit `b9847f6` (puis `e65853a`) · **6,65 / 10** avant publication (133 / 20)
+## Audit avant publication du 04/11/2026 · commit `b9847f6` (puis `e65853a`) · **6,7 / 10** avant publication (134 / 20) · web seulement
 
 **Commit audité** : `b9847f6` (PR #106), déployé sur Railway (`de589d65`, SUCCESS, démarré le 03/11 à 20:09 UTC). La PR #107 (`e65853a`, jour logique du navigateur) a été fusionnée pendant l'audit, à 07:23 UTC, CI verte : suites rejouées dessus, parcours non rejoués.
 **Méthode** : lecture seule partout. Aucune écriture en base, aucune migration, aucun déploiement, aucune PR touchée (Dependabot #100 comprise). Les parcours sont joués sur le serveur de démo (`run_local_fake.py`, fausse base des tests) avec un serveur d'audit hors dépôt qui ajoute une horloge avançable, des notifications interceptées et des décors (un an d'historique, compte neuf). Aucune donnée écrite en production, aucun compte de test créé.
+**Distribution** (précisée par le propriétaire le 04/11, après la première version de ce rapport) : **web seulement**, installée par le bouton « Installer » du navigateur ; ni Play Store ni App Store. B1, B2 et B5 deviennent sans objet, l'axe 15 passe de 7 à 8 (6,65 → 6,7), la partie Android de I-6 tombe.
 **Page visuelle** : https://claude.ai/artifact/FMvcr97HGZEWYLbFbjTRKv (privée) ; la même page dans `RAPPORT_AUDIT.html`, capture `RAPPORT_AUDIT_avant_publication.png`.
 
 ### 1. Verdict
 
 > 1. L'app est solide sur l'essentiel : séance, programme, progression, nutrition, import, amis et compte marchent de bout en bout, chiffres justes sur un an d'historique.
 > 2. Rien ne perd de données : 1 965 tests Python et 178 tests JS verts (commit `e65853a`), 0 réponse 5xx sur 7 jours, aucun compte ne voit les données d'un autre (15 essais d'intrusion refusés).
-> 3. Mais la coquille Android n'est pas publiable : pubs sans recueil du consentement, et une faille critique dans Capacitor 7.6.6.
-> 4. Et l'exploitation n'est pas prête : aucune sauvegarde de la base (offre Supabase gratuite), vente sans SIRET.
-> 5. Cinq défauts produit sont à corriger avant le lancement (relances malgré le refus, reprise, hors ligne, GPS, fin d'essai muette) ; aucun ne demande plus d'une PR.
+> 3. Mais l'exploitation n'est pas prête : aucune sauvegarde de la base (offre Supabase gratuite), vente sans SIRET.
+> 4. Et des relances partent vers des comptes qui ont coupé les notifications.
+> 5. Quatre autres défauts produit sont à corriger avant le lancement (reprise, hors ligne, GPS, fin d'essai muette) ; aucun ne demande plus d'une PR.
 
 **Prêt à publier : NON.**
 
-Bloquants (à lever avant le dépôt sur le Play Store) :
-1. **B1 · Pubs AdMob sans consentement.** `pwa/static/js/ads.js:26` lance `AdMob.initialize({})` sans formulaire de consentement ; aucune trace de consentement dans `pwa/static/js`, `pwa/templates` ni `android/app/src`. En Europe, l'identifiant publicitaire demande l'accord de l'utilisateur, et Google exige un outil de consentement certifié pour diffuser.
-2. **B2 · Faille critique dans la coquille Android.** `npm audit` : `@capacitor/android` 7.6.6 (`package-lock.json`), avis GHSA-rvm3-566m-v7fv (« contenu distant chargé à l'origine de l'app »), corrigé en 7.6.9. Il faut monter la version et reconstruire l'AAB.
-3. **B3 · Aucune sauvegarde de la base.** Offre Supabase `free` (`get_organization`) ; la documentation Supabase : sauvegardes quotidiennes « Pro, Team et Enterprise » seulement. Aucun script de sauvegarde dans le dépôt.
-4. **B4 · Vendre sans identité commerciale.** `core/legal.py:10` : éditeur « particulier (personne physique) » ; `EDITEUR_SIRET` absent des variables Railway ; les CGV et mentions ne disent rien de la TVA. Vendre des abonnements demande un statut (par exemple micro-entreprise) et ces mentions. À valider avec un conseiller : ce n'est pas un avis juridique.
-5. **B5 · Déclarations Play fausses en l'état.** `docs/PLAY_STORE.md:64-71` prévoit de déclarer « pas de publicité » et « aucune donnée partagée à des fins pub » ; l'app gratuite affiche AdMob. `HIDE_NATIVE_BILLING` n'est pas posé sur Railway (normal hors Play, obligatoire avant le dépôt).
+Bloquants (à lever avant d'ouvrir aux premiers utilisateurs) :
+1. **B3 · Aucune sauvegarde de la base.** Offre Supabase `free` (`get_organization`) ; la documentation Supabase : sauvegardes quotidiennes « Pro, Team et Enterprise » seulement. Aucun script de sauvegarde dans le dépôt.
+2. **B4 · Vendre sans identité commerciale.** `core/legal.py:10` : éditeur « particulier (personne physique) » ; `EDITEUR_SIRET` absent des variables Railway ; les CGV et mentions ne disent rien de la TVA. Vendre des abonnements demande un statut (par exemple micro-entreprise) et ces mentions. À valider avec un conseiller : ce n'est pas un avis juridique.
+3. **I-1 · Relances malgré le refus.** Un compte qui a coupé les notifications reçoit quand même les relances (partie 4, I-1). C'est un défaut de consentement.
 
-La PWA web, elle, pourrait ouvrir aux premiers utilisateurs une fois B3, B4 et l'important I-1 réglés : B1, B2 et B5 ne concernent que l'app Android.
+Sans objet tant que l'app n'est distribuée que sur le web (gardés pour le jour où un APK reviendrait) : `ads.js` s'arrête hors de l'app native (`pwa/static/js/ads.js:19-21`), donc aucune pub sur le web.
+- **B1 · Pubs AdMob sans consentement.** `pwa/static/js/ads.js:26` lance `AdMob.initialize({})` sans formulaire de consentement ; aucune trace de consentement dans `pwa/static/js`, `pwa/templates` ni `android/app/src`. En Europe, l'identifiant publicitaire demande l'accord de l'utilisateur, et Google exige un outil de consentement certifié pour diffuser.
+- **B2 · Faille critique dans la coquille Android.** `npm audit` : `@capacitor/android` 7.6.6 (`package-lock.json`), avis GHSA-rvm3-566m-v7fv (« contenu distant chargé à l'origine de l'app »), corrigé en 7.6.9. Il faut monter la version et reconstruire l'AAB.
+- **B5 · Déclarations Play fausses en l'état.** `docs/PLAY_STORE.md:64-71` prévoit de déclarer « pas de publicité » et « aucune donnée partagée à des fins pub » ; l'app gratuite affiche AdMob. `HIDE_NATIVE_BILLING` n'est pas posé sur Railway (normal hors Play, obligatoire avant le dépôt).
 
 ### 2. Note avant publication (nouvelle grille)
 
@@ -45,14 +47,14 @@ Grille : 7 = prêt au lancement ; 8 = solide ; 9 = au niveau des meilleures apps
 | Plateforme | 12 Performance | **6** | Accueil en production : médiane 0,8 à 1 s, p90 2,3 s ; ~200 ms par appel à Supabase. |
 | Technique | 13 Architecture | **7** | Couches séparées, plafonds de taille tenus par des tests. |
 | Technique | 14 Modèle de données | **8** | v54 appliquée, 0 doublon, 0 orphelin, contraintes en place, 4 échauffements réels en base. |
-| Technique | 15 Sécurité | **7** | Intrusion simple : 15 refus sur 15, 0 avis Python ; faille critique dans la coquille Android. |
+| Technique | 15 Sécurité | **8** | Intrusion simple : 15 refus sur 15, 0 avis Python, RLS fermée ; la faille Capacitor ne touche pas le web. |
 | Technique | 16 Robustesse | **6** | 0 5xx sur 6 125 requêtes en 7 jours ; aucune sauvegarde de la base, pas d'alerte navigateur. |
 | Technique | 17 Tests | **7** | 1 965 + 178 verts, 0 ignoré, 87 % de couverture, 3 créneaux figés verts ; 4 défauts du jour non couverts. |
-| Business | 18 Monétisation | **5** | Paiement non joué (pas de clés de test) ; fin d'essai muette ; Android Play sans achat possible ; pas de SIRET. |
+| Business | 18 Monétisation | **5** | Paiement non joué (pas de clés de test) ; fin d'essai muette ; pas de SIRET. |
 | Business | 19 Rétention | **6** | Rappels, récap, défis, amis, relances prouvés sur 3 semaines simulées ; relance qui ignore le refus. |
 | Business | 20 Accessibilité | **7** | Lighthouse 93 à 97 ; bulle d'aide sans nom, contraste des jours de repos ; lecteur d'écran à vérifier sur appareil. |
 
-Total **133 / 20 = 6,65**. Produit 54/8 = **6,75** · Plateforme 26/4 = **6,5** · Technique 35/5 = **7,0** · Business 18/3 = **6,0**.
+Total **134 / 20 = 6,7**. Produit 54/8 = **6,75** · Plateforme 26/4 = **6,5** · Technique 36/5 = **7,2** · Business 18/3 = **6,0**. (Première version, en supposant une sortie Android : 133 / 20 = 6,65, sécurité à 7.)
 
 **Série historique, à part** (grille d'usage) : 4,9 (30/09) → 5,6 (03/10) → 6,6 (06/10) → 6,7 (18/10) → 6,8 (28/10).
 **Changement de méthode** : les audits précédents notaient aussi l'usage réel (inscriptions, essais, paiements), qui n'existe pas avant le lancement ; celui-ci note la preuve avant lancement (parcours joués, simulations, tests), donc les deux séries ne se comparent pas.
@@ -73,7 +75,6 @@ Total **133 / 20 = 6,65**. Produit 54/8 = **6,75** · Plateforme 26/4 = **6,5** 
 | 11 | 7 | Un seul nom (PRO), formats français partout, Corps à un vert ; 25 captures relues. |
 | 12 | 6 | **7** : médiane de l'accueil sous 500 ms et de « Série faite » sous 400 ms en production, mesurées sur 7 jours. |
 | 13 | 7 | 0 import entre blueprints. |
-| 15 | 7 | B2 levé (Capacitor ≥ 7.6.9, AAB reconstruit) ; `npm audit` à 0. |
 | 16 | 6 | **7** : B3 levé (sauvegarde quotidienne + une restauration essayée sur un projet vide). **8** : alerte Sentry côté navigateur. |
 | 17 | 7 | Un test automatique par parcours P1 à P10 (aujourd'hui P6 et P10 n'ont pas de test navigateur) ; suite verte sous Windows constatée par le propriétaire. |
 | 18 | 5 | **6** : I-6 et B4 levés. **7** : P6 joué en mode test Stripe (mensuel, annuel, à vie, webhook, portail, résiliation, remboursement, litige). |
@@ -101,7 +102,7 @@ Moyenne sur 9 parcours joués : 64 / 9 = **7,1**.
 
 #### Critiques
 
-Aucun défaut ne perd de données ni n'ouvre un compte à un autre. Les cinq bloquants B1 à B5 (partie 1) sont des conditions de publication, pas des pannes.
+Aucun défaut ne perd de données ni n'ouvre un compte à un autre. Les bloquants B3, B4 (partie 1) sont des conditions de lancement, pas des pannes ; I-1 y figure aussi.
 
 #### Importants
 
@@ -112,7 +113,7 @@ Aucun défaut ne perd de données ni n'ouvre un compte à un autre. Les cinq blo
 | I-3 | **Hors ligne : 1re séance sans deux feuilles de style, « Terminer » sans effet** | P9 : échecs hors ligne `seance.css`, `styles-extraits.css`, `erreurs.js`, `push.js`, 2 illustrations ; `static/service-worker.js:11` ne les garde pas. Fenêtre de fin rendue dans la page, bouton à y = 703 sous `rest-timer-bar-time`. Après « Enregistrer » hors ligne : file inchangée (664 octets), au retour du réseau 3 séries en base mais 0 bilan, 0 `workout_finished` | En sous-sol, la séance ne se termine pas : ni bilan, ni fil, ni essai offert | Ajouter les fichiers au service worker ; mettre `/seance/finish` en file hors ligne | M |
 | I-4 | **Le GPS s'arrête à la 1re erreur passagère** | `templates/cardio.html:465-470` appelle `gpsArreter()` sur toute erreur sauf le refus. Chromium : 6 positions, une erreur `POSITION_UNAVAILABLE`, suivi coupé, 0,00 km, « Position indisponible ». Avec `timeout: 15000`, un téléphone en économie (une position toutes les 35 s, `CONTEXT.md`) déclencherait aussi l'arrêt : à vérifier sur appareil | Course perdue en route | Ne s'arrêter que sur le refus ; afficher l'erreur passagère et continuer | S |
 | I-5 | **Chaque appel à Supabase coûte ~200 ms** | Journaux « lent » : `/tasks/reminders` 5 requêtes en 0,8 à 1,5 s chaque heure, même la nuit (déjà 1 s le 28/10) ; `/accueil` 9 à 16 requêtes, 0,9 à 5,7 s. Métriques Railway 7 j : accueil p50 799 à 997 ms, p90 2 323 à 2 384 ms ; « Série faite » p50 556 à 650 ms (45 envois). Railway `europe-west4`, Supabase `eu-west-1`. Cause non établie | App lente dès l'accueil | Mesurer un appel isolé, vérifier la réutilisation des connexions, regrouper les lectures de l'accueil | M |
-| I-6 | **Fin d'essai muette ; Android Play sans achat** | P1 : à J+4, aucun message (« essai » absent de `templates`, `routes`, `core`), seulement les murs PRO. Avec `HIDE_NATIVE_BILLING`, `templates/premium.html:153` dit « PRO n'est pas proposé à l'achat dans l'application » mais l'essai, la fenêtre « Découvrir PRO » et la carte « Passe en PRO » restent (`hide_billing` n'est testé que dans `premium.html` et `vip_wall.html`) | Conversion perdue ; impasse sur Android | Message et push la veille de la fin ; sur Android Play, ni fenêtre ni carte d'achat | M |
+| I-6 | **Fin d'essai muette** | P1 : à J+4, aucun message (« essai » absent de `templates`, `routes`, `core`), seulement les murs PRO | Conversion perdue : l'utilisateur ne sait pas pourquoi tout se ferme | Carte le jour de la fin, push la veille | S |
 | I-7 | **Coach et générateur jamais évalués sur le vrai modèle** | Aucune clé Anthropic dans cette session ; tests avec IA simulée seulement | Qualité inconnue au lancement | Jouer le jeu fixe ci-dessous (coût annoncé : < 0,05 $) | S |
 
 #### Mineurs
@@ -144,21 +145,22 @@ Aucun défaut ne perd de données ni n'ouvre un compte à un autre. Les cinq blo
 
 | Sujet | Point | État | Preuve |
 |---|---|---|---|
-| Play Store | AAB signé | **Non vérifiable** | La clé vit hors du dépôt (`docs/PLAY_STORE.md:26`) ; `versionCode 7`, `versionName 1.0.6` (`android/app/build.gradle:29-30`) |
-| Play Store | AAB à jour (Capacitor ≥ 7.6.9) | **Pas fait** | B2 |
-| Play Store | Empreintes SHA-1 (clé de release + Play App Signing) | **Non vérifiable** | Release déclarée dans `CONTEXT.md` ; celle de Google n'existe qu'après le 1er envoi |
-| Play Store | Fiche, captures, bannière 1024 × 500 | **Fait (à relire)** | `marketing/promo/feature_graphic_1024x500.png`, `promo_1` à `promo_5` |
-| Play Store | Formulaire « Sécurité des données » | **Pas fait** | B5 : la doc prévoit « pas de publicité » ; manquent pub, photos, position |
-| Play Store | Classification du contenu | **Non vérifiable** | Console Play |
-| Play Store | Consentement pub (UMP) | **Pas fait** | B1 |
-| Play Store | `HIDE_NATIVE_BILLING=1` | **Pas fait** | Absent des variables Railway |
-| Play Store | Politique de confidentialité en ligne | **Fait** | Route `/confidentialite` ; sous-traitants listés (`templates/confidentialite.html:42-51`) |
-| Play Store | Suppression du compte dans l'app et sur le web | **Fait** | P10 : 0 ligne restante ; FAQ : lien de demande par e-mail (`templates/faq.html:128`) |
+| Play Store (sans objet) | AAB signé | **Sans objet** | Web seulement ; la clé vit hors du dépôt (`docs/PLAY_STORE.md:26`) ; `versionCode 7`, `versionName 1.0.6` (`android/app/build.gradle:29-30`) |
+| Play Store (sans objet) | AAB à jour (Capacitor ≥ 7.6.9) | **Sans objet** | Web seulement ; B2 |
+| Play Store (sans objet) | Empreintes SHA-1 (clé de release + Play App Signing) | **Sans objet** | Web seulement ; release déclarée dans `CONTEXT.md` ; celle de Google n'existe qu'après le 1er envoi |
+| Play Store (sans objet) | Fiche, captures, bannière 1024 × 500 | **Sans objet** | Web seulement ; `marketing/promo/feature_graphic_1024x500.png`, `promo_1` à `promo_5` |
+| Play Store (sans objet) | Formulaire « Sécurité des données » | **Sans objet** | Web seulement ; B5 : la doc prévoit « pas de publicité » ; manquent pub, photos, position |
+| Play Store (sans objet) | Classification du contenu | **Sans objet** | Web seulement ; console Play |
+| Play Store (sans objet) | Consentement pub (UMP) | **Sans objet** | Web seulement ; B1 |
+| Play Store (sans objet) | `HIDE_NATIVE_BILLING=1` | **Sans objet** | Web seulement ; absent des variables Railway |
+| Publication | Installation par le bouton « Installer » du navigateur | **Non vérifiable** | Manifeste et service worker servis par l'app (`/manifest.json`, `/service-worker.js`) ; sur iPhone, Safari n'a pas de bouton « Installer », seulement « Sur l'écran d'accueil » ; à essayer sur l'appareil de test, Android et iPhone |
+| Publication | Politique de confidentialité en ligne | **Fait** | Route `/confidentialite` ; sous-traitants listés (`templates/confidentialite.html:42-51`) |
+| Publication | Suppression du compte dans l'app et sur le web | **Fait** | P10 : 0 ligne restante ; FAQ : lien de demande par e-mail (`templates/faq.html:128`) |
 | Paiement | Stripe en mode réel (clés, webhook) | **Non vérifiable** | `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` définies (noms) ; 0 appel au webhook en 7 jours ; abonnement aux 6 événements à voir dans Stripe |
 | Paiement | Prix affichés | **Fait** | 4,99 € / 39,99 € / 79,99 € (`routes/billing.py:38-40`) |
 | Paiement | CGV, mentions légales | **En partie** | Pages présentes, rétractation 14 jours ; SIRET et TVA absents (B4) |
 | RGPD | Export, suppression | **Fait** | P10 |
-| RGPD | Consentements | **En partie** | Newsletter avec date (v31) ; pub sans consentement (B1) ; relance malgré le refus (I-1) |
+| RGPD | Consentements | **En partie** | Newsletter avec date (v31) ; relance malgré le refus (I-1) ; aucune pub sur le web |
 | RGPD | Sous-traitants listés | **Fait** | Supabase, Railway, Google, Anthropic, AdMob, Stripe, Brevo, Sentry, Open Food Facts |
 | Exploitation | Sauvegardes Supabase | **Pas fait** | B3 |
 | Exploitation | Plan de reprise | **Pas fait** | Aucun document ; dépend de B3 |
@@ -184,36 +186,39 @@ Chaque prompt suppose la règle commune : « Lis `CLAUDE.md` et `CONTEXT.md`. Pr
 | 1 | Relances : respecter le refus, un push par heure | I-1, m10 | 10 (+1), 19 (+1) | S | **Sonnet 5.5**, moyen, € — cause connue, test facile |
 | 2 | Sauvegarde quotidienne de la base | B3 | 16 (+1) | M | **Opus 5.5**, élevé, €€€ — données |
 | 3 | Mentions légales : statut, SIRET, TVA | B4 | 18 (+0,5) | S | **Haiku 5.5**, bas, € — texte, après la décision du propriétaire |
-| 4 | Consentement pub (UMP) et déclarations Play | B1, B5, m12 | 18, 15 | M | **Opus 5.5**, élevé, €€€ — légal, Android, plusieurs fichiers |
-| 5 | Capacitor 7.6.9 et nouvel AAB | B2 | 15 (+1) | S | **Opus 5.5**, élevé, €€ — sécurité |
-| 6 | Hors ligne : fichiers gardés et « Terminer » en file | I-3 | 9 (+1) | M | **Opus 5.5**, élevé, €€€ — file hors ligne, données |
-| 7 | Reprise et semaine allégée : suggestion gardée après une série | I-2 | 2 (+1) | S | **Sonnet 5.5**, moyen, € — cause connue |
-| 8 | GPS : continuer après une erreur passagère ; secondes Strava | I-4, m3 | 8 (+1) | S | **Sonnet 5.5**, moyen, € — local |
-| 9 | Fin d'essai annoncée ; Android sans fenêtre d'achat | I-6 | 18 (+0,5), 19 | M | **Opus 5.5**, élevé, €€ — paiement |
-| 10 | Évaluer coach et générateur sur le vrai modèle | I-7 | 5 (+1), 6 (+1) | S | **Opus 5.5**, élevé, €€ — IA (coût annoncé < 0,05 $) |
-| 11 | Performance : le coût d'un appel à Supabase | I-5 | 12 (+1) | M | **Opus 5.5**, élevé, €€€ — cause inconnue |
-| 12 | Fiche exercice et formats français | m1, m2 | 4 (+1), 11 | S | **Sonnet 5.5**, moyen, € — calcul local |
-| 13 | Textes : PRO partout, pesées, remise à zéro | m4, m6, m9 | 11 | S | **Haiku 5.5**, bas, € — texte |
-| 14 | Lien d'ami vers la 1re séance ; Corps à un vert ; accessibilité | m5, m7, m8 | 1, 11, 20 | S | **Sonnet 5.5**, moyen, € — gabarits |
-| 15 | Démo fidèle (`auth_check_ts`, `created_at`) | m11 | 17 | S | **Sonnet 5.5**, moyen, € — outil de test |
+| 4 | Hors ligne : fichiers gardés et « Terminer » en file | I-3 | 9 (+1) | M | **Opus 5.5**, élevé, €€€ — file hors ligne, données |
+| 5 | Reprise et semaine allégée : suggestion gardée après une série | I-2 | 2 (+1) | S | **Sonnet 5.5**, moyen, € — cause connue |
+| 6 | GPS : continuer après une erreur passagère ; secondes Strava | I-4, m3 | 8 (+1) | S | **Sonnet 5.5**, moyen, € — local |
+| 7 | Fin d'essai annoncée (carte et push la veille) | I-6 | 18 (+0,5), 19 | S | **Sonnet 5.5**, moyen, € — local, cause connue |
+| 8 | Évaluer coach et générateur sur le vrai modèle | I-7 | 5 (+1), 6 (+1) | S | **Opus 5.5**, élevé, €€ — IA (coût annoncé < 0,05 $) |
+| 9 | Performance : le coût d'un appel à Supabase | I-5 | 12 (+1) | M | **Opus 5.5**, élevé, €€€ — cause inconnue |
+| 10 | Fiche exercice et formats français | m1, m2 | 4 (+1), 11 | S | **Sonnet 5.5**, moyen, € — calcul local |
+| 11 | Textes : PRO partout, pesées, remise à zéro | m4, m6, m9 | 11 | S | **Haiku 5.5**, bas, € — texte |
+| 12 | Lien d'ami vers la 1re séance ; Corps à un vert ; accessibilité | m5, m7, m8 | 1, 11, 20 | S | **Sonnet 5.5**, moyen, € — gabarits |
+| 13 | Démo fidèle (`auth_check_ts`, `created_at`) | m11 | 17 | S | **Sonnet 5.5**, moyen, € — outil de test |
+| Si un APK revient | Consentement pub (UMP) et déclarations Play | B1, B5, m12 | 18 | M | **Opus 5.5**, élevé, €€€ — légal, Android |
+| Si un APK revient | Capacitor 7.6.9 et nouvel AAB | B2 | 15 | S | **Opus 5.5**, élevé, €€ — sécurité |
 
 **Prompts prêts à coller** (après la règle commune) :
 
 1. « Audit du 04/11, I-1 : la relance push part vers des comptes qui ont coupé les notifications (`reglages.notifications = false`) : `core/push.py:157-158` ne lit pas le réglage, décocher garde l'abonnement (`templates/gestion.html:495`). Le même soir, rappel et relance partent à la même minute, et un inactif reçoit un rappel à chaque séance prévue sans fin. Corrige : relance filtrée sur le réglage, un seul push par compte et par heure (rappel prioritaire), rappels coupés après 14 jours sans séance. m10 : retenter `mark_reactivation_sent` et corriger son message. Preuve : test qui simule 21 jours de crons (3 comptes) et compte les push. »
 2. « Audit du 04/11, B3 : offre Supabase gratuite, aucune sauvegarde. Propose au propriétaire, avant tout code : (a) passer en Pro, ou (b) un `pg_dump` quotidien par GitHub Actions vers un stockage privé, chiffré, gardé 14 jours. Pour (b) : workflow, secret par nom seulement, essai de restauration sur un PostgreSQL vide de la CI. Aucune écriture en production. »
 3. « Audit du 04/11, B4 : mentions légales et CGV. Une fois le statut choisi par le propriétaire, affiche le SIRET (`EDITEUR_SIRET`, déjà lu par `core/legal.py`) et la mention de TVA adaptée dans `templates/mentions_legales.html` et `templates/cgv.html`. Test : la page affiche les deux quand la variable est posée. »
-4. « Audit du 04/11, B1, B5 : `pwa/static/js/ads.js:26` lance AdMob sans consentement. Ajoute le formulaire de consentement de Google (UMP) via `@capacitor-community/admob` avant toute pub, pubs non personnalisées en cas de refus, un lien pour changer d'avis dans Réglages. Réécris `docs/PLAY_STORE.md` (Capacitor, AdMob, photos, position) pour le formulaire « Sécurité des données ». Preuve : test JS (pas de pub avant la réponse) ; capture sur l'appareil de test par le propriétaire. »
-5. « Audit du 04/11, B2 : `npm audit` signale une faille critique dans `@capacitor/android` 7.6.6 (GHSA-rvm3-566m-v7fv), corrigée en 7.6.9. Monte les paquets Capacitor à la même version, `npx cap sync`, vérifie `npm audit` à 0 et note dans `docs/CAPACITOR.md` la reconstruction de l'AAB par le propriétaire. »
-6. « Audit du 04/11, I-3 : hors ligne, une séance ouverte pour la première fois n'a ni `static/css/seance.css` ni `static/css/styles-extraits.css` (absents de `APP_SHELL`, `static/service-worker.js:11`) : la fenêtre de fin s'affiche sans style, son bouton sous la barre du chrono. Et « Terminer » hors ligne n'enregistre ni bilan ni fin au retour du réseau (file inchangée). Corrige les deux. Preuve : test navigateur mode avion de bout en bout, bilan et `workout_finished` présents au retour. »
-7. « Audit du 04/11, I-2 : séance de reprise créée par le coach, exercice au poids du corps : après la 1re « Série faite », l'objectif passe de 9 à 13 reps et le bandeau disparaît. `routes/seance.py:487` recalcule `_suggestion_for` sans `coach_seance.conseils_actifs` ; `static/js/seance.js:458` remplace la suggestion. Vérifie aussi la semaine allégée (`core/seance_contexte.py:70`). Preuve : test serveur et test navigateur (tractions, 3 séries à 9). »
-8. « Audit du 04/11, I-4 : `templates/cardio.html:465-470` arrête le suivi GPS sur toute erreur ; ne l'arrêter que sur un refus (code 1), afficher l'erreur passagère et continuer. m3 : l'import Strava arrondit les durées à la minute ; garde les secondes (minutes décimales, comme la saisie). Preuve : test JS du suivi avec une erreur code 2 ; test de l'import (1 845 s → 30,75). »
-9. « Audit du 04/11, I-6 : la fin de l'essai PRO n'est annoncée nulle part. Ajoute une carte sur l'accueil le jour de la fin et un push la veille (dans le cron horaire, une fois). Avec `HIDE_NATIVE_BILLING`, n'affiche ni la fenêtre « Découvrir PRO » ni la carte « Passe en PRO » (`routes/accueil.py`, gabarits). Preuve : tests serveur avec horloge avancée, comptes web et natif. »
-10. « Audit du 04/11, I-7 : évalue le coach (15 questions du jeu fixe du rapport, annexe Z.4) et le générateur (3 profils) sur Haiku 5.5, avec l'accord du propriétaire (coût annoncé < 0,05 $). Note chaque réponse (juste, chiffres tirés du contexte, refus correct). Livre le tableau dans `RAPPORT_AUDIT.md`. Aucune modification de code sans nouvelle PR. »
-11. « Audit du 04/11, I-5 : en production, chaque appel à Supabase coûte ~200 ms (`/tasks/reminders` : 5 requêtes en ~1 s chaque heure ; accueil p50 0,8 à 1 s, p90 2,3 s). Trouve la cause (réutilisation des connexions HTTP du client postgrest, région, nombre d'appels de l'accueil) en lisant les journaux « lent » et en mesurant en local. Propose avant de coder. Objectif : accueil p50 < 500 ms. »
-12. « Audit du 04/11, m1 : la fiche exercice affiche le meilleur 1RM mais calcule « +X % depuis » avec la dernière séance (`core/exercise_stats.py:141-143`) : 111,8 kg et +23 % au lieu de +47 % après une séance légère. m2 : « 1RM 194.0 kg » (`templates/progres.html:274`), « 2056 kcal », dates ISO de l'aperçu Strava, « -50 % » du récap. Preuve : tests. »
-13. « Audit du 04/11, m4, m6, m9 : textes. « Il faut 3 pesées sur 2 semaines… tu en as 14 » (`templates/nutrition.html:208`) ; PRO partout au lieu de Premium et VIP (« Tu es VIP », « features premium », `templates/premium.html:54-55`, FAQ, onboarding) ; confirmation de remise à zéro exacte (`templates/gestion.html`). Preuve : test qui refuse « VIP » et « Premium » dans les gabarits visibles. »
-14. « Audit du 04/11, m5, m7, m8 : après une inscription par lien d'ami (`routes/onboarding.py:223`), un bouton « Commencer ma première séance » sur Amis ; onglet Corps à un seul aplat vert ; bulle d'aide avec un nom (`aria-label`), contraste des jours de repos du calendrier, `meta description` de la page publique. Preuve : `tests/test_accessibilite.py` étendu. »
-15. « Audit du 04/11, m11 : dans `run_local_fake.py`, `/test-vierge` et `/test-compte` posent `auth_check_ts`, et la fausse base remplit `created_at` à l'insertion comme PostgreSQL. Sans cela, la démo déconnecte après 15 s et la règle des défis ne s'y joue pas. Preuve : test navigateur de plus de 20 s. »
+4. « Audit du 04/11, I-3 : hors ligne, une séance ouverte pour la première fois n'a ni `static/css/seance.css` ni `static/css/styles-extraits.css` (absents de `APP_SHELL`, `static/service-worker.js:11`) : la fenêtre de fin s'affiche sans style, son bouton sous la barre du chrono. Et « Terminer » hors ligne n'enregistre ni bilan ni fin au retour du réseau (file inchangée). Corrige les deux. Preuve : test navigateur mode avion de bout en bout, bilan et `workout_finished` présents au retour. »
+5. « Audit du 04/11, I-2 : séance de reprise créée par le coach, exercice au poids du corps : après la 1re « Série faite », l'objectif passe de 9 à 13 reps et le bandeau disparaît. `routes/seance.py:487` recalcule `_suggestion_for` sans `coach_seance.conseils_actifs` ; `static/js/seance.js:458` remplace la suggestion. Vérifie aussi la semaine allégée (`core/seance_contexte.py:70`). Preuve : test serveur et test navigateur (tractions, 3 séries à 9). »
+6. « Audit du 04/11, I-4 : `templates/cardio.html:465-470` arrête le suivi GPS sur toute erreur ; ne l'arrêter que sur un refus (code 1), afficher l'erreur passagère et continuer. m3 : l'import Strava arrondit les durées à la minute ; garde les secondes (minutes décimales, comme la saisie). Preuve : test JS du suivi avec une erreur code 2 ; test de l'import (1 845 s → 30,75). »
+7. « Audit du 04/11, I-6 : la fin de l'essai PRO n'est annoncée nulle part. Ajoute une carte sur l'accueil le jour de la fin et un push la veille (dans le cron horaire, une fois). Preuve : tests serveur avec horloge avancée (veille, jour de fin, lendemain). »
+8. « Audit du 04/11, I-7 : évalue le coach (15 questions du jeu fixe du rapport, annexe Z.4) et le générateur (3 profils) sur Haiku 5.5, avec l'accord du propriétaire (coût annoncé < 0,05 $). Note chaque réponse (juste, chiffres tirés du contexte, refus correct). Livre le tableau dans `RAPPORT_AUDIT.md`. Aucune modification de code sans nouvelle PR. »
+9. « Audit du 04/11, I-5 : en production, chaque appel à Supabase coûte ~200 ms (`/tasks/reminders` : 5 requêtes en ~1 s chaque heure ; accueil p50 0,8 à 1 s, p90 2,3 s). Trouve la cause (réutilisation des connexions HTTP du client postgrest, région, nombre d'appels de l'accueil) en lisant les journaux « lent » et en mesurant en local. Propose avant de coder. Objectif : accueil p50 < 500 ms. »
+10. « Audit du 04/11, m1 : la fiche exercice affiche le meilleur 1RM mais calcule « +X % depuis » avec la dernière séance (`core/exercise_stats.py:141-143`) : 111,8 kg et +23 % au lieu de +47 % après une séance légère. m2 : « 1RM 194.0 kg » (`templates/progres.html:274`), « 2056 kcal », dates ISO de l'aperçu Strava, « -50 % » du récap. Preuve : tests. »
+11. « Audit du 04/11, m4, m6, m9 : textes. « Il faut 3 pesées sur 2 semaines… tu en as 14 » (`templates/nutrition.html:208`) ; PRO partout au lieu de Premium et VIP (« Tu es VIP », « features premium », `templates/premium.html:54-55`, FAQ, onboarding) ; confirmation de remise à zéro exacte (`templates/gestion.html`). Preuve : test qui refuse « VIP » et « Premium » dans les gabarits visibles. »
+12. « Audit du 04/11, m5, m7, m8 : après une inscription par lien d'ami (`routes/onboarding.py:223`), un bouton « Commencer ma première séance » sur Amis ; onglet Corps à un seul aplat vert ; bulle d'aide avec un nom (`aria-label`), contraste des jours de repos du calendrier, `meta description` de la page publique. Preuve : `tests/test_accessibilite.py` étendu. »
+13. « Audit du 04/11, m11 : dans `run_local_fake.py`, `/test-vierge` et `/test-compte` posent `auth_check_ts`, et la fausse base remplit `created_at` à l'insertion comme PostgreSQL. Sans cela, la démo déconnecte après 15 s et la règle des défis ne s'y joue pas. Preuve : test navigateur de plus de 20 s. »
+
+Si un APK revient :
+
+A. « Audit du 04/11, B1, B5 : `pwa/static/js/ads.js:26` lance AdMob sans consentement. Ajoute le formulaire de consentement de Google (UMP) via `@capacitor-community/admob` avant toute pub, pubs non personnalisées en cas de refus, un lien pour changer d'avis dans Réglages. Réécris `docs/PLAY_STORE.md` (Capacitor, AdMob, photos, position) pour le formulaire « Sécurité des données ». Preuve : test JS (pas de pub avant la réponse) ; capture sur l'appareil de test par le propriétaire. »
+B. « Audit du 04/11, B2 : `npm audit` signale une faille critique dans `@capacitor/android` 7.6.6 (GHSA-rvm3-566m-v7fv), corrigée en 7.6.9. Monte les paquets Capacitor à la même version, `npx cap sync`, vérifie `npm audit` à 0 et note dans `docs/CAPACITOR.md` la reconstruction de l'AAB par le propriétaire. »
 
 ### 7. À vérifier après lancement (audit suivant)
 
@@ -236,7 +241,7 @@ Chaque prompt suppose la règle commune : « Lis `CLAUDE.md` et `CONTEXT.md`. Pr
 | Suite sans tests navigateur, figée (`time-machine`) au 31/12 23:30 UTC, au 28/03/2027 01:30 UTC (heure d'été), au dimanche 08/11 22:45 UTC | **0 échec** sur les trois créneaux |
 | `pip-audit -r requirements.txt` | **0 avis** |
 | `pip-audit -r requirements-dev.txt` | 4 avis, tous Pillow 12.3.0 (outil de dev, absent de la production) |
-| `npm audit --omit=dev` | **1 critique** : `@capacitor/android` 7.0.0 – 7.6.8 (installé : 7.6.6) |
+| `npm audit --omit=dev` | **1 critique** : `@capacitor/android` 7.0.0 – 7.6.8 (installé : 7.6.6) ; sans objet pour le web |
 | Lighthouse 12.8.2 mobile (démo, 4G simulée) | page publique 100 / 97 / 100 (SEO 92) ; accueil 81 / 94 / 100, CLS 0,245 dû à la bulle d'aide du premier jour ; séance 77 / 93 / 100 ; Progrès 89 / 96 / 96 (performance / accessibilité / bonnes pratiques) |
 | Poids (démo, PRO 1 an, gzip) | accueil 8,7 ko, séance 21,6 ko, Progrès 19,4 ko, programme 24,9 ko, nutrition 22,7 ko ; `static/js` 358 ko brut, 112 ko gzip ; temps serveur à chaud 1 à 14 ms |
 | Sous Windows | **Non vérifiable d'ici** (session Linux) |
