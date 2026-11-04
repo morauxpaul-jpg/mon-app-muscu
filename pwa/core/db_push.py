@@ -178,7 +178,7 @@ def list_push_subscriptions_for_users(user_ids: set) -> list[dict]:
         return []
 
 
-def list_all_programs() -> list[dict]:
+def list_all_programs(user_ids: set | None = None) -> list[dict]:
     """[{user_id, data}] des comptes ABONNÉS aux notifications — cron des
     rappels de séance.
 
@@ -186,12 +186,13 @@ def list_all_programs() -> list[dict]:
     il faudrait une requête par utilisateur à chaque heure. Mais lire le blob
     de TOUS les comptes chaque heure, pour n'écrire qu'aux abonnés, coûtait
     de plus en plus (audit du 30/09, M6) : on ne lit que les leurs.
+    `user_ids` restreint encore à ces comptes (relance des inactifs).
     """
     client = get_client()
     try:
         abonnes = sorted({r["user_id"] for r in _fetch_all(lambda: (
             client.table("push_subscriptions").select("user_id").order("id")
-        )) if r.get("user_id")})
+        )) if r.get("user_id") and (user_ids is None or r["user_id"] in user_ids)})
         out: list = []
         for i in range(0, len(abonnes), 100):
             lot = abonnes[i:i + 100]
@@ -220,24 +221,38 @@ def users_trained_on(date_str: str) -> set:
     return {r["user_id"] for r in rows if r.get("user_id") and perf_brute(r)}
 
 
+_ESSAIS_MARQUAGE = 3
+_PAUSE_MARQUAGE = 0.5  # secondes, multipliée par le numéro de l'essai
+
+
 def mark_reactivation_sent(endpoint: str, count: int) -> None:
     """Mémorise l'envoi d'une relance sur un abonnement (colonnes v34).
-    Best-effort : sans la migration, l'update échoue et on continue."""
+
+    Retente en cas d'échec passager, puis LÈVE l'erreur : l'appelant la
+    journalise. Sans cette trace, la même relance repartirait au prochain
+    passage du cron (audit du 04/11, m10)."""
     if not endpoint:
         return
-    client = get_client()
-    try:
-        (
-            client.table("push_subscriptions")
-            .update({
-                "last_reactivation_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-                "reactivation_count": int(count),
-            })
-            .eq("endpoint", endpoint)
-            .execute()
-        )
-    except Exception as e:
-        logger.warning("mark_reactivation_sent FAILED (migration v34 ?): %s", e)
+    import time
+    dernier = None
+    for essai in range(1, _ESSAIS_MARQUAGE + 1):
+        try:
+            (
+                get_client().table("push_subscriptions")
+                .update({
+                    "last_reactivation_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+                    "reactivation_count": int(count),
+                })
+                .eq("endpoint", endpoint)
+                .execute()
+            )
+            return
+        except Exception as e:
+            dernier = e
+            logger.warning("mark_reactivation_sent essai %s/%s: %s", essai, _ESSAIS_MARQUAGE, e)
+            if essai < _ESSAIS_MARQUAGE:
+                time.sleep(_PAUSE_MARQUAGE * essai)
+    raise RuntimeError(f"enregistrement de la relance impossible après {_ESSAIS_MARQUAGE} essais : {dernier}")
 
 
 def history_between_for_users(user_ids, debut: str, fin: str) -> list[dict]:

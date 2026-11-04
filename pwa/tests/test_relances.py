@@ -94,6 +94,11 @@ def test_le_cron_relance_quelquun_qui_a_decroche_une_deuxieme_fois(fake_db, monk
     import core.push as push
     import core.db as db
     derniere = (dt.date.today() - dt.timedelta(days=5)).isoformat()
+    # Les relances ne partent qu'aux comptes qui ont gardé les notifications.
+    fake_db.table("programs").insert({"user_id": USER_ID, "data": {
+        "_settings": {"notifications": True}}}).execute()
+    fake_db.table("push_subscriptions").insert({
+        "user_id": USER_ID, "endpoint": "e1", "p256dh": "k", "auth": "a"}).execute()
     monkeypatch.setattr(push, "is_configured", lambda: True)
     monkeypatch.setattr(db, "get_inactive_users", lambda **k: {USER_ID: derniere})
     monkeypatch.setattr(db, "list_push_subscriptions_for_users", lambda ids: [{

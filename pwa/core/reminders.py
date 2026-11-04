@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_HOUR = 18
 # Bornes raisonnables : pas de notification au milieu de la nuit.
 MIN_HOUR, MAX_HOUR = 6, 22
+# Au-delà, on cesse les rappels : la relance des inactifs prend le relais
+# (3 messages espacés), puis plus rien. Sans cette borne, un compte parti
+# recevait un rappel à CHAQUE séance prévue, sans fin (audit du 04/11, I-1).
+MAX_JOURS_SANS_SEANCE = 14
 
 
 def clean_hour(value, default=DEFAULT_HOUR) -> int:
@@ -40,6 +44,18 @@ def clean_hour(value, default=DEFAULT_HOUR) -> int:
 def _planned_today(prog: dict, day) -> str:
     from core.rotation import seance_prevue
     return seance_prevue(prog, day)
+
+
+def _trop_inactif(uid: str, data: dict, dernieres: dict, today) -> bool:
+    """Plus de MAX_JOURS_SANS_SEANCE jours sans séance (à défaut d'historique,
+    depuis le début du programme)."""
+    import datetime as dt
+    ref = dernieres.get(uid) or data.get("_started_at")
+    try:
+        jour = dt.date.fromisoformat(str(ref)[:10])
+    except (TypeError, ValueError):
+        return False
+    return (today - jour).days > MAX_JOURS_SANS_SEANCE
 
 
 def targets_for_hour(hour: int) -> list[dict]:
@@ -77,8 +93,18 @@ def targets_for_hour(hour: int) -> list[dict]:
         user_hour = clean_hour(settings.get("reminder_hour"), DEFAULT_HOUR)
         if user_hour == 0 or user_hour != hour:
             continue
-        out.append({"user_id": uid, "seance": seance, "hour": user_hour})
-    return out
+        out.append({"user_id": uid, "seance": seance, "hour": user_hour, "_data": data})
+    if not out:
+        return out
+    try:
+        dernieres = core_db._last_activity_by_user()
+    except Exception as e:
+        logger.error("targets_for_hour activité FAILED: %s", e)
+        dernieres = {}
+    gardes = [t for t in out if not _trop_inactif(t["user_id"], t["_data"], dernieres, today)]
+    for t in gardes:
+        t.pop("_data")
+    return gardes
 
 
 def payload_for(seance: str) -> dict:
