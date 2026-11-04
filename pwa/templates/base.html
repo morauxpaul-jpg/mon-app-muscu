@@ -110,8 +110,11 @@
       if (!s.active_session || !s.session_id) return;
       // Journée logique, comme le serveur : avant 4 h, c'est encore la veille.
       // toISOString() donnait la date UTC, et la reprise ratait entre minuit
-      // et 2 h (audit du 03/10, profil 8).
-      var d = new Date(Date.now() - 4 * 3600 * 1000);
+      // et 2 h (audit du 03/10, profil 8). Heure de l'horloge puis veille au
+      // calendrier, comme static/js/jour-seance.js : « maintenant moins 4 h »
+      // se trompait la nuit du passage à l'heure d'hiver.
+      var d = new Date();
+      if (d.getHours() < 4) d.setDate(d.getDate() - 1);
       var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
         + '-' + String(d.getDate()).padStart(2, '0');
       if (s.session_date !== today) { localStorage.removeItem('active_session'); return; }

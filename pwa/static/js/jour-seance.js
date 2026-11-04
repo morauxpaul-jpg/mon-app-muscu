@@ -22,9 +22,16 @@
 
   function deuxChiffres(n) { return String(n).padStart(2, '0'); }
 
-  /** Journée logique, comme le serveur et base.html : avant 4 h, c'est encore la veille. */
+  /**
+   * Journée logique, comme le serveur (core/dates.py) et base.html : avant 4 h
+   * à l'horloge, c'est encore la veille. On lit l'heure affichée puis on recule
+   * d'un jour au calendrier : « maintenant moins 4 h » se trompait la nuit du
+   * passage à l'heure d'hiver (le 25/10/2026 à 03 h 13, il retombait à 23 h 13
+   * heure d'été... du 25, et la page se datait du lendemain).
+   */
   function jourLogique(maintenantMs) {
-    var d = new Date((maintenantMs == null ? Date.now() : maintenantMs) - 4 * 3600 * 1000);
+    var d = new Date(maintenantMs == null ? Date.now() : maintenantMs);
+    if (d.getHours() < 4) d.setDate(d.getDate() - 1);
     return d.getFullYear() + '-' + deuxChiffres(d.getMonth() + 1) + '-' + deuxChiffres(d.getDate());
   }
 

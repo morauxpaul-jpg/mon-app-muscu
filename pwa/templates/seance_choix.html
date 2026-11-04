@@ -17,7 +17,13 @@
         if (params.has('date')) return;
         var data = JSON.parse(localStorage.getItem('active_session') || '{}');
         if (!data.active_session) return;
-        var today = new Date().toISOString().slice(0, 10);
+        // Journée logique, comme le serveur et base.html : avant 4 h à
+        // l'horloge, c'est encore la veille. toISOString() donnait la date
+        // UTC : entre 1-2 h et 4 h, la séance en cours était oubliée.
+        var d = new Date();
+        if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+        var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+          + '-' + String(d.getDate()).padStart(2, '0');
         if (data.session_date !== today) {
           localStorage.removeItem('active_session');
           return;
@@ -52,7 +58,13 @@
       try {
         var data = JSON.parse(localStorage.getItem('active_session') || '{}');
         if (!data.active_session) return;
-        var today = new Date().toISOString().slice(0, 10);
+        // Journée logique, comme le serveur et base.html : avant 4 h à
+        // l'horloge, c'est encore la veille. toISOString() donnait la date
+        // UTC : entre 1-2 h et 4 h, la séance en cours était oubliée.
+        var d = new Date();
+        if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+        var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+          + '-' + String(d.getDate()).padStart(2, '0');
         if (data.session_date !== today) {
           localStorage.removeItem('active_session');
           return;
