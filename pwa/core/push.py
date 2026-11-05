@@ -8,6 +8,7 @@ Variables d'env (Railway) :
 L'envoi est best-effort et tolérant : si la lib ou les clés manquent, on
 n'échoue jamais l'appelant (retour 'unconfigured'/'error').
 """
+import datetime as _dt
 import json
 import logging
 import os
@@ -115,7 +116,6 @@ def relances_de_cet_arret(sub: dict, derniere_seance: str | None) -> int:
 
 def _should_relaunch(sub: dict, now=None, derniere_seance: str | None = None) -> bool:
     """True si cet abonnement peut recevoir une relance maintenant."""
-    import datetime as _dt
     count = relances_de_cet_arret(sub, derniere_seance)
     if count >= MAX_REACTIVATIONS:
         return False
@@ -133,7 +133,8 @@ def _should_relaunch(sub: dict, now=None, derniere_seance: str | None = None) ->
 
 
 def run_reactivation_push(min_days: int = 3, max_days: int = 30,
-                          payload: dict | None = None, force: bool = False) -> dict:
+                          payload: dict | None = None, force: bool = False,
+                          heure: int | None = None) -> dict:
     """Cible les inactifs abonnés (min_days–max_days sans séance) et leur envoie
     un push de relance. Source de vérité unique pour le bouton admin ET le cron.
 
@@ -141,6 +142,12 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
     - Supprime au passage les abonnements morts (404/410).
     - Plafonne à MAX_REACTIVATIONS messages espacés de MIN_DAYS_BETWEEN jours
       par personne (`force=True` ignore ce plafond : test admin).
+    - Ne relance que les comptes qui ont gardé les notifications cochées
+      (`reglages.notifications`) : décocher la case laisse l'abonnement en
+      place, c'est donc le réglage qui décide (audit du 04/11, I-1).
+    - Un seul push par compte et par heure : qui reçoit son rappel de séance
+      à cette heure n'est pas relancé (le rappel est prioritaire). `force`
+      (test admin) ignore ces deux filtres.
     - Best-effort : n'échoue jamais sur un envoi individuel.
 
     Retour : {"ok", "sent", "expired", "errors", "targets"} ou
@@ -156,13 +163,25 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
     try:
         targets = core_db.get_inactive_users(min_days=min_days, max_days=max_days)
         subs = core_db.list_push_subscriptions_for_users(set(targets))
+        autorises, rappeles = set(targets), set()
+        if not force and targets:
+            from core import reminders
+            progs = core_db.list_all_programs(user_ids=set(targets))
+            reglages = core_db.reglages_pour(progs)
+            autorises = {u for u in targets if (reglages.get(u) or {}).get("notifications")}
+            heure = reminders.now_paris().hour if heure is None else int(heure)
+            rappeles = {t["user_id"] for t in reminders.targets_for_hour(heure)}
     except Exception as e:
         logger.error("run_reactivation_push gather FAILED: %s", e)
         return {"ok": False, "error": "gather_failed"}
 
     sent, expired, errors, skipped = 0, 0, 0, 0
     for sub in subs:
-        derniere = targets.get(sub.get("user_id"))
+        uid = sub.get("user_id")
+        if not force and (uid not in autorises or uid in rappeles):
+            skipped += 1
+            continue
+        derniere = targets.get(uid)
         if not force and not _should_relaunch(sub, derniere_seance=derniere):
             skipped += 1
             continue
@@ -174,8 +193,10 @@ def run_reactivation_push(min_days: int = 3, max_days: int = 30,
             sent += 1
             try:
                 core_db.mark_reactivation_sent(sub.get("endpoint"), count + 1)
-            except Exception:
-                pass
+            except Exception as e:
+                # Sans trace de l'envoi, la même relance repartirait demain.
+                logger.error("relance envoyée mais NON enregistrée (%s) : %s",
+                             sub.get("endpoint"), e)
         elif status == "expired":
             expired += 1
             try:
