@@ -1,0 +1,110 @@
+# Sauvegarde quotidienne de la base (audit du 04/11, B3).
+#
+# L'offre Supabase gratuite ne sauvegarde rien. Chaque nuit :
+#   1. copie de la base de production, EN LECTURE SEULE (schéma public +
+#      comptes auth.users / auth.identities, une seule photo de la base) ;
+#   2. restauration d'essai sur un PostgreSQL VIDE démarré ici, et
+#      comparaison table par table : une copie qui ne se restaure pas fait
+#      échouer le workflow (GitHub prévient par e-mail) ;
+#   3. chiffrement avec `age` pour la clé publique du propriétaire : seule sa
+#      clé privée, gardée hors de GitHub, rouvre l'archive ;
+#   4. archive gardée 14 jours dans les « artefacts » de l'exécution, puis
+#      effacée par GitHub.
+# Le dépôt est public : n'importe quel compte GitHub peut télécharger un
+# artefact. D'où le chiffrement, et rien de la base dans le journal.
+#
+# À régler une fois par le propriétaire (docs/SAUVEGARDE.md) :
+#   - secret  SUPABASE_DB_URL     adresse « Session pooler » de la base ;
+#   - variable SAUVEGARDE_CLE_AGE clé publique age (age1…), pas secrète.
+name: Sauvegarde
+
+on:
+  schedule:
+    # Chaque nuit à 02:17 UTC (3 h 17 ou 4 h 17 à Paris), quand personne ne
+    # s'entraîne. Pas à l'heure pile : GitHub y retarde les tâches.
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Deux sauvegardes ne se marchent pas dessus ; aucune n'est annulée.
+concurrency:
+  group: sauvegarde
+  cancel-in-progress: false
+
+jobs:
+  sauvegarde:
+    name: Copie, restauration d'essai, chiffrement
+    # Une copie du dépôt (fork) n'a ni le secret ni de raison de tourner.
+    if: github.repository == 'morauxpaul-jpg/mon-app-muscu'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # La base vide de la restauration d'essai, de la version de production.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Secret et clé présents
+        env:
+          SAUVEGARDE_SOURCE: ${{ secrets.SUPABASE_DB_URL }}
+          CLE: ${{ vars.SAUVEGARDE_CLE_AGE }}
+        run: |
+          manque=""
+          [ -n "$SAUVEGARDE_SOURCE" ] || manque="$manque secret SUPABASE_DB_URL,"
+          [ -n "$CLE" ] || manque="$manque variable SAUVEGARDE_CLE_AGE,"
+          if [ -n "$manque" ]; then
+            echo "::error::À créer dans GitHub :$manque voir docs/SAUVEGARDE.md."
+            exit 1
+          fi
+
+      # pg_dump doit être au moins de la version du serveur (PostgreSQL 17).
+      - name: Outils PostgreSQL 17 et age
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common age
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+          echo "PG_BIN=/usr/lib/postgresql/17/bin" >> "$GITHUB_ENV"
+
+      - name: Copie de la base (lecture seule)
+        env:
+          SAUVEGARDE_SOURCE: ${{ secrets.SUPABASE_DB_URL }}
+        run: python3 pwa/tools/sauvegarde_base.py copier "$RUNNER_TEMP/copie"
+
+      - name: Restauration d'essai sur un PostgreSQL vide
+        env:
+          SAUVEGARDE_CIBLE: postgresql://postgres:postgres@localhost:5432/postgres
+        run: python3 pwa/tools/sauvegarde_base.py verifier "$RUNNER_TEMP/copie"
+
+      - name: Chiffrement
+        env:
+          CLE: ${{ vars.SAUVEGARDE_CLE_AGE }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/envoi"
+          python3 pwa/tools/sauvegarde_base.py emballer "$RUNNER_TEMP/copie" "$CLE" \
+            "$RUNNER_TEMP/envoi/sauvegarde-$(date -u +%Y-%m-%d).tar.age"
+          rm -rf "$RUNNER_TEMP/copie"
+
+      - name: Archive gardée 14 jours
+        uses: actions/upload-artifact@v7
+        with:
+          name: sauvegarde-${{ github.run_number }}
+          path: ${{ runner.temp }}/envoi/sauvegarde-*.tar.age
+          retention-days: 14
+          if-no-files-found: error
+          # Déjà compressée par pg_dump, et chiffrée : rien à gagner.
+          compression-level: 0
