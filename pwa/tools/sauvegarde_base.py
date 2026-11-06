@@ -1,11 +1,14 @@
 """Sauvegarde quotidienne de la base (audit du 04/11, B3).
 
 L'offre Supabase gratuite ne sauvegarde rien. Ce script, lancé chaque nuit
-par .github/workflows/sauvegarde.yml, fait trois choses :
+par .github/workflows/sauvegarde.yml, fait quatre choses :
 
   copier   DOSSIER          copie la base désignée par SAUVEGARDE_SOURCE
+  photos   DOSSIER          copie les fichiers des photos de progression
+                            (sauvegarde_photos.py)
   verifier DOSSIER          la restaure sur la base VIDE SAUVEGARDE_CIBLE et
-                            compare, table par table, le nombre de lignes
+                            compare, table par table, le nombre de lignes,
+                            puis vérifie que chaque photo de la base a son fichier
   emballer DOSSIER CLE SORTIE
                             range le dossier dans une archive chiffrée avec
                             `age` pour la clé publique CLE (age1…)
@@ -14,8 +17,8 @@ Ce qui est copié (une seule photo de la base, `pg_export_snapshot`) :
 - tout le schéma `public` : tables, données, fonctions, droits ;
 - les comptes : `auth.users` et `auth.identities` (lien Google ↔ compte).
   Sans eux, les lignes de `public` ne se rattachent plus à personne.
-Pas les sessions ni les jetons (on se reconnecte), ni les fichiers du
-stockage (photos) : `pg_dump` ne copie que la base.
+Pas les sessions ni les jetons (on se reconnecte). Les fichiers des photos,
+que `pg_dump` ne voit pas, sont copiés à part (commande `photos`).
 
 La source n'est que lue : la photo est prise dans une transaction
 « read only », et pg_dump travaille lui aussi en lecture seule.
@@ -35,6 +38,8 @@ import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
+
+import sauvegarde_photos
 
 PUBLIC = "public.dump"
 COMPTES = "comptes.dump"
@@ -224,6 +229,10 @@ def verifier(dossier):
     print(f"Restauration d'essai réussie : {len(attendu)} tables, "
           f"{sum(attendu.values())} lignes, toutes retrouvées.")
 
+    # 4. Les photos, si elles ont été copiées : un fichier par photo et par
+    #    miniature de la base restaurée, de la bonne taille.
+    sauvegarde_photos.verifier_photos(dossier, lambda sql: _psql(cible, sql))
+
 
 # --------------------------------------------------------------- emballer --
 
@@ -241,6 +250,9 @@ def emballer(dossier, cle, sortie):
         with tarfile.open(en_clair, "w") as tar:
             for nom in (MANIFESTE, PUBLIC, COMPTES):
                 tar.add(dossier / nom, arcname=nom)
+            if (dossier / sauvegarde_photos.LISTE).exists():
+                for nom in (sauvegarde_photos.LISTE, sauvegarde_photos.PHOTOS):
+                    tar.add(dossier / nom, arcname=nom)
         _lancer(["age", "--encrypt", "--recipient", cle, "--output", str(sortie), str(en_clair)],
                 "le chiffrement (age)")
     finally:
@@ -252,6 +264,8 @@ def main(args):
     try:
         if args[:1] == ["copier"] and len(args) == 2:
             copier(args[1])
+        elif args[:1] == ["photos"] and len(args) == 2:
+            sauvegarde_photos.copier_photos(args[1])
         elif args[:1] == ["verifier"] and len(args) == 2:
             verifier(args[1])
         elif args[:1] == ["emballer"] and len(args) == 4:
@@ -259,7 +273,7 @@ def main(args):
         else:
             print(__doc__)
             return 2
-    except Echec as e:
+    except (Echec, sauvegarde_photos.Echec) as e:
         print(f"ERREUR : {e}", file=sys.stderr)
         return 1
     return 0

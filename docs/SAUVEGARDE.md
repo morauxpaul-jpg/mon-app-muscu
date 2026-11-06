@@ -10,9 +10,12 @@ PR, GitHub copie la base **chaque nuit à 02:17 UTC** (workflow « Sauvegarde »
    - tout le schéma `public` (séries, programmes, réglages, nutrition, amis…) avec ses droits ;
    - les comptes : `auth.users` et `auth.identities` (le lien entre un compte Google et ses données).
    Une seule photo de la base pour tout : un compte créé pendant la copie n'y entre pas à moitié.
+   Puis **les photos de progression** (fichiers du dossier privé `photos-corps` de Supabase
+   Storage), en lecture seule elles aussi, avec des clés « S3 » qui n'ouvrent que les fichiers.
 2. **Restauration d'essai** sur un PostgreSQL 17 **vide**, démarré pour l'occasion, puis
    comparaison du nombre de lignes, table par table. Si une seule table diffère, ou si la
-   restauration échoue, le workflow échoue et GitHub envoie un e-mail.
+   restauration échoue, le workflow échoue et GitHub envoie un e-mail. Même chose si une photo
+   de la base n'a pas son fichier dans la copie, ou pas la taille notée en base.
 3. **Chiffrement** avec `age`, pour ta clé publique. Seule ta clé privée rouvre l'archive.
 4. **Archive gardée 14 jours** dans l'exécution du workflow (onglet Actions → Sauvegarde →
    une exécution → « Artifacts »), puis effacée automatiquement par GitHub.
@@ -22,17 +25,18 @@ Le journal ne contient rien de la base, seulement le nombre de tables et de lign
 
 ## Ce qui n'est PAS sauvegardé
 
-- **Les photos de progression** (10 fichiers, 2,3 Mo au 05/11/2026). Elles sont dans le stockage
-  de fichiers de Supabase, que `pg_dump` ne copie pas (et que l'offre Pro ne sauvegarde pas non
-  plus). Les sauver demanderait la clé serveur de Supabase dans GitHub : tâche séparée, à décider.
+- **Les photos, tant que les clés S3 manquent** (étape 5 ci-dessous) : la base est sauvegardée
+  quand même, puis le workflow échoue en fin de course (« La base est sauvegardée, mais PAS les
+  photos ») pour que GitHub te prévienne.
 - **Les sessions de connexion** : après une restauration, chacun se reconnecte avec Google.
 - Les réglages de Supabase eux-mêmes (fournisseur Google, URL de redirection) : à refaire à la main
   sur un nouveau projet.
 
 ## Mise en place (une fois, par toi)
 
-Tant que ces trois réglages manquent, le workflow échoue avec le message
-« À créer dans GitHub : … ». Je n'ai et n'aurai jamais leurs valeurs.
+Tant que les trois premiers réglages manquent, le workflow échoue avec le message
+« À créer dans GitHub : … ». Le cinquième (photos) est décrit plus bas. Claude n'a et n'aura
+jamais leurs valeurs.
 
 ### 1. Ta paire de clés
 
@@ -112,6 +116,33 @@ en tout », « Restauration d'essai réussie : 23 tables, 2329 lignes, toutes re
 de 184 552 octets, ouverte par le propriétaire avec sa clé (manifeste : serveur 17.6, 1 323 séries,
 15 comptes).
 
+### 5. Les photos : une paire de clés S3 dans GitHub
+
+Les photos sont des fichiers, que la copie de la base ne voit pas. Le workflow les lit par l'accès
+« S3 » de Supabase Storage. Ses clés **n'ouvrent que les fichiers** (toutes les opérations sur
+tous les dossiers de fichiers, d'après Supabase), **pas la base ni les comptes** : c'est moins que
+la clé `service_role` de l'app. Le script ne fait que lister et télécharger (un test le vérifie).
+
+1. Supabase → **Storage** → **Settings** (lien direct :
+   <https://supabase.com/dashboard/project/pagrkndckkxlbmaasssl/storage/settings>), section
+   **S3 Connection** / **S3 Access Keys** → **New access key**, description « sauvegarde GitHub ».
+   Supabase affiche un **Access key ID** et un **Secret access key**. Le second n'est montré
+   **qu'une fois** : ne ferme pas la fenêtre avant l'étape 2.
+   Sur cette page, l'adresse (« Endpoint ») doit être
+   `https://pagrkndckkxlbmaasssl.storage.supabase.co/storage/v1/s3` et la région `eu-west-1` :
+   ce sont les valeurs écrites dans le workflow. Si elles diffèrent, dis-le à Claude.
+2. GitHub → Settings → Secrets and variables → Actions → onglet **Secrets**, deux secrets :
+   - Name : `SUPABASE_S3_ID` — Value : l'*Access key ID* ;
+   - Name : `SUPABASE_S3_SECRET` — Value : le *Secret access key*.
+3. Actions → **Sauvegarde** → *Run workflow*. Le journal doit dire
+   `Photos copiées : N fichiers, … octets.` puis, à la restauration d'essai,
+   `Photos : N fichiers attendus par la base, tous présents (N copiés).`
+   (N = 2 par photo : la photo et sa miniature.)
+
+Créer ces clés est un changement en production (de nouveaux accès) : c'est toi qui le fais.
+Pour les révoquer : même page Supabase, supprimer la clé ; la sauvegarde des photos échouera
+alors (la base, elle, continue d'être sauvegardée).
+
 ## Restaurer
 
 ### Essai sur un PostgreSQL vide (ce que fait le workflow chaque nuit)
@@ -137,7 +168,10 @@ avec une session Claude, mode élevé, et ton accord explicite pour chaque écri
    compte) : l'étape 2 n'a remis que des lignes. Le reposer depuis `comptes.dump` :
    `pg_restore --list comptes.dump | findstr /c:"TRIGGER" > declencheur.txt`, puis
    `pg_restore --use-list=declencheur.txt --dbname=NOUVELLE_ADRESSE comptes.dump`.
-5. Recopier dans Railway la nouvelle `SUPABASE_URL` et les nouvelles clés, refaire le fournisseur
+5. Les photos : créer le dossier privé `photos-corps` (migration v50, partie Storage), puis y
+   remettre chaque fichier du dossier `photos/` de l'archive **sous le même nom** (par exemple
+   `<id du compte>/<nom>.jpg`) : la table `photos_corps` y renvoie par ce nom.
+6. Recopier dans Railway la nouvelle `SUPABASE_URL` et les nouvelles clés, refaire le fournisseur
    Google dans Supabase, redéployer.
 
 ## À savoir
@@ -150,4 +184,11 @@ avec une session Claude, mode élevé, et ton accord explicite pour chaque écri
 - **Le secret donne tous les droits sur la base** (mot de passe `postgres`). Le script ne fait que
   lire. Pour aller plus loin : un rôle Postgres en lecture seule dédié à la sauvegarde. C'est une
   écriture en production, donc une tâche séparée, avec ton accord.
+- **Les clés S3 ouvrent aussi l'écriture et l'effacement des fichiers** : Supabase n'en propose pas
+  en lecture seule. Le script n'utilise que la lecture, mais un secret qui fuiterait permettrait
+  d'effacer les photos. Elles ne servent que dans ce workflow, qui ne tourne pas depuis un fork.
+- **Une photo reprise pendant la copie** (entre la copie de la base et celle des fichiers, quelques
+  secondes vers 3 h 17) ferait échouer la vérification ce soir-là (« fichier absent ») ; la nuit
+  suivante repasse.
 - **Taille** : 16 Mo de base au 05/11/2026 ; l'archive chiffrée est plus petite (copie compressée).
+  Les photos s'y ajoutent telles quelles (2 Mo au plus chacune, 2,3 Mo au total le 06/11/2026).

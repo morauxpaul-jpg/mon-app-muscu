@@ -1,0 +1,5 @@
+# Dépendances de la SAUVEGARDE quotidienne (.github/workflows/sauvegarde.yml),
+# ni de l'app ni de Railway : copie des photos par l'accès S3 de Supabase
+# Storage (pwa/tools/sauvegarde_photos.py). Aussi chargées par les tests
+# (requirements-dev.txt).
+boto3==1.43.126

@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -56,16 +57,23 @@ def test_le_workflow_tourne_chaque_nuit_et_a_la_demande():
     assert "workflow_dispatch:" in texte              # lancement à la main
 
 
+SECRETS = {"SUPABASE_DB_URL", "SUPABASE_S3_ID", "SUPABASE_S3_SECRET"}
+
+
 def test_le_secret_nest_designe_que_par_son_nom():
     texte = _texte()
-    assert set(re.findall(r"secrets\.(\w+)", texte)) == {"SUPABASE_DB_URL"}
-    assert "supabase.co" not in texte and "pooler.supabase" not in texte
+    assert set(re.findall(r"secrets\.(\w+)", texte)) == SECRETS
+    # Aucune adresse de BASE (elle contient le mot de passe) ; seule l'adresse
+    # publique du stockage, sans secret, y figure.
+    assert "pooler.supabase" not in texte and not re.search(r"db\.\w+\.supabase\.co", texte)
+    assert "postgresql://postgres." not in texte
     # Seulement passé en variable d'environnement, jamais recopié dans une
     # commande (où il pourrait s'afficher), jamais affiché.
     for ligne in texte.splitlines():
         if "secrets." in ligne:
-            assert re.fullmatch(r" +[A-Z_]+: \$\{\{ secrets\.SUPABASE_DB_URL \}\}", ligne), ligne
+            assert re.fullmatch(r" +[A-Z_0-9]+: \$\{\{ secrets\.(\w+) \}\}", ligne), ligne
         if "echo" in ligne:
+            assert "$SAUVEGARDE_S" not in ligne and "${{ secrets" not in ligne, ligne
             assert "SOURCE" not in ligne and "DB_URL" not in ligne, ligne
 
 
@@ -73,11 +81,13 @@ def test_rien_ne_part_avant_la_restauration_dessai_et_le_chiffrement():
     noms = [n for n, _ in _etapes()]
     texte = _texte()
     position = {mot: next(i for i, (_, e) in enumerate(_etapes()) if mot in e)
-                for mot in ("sauvegarde_base.py copier", "sauvegarde_base.py verifier",
-                            "sauvegarde_base.py emballer", "actions/upload-artifact")}
+                for mot in ("sauvegarde_base.py copier", "sauvegarde_base.py photos",
+                            "sauvegarde_base.py verifier", "sauvegarde_base.py emballer",
+                            "actions/upload-artifact", "PHOTOS == 'absentes'")}
     ordre = sorted(position, key=position.get)
-    assert ordre == ["sauvegarde_base.py copier", "sauvegarde_base.py verifier",
-                     "sauvegarde_base.py emballer", "actions/upload-artifact"], noms
+    assert ordre == ["sauvegarde_base.py copier", "sauvegarde_base.py photos",
+                     "sauvegarde_base.py verifier", "sauvegarde_base.py emballer",
+                     "actions/upload-artifact", "PHOTOS == 'absentes'"], noms
     envoi = dict(_etapes())[next(n for n, e in _etapes() if "upload-artifact" in e)]
     assert re.search(r"path: .*\.tar\.age\s*$", envoi, flags=re.M), envoi
     assert "retention-days: 14" in envoi
@@ -212,6 +222,13 @@ def source():
                  80 + g * 2.5, '2026-11-02' from generate_series(1, 4) g;
         insert into public.history (user_id, semaine, seance, exercice, serie, reps, poids, date)
           values ('00000000-0000-0000-0000-00000000000b', 1, 'Jambes', 'Squat', 1, 5, 120, '2026-11-03');
+        insert into public.photos_corps (user_id, date, angle, chemin, miniature, octets) values
+          ('00000000-0000-0000-0000-00000000000a', '2026-11-02', 'face',
+           '00000000-0000-0000-0000-00000000000a/p1.jpg',
+           '00000000-0000-0000-0000-00000000000a/p1_mini.jpg', 300),
+          ('00000000-0000-0000-0000-00000000000a', '2026-11-02', 'dos',
+           '00000000-0000-0000-0000-00000000000a/p2.jpg',
+           '00000000-0000-0000-0000-00000000000a/p2_mini.jpg', 500);
     """)
     yield url
     _psql(URL, f"drop database if exists sauvegarde_source_{os.getpid()} with (force)")
@@ -298,3 +315,147 @@ def test_la_copie_voit_une_seule_photo_de_la_base(source, monkeypatch):
     finally:
         photo.fermer()
         _psql(source, "delete from auth.users where email = 'pendant@exemple.fr'")
+
+
+# ---------------------------------------------------------------- photos --
+# Un faux stockage S3 local (moto), à la place de Supabase Storage.
+
+FICHIERS = {
+    "00000000-0000-0000-0000-00000000000a/p1.jpg": b"\xff\xd8" + b"1" * 298,
+    "00000000-0000-0000-0000-00000000000a/p1_mini.jpg": b"\xff\xd8" + b"m" * 40,
+    "00000000-0000-0000-0000-00000000000a/p2.jpg": b"\xff\xd8" + b"2" * 498,
+    "00000000-0000-0000-0000-00000000000a/p2_mini.jpg": b"\xff\xd8" + b"n" * 40,
+}
+
+
+@pytest.fixture
+def stockage(monkeypatch):
+    """Un dossier `photos-corps` avec les fichiers des deux photos de la
+    base d'essai, et les variables que le workflow donne au script."""
+    boto3 = pytest.importorskip("boto3")
+    serveur_moto = pytest.importorskip("moto.server")
+    serveur = serveur_moto.ThreadedMotoServer(ip_address="127.0.0.1", port=0, verbose=False)
+    serveur.start()
+    hote, port = serveur.get_host_and_port()
+    adresse = f"http://{hote}:{port}"
+    # Le faux stockage garde son état d'un serveur à l'autre : on repart de zéro.
+    urllib.request.urlopen(urllib.request.Request(f"{adresse}/moto-api/reset", method="POST"))
+    env = {"SAUVEGARDE_S3_ID": "faux-id", "SAUVEGARDE_S3_SECRET": "faux-secret",
+           "SAUVEGARDE_S3_ADRESSE": adresse, "SAUVEGARDE_S3_REGION": "eu-west-1"}
+    for nom, valeur in env.items():
+        monkeypatch.setenv(nom, valeur)
+    s3 = boto3.client("s3", endpoint_url=adresse, region_name="eu-west-1",
+                      aws_access_key_id="faux-id", aws_secret_access_key="faux-secret")
+    s3.create_bucket(Bucket="photos-corps",
+                     CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    for cle, contenu in FICHIERS.items():
+        s3.put_object(Bucket="photos-corps", Key=cle, Body=contenu)
+    yield s3, env
+    serveur.stop()
+
+
+def _etat(s3):
+    return sorted((o["Key"], o["Size"], o["ETag"])
+                  for o in s3.list_objects_v2(Bucket="photos-corps").get("Contents", []))
+
+
+def test_les_photos_sont_copiees_octet_pour_octet_sans_rien_changer_au_stockage(stockage, tmp_path):
+    import sauvegarde_photos as p
+    s3, _ = stockage
+    avant = _etat(s3)
+    p.copier_photos(tmp_path)
+    for cle, contenu in FICHIERS.items():
+        assert (tmp_path / "photos" / cle).read_bytes() == contenu
+    liste = json.loads((tmp_path / "photos.json").read_text())
+    assert liste == {"dossier": "photos-corps", "fichiers": {c: len(v) for c, v in FICHIERS.items()}}
+    assert _etat(s3) == avant                                   # lecture seule
+
+
+def test_le_stockage_nest_que_lu():
+    """Les seuls appels au stockage : lister et télécharger. Jamais écrire,
+    remplacer ni effacer (les clés S3 le permettraient)."""
+    source = (PWA / "tools" / "sauvegarde_photos.py").read_text(encoding="utf-8")
+    assert set(re.findall(r"\bs3\.(\w+)\(", source)) == {"get_paginator", "get_object"}
+    assert "list_objects_v2" in source
+
+
+def test_un_nom_de_fichier_ne_sort_pas_du_dossier(tmp_path):
+    import sauvegarde_photos as p
+    assert p._destination(tmp_path, "u/x.jpg") == (tmp_path / "u" / "x.jpg").resolve()
+    for cle in ("../x.jpg", "u/../../x.jpg", "/etc/x.jpg"):
+        with pytest.raises(p.Echec, match="refusé"):
+            p._destination(tmp_path, cle)
+
+
+def test_sans_les_cles_s3_le_script_les_nomme(monkeypatch, tmp_path, capsys):
+    import sauvegarde_base as s
+    for nom in ("SAUVEGARDE_S3_ID", "SAUVEGARDE_S3_SECRET"):
+        monkeypatch.delenv(nom, raising=False)
+    monkeypatch.setenv("SAUVEGARDE_S3_ADRESSE", "http://127.0.0.1:9")
+    assert s.main(["photos", str(tmp_path)]) == 1
+    assert "SAUVEGARDE_S3_ID, SAUVEGARDE_S3_SECRET vide" in capsys.readouterr().err
+
+
+def test_un_stockage_injoignable_fait_echouer_sans_montrer_la_cle(monkeypatch, tmp_path, capsys):
+    import sauvegarde_base as s
+    for nom, valeur in (("SAUVEGARDE_S3_ID", "faux-id"), ("SAUVEGARDE_S3_SECRET", "faux-secret"),
+                        ("SAUVEGARDE_S3_ADRESSE", "http://127.0.0.1:9"),   # rien n'écoute
+                        ("SAUVEGARDE_S3_ESSAIS", "1")):
+        monkeypatch.setenv(nom, valeur)
+    assert s.main(["photos", str(tmp_path)]) == 1
+    erreur = capsys.readouterr().err
+    assert "copie des photos impossible" in erreur and "faux-secret" not in erreur
+
+
+@avec_age
+def test_larchive_contient_les_photos(tmp_path):
+    import sauvegarde_base as s
+    copie = tmp_path / "copie"
+    (copie / "photos" / "u").mkdir(parents=True)
+    for nom in (s.MANIFESTE, s.PUBLIC, s.COMPTES):
+        (copie / nom).write_text("x", encoding="utf-8")
+    (copie / "photos.json").write_text('{"fichiers": {"u/a.jpg": 3}}', encoding="utf-8")
+    (copie / "photos" / "u" / "a.jpg").write_bytes(b"abc")
+    cles = tmp_path / "cle.txt"
+    subprocess.run(["age-keygen", "-o", str(cles)], check=True, capture_output=True)
+    publique = re.search(r"public key: (age1\w+)", cles.read_text()).group(1)
+    s.emballer(copie, publique, tmp_path / "a.tar.age")
+    ouvert = tmp_path / "a.tar"
+    subprocess.run(["age", "-d", "-i", str(cles), "-o", str(ouvert), str(tmp_path / "a.tar.age")],
+                   check=True)
+    with tarfile.open(ouvert) as tar:
+        assert "photos/u/a.jpg" in tar.getnames() and "photos.json" in tar.getnames()
+        assert tar.extractfile("photos/u/a.jpg").read() == b"abc"
+
+
+@avec_postgres
+def test_chaque_photo_de_la_base_a_son_fichier_dans_la_copie(source, stockage, tmp_path):
+    copie = tmp_path / "copie"
+    _, env = stockage
+    assert _script("copier", copie, SAUVEGARDE_SOURCE=source).returncode == 0
+    r = _script("photos", copie, **env)
+    assert r.returncode == 0, r.stderr
+    assert "Photos copiées : 4 fichiers" in r.stdout
+
+    def verifier(nom):
+        cible = _base(f"sauvegarde_{nom}_{os.getpid()}")
+        try:
+            return _script("verifier", copie, SAUVEGARDE_CIBLE=cible)
+        finally:
+            _psql(URL, f"drop database if exists sauvegarde_{nom}_{os.getpid()} with (force)")
+
+    r = verifier("photos_ok")
+    assert r.returncode == 0, r.stderr
+    assert "Photos : 4 fichiers attendus par la base, tous présents (4 copiés)." in r.stdout
+
+    photo = copie / "photos" / "00000000-0000-0000-0000-00000000000a" / "p2.jpg"
+    photo.write_bytes(photo.read_bytes()[:-1])                   # tronquée
+    r = verifier("photo_tronquee")
+    assert r.returncode == 1
+    assert "taille différente : 00000000-0000-0000-0000-00000000000a/p2.jpg (499 octets, 500 en base)" \
+        in r.stderr
+
+    (copie / "photos" / "00000000-0000-0000-0000-00000000000a" / "p1_mini.jpg").unlink()
+    r = verifier("photo_absente")
+    assert r.returncode == 1
+    assert "fichier absent : 00000000-0000-0000-0000-00000000000a/p1_mini.jpg" in r.stderr
