@@ -104,6 +104,17 @@ jobs:
       - name: Navigateur des tests de parcours
         run: python -m playwright install --with-deps chromium
 
+      # Sauvegarde de la base (tests/test_sauvegarde.py) : pg_dump doit être de
+      # la version du serveur (celui du runner, 16, refuse un serveur 17), et
+      # `age` chiffre l'archive. Sans eux, ces tests échoueraient ou
+      # s'ignoreraient.
+      - name: Outils de la sauvegarde (PostgreSQL 17, age)
+        run: |
+          sudo apt-get install -y -q postgresql-common age
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
