@@ -39,15 +39,21 @@ Tant que ces trois réglages manquent, le workflow échoue avec le message
 Sur ton PC Windows :
 
 1. Télécharge `age` : <https://github.com/FiloSottile/age/releases> → le fichier
-   `age-v…-windows-amd64.zip`. Décompresse-le.
-2. Dans ce dossier, ouvre PowerShell et tape :
+   **`age-v…-windows-amd64.zip`**. Pas `darwin` (Mac) ni `linux` : ils n'ont pas de `.exe`.
+   Décompresse-le : `age.exe` et `age-keygen.exe` sont dans le sous-dossier **`age`**.
+2. Ouvre PowerShell **dans ce sous-dossier** (par exemple
+   `cd C:\Users\…\age-v1.3.2-windows-amd64\age`, puis `dir` doit lister `age.exe`) et tape :
    ```
    .\age-keygen.exe -o cle-sauvegarde-muscu.txt
    ```
    Il affiche `Public key: age1…` : c'est ta **clé publique** (elle n'est pas secrète).
+   L'avertissement « writing secret key to a world-readable file » concerne Linux et Mac :
+   sans objet sous Windows.
 3. Le fichier `cle-sauvegarde-muscu.txt` contient ta **clé privée**. Garde-le **hors de GitHub**,
-   en deux endroits (gestionnaire de mots de passe + clé USB, par exemple).
+   en deux endroits (gestionnaire de mots de passe + clé USB, par exemple). Un dossier
+   `Documents` synchronisé avec OneDrive l'envoie aussi dans ce nuage.
    **Le perdre, c'est perdre toutes les sauvegardes** : personne ne pourra les ouvrir.
+   Ne le montre à personne, Claude compris.
 
 ### 2. La clé publique dans GitHub
 
@@ -58,12 +64,22 @@ New repository variable :
 
 ### 3. L'adresse de la base dans GitHub
 
-1. Supabase → le projet → bouton **Connect** (en haut) → **Session pooler** → copie l'adresse
-   (`postgresql://postgres.pagrkndckkxlbmaasssl:[YOUR-PASSWORD]@aws-…pooler.supabase.com:5432/postgres`).
-   Pas l'adresse « Direct connection » : GitHub ne la joint pas (IPv6 seulement).
-2. Remplace `[YOUR-PASSWORD]` par le mot de passe de la base. Si tu ne l'as plus : Supabase →
-   Project Settings → Database → *Reset database password*. L'app n'utilise pas ce mot de passe
-   (elle passe par la clé `service_role`), mais c'est un changement en production : à toi de voir.
+1. Supabase → le projet → bouton **Connect** (en haut) → onglet **Direct** (« Connection
+   string ») → méthode **Session pooler**. Lien direct :
+   <https://supabase.com/dashboard/project/pagrkndckkxlbmaasssl?showConnect=true&method=session>.
+   La bonne adresse commence par `postgresql://postgres.pagrkndckkxlbmaasssl:` (un point après
+   `postgres`) et contient `pooler.supabase.com:5432` (port **5432**). Pas `db.…supabase.co`
+   (connexion directe, IPv6 seulement : GitHub ne la joint pas), ni le port 6543 (mode
+   « Transaction »).
+2. Remplace **tout** `[YOUR-PASSWORD]`, **crochets compris**, par le mot de passe de la base :
+   `…pagrkndckkxlbmaasssl:[YOUR-PASSWORD]@aws-…` devient `…pagrkndckkxlbmaasssl:MotDePasse@aws-…`,
+   sans espace. Supabase ne réaffiche jamais ce mot de passe : si tu ne l'as plus, Supabase →
+   Database → Settings (<https://supabase.com/dashboard/project/pagrkndckkxlbmaasssl/database/settings>)
+   → *Reset database password* → *Generate a password*, et le copier dans ton gestionnaire de mots
+   de passe **avant** de valider. Lettres et chiffres seulement si tu le choisis toi-même : `@ : / # ? %`
+   cassent l'adresse. L'app n'utilise pas ce mot de passe (aucune adresse de base dans le code ;
+   elle passe par `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`), mais c'est un changement en
+   production : à toi de voir.
 3. GitHub → Settings → Secrets and variables → Actions → onglet **Secrets** →
    New repository secret :
    - Name : `SUPABASE_DB_URL`
@@ -75,13 +91,26 @@ GitHub → Actions → **Sauvegarde** → *Run workflow*. Attendre le rond vert 
 Le journal de l'étape « Restauration d'essai » doit dire :
 `Restauration d'essai réussie : N tables, M lignes, toutes retrouvées.`
 
-Puis vérifie une fois que **ta** clé ouvre bien l'archive : télécharge l'artefact (un `.zip`),
-décompresse-le, puis dans PowerShell, dans le dossier de `age` :
-```
-.\age.exe -d -i cle-sauvegarde-muscu.txt -o sauvegarde.tar C:\chemin\sauvegarde-AAAA-MM-JJ.tar.age
-tar -xf sauvegarde.tar
-```
-Tu dois voir `manifeste.json` (date et nombre de lignes par table), `public.dump` et `comptes.dump`.
+Puis vérifie une fois que **ta** clé ouvre bien l'archive :
+1. Sur la page de l'exécution (Actions → Sauvegarde → l'exécution, la plus récente en haut),
+   **tout en bas**, section **Artifacts** : clique sur `sauvegarde-N`. Un `.zip` se télécharge.
+2. Décompresse-le **dans le dossier de `age.exe`** : il donne un dossier `sauvegarde-N` qui
+   contient `sauvegarde-AAAA-MM-JJ.tar.age`.
+3. Dans PowerShell, dans le dossier de `age.exe`, avec le vrai nom du dossier et du fichier :
+   ```
+   .\age.exe -d -i cle-sauvegarde-muscu.txt -o sauvegarde.tar .\sauvegarde-1\sauvegarde-2026-11-06.tar.age
+   tar -xf sauvegarde.tar
+   ```
+   Les deux commandes n'affichent rien quand tout va bien.
+4. Tu dois voir `manifeste.json` (date, version du serveur, nombre de lignes par table : à ouvrir
+   avec le Bloc-notes), `public.dump` et `comptes.dump`.
+5. **Supprime ensuite** `sauvegarde.tar`, `manifeste.json`, `public.dump` et `comptes.dump` : ils
+   contiennent la base **en clair**.
+
+**Fait le 06/11/2026** : exécution n° 1 (`workflow_dispatch`), « Copie faite : 23 tables, 2329 lignes
+en tout », « Restauration d'essai réussie : 23 tables, 2329 lignes, toutes retrouvées », archive
+de 184 552 octets, ouverte par le propriétaire avec sa clé (manifeste : serveur 17.6, 1 323 séries,
+15 comptes).
 
 ## Restaurer
 
