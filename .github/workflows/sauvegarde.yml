@@ -2,7 +2,9 @@
 #
 # L'offre Supabase gratuite ne sauvegarde rien. Chaque nuit :
 #   1. copie de la base de production, EN LECTURE SEULE (schéma public +
-#      comptes auth.users / auth.identities, une seule photo de la base) ;
+#      comptes auth.users / auth.identities, une seule photo de la base),
+#      puis des fichiers des photos de progression (Supabase Storage, clés
+#      S3 qui n'ouvrent que les fichiers, lecture seule) ;
 #   2. restauration d'essai sur un PostgreSQL VIDE démarré ici, et
 #      comparaison table par table : une copie qui ne se restaure pas fait
 #      échouer le workflow (GitHub prévient par e-mail) ;
@@ -15,7 +17,10 @@
 #
 # À régler une fois par le propriétaire (docs/SAUVEGARDE.md) :
 #   - secret  SUPABASE_DB_URL     adresse « Session pooler » de la base ;
-#   - variable SAUVEGARDE_CLE_AGE clé publique age (age1…), pas secrète.
+#   - variable SAUVEGARDE_CLE_AGE clé publique age (age1…), pas secrète ;
+#   - secrets SUPABASE_S3_ID et SUPABASE_S3_SECRET : paire de clés S3 du
+#     stockage. Absents : la base est sauvegardée quand même, puis le
+#     workflow échoue en fin de course pour le signaler (e-mail de GitHub).
 name: Sauvegarde
 
 on:
@@ -71,6 +76,17 @@ jobs:
             exit 1
           fi
 
+      # boto3 pour les photos, sur le Python de production (pas celui du
+      # système, qui peut refuser pip : PEP 668).
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-sauvegarde.txt
+
+      - name: Dépendances de la sauvegarde
+        run: pip install -r requirements-sauvegarde.txt
+
       # pg_dump doit être au moins de la version du serveur (PostgreSQL 17).
       - name: Outils PostgreSQL 17 et age
         run: |
@@ -84,6 +100,22 @@ jobs:
         env:
           SAUVEGARDE_SOURCE: ${{ secrets.SUPABASE_DB_URL }}
         run: python3 pwa/tools/sauvegarde_base.py copier "$RUNNER_TEMP/copie"
+
+      # Après la base : un fichier remplacé entre les deux copies manquerait
+      # (rare à cette heure) et la vérification le dirait.
+      - name: Copie des photos (lecture seule)
+        env:
+          SAUVEGARDE_S3_ID: ${{ secrets.SUPABASE_S3_ID }}
+          SAUVEGARDE_S3_SECRET: ${{ secrets.SUPABASE_S3_SECRET }}
+          SAUVEGARDE_S3_ADRESSE: https://pagrkndckkxlbmaasssl.storage.supabase.co/storage/v1/s3
+          SAUVEGARDE_S3_REGION: eu-west-1
+        run: |
+          if [ -z "$SAUVEGARDE_S3_ID" ] || [ -z "$SAUVEGARDE_S3_SECRET" ]; then
+            echo "::warning::Photos NON sauvegardées : secrets SUPABASE_S3_ID et SUPABASE_S3_SECRET à créer (docs/SAUVEGARDE.md)."
+            echo "PHOTOS=absentes" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          python3 pwa/tools/sauvegarde_base.py photos "$RUNNER_TEMP/copie"
 
       - name: Restauration d'essai sur un PostgreSQL vide
         env:
@@ -108,3 +140,10 @@ jobs:
           if-no-files-found: error
           # Déjà compressée par pg_dump, et chiffrée : rien à gagner.
           compression-level: 0
+
+      # La base est rangée ; reste à prévenir si les photos manquent.
+      - name: Photos incluses ?
+        if: env.PHOTOS == 'absentes'
+        run: |
+          echo "::error::La base est sauvegardée, mais PAS les photos : créer les secrets SUPABASE_S3_ID et SUPABASE_S3_SECRET (docs/SAUVEGARDE.md)."
+          exit 1

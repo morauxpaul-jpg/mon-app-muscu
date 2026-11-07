@@ -20,3 +20,7 @@ playwright==1.64.0
 fakeredis[lua]==2.40.0
 lupa==2.8
 sortedcontainers==2.4.0
+# Sauvegarde des photos (pwa/tests/test_sauvegarde.py) : boto3 comme dans le
+# workflow, et un faux stockage S3 local (moto) pour l'éprouver sans Supabase.
+-r requirements-sauvegarde.txt
+moto[s3,server]==5.2.5
