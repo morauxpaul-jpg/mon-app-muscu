@@ -119,6 +119,21 @@ def test_les_cgv_disent_les_prix_et_la_retractation(fake_db, client):
     assert 'id="retractation"' in html and "14 jours" in html
 
 
+@pytest.mark.parametrize("page", ["/mentions-legales", "/cgv"])
+def test_le_siret_s_affiche_quand_la_variable_est_posee(page, fake_db, client, monkeypatch):
+    """Audit du 04/11, B4 : le SIRET vient de EDITEUR_SIRET, sur les deux pages."""
+    monkeypatch.setenv("EDITEUR_SIRET", "123 456 789 00012")
+    html = client.get(page).get_data(as_text=True)
+    assert "123 456 789 00012" in html
+
+
+@pytest.mark.parametrize("page", ["/mentions-legales", "/cgv"])
+def test_pas_de_siret_affiche_sans_la_variable(page, fake_db, client, monkeypatch):
+    monkeypatch.delenv("EDITEUR_SIRET", raising=False)
+    html = client.get(page).get_data(as_text=True)
+    assert "SIRET" not in html
+
+
 def test_la_page_pro_renvoie_aux_cgv(gratuit):
     html = gratuit.get("/premium").get_data(as_text=True)
     assert 'href="/cgv"' in html and 'href="/cgv#retractation"' in html
