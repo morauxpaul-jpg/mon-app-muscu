@@ -10,6 +10,7 @@
   <div class="card legal-card">
     <h3>1. Objet</h3>
     <p>Ces conditions encadrent la souscription à l'offre <strong>Premium (PRO)</strong> de Muscu Tracker, éditée par {{ editeur.nom }} (voir les <a href="/mentions-legales">mentions légales</a>). L'utilisation gratuite de l'app ne nécessite aucun paiement.</p>
+    {% if editeur.siret %}<p>Vendeur : {{ editeur.nom }}, SIRET {{ editeur.siret }}.</p>{% endif %}
   </div>
 
   <div class="card legal-card">
