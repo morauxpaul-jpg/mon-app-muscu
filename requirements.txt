@@ -3,11 +3,11 @@ flask-limiter==3.8.0
 # redis < 8 : limits (stockage de flask-limiter) ne le prend pas en charge.
 redis==7.4.1
 gunicorn==26.2.0
-tzdata==2026.5
-supabase==2.33.0
+tzdata==2026.6
+supabase==2.34.0
 pyjwt==2.15.1
-cryptography==50.0.1
+cryptography==50.0.2
 anthropic==1.17.0
-sentry-sdk[flask]==2.72.0
+sentry-sdk[flask]==2.74.0
 stripe==15.2.0
 pywebpush==2.5.0
