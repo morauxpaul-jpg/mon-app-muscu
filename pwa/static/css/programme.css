@@ -1,0 +1,174 @@
+/* Éditeur de programme (/programme) : chargé par templates/programme.html
+   seulement. Sorti de components-pages.css le 23/11 (plafond de 900 lignes,
+   tests/test_mineurs_audit.py). */
+
+/* Éditeur de programme (retour du 23/11 : « des boutons partout »).
+   Un exercice = une ligne : poignée, nom, « 3 séries · Pecs », réglages
+   repliés. On ne glisse que par la poignée, assez grande pour le pouce. */
+.prog-exos { margin-bottom: var(--sp-sm); border-top: 1px solid #262626; }
+.prog-exo-row {
+  border: none;
+  border-bottom: 1px solid #262626;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+}
+.prog-exo-ligne {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+}
+.prog-exo-txt { flex: 1; min-width: 0; }
+.prog-exo-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--text-1);
+  font-size: var(--text-base);
+}
+.prog-exo-sous { padding: 0 4px; font-size: 0.78rem; color: var(--text-2); }
+/* Poignée : 44 × 56 px, glisser immédiat (pas d'appui long : touch-action
+   coupe le défilement sous le doigt, et seulement là). */
+.prog-exo-poignee {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  align-self: stretch;
+  margin-left: -10px;
+  color: var(--text-2);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.prog-exo-poignee:active { cursor: grabbing; color: var(--text-1); }
+/* Pendant le glisser : la place visée en pointillés, la ligne soulevée. */
+.prog-exo-ghost {
+  opacity: 0.4;
+  background: var(--accent-bg);
+  outline: 1.5px dashed var(--accent);
+  outline-offset: -2px;
+}
+.prog-exo-choisi { background: var(--bg-surface); }
+.prog-exo-dragging {
+  opacity: 0.95;
+  background: var(--bg-elevated);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+body.sorting, body.sorting * { cursor: grabbing !important; }
+.prog-exo-fields { padding: 0 0 var(--sp-md) 34px; }
+.prog-exo-fields .field-label:first-child { margin-top: 0; }
+.prog-exo-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--sp-md);
+  align-items: center;
+}
+.prog-exo-actions .btn.mini { width: auto; }
+.prog-exo-actions .prog-exo-retirer { margin-left: auto; }
+.prog-exo-aide { margin: 6px 0 8px; font-size: 0.78rem; color: var(--text-2); }
+.prog-exo-aide .icon { vertical-align: -3px; }
+
+/* « ⋯ » et réglages : un bouton rond discret, cible de 44 px. */
+.prog-plus {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.prog-plus:hover, .prog-plus[aria-expanded="true"] { background: var(--bg-elevated); color: var(--text-1); }
+.prog-head .prog-plus { margin-left: auto; align-self: center; }
+.prog-head .prog-plus + .exo-toggle { margin-left: 0; }
+/* Le menu : une action par ligne, à filet, comme l'onglet Plus. */
+.prog-menu {
+  margin: 4px 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+.prog-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: none;
+  border-bottom: 1px solid #262626;
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--text-base);
+  text-align: left;
+  cursor: pointer;
+}
+.prog-menu > :last-child, .prog-menu > form:last-child .prog-menu-item { border-bottom: none; }
+.prog-menu-item:hover { background: var(--bg-elevated); }
+.prog-menu-item--danger { color: var(--danger); }
+.prog-menu-champ { padding: 10px 14px; border-bottom: 1px solid #262626; }
+.prog-menu-champ .field-label { margin-top: 0; }
+.prog-renommer { display: flex; gap: 6px; margin: 0 0 10px; }
+.prog-renommer .field { flex: 1; margin: 0; }
+/* Ajouter un exercice : replié derrière un bouton en pointillés. */
+.prog-ajout-exo {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+  margin-top: var(--sp-sm);
+  border: 1.5px dashed #333333;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  cursor: pointer;
+}
+.prog-ajout-form { margin-top: var(--sp-md); }
+.prog-ajout-biblio { width: 100%; justify-content: center; margin-bottom: 8px; }
+.prog-ajout-boutons { display: flex; gap: 6px; margin-top: 10px; }
+.prog-ajout-boutons .btn { flex: 1; justify-content: center; }
+
+/* Nom d'exercice modifiable dans le programme. Il se lit comme du texte
+   tant qu'on n'y touche pas : un champ visible partout transformerait la
+   liste en formulaire, alors qu'on la parcourt surtout pour la relire. */
+/* `.prog-exo-name` en tête : sans lui, le style commun des champs
+   (surfaces.css, input[type="text"]) l'emportait et dessinait un cadre. */
+.prog-exo-name .prog-exo-rename {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.prog-exo-name .prog-exo-rename:hover { border-bottom-color: var(--border-default); }
+.prog-exo-name .prog-exo-rename:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: var(--accent);
+  background: rgba(255, 255, 255, 0.04);
+}
+/* Équipement par défaut de l'exercice (core/noms_exercices.py). */
+.prog-exo-materiel {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-2);
+  font-size: 0.72rem;
+}

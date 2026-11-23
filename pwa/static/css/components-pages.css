@@ -55,47 +55,6 @@
   border-radius: var(--radius-md);
 }
 
-.prog-exo-row {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: var(--sp-md);
-  margin-bottom: var(--sp-sm);
-}
-.prog-exo-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  color: var(--text-1);
-  font-size: var(--text-base);
-  margin-bottom: 4px;
-}
-/* Poignée de réordonnancement (maintenir pour glisser) */
-.prog-exo-grip {
-  flex-shrink: 0;
-  color: var(--text-3);
-  cursor: grab;
-  touch-action: none;
-}
-.prog-exo-grip:active { cursor: grabbing; }
-/* Pendant le glisser : fantôme à l'emplacement cible + élément soulevé */
-.prog-exo-ghost {
-  opacity: 0.35;
-  background: var(--accent-bg);
-}
-.prog-exo-dragging {
-  opacity: 0.95;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
-  border-color: var(--border-glass-bright);
-}
-.prog-exo-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: var(--sp-sm);
-  justify-content: flex-end;
-}
-.prog-exo-actions form { flex: 1; }
 .btn.mini {
   padding: 6px 8px;
   font-size: var(--text-sm);
@@ -528,36 +487,6 @@ html.has-ad-banner .haut-page {
 .debrief-locked strong { font-size: 0.9rem; color: var(--text-1); }
 .debrief-locked p { margin: 3px 0 0; font-size: 0.78rem; color: var(--text-2); line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) { .debrief-dot { animation: none; opacity: 0.6; } }
-
-/* Nom d'exercice modifiable dans le programme. Il se lit comme du texte
-   tant qu'on n'y touche pas : un champ visible partout transformerait la
-   liste en formulaire, alors qu'on la parcourt surtout pour la relire. */
-.prog-exo-rename {
-  flex: 1;
-  min-width: 0;
-  padding: 2px 4px;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-.prog-exo-rename:hover { border-bottom-color: var(--border-default); }
-.prog-exo-rename:focus {
-  outline: none;
-  border-bottom-color: var(--accent);
-  background: rgba(255, 255, 255, 0.04);
-}
-/* Équipement par défaut de l'exercice (core/noms_exercices.py). */
-.prog-exo-materiel {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-  color: var(--text-2);
-  font-size: 0.72rem;
-}
 
 /* Rotation des séances, sous le planning de la page programme. */
 .rotation-bloc { margin-top: 4px; }

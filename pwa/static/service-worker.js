@@ -45,6 +45,7 @@ const APP_SHELL = [
   "/static/js/aliments-recherche.js",
   "/static/js/nutrition.js",
   "/static/js/programme.js",
+  "/static/css/programme.css",
   "/static/css/timer.css",
   "/static/css/rest-timer.css",
   "/static/css/a11y.css",

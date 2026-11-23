@@ -112,6 +112,7 @@ def test_programme_bibliotheque_renommer_et_ajouter(serveur, navigateur):
     carte.locator(".exo-head").click()
 
     # La bibliothèque s'ouvre (sortie vers <body>), se filtre, et remplit le champ.
+    carte.get_by_role("button", name="Ajouter un exercice").click()
     carte.get_by_role("button", name="Choisir un exercice").click()
     modale = pg.locator("body > div", has=pg.get_by_role("heading", name="Bibliothèque d'exercices"))
     sync_api.expect(modale).to_be_visible()
@@ -131,6 +132,7 @@ def test_programme_bibliotheque_renommer_et_ajouter(serveur, navigateur):
     assert [e["name"] for e in _programme(serveur)["Push"]][-1] == nom
 
     # Renommer la séance : le champ s'ouvre prérempli, « OK » renomme sur le serveur.
+    carte.get_by_role("button", name="Options de la séance Push").click()
     carte.get_by_role("button", name="Renommer").click()
     champ = carte.locator(".rn-input")
     sync_api.expect(champ).to_be_focused()

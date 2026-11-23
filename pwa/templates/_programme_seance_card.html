@@ -2,63 +2,47 @@
    Variables Alpine attendues dans le scope parent :
      - sname : nom de la séance
      - prog, seanceOrder, seanceProg, programmes, originSeanceNames
-     - moveSeanceInProg, renameSeance, deleteSeance, moveSeanceToProg
-     - addExo, moveExo, deleteExo, toggleMuscle, scheduleSave
    Les gestes en plusieurs temps (renommer puis fermer, choisir dans la
    bibliothèque…) sont des méthodes de programmeApp : la version CSP
    d'Alpine n'accepte qu'une expression par attribut (static/js/programme.js).
-#}
+
+   Lisibilité (retour du 23/11 : « des boutons partout ») : les actions de la
+   séance sont rangées derrière UN bouton « ⋯ » ; chaque exercice tient sur
+   une ligne (poignée, nom, « 3 séries · Pecs ») et ses réglages s'ouvrent
+   au besoin. On glisse un exercice par sa poignée. #}
 {# Style « Instrument » : une ligne à filet, le nom en grand, dessous
    « 3 exercices · 10 séries · pecs, épaules » (resumeSeance). La classe
    `card` reste : commencerRenommage() retrouve la carte par elle. #}
-<div class="card prog-seance" x-data="{ open: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
+<div class="card prog-seance" x-data="{ open: false, menu: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
   <div class="exo-head" @click="open = !open">
     <div class="prog-seance-txt">
       <div class="exo-title" x-text="sname"></div>
       <div class="prog-seance-sous" x-text="resumeSeance(sname)"></div>
     </div>
+    <button type="button" class="prog-plus" :aria-expanded="menu ? 'true' : 'false'"
+            :aria-label="'Options de la séance ' + sname" @click.stop="basculerMenu()">
+      <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#more-horizontal"/></svg>
+    </button>
     <svg class="icon icon-md prog-seance-fleche" :class="open ? 'prog-seance-fleche--ouverte' : ''" aria-hidden="true"><use href="/static/img/icons.svg#chevron-right"/></svg>
   </div>
 
-  <div class="exo-body" x-show="open" x-transition>
-    <div class="s-a38f82">
-      <button type="button" class="btn label-icon" @click="moveSeanceInProg(sname, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
-      <button type="button" class="btn label-icon" @click="moveSeanceInProg(sname, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
-      <button type="button" class="btn label-icon" @click="commencerRenommage()">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
-      </button>
-      <button type="button" class="btn label-icon" @click="showMove = !showMove">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#folder"/></svg>Déplacer
-      </button>
-      <button type="button" class="btn label-icon" x-show="!confirmDel" @click="confirmDel=true">
-        <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
-      </button>
-      <template x-if="confirmDel">
-        <span class="inline-confirm s-c6af6d">
-          <span class="confirm-label">Supprimer <span x-text="sname"></span> ?</span>
-          <button type="button" class="btn" @click="confirmDel=false">Annuler</button>
-          <button type="button" class="btn btn-danger" @click="supprimerSeance()">Confirmer</button>
-        </span>
-      </template>
-      <template x-if="originSeanceNames.includes(sname)">
-        <form class="s-cccfa4" method="post" action="/programme/seance/reset">
-          <input type="hidden" name="name" :value="sname">
-          <button type="button" class="btn label-icon" x-show="!confirmReset" @click="confirmReset=true"><svg class="icon icon-sm"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
-          <template x-if="confirmReset">
-            <span class="inline-confirm s-c6af6d">
-              <span class="confirm-label">Réinitialiser à l'origine ?</span>
-              <button type="button" class="btn" @click="confirmReset=false">Annuler</button>
-              <button type="submit" class="btn btn-danger">Confirmer</button>
-            </span>
-          </template>
-        </form>
-      </template>
-    </div>
-
-    <div x-show="showMove" x-transition class="flex-show s-0bef99">
-      <label class="field-label s-f63375">Déplacer vers</label>
-      <select class="field s-5d50d5"
-              @change="deplacerSeance($event)">
+  {# ── Les actions de la séance, une par ligne ── #}
+  <div class="prog-menu" x-show="menu" x-cloak x-transition>
+    <button type="button" class="prog-menu-item" @click="commencerRenommage()">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#edit"/></svg>Renommer
+    </button>
+    <button type="button" class="prog-menu-item" x-show="!seanceAuBord(sname, 'up')" @click="moveSeanceInProg(sname, 'up')">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter la séance
+    </button>
+    <button type="button" class="prog-menu-item" x-show="!seanceAuBord(sname, 'down')" @click="moveSeanceInProg(sname, 'down')">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre la séance
+    </button>
+    <button type="button" class="prog-menu-item" x-show="programmes.length > 0" @click="showMove = !showMove">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#folder"/></svg>Changer de programme
+    </button>
+    <div x-show="showMove" x-cloak class="prog-menu-champ">
+      <label class="field-label" :for="'deplacer-' + sname">Mettre dans</label>
+      <select class="field" :id="'deplacer-' + sname" @change="deplacerSeance($event)">
         <option value="">— Choisir —</option>
         <template x-for="pg in programmes" :key="pg.id">
           <option :value="pg.id" :disabled="seanceProg[sname] === pg.id" x-text="pg.name"></option>
@@ -66,80 +50,124 @@
         <option value="__none__" :disabled="!seanceProg[sname]">Non classé</option>
       </select>
     </div>
-
-    <div x-show="renaming" x-transition class="flex-show s-fd2aab">
-      <input type="text" class="rn-input field s-97445a" x-model="newName" maxlength="60"
-             :aria-label="'Nouveau nom pour ' + sname"
-             @keydown.enter.prevent="validerRenommage()"
-             @keydown.escape="renaming=false">
-      <button type="button" class="btn primary" @click="validerRenommage()">OK</button>
+    <template x-if="originSeanceNames.includes(sname)">
+      <form method="post" action="/programme/seance/reset">
+        <input type="hidden" name="name" :value="sname">
+        <button type="button" class="prog-menu-item" x-show="!confirmReset" @click="confirmReset=true">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser
+        </button>
+        <div class="inline-confirm prog-menu-champ" x-show="confirmReset">
+          <span class="confirm-label">Revenir à la séance d'origine ?</span>
+          <button type="button" class="btn" @click="confirmReset=false">Annuler</button>
+          <button type="submit" class="btn btn-danger">Confirmer</button>
+        </div>
+      </form>
+    </template>
+    <button type="button" class="prog-menu-item prog-menu-item--danger" x-show="!confirmDel" @click="confirmDel=true">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#trash"/></svg>Supprimer la séance
+    </button>
+    <div class="inline-confirm prog-menu-champ" x-show="confirmDel" x-cloak>
+      <span class="confirm-label">Supprimer <span x-text="sname"></span> ?</span>
+      <button type="button" class="btn" @click="confirmDel=false">Annuler</button>
+      <button type="button" class="btn btn-danger" @click="supprimerSeance()">Confirmer</button>
     </div>
+  </div>
 
-    <div x-sort="reorderExo(sname, $item, $position)"
-         x-sort:config="{ animation: 150, delay: 220, delayOnTouchOnly: true, filter: 'input, button, select, textarea, .muscle-dd', preventOnFilter: false, ghostClass: 'prog-exo-ghost', dragClass: 'prog-exo-dragging' }">
-    <template x-for="(ex, exIdx) in prog[sname]" :key="sname + '|' + exIdx + '|' + ex.name">
-      <div class="prog-exo-row" x-sort:item="exIdx" x-data="{ confirmExoDel: false }">
-        <div class="prog-exo-form">
-          <div class="prog-exo-name">
-            <svg class="icon icon-sm prog-exo-grip" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg>
-            {# Modifiable : le nom de la bibliothèque ne convient pas toujours.
-               « Tirage horizontal » devient « ... prise neutre » et « ... prise
-               large », qui se chargent différemment et méritent chacun leur
-               progression. Avant, il fallait supprimer puis resaisir. #}
-            <input type="text" class="prog-exo-rename" maxlength="60"
-                   :value="ex.name"
-                   @change="renommerExo(sname, exIdx, $event.target.value)"
-                   :aria-label="'Nom de cet exercice : ' + ex.name">
-            {# Équipement par défaut en séance, sorti du nom quand on l'y avait tapé. #}
-            <span class="prog-exo-materiel" x-show="ex.materiel" x-text="ex.materiel"></span>
+  <div x-show="renaming" x-cloak x-transition class="prog-renommer">
+    <input type="text" class="rn-input field" x-model="newName" maxlength="60"
+           :aria-label="'Nouveau nom pour ' + sname"
+           @keydown.enter.prevent="validerRenommage()"
+           @keydown.escape="renaming=false">
+    <button type="button" class="btn primary" @click="validerRenommage()">OK</button>
+  </div>
+
+  <div class="exo-body" x-show="open" x-transition>
+    <p class="prog-exo-aide" x-show="prog[sname].length > 1">Maintiens <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#grip-vertical"/></svg> et glisse pour changer l'ordre.</p>
+    {# Une clé STABLE par exercice (cleExo) : avec l'index dans la clé, chaque
+       glisser recréait les lignes pendant que SortableJS les déplaçait, d'où
+       une rafale d'erreurs « Undefined variable: ex » (mesuré le 23/11 : 26
+       par glisser). On ne glisse que par la poignée : le reste de la ligne
+       est fait de champs. #}
+    <div class="prog-exos" x-sort="reorderExo(sname, $item, $position)"
+         x-sort:config="{ handle: '.prog-exo-poignee', animation: 150, ghostClass: 'prog-exo-ghost', chosenClass: 'prog-exo-choisi', dragClass: 'prog-exo-dragging' }">
+    <template x-for="(ex, exIdx) in prog[sname]" :key="cleExo(ex)">
+      <div class="prog-exo-row" x-sort:item="cleExo(ex)" x-data="{ confirmExoDel: false, reglages: false }">
+        <div class="prog-exo-ligne">
+          <span class="prog-exo-poignee" aria-hidden="true"><svg class="icon icon-md"><use href="/static/img/icons.svg#grip-vertical"/></svg></span>
+          <div class="prog-exo-txt">
+            <div class="prog-exo-name">
+              {# Modifiable : le nom de la bibliothèque ne convient pas toujours.
+                 « Tirage horizontal » devient « ... prise neutre » et « ... prise
+                 large », qui se chargent différemment et méritent chacun leur
+                 progression. Avant, il fallait supprimer puis resaisir. #}
+              <input type="text" class="prog-exo-rename" maxlength="60"
+                     :value="ex.name"
+                     @change="renommerExo(sname, exIdx, $event.target.value)"
+                     :aria-label="'Nom de cet exercice : ' + ex.name">
+              {# Équipement par défaut en séance, sorti du nom quand on l'y avait tapé. #}
+              <span class="prog-exo-materiel" x-show="ex.materiel" x-text="ex.materiel"></span>
+            </div>
+            <div class="prog-exo-sous" x-text="resumeExo(sname, exIdx)"></div>
           </div>
-          <div class="prog-exo-fields">
-            <label class="field-label s-96ad60">Séries</label>
-            <input type="number" min="1" :max="BORNES.series" x-model.number="ex.sets" class="field" @change="bornerEtSauver(ex)"
-                   aria-label="Nombre de séries">
-            <label class="prog-superset" x-show="exIdx < prog[sname].length - 1">
-              <input type="checkbox" x-model="ex.superset" @change="scheduleSave()">
-              <span>Enchaîner avec le suivant (superset)</span>
-            </label>
-            <label class="field-label">Muscle(s)</label>
-            <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
-              <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">
-                <span class="muscle-dd-value" :class="{ 'is-empty': !(ex.muscle && ex.muscle.trim()) }"
-                      x-text="(ex.muscle && ex.muscle.trim()) ? ex.muscle : 'Auto-détection'"></span>
-                <svg class="icon icon-sm" :style="openM ? 'transform:rotate(180deg)' : ''"><use href="/static/img/icons.svg#arrow-down"/></svg>
-              </button>
-              <div class="muscle-dd-panel" x-show="openM" x-transition x-cloak>
-                <div class="muscle-checks">
-                  {% for m in muscle_list %}
-                    <label class="muscle-check">
-                      <input type="checkbox" value="{{ m }}"
-                             :checked="aLeMuscle(ex, '{{ m }}')"
-                             @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
-                      <span>{{ m }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
+          <button type="button" class="prog-plus" :aria-expanded="reglages ? 'true' : 'false'"
+                  :aria-label="'Réglages de ' + ex.name" @click="reglages = !reglages">
+            <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#sliders"/></svg>
+          </button>
+        </div>
+
+        <div class="prog-exo-fields" x-show="reglages" x-cloak x-transition>
+          <label class="field-label">Séries</label>
+          <input type="number" min="1" :max="BORNES.series" x-model.number="ex.sets" class="field" @change="bornerEtSauver(ex)"
+                 aria-label="Nombre de séries">
+          <label class="prog-superset" x-show="exIdx < prog[sname].length - 1">
+            <input type="checkbox" x-model="ex.superset" @change="scheduleSave()">
+            <span>Enchaîner avec le suivant (superset)</span>
+          </label>
+          <label class="field-label">Muscle(s)</label>
+          <div class="muscle-dd" x-data="{ openM: false }" @click.outside="openM = false">
+            <button type="button" class="field muscle-dd-trigger" @click="openM = !openM">
+              <span class="muscle-dd-value" :class="{ 'is-empty': !(ex.muscle && ex.muscle.trim()) }"
+                    x-text="(ex.muscle && ex.muscle.trim()) ? ex.muscle : 'Auto-détection'"></span>
+              <svg class="icon icon-sm" :style="openM ? 'transform:rotate(180deg)' : ''"><use href="/static/img/icons.svg#arrow-down"/></svg>
+            </button>
+            <div class="muscle-dd-panel" x-show="openM" x-transition x-cloak>
+              <div class="muscle-checks">
+                {% for m in muscle_list %}
+                  <label class="muscle-check">
+                    <input type="checkbox" value="{{ m }}"
+                           :checked="aLeMuscle(ex, '{{ m }}')"
+                           @change="toggleMuscle(ex, '{{ m }}', $event.target.checked)">
+                    <span>{{ m }}</span>
+                  </label>
+                {% endfor %}
               </div>
             </div>
           </div>
-        </div>
-        <div class="prog-exo-actions" x-show="!confirmExoDel">
-          <button type="button" class="btn mini icon-btn" aria-label="Supprimer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg></button>
-        </div>
-        <div class="inline-confirm s-8a77e5" x-show="confirmExoDel" x-cloak>
-          <span class="confirm-label">Supprimer <span x-text="ex.name"></span> ?</span>
-          <button type="button" class="btn mini" @click="confirmExoDel=false">Annuler</button>
-          <button type="button" class="btn mini btn-danger" @click="supprimerExo()">Confirmer</button>
+          {# Sans glisser (lecteur d'écran, clavier, glisser capricieux) : monter, descendre. #}
+          <div class="prog-exo-actions" x-show="!confirmExoDel">
+            <button type="button" class="btn mini icon-btn" aria-label="Monter l'exercice" :disabled="exIdx === 0" @click="monterExo()"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-up"/></svg></button>
+            <button type="button" class="btn mini icon-btn" aria-label="Descendre l'exercice" :disabled="exIdx === prog[sname].length - 1" @click="descendreExo()"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-down"/></svg></button>
+            <button type="button" class="btn mini label-icon prog-exo-retirer" @click="confirmExoDel=true"><svg class="icon icon-sm icon-danger" aria-hidden="true"><use href="/static/img/icons.svg#trash"/></svg>Retirer</button>
+          </div>
+          <div class="inline-confirm s-8a77e5" x-show="confirmExoDel" x-cloak>
+            <span class="confirm-label">Retirer <span x-text="ex.name"></span> ?</span>
+            <button type="button" class="btn mini" @click="confirmExoDel=false">Annuler</button>
+            <button type="button" class="btn mini btn-danger" @click="supprimerExo()">Confirmer</button>
+          </div>
         </div>
       </div>
     </template>
     </div>
 
-    <hr class="s-85f535">
+    {# ── Ajouter un exercice : replié derrière un seul bouton ── #}
+    <div x-data="{ ajout: false, newExo: { name: '', sets: 3, muscles: [] }, showLibrary: false, libFilter: 'Tous', libSearch: '' }">
+      <button type="button" class="prog-ajout-exo label-icon" x-show="!ajout" @click="ajout = true">
+        <svg class="icon icon-sm icon-accent" aria-hidden="true"><use href="/static/img/icons.svg#plus"/></svg>Ajouter un exercice
+      </button>
 
-    <div x-data="{ newExo: { name: '', sets: 3, muscles: [] }, showLibrary: false, libFilter: 'Tous', libSearch: '' }">
+      <div class="prog-ajout-form" x-show="ajout" x-cloak>
       <label class="field-label s-d46224">Nouvel exercice</label>
-      <button type="button" class="btn label-icon s-914733"
+      <button type="button" class="btn label-icon prog-ajout-biblio"
               @click="showLibrary = true">
         <svg class="icon icon-sm icon-accent"><use href="/static/img/icons.svg#clipboard-list"/></svg>Choisir un exercice
       </button>
@@ -184,7 +212,7 @@
       </div>
 
       <input type="text" x-model="newExo.name" class="field" placeholder="Nom de l'exercice">
-      <p class="s-26913c">
+      <p class="prog-exo-aide">
         Tu peux préciser le nom — « Tirage horizontal prise neutre » et
         « ... prise large » comptent comme deux exercices, avec chacun sa
         progression, mais partagent la même fiche.
@@ -211,10 +239,14 @@
           </div>
         </div>
       </div>
-      <button type="button" class="btn primary label-icon s-ac0370"
-              @click="ajouterNouvelExo()">
-        <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
-      </button>
+      <div class="prog-ajout-boutons">
+        <button type="button" class="btn" @click="ajout = false">Annuler</button>
+        <button type="button" class="btn primary label-icon"
+                @click="ajouterNouvelExo()">
+          <svg class="icon icon-sm"><use href="/static/img/icons.svg#plus"/></svg>Ajouter l'exercice
+        </button>
+      </div>
+      </div>
     </div>
   </div>
 </div>

@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Programme · Muscu Tracker{% endblock %}
 
+{% block head_extra %}
+  <link rel="stylesheet" href="/static/css/programme.css">
+{% endblock %}
+
 {% block content %}
 <div x-data="programmeApp">
   <div class="s-a2cd8b">
@@ -121,36 +125,40 @@
   </div>
 
   <template x-for="pg in programmes" :key="pg.id">
-    <section class="prog-section" x-data="{ open: true, newSname: '' }">
+    <section class="prog-section" x-data="{ open: true, menu: false, c: false, newSname: '' }">
       <div class="prog-head" @click="open = !open">
         <span class="prog-name" x-text="pg.name"></span>
         <span class="prog-compte" x-text="seancesIn(pg.id).length + ' séance' + (seancesIn(pg.id).length > 1 ? 's' : '')"></span>
+        <button type="button" class="prog-plus prog-plus--programme" :aria-expanded="menu ? 'true' : 'false'"
+                :aria-label="'Options du programme ' + pg.name" @click.stop="basculerMenu()">
+          <svg class="icon icon-md" aria-hidden="true"><use href="/static/img/icons.svg#more-horizontal"/></svg>
+        </button>
         <div class="exo-toggle" x-text="open ? '−' : '+'"></div>
       </div>
 
-      <div x-show="open" x-transition>
-        <div class="prog-actions">
-          <button type="button" class="btn mini label-icon" aria-label="Monter" @click="moveProgramme(pg.id, 'up')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter</button>
-          <button type="button" class="btn mini label-icon" aria-label="Descendre" @click="moveProgramme(pg.id, 'down')"><svg class="icon icon-sm"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre</button>
-          <button type="button" class="btn mini label-icon" @click="openRenameModal(pg)">
-            <svg class="icon icon-sm"><use href="/static/img/icons.svg#edit"/></svg>Renommer
-          </button>
-          <template x-if="true">
-            <div class="s-003db1" x-data="{ c:false }">
-              <button type="button" class="btn mini label-icon" x-show="!c" @click="c=true">
-                <svg class="icon icon-sm icon-danger"><use href="/static/img/icons.svg#trash"/></svg>Supprimer
-              </button>
-              <template x-if="c">
-                <span class="inline-confirm s-c6af6d">
-                  <span class="confirm-label">Supprimer ce programme ?</span>
-                  <button type="button" class="btn mini" @click="c=false">Annuler</button>
-                  <button type="button" class="btn mini btn-danger" @click="supprimerProgramme(pg.id)">Confirmer</button>
-                </span>
-              </template>
-            </div>
-          </template>
+      {# Les actions du programme derrière « ⋯ » : quatre boutons sous chaque
+         titre de programme, puis cinq sous chaque séance, noyaient la page. #}
+      <div class="prog-menu" x-show="menu" x-cloak x-transition>
+        <button type="button" class="prog-menu-item" @click="renommerProgrammeMenu(pg)">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#edit"/></svg>Renommer
+        </button>
+        <button type="button" class="prog-menu-item" x-show="!programmeAuBord(pg.id, 'up')" @click="moveProgramme(pg.id, 'up')">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-up"/></svg>Monter le programme
+        </button>
+        <button type="button" class="prog-menu-item" x-show="!programmeAuBord(pg.id, 'down')" @click="moveProgramme(pg.id, 'down')">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#arrow-down"/></svg>Descendre le programme
+        </button>
+        <button type="button" class="prog-menu-item prog-menu-item--danger" x-show="!c" @click="c=true">
+          <svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#trash"/></svg>Supprimer le programme
+        </button>
+        <div class="inline-confirm prog-menu-champ" x-show="c" x-cloak>
+          <span class="confirm-label">Supprimer ce programme ? Ses séances passent dans « Non classé ».</span>
+          <button type="button" class="btn mini" @click="c=false">Annuler</button>
+          <button type="button" class="btn mini btn-danger" @click="supprimerProgramme(pg.id)">Confirmer</button>
         </div>
+      </div>
 
+      <div x-show="open" x-transition>
         <template x-for="sname in seancesIn(pg.id)" :key="sname">
           {% include "_programme_seance_card.html" %}
         </template>
@@ -464,8 +472,6 @@
     .prog-name--gris { color: var(--text-2); }
     .prog-compte { flex-shrink: 0; font-size: 0.85rem; color: var(--text-2); }
     .prog-head .exo-toggle { margin-left: auto; color: var(--text-2); }
-    .prog-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
-    .prog-actions .btn { width: auto; }
     .card.prog-seance {
       margin: -1px 0 0; padding: 0; border: none; border-radius: 0;
       border-top: 1px solid #262626; border-bottom: 1px solid #262626; background: none;
