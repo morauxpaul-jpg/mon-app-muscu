@@ -25,6 +25,7 @@ def test_un_nouvel_exercice_est_range_dans_l_editeur(serveur, navigateur):
     pg.goto(serveur + "/programme")
     carte = pg.locator("div.card:has(> .exo-head .exo-title:text-is('Push'))")
     carte.locator(".exo-head").click()
+    carte.get_by_role("button", name="Ajouter un exercice").click()
     carte.get_by_placeholder("Nom de l'exercice").fill("developpe incline halteres")
     carte.get_by_role("button", name="Ajouter l'exercice").click()
 

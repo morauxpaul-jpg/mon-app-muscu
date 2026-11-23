@@ -8,6 +8,18 @@ function lireDonneesPage(id, defaut) {
 }
 var BORNES = lireDonneesPage('prog-bornes', { series: 20, exos: 30, seances: 30 });
 
+// Clé stable d'un exercice pour x-for et x-sort, gardée hors des données
+// (rien de plus n'est envoyé au serveur). Avec l'index dans la clé, chaque
+// glisser recréait toutes les lignes pendant que SortableJS les déplaçait :
+// 26 erreurs « Undefined variable: ex » par glisser (mesuré le 23/11).
+var CLES_EXOS = new WeakMap();
+var derniereCle = 0;
+function cleExo(ex) {
+  if (!ex || typeof ex !== 'object') return '';
+  if (!CLES_EXOS.has(ex)) CLES_EXOS.set(ex, 'x' + (++derniereCle));
+  return CLES_EXOS.get(ex);
+}
+
 function programmeApp() {
   return {
     isVip: !!lireDonneesPage('prog-vip', false),
@@ -222,6 +234,13 @@ function programmeApp() {
       }
       this.scheduleSave();
     },
+    // Premier programme (dir 'up') ou dernier ('down') : le menu cache
+    // alors « Monter » ou « Descendre », qui ne feraient rien.
+    programmeAuBord(id, dir) {
+      var lst = this.programmes || [];
+      var i = lst.findIndex(function (p) { return p.id === id; });
+      return i < 0 || (dir === 'up' ? i === 0 : i === lst.length - 1);
+    },
     moveProgramme(id, dir) {
       var i = this.programmes.findIndex(function (p) { return p.id === id; });
       if (i < 0) return;
@@ -408,6 +427,11 @@ function programmeApp() {
       });
     },
 
+    seanceAuBord(name, dir) {
+      var soeurs = this.seancesIn(this.seanceProg[name] || null);
+      var i = soeurs.indexOf(name);
+      return i < 0 || (dir === 'up' ? i === 0 : i === soeurs.length - 1);
+    },
     moveSeanceInProg(name, dir) {
       // Déplace la séance parmi ses voisines du même programme
       var pid = this.seanceProg[name] || null;
@@ -487,9 +511,17 @@ function programmeApp() {
       var tmp = lst[idx]; lst[idx] = lst[j]; lst[j] = tmp;
       this.scheduleSave();
     },
-    reorderExo(sname, from, to) {
+    cleExo(ex) {
+      return cleExo(ex);
+    },
+    // x-sort donne la clé de l'exercice glissé (x-sort:item) et sa nouvelle
+    // place. La clé, pas l'index : l'index lu au premier rendu devient faux
+    // dès le premier déplacement, puisque les lignes sont gardées.
+    reorderExo(sname, cle, to) {
       var lst = this.prog[sname];
-      if (!lst || from === to || from < 0 || to < 0 || from >= lst.length || to >= lst.length) return;
+      if (!lst) return;
+      var from = lst.findIndex(function (e) { return cleExo(e) === cle; });
+      if (from === to || from < 0 || to < 0 || to >= lst.length) return;
       var item = lst.splice(from, 1)[0];
       lst.splice(to, 0, item);
       this.scheduleSave();
@@ -514,7 +546,21 @@ function programmeApp() {
     // fermer » devient une méthode. Appelée depuis une carte, `this` voit
     // aussi l'état de la carte (sname, newName, confirmDel…) : Alpine
     // fusionne les portées imbriquées.
+    basculerMenu() {
+      this.menu = !this.menu;
+    },
+    renommerProgrammeMenu(pg) {
+      this.menu = false;
+      this.openRenameModal(pg);
+    },
+    monterExo() {
+      this.moveExo(this.sname, this.exIdx, 'up');
+    },
+    descendreExo() {
+      this.moveExo(this.sname, this.exIdx, 'down');
+    },
     commencerRenommage() {
+      this.menu = false;
       this.renaming = true;
       this.newName = this.sname;
       var carte = this.$el.closest('.card');
@@ -534,6 +580,7 @@ function programmeApp() {
     deplacerSeance(ev) {
       this.moveSeanceToProg(this.sname, ev.target.value);
       this.showMove = false;
+      this.menu = false;
       ev.target.value = '';
     },
     bornerEtSauver(ex) {
@@ -559,6 +606,19 @@ function programmeApp() {
       var t = exos.length + ' exercice' + (exos.length > 1 ? 's' : '');
       if (series) t += ' · ' + series + ' série' + (series > 1 ? 's' : '');
       if (muscles.length) t += ' · ' + muscles.slice(0, 3).join(', ') + (muscles.length > 3 ? '…' : '');
+      return t;
+    },
+    // Sous le nom d'un exercice : « 3 séries · Pecs », « superset avec le suivant ».
+    resumeExo(sname, i) {
+      var lst = this.prog[sname] || [];
+      var ex = lst[i];
+      if (!ex) return '';
+      var n = Math.max(0, parseInt(ex.sets, 10) || 0);
+      var t = n + ' série' + (n > 1 ? 's' : '');
+      var m = (ex.muscle || '').split(',').map(function (x) { return x.trim(); })
+        .filter(function (x) { return x && x.toLowerCase() !== 'autre'; });
+      if (m.length) t += ' · ' + m.join(', ');
+      if (ex.superset && i < lst.length - 1) t += ' · enchaîné avec le suivant';
       return t;
     },
     supprimerExo() {
@@ -647,3 +707,25 @@ function changeProgramme() {
 document.addEventListener('alpine:init', function () {
   window.Alpine.data('changeProgramme', changeProgramme);
 });
+
+// Glisser un exercice au doigt : SortableJS pose dans la liste une COPIE de
+// la ligne (le fantôme qui suit le doigt). Alpine la voyait arriver, la
+// prenait pour une ligne neuve et l'évaluait hors de sa boucle x-for, sans
+// `ex` : une trentaine d'erreurs « Undefined variable: ex » par glisser
+// (mesuré le 23/11). Le temps du geste, Alpine ignore donc les ajouts dans
+// cette liste ; x-for, lui, initialise ses lignes sans passer par là.
+function ignorerLaListePendantLeGlisser(ev) {
+  var poignee = ev.target && ev.target.closest && ev.target.closest('.prog-exo-poignee');
+  var liste = poignee && poignee.closest('[x-sort]');
+  if (!liste || liste._x_ignoreMutationObserver) return;
+  liste._x_ignoreMutationObserver = true;
+  var gestes = ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'dragend', 'drop'];
+  var fin = function () {
+    gestes.forEach(function (g) { document.removeEventListener(g, fin, true); });
+    // Après les tâches d'Alpine : le fantôme retiré, rien ne reste à évaluer.
+    setTimeout(function () { liste._x_ignoreMutationObserver = false; }, 50);
+  };
+  gestes.forEach(function (g) { document.addEventListener(g, fin, true); });
+}
+document.addEventListener('pointerdown', ignorerLaListePendantLeGlisser, true);
+document.addEventListener('touchstart', ignorerLaListePendantLeGlisser, { capture: true, passive: true });
