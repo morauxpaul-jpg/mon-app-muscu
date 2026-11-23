@@ -28,7 +28,15 @@
 
   <div class="seance-header">
     <div class="seance-label"><a href="/seance?date={{ date_iso }}" class="seance-retour">← Changer</a> · SÉANCE · SEMAINE {{ s_display }}</div>
-    <div class="seance-title">{{ seance_name }}</div>
+    <div class="seance-titre-ligne">
+      <div class="seance-title">{{ seance_name }}</div>
+      {# Aller changer la séance elle-même (exercices, séries) sans la
+         chercher dans Programme (retour du 23/11). #}
+      {% if mode == "prefaite" and seance_programme %}
+      <a class="seance-modifier label-icon" href="/programme?seance={{ seance_programme|urlencode }}"
+         aria-label="Modifier la séance {{ seance_programme }} dans le programme"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#edit"/></svg>Modifier</a>
+      {% endif %}
+    </div>
   </div>
 
   {# ── Bilan enregistré à la fin de cette séance ──────────────── #}

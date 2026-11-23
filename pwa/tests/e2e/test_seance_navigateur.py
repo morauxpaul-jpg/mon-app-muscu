@@ -352,11 +352,11 @@ def test_lequipement_est_en_tete_de_carte(page, serveur):
 
 
 def test_une_serie_dechauffement_part_a_part(page, serveur):
-    """Panneau « RPE, remarque » : la case la marque ; elle s'enregistre avec
+    """Le bouton « Échauffement » de la série la marque ; elle s'enregistre avec
     son type et le volume d'échauffement s'affiche à part."""
     carte = page.locator("#exo-anchor-0")
-    carte.locator(".serie-encours").nth(0).locator(".serie-puce").first.click()
-    carte.locator(".serie-echauff").first.click()
+    # Visible d'emblée, à côté de « RPE, remarque » (retour du 23/11).
+    carte.locator(".serie-encours").nth(0).get_by_role("button", name="Échauffement", exact=True).click()
     carte.get_by_label("Répétitions série 1", exact=True).fill("10")
     carte.get_by_label("Poids série 1", exact=True).fill("20")
     carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()
@@ -587,8 +587,8 @@ def test_l_echauffement_d_un_exercice_echange_reste_apres_rechargement(page, ser
     assert echange and echange != EXO
     page.evaluate("Alpine.$data(document.querySelector('#exo-anchor-0')).open = true")
     carte = page.locator("#exo-anchor-0")
-    carte.locator(".serie-encours").nth(0).locator(".serie-puce").first.click()
-    carte.locator(".serie-echauff").first.click()
+    # Visible d'emblée, à côté de « RPE, remarque » (retour du 23/11).
+    carte.locator(".serie-encours").nth(0).get_by_role("button", name="Échauffement", exact=True).click()
     carte.get_by_label("Répétitions série 1", exact=True).fill("10")
     carte.get_by_label("Poids série 1", exact=True).fill("20")
     carte.locator(".serie-encours").nth(0).locator(".serie-valider").click()

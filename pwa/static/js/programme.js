@@ -559,6 +559,15 @@ function programmeApp() {
     descendreExo() {
       this.moveExo(this.sname, this.exIdx, 'down');
     },
+    // /programme?seance=Push (lien « Modifier » de la page Séance) : la carte
+    // de cette séance s'ouvre et vient à l'écran.
+    montrerSiCiblee() {
+      var cible = new URLSearchParams(window.location.search).get('seance');
+      if (!cible || cible !== this.sname) return;
+      this.open = true;
+      var carte = this.$el;
+      setTimeout(function () { carte.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 150);
+    },
     commencerRenommage() {
       this.menu = false;
       this.renaming = true;

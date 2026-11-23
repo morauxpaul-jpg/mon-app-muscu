@@ -271,3 +271,29 @@
 }
 
 /* Suite : components-seance.css puis components-pages.css (chargés dans cet ordre). */
+
+/* Bibliothèque d'exercices (Programme et Séance) : un groupe ne s'affiche
+   que s'il a des résultats ($biblio.groupeVisible) ; la ligne entière se
+   touche, le nom tient sur toute la largeur (retour du 23/11). */
+.biblio-groupe {
+  position: sticky; top: 0; z-index: 1;
+  margin: 10px 0 0; padding: 4px 0;
+  background: #111111; color: var(--text-2);
+  font-family: var(--font-display); font-weight: 600; font-size: 0.78rem;
+  text-transform: uppercase;
+}
+.biblio-ligne {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 48px; padding: 8px 2px;
+  border: none; border-bottom: 1px solid #262626; border-radius: 0;
+  background: none; color: var(--text-1); font: inherit; text-align: left; cursor: pointer;
+}
+.biblio-ligne:hover, .biblio-ligne:focus-visible { background: var(--bg-elevated); }
+.biblio-ligne-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.biblio-nom { font-size: 0.92rem; font-weight: 500; }
+.biblio-muscles { font-size: 0.74rem; color: var(--text-2); }
+.biblio-choisir {
+  flex-shrink: 0; padding: 4px 10px; border-radius: var(--radius-sm);
+  background: var(--bg-elevated); color: var(--text-1); font-size: 0.8rem;
+}
+.biblio-vide { margin: 12px 0; font-size: 0.85rem; color: var(--text-2); }

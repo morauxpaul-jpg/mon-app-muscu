@@ -439,6 +439,8 @@
 /* « Skip » seul, discret à droite : « Enregistrer » est parti (m8). */
 .exo-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   justify-content: flex-end;
   margin-top: 6px;
 }

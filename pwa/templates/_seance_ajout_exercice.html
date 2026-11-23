@@ -97,22 +97,24 @@
           </select>
           <div class="s-bcf450">
             <template x-for="grp in $biblio.groupes()" :key="'slib-'+grp">
-              <template x-if="libFilter === 'Tous' || libFilter === grp">
-                <div>
-                  <div class="s-f2e2ad" x-text="grp"></div>
-                  <template x-for="ex in $biblio.exos(grp)" :key="grp+'-'+ex.name">
-                    <div class="s-1eb598" x-show="$biblio.correspond(ex, libSearch)">
-                      <div>
-                        <div class="s-d799ac" x-text="ex.name"></div>
-                        <div class="s-8b4f4a" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
-                      </div>
-                      <button type="button" class="btn mini s-86abda"
-                              @click="choisirDansBiblio(ex, grp)">+ Ajouter</button>
-                    </div>
-                  </template>
-                </div>
-              </template>
+              <div x-show="$biblio.groupeVisible(grp, libSearch, libFilter)">
+                <div class="biblio-groupe" x-text="grp"></div>
+                <template x-for="ex in $biblio.exos(grp)" :key="grp+'-'+ex.name">
+                  {# La ligne entière se touche : le gros bouton « Choisir »
+                     prenait les deux tiers de la largeur et cassait le nom
+                     en trois lignes. #}
+                  <button type="button" class="biblio-ligne" x-show="$biblio.correspond(ex, libSearch)"
+                          @click="choisirDansBiblio(ex, grp)" :aria-label="'Choisir ' + ex.name">
+                    <span class="biblio-ligne-txt">
+                      <span class="biblio-nom" x-text="ex.name"></span>
+                      <span class="biblio-muscles" x-show="ex.muscles.length" x-text="ex.muscles.join(', ')"></span>
+                    </span>
+                    <span class="biblio-choisir">Choisir</span>
+                  </button>
+                </template>
+              </div>
             </template>
+            <p class="biblio-vide" x-show="$biblio.aucun(libSearch, libFilter)">Aucun exercice trouvé. Tape son nom dans le champ, sous la bibliothèque.</p>
           </div>
           <button type="button" class="btn primary s-1847bb" @click="showLib = false">Fermer</button>
         </div>

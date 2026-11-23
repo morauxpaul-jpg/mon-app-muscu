@@ -35,7 +35,6 @@
 .s-0fef38:not(#_s):not(#_s) { color: var(--text-2); font-size: 0.75rem; letter-spacing: 0; font-family: var(--font-display); display:flex; justify-content:space-between; align-items:center; }
 .s-1065cb:not(#_s):not(#_s) { color:var(--text-mute); font-size:0.78rem; margin-left:4px; }
 .s-10e689:not(#_s):not(#_s) { width:100%; box-sizing:border-box; background:var(--bg-input, rgba(255,255,255,0.05)); border:0.5px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-1); padding:10px; font-size:0.88rem; font-family:inherit; resize:none; }
-.s-11323b:not(#_s):not(#_s) { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:0.5px solid var(--border-subtle); }
 .s-116966:not(#_s):not(#_s) { margin:0; }
 .s-121b3c:not(#_s):not(#_s) { border-color: rgba(255,69,58,0.5); }
 .s-1342a3:not(#_s):not(#_s) { font-size:0.7rem; color:var(--text-3); }
@@ -56,7 +55,6 @@
 .s-1d79de:not(#_s):not(#_s) { margin:0 0 8px; font-size:0.9rem; color:var(--text-1); }
 .s-1e20da:not(#_s):not(#_s) { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.78); align-items:center; justify-content:center; padding:20px; }
 .s-1e84b2:not(#_s):not(#_s) { text-decoration:none; color:inherit; display:block; border-color:#333333; }
-.s-1eb598:not(#_s):not(#_s) { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
 .s-1f5861:not(#_s):not(#_s) { border-color:var(--success); background:var(--success-bg); }
 .s-1fc7f0:not(#_s):not(#_s) { width:100%; margin:0; }
 .s-206006:not(#_s):not(#_s) { font-size:0.76rem; color:var(--text-2); text-align:center; margin:0 0 12px; line-height:1.5; }
@@ -215,7 +213,6 @@
 .s-839aae:not(#_s):not(#_s) { color:#FF9F0A; }
 .s-84b281:not(#_s):not(#_s) { font-size:0.75rem; color:var(--text-3); margin-top:2px; }
 .s-85a05b:not(#_s):not(#_s) { margin:0; font-size:0.9rem; }
-.s-86abda:not(#_s):not(#_s) { white-space:nowrap; }
 .s-86c142:not(#_s):not(#_s) { display:inline-flex; margin-bottom:10px; }
 .s-87de47:not(#_s):not(#_s) { width:100%; justify-content:center; margin-top: 6px; }
 .s-8819f3:not(#_s):not(#_s) { border-color:var(--border-default); padding:10px 12px; margin-bottom:10px; }
@@ -226,7 +223,6 @@
 .s-8a0196:not(#_s):not(#_s) { font-size: 0.78rem; color: var(--text-dim); margin-top: 8px; text-align:center; }
 .s-8a77e5:not(#_s):not(#_s) { margin-top:8px; }
 .s-8af194:not(#_s):not(#_s) { display:block; font-size:0.78rem; color:var(--text-mute); margin-top:4px; }
-.s-8b4f4a:not(#_s):not(#_s) { font-size:0.7rem; color:var(--text-dim); }
 .s-8b872f:not(#_s):not(#_s) { color:currentColor; }
 .s-8bc5f9:not(#_s):not(#_s) { color: #FF453A; font-weight: 700; margin-bottom: 6px; }
 .s-8c5809:not(#_s):not(#_s) { font-size:0.88rem; color:var(--text-1); font-weight:500; }
@@ -311,7 +307,6 @@
 .s-be67db:not(#_s):not(#_s) { font-size:0.8rem; color:var(--text-dim); margin-top:8px; }
 .s-bea3ad:not(#_s):not(#_s) { font-size:1.4rem; }
 .s-beee49:not(#_s):not(#_s) { font-size:0.72rem; color:var(--text-3); margin-top:2px; }
-.s-bf49e3:not(#_s):not(#_s) { font-size:0.85rem; color:var(--text-1); font-weight:500; }
 .s-bfae15:not(#_s):not(#_s) { margin-top:8px; flex-direction:column; gap:6px; }
 .s-c01db1:not(#_s):not(#_s) { cursor:pointer; min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center; }
 .s-c1734a:not(#_s):not(#_s) { background:#111111; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:18px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 48px rgba(0,0,0,0.6); }
@@ -349,7 +344,6 @@
 .s-d6f2af:not(#_s):not(#_s) { margin-top:14px; }
 .s-d704ea:not(#_s):not(#_s) { flex-direction:column; gap:8px; }
 .s-d76768:not(#_s):not(#_s) { gap:4px; }
-.s-d799ac:not(#_s):not(#_s) { font-size:0.85rem; color:#fff; font-weight:600; }
 .s-d95b59:not(#_s):not(#_s) { opacity:0.6; }
 .s-da12f2:not(#_s):not(#_s) { margin-bottom:12px; }
 .s-dae33e:not(#_s):not(#_s) { padding:4px 10px; font-size:0.75rem; }
@@ -388,9 +382,7 @@
 .s-f05337:not(#_s):not(#_s) { width:100%; justify-content:center; margin-top:16px; }
 .s-f12844:not(#_s):not(#_s) { display:flex; gap:8px; margin-top:8px; }
 .s-f15bdb:not(#_s):not(#_s) { font-size:1.1rem; }
-.s-f2e2ad:not(#_s):not(#_s) { font-size:0.72rem; color: var(--text-2); letter-spacing: 0; font-family: var(--font-display); font-weight:700; margin:8px 0 4px; }
 .s-f4083a:not(#_s):not(#_s) { padding:14px 14px 6px; }
-.s-f44142:not(#_s):not(#_s) { font-size:0.72rem; color:var(--text-3); letter-spacing: 0; font-family: var(--font-display); font-weight:600; margin:8px 0 4px; }
 .s-f4cfdb:not(#_s):not(#_s) { color:var(--danger); font-size:0.82rem; text-align:center; }
 .s-f4e719:not(#_s):not(#_s) { margin:10px 0; }
 .s-f5701a:not(#_s):not(#_s) { font-size:0.82rem; color:var(--text-2); }

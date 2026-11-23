@@ -33,7 +33,7 @@ def test_le_bouton_de_la_bibliotheque_ne_ment_plus():
     """Il remplit le champ, il n'ajoute pas. « + Ajouter » faisait valider
     sans regarder le nom."""
     assert ">+ Ajouter</button>" not in CARTE
-    assert ">Choisir</button>" in CARTE
+    assert 'class="biblio-choisir">Choisir<' in CARTE
 
 
 def test_le_renommage_demande_si_lhistorique_suit():
