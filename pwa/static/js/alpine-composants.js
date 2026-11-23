@@ -40,6 +40,19 @@
       if (typeof window.exerciseMatches === "function") return window.exerciseMatches(ex, requete);
       return !requete || ex.name.toLowerCase().indexOf(String(requete).toLowerCase()) >= 0;
     },
+    // Un groupe s'affiche s'il est choisi (ou « Tous ») et qu'au moins un
+    // de ses exercices répond à la recherche. Avant, chercher « curl »
+    // listait les treize groupes l'un sous l'autre, neuf d'entre eux vides
+    // (retour du 23/11 : « tous les muscles un par un en dessous »).
+    groupeVisible: function (groupe, requete, filtre) {
+      if (filtre && filtre !== "Tous" && filtre !== groupe) return false;
+      var self = this;
+      return this.exos(groupe).some(function (ex) { return self.correspond(ex, requete); });
+    },
+    aucun: function (requete, filtre) {
+      var self = this;
+      return !this.groupes().some(function (g) { return self.groupeVisible(g, requete, filtre); });
+    },
     // Le muscle du programme qui correspond à un groupe de la bibliothèque.
     muscleDe: function (groupe, defaut) {
       var table = window.LIBRARY_TO_MUSCLE;

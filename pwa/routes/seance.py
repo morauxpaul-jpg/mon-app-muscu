@@ -308,6 +308,7 @@ def seance():
             active="seance",
             mode="prefaite",
             seance_name=name,
+            seance_programme=base_name,
             date_iso=date_iso,
             date_label=_date_label(target_date),
             is_rattrapage=is_rattrapage, en_avance_label=en_avance_label,

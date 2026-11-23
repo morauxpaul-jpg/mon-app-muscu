@@ -13,7 +13,7 @@
 {# Style « Instrument » : une ligne à filet, le nom en grand, dessous
    « 3 exercices · 10 séries · pecs, épaules » (resumeSeance). La classe
    `card` reste : commencerRenommage() retrouve la carte par elle. #}
-<div class="card prog-seance" x-data="{ open: false, menu: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
+<div class="card prog-seance" x-init="montrerSiCiblee()" x-data="{ open: false, menu: false, renaming: false, newName: '', showMove: false, confirmDel: false, confirmReset: false }">
   <div class="exo-head" @click="open = !open">
     <div class="prog-seance-txt">
       <div class="exo-title" x-text="sname"></div>
@@ -186,22 +186,24 @@
           </select>
           <div class="s-bcf450">
             <template x-for="grp in $biblio.groupes()" :key="'lib-'+grp">
-              <template x-if="libFilter === 'Tous' || libFilter === grp">
-                <div>
-                  <div class="s-f44142" x-text="grp"></div>
-                  <template x-for="ex in $biblio.exos(grp)" :key="grp+'-'+ex.name">
-                    <div class="s-11323b" x-show="$biblio.correspond(ex, libSearch)">
-                      <div>
-                        <div class="s-bf49e3" x-text="ex.name"></div>
-                        <div class="s-8b4f4a" x-text="ex.muscles.length ? ex.muscles.join(', ') : ''"></div>
-                      </div>
-                      <button type="button" class="btn mini s-86abda"
-                              @click="choisirDansBiblio(ex, grp)">Choisir</button>
-                    </div>
-                  </template>
-                </div>
-              </template>
+              <div x-show="$biblio.groupeVisible(grp, libSearch, libFilter)">
+                <div class="biblio-groupe" x-text="grp"></div>
+                <template x-for="ex in $biblio.exos(grp)" :key="grp+'-'+ex.name">
+                  {# La ligne entière se touche : le gros bouton « Choisir »
+                     prenait les deux tiers de la largeur et cassait le nom
+                     en trois lignes. #}
+                  <button type="button" class="biblio-ligne" x-show="$biblio.correspond(ex, libSearch)"
+                          @click="choisirDansBiblio(ex, grp)" :aria-label="'Choisir ' + ex.name">
+                    <span class="biblio-ligne-txt">
+                      <span class="biblio-nom" x-text="ex.name"></span>
+                      <span class="biblio-muscles" x-show="ex.muscles.length" x-text="ex.muscles.join(', ')"></span>
+                    </span>
+                    <span class="biblio-choisir">Choisir</span>
+                  </button>
+                </template>
+              </div>
             </template>
+            <p class="biblio-vide" x-show="$biblio.aucun(libSearch, libFilter)">Aucun exercice trouvé. Saisis-le à la main ci-dessous.</p>
           </div>
           <hr class="s-cb5c54">
           <div class="s-15bff6">Exercice personnalisé</div>

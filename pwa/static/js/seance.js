@@ -240,8 +240,26 @@
     setTimeout(function () { t.remove(); }, 3500);
   }
 
+  // Séries de travail faites (échauffements exclus) contre séries prévues.
+  function resteDesSeries(data) {
+    var series = data.sets || [];
+    var passe = series.some(function (s) { return /SKIP/.test(s.remarque || ""); });
+    if (passe || data.is_isometric) return false;
+    var faites = series.filter(function (s) {
+      return s.type !== "echauffement" && Number(s.reps) > 0;
+    }).length;
+    return faites < (Number(data.p_sets) || 0);
+  }
+  window.resteDesSeries = resteDesSeries;
+
   // ── Composant Alpine d'un exercice ───────────────────────────────
   window.exoBlock = function (index, data) {
+    // Ouverte tant qu'il reste des séries de travail prévues. Le serveur dit
+    // « terminé » dès UNE série (core/seance_historique._exo_completed : la
+    // séance compte), et la carte se rouvrait fermée à chaque rechargement :
+    // 1 échauffement + 1 série sur 3, l'app relancée, et l'exercice semblait
+    // fini (retour du 23/11). Un exercice passé (« Skip ») reste fermé.
+    var ouverte = !data.completed || resteDesSeries(data);
     var draftKey = DRAFT_PREFIX + data.base + "_" +
                    (data.exo_index != null ? data.exo_index : index);
     // Clé de la file hors-ligne : un envoi plus récent du même exercice
@@ -249,7 +267,7 @@
     var cle = draftKey;
     return {
       _cle: cle,
-      open: !data.completed,
+      open: ouverte,
       // Révision des séries : `_rev` bouge à chaque modification,
       // `_revServeur` est la dernière que le serveur (ou la file) a reçue.
       _rev: 0,
@@ -897,6 +915,14 @@
         if (mode !== "complet" && this.completed && !this.isIso && this.indexCourant() === -1) {
           this.toutFait = true;
         }
+      },
+
+      // « Réinitialiser » : le serveur efface les séries du jour ; ce que le
+      // téléphone garde de cet exercice (brouillon, envoi en attente) les
+      // ferait revenir au rechargement.
+      oublierSaisie: function () {
+        try { localStorage.removeItem(draftKey); } catch (e) {}
+        if (window.OfflineQueue && window.OfflineQueue.drop) window.OfflineQueue.drop(cle);
       },
 
       toutFait: false,

@@ -117,13 +117,15 @@ def test_programme_bibliotheque_renommer_et_ajouter(serveur, navigateur):
     modale = pg.locator("body > div", has=pg.get_by_role("heading", name="Bibliothèque d'exercices"))
     sync_api.expect(modale).to_be_visible()
     modale.get_by_placeholder("Rechercher un exercice...").fill("squat bulgare")
-    # Le filtre est appliqué quand seules des lignes « squat » restent visibles.
+    # Le filtre est appliqué quand seules des lignes « squat » restent visibles,
+    # et seuls les groupes qui en ont gardent leur titre.
     pg.wait_for_function("""() => {
-        const b = [...document.querySelectorAll('body > div button')]
-          .filter(x => x.textContent.trim() === 'Choisir' && x.offsetParent);
-        return b.length > 0 && b.every(x => /squat/i.test(x.parentElement.textContent)); }""")
-    choix = modale.locator("div:visible > button", has_text="Choisir")
-    nom = choix.first.locator("xpath=..").locator("div > div").first.inner_text()
+        const b = [...document.querySelectorAll('body > div .biblio-ligne')].filter(x => x.offsetParent);
+        return b.length > 0 && b.every(x => /squat/i.test(x.textContent)); }""")
+    titres = modale.locator(".biblio-groupe:visible").all_inner_texts()
+    assert [t.upper() for t in titres] == ["JAMBES"], titres
+    choix = modale.locator(".biblio-ligne:visible")
+    nom = choix.first.locator(".biblio-nom").inner_text()
     choix.first.click()
     sync_api.expect(modale).to_be_hidden()
     assert carte.get_by_placeholder("Nom de l'exercice").input_value() == nom
@@ -174,9 +176,9 @@ def test_seance_bibliotheque_deplacer_et_fiche(serveur, navigateur):
     pg.get_by_role("button", name="Choisir un exercice").click()
     modale = pg.locator("body > div", has=pg.get_by_role("heading", name="Bibliothèque d'exercices"))
     sync_api.expect(modale).to_be_visible()
-    ligne = modale.locator("div:visible", has=pg.get_by_role("button", name="+ Ajouter")).last
-    nom = ligne.locator("div > div").first.inner_text()
-    ligne.get_by_role("button", name="+ Ajouter").click()
+    ligne = modale.locator(".biblio-ligne:visible").last
+    nom = ligne.locator(".biblio-nom").inner_text()
+    ligne.click()
     assert pg.get_by_placeholder("Tape ou choisis un exercice déjà utilisé").input_value() == nom
     assert erreurs == []
     ctx.close()

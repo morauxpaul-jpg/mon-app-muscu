@@ -249,26 +249,15 @@
                           x-text="'objectif ' + targetReps"></span>
                   </div>
 
-                  {# Style « Instrument » (maquette du 13/10) : la charge puis les
-                     reps, chacune entre un − et un +. Le − / + de la charge
+                  {# Style « Instrument » (maquette du 13/10) : les reps puis la
+                     charge (retour du 23/11 : dans cet ordre, comme on le dit
+                     et comme « Dernière fois »), chacune entre un − et un +. Le − / + de la charge
                      passe à la charge d'à côté déjà soulevée (les plaques de
                      la machine), sinon d'un écart habituel (ajuster()). Le
                      chiffre reste un champ : on peut toujours le taper.
                      Des <div> et non des <label> : un label envoie son clic
                      au premier bouton qu'il contient (le −). #}
                   <div class="serie-duo" :class="showWeight ? '' : 'seul'">
-                    <div class="serie-champ" x-show="showWeight">
-                      <span class="serie-etiq">Kg</span>
-                      <div class="serie-pas">
-                        <button type="button" class="serie-moins" @click="ajuster(s, 'poids', -1)"
-                                :aria-label="'Moins lourd, série ' + (i + 1)">−</button>
-                        <input type="number" inputmode="decimal" step="any" min="0" x-model.number="s.poids"
-                               placeholder="kg" :aria-label="'Poids série ' + (i + 1)"
-                               @input.once="aSaisi()">
-                        <button type="button" class="serie-plus" @click="ajuster(s, 'poids', 1)"
-                                :aria-label="'Plus lourd, série ' + (i + 1)">+</button>
-                      </div>
-                    </div>
                     <div class="serie-champ">
                       <span class="serie-etiq">Reps</span>
                       <div class="serie-pas">
@@ -281,13 +270,31 @@
                                 :aria-label="'Une répétition de plus, série ' + (i + 1)">+</button>
                       </div>
                     </div>
+                    <div class="serie-champ" x-show="showWeight">
+                      <span class="serie-etiq">Kg</span>
+                      <div class="serie-pas">
+                        <button type="button" class="serie-moins" @click="ajuster(s, 'poids', -1)"
+                                :aria-label="'Moins lourd, série ' + (i + 1)">−</button>
+                        <input type="number" inputmode="decimal" step="any" min="0" x-model.number="s.poids"
+                               placeholder="kg" :aria-label="'Poids série ' + (i + 1)"
+                               @input.once="aSaisi()">
+                        <button type="button" class="serie-plus" @click="ajuster(s, 'poids', 1)"
+                                :aria-label="'Plus lourd, série ' + (i + 1)">+</button>
+                      </div>
+                    </div>
                   </div>
 
+                  {# L'échauffement à côté de « RPE, remarque », plus dedans : on ne
+                     le trouvait pas (retour du 23/11). #}
                   <div class="serie-options">
+                    <button type="button" class="serie-puce serie-echauff" x-show="echauffOk"
+                            :class="s.type === 'echauffement' ? 'on' : ''"
+                            :aria-pressed="(s.type === 'echauffement').toString()"
+                            @click="basculerEchauffement(s)">Échauffement</button>
                     <button type="button" class="serie-puce" :class="(s.rpe || s.remarque) ? 'on' : ''"
                             @click="optionsDe = (optionsDe === i ? -1 : i)"
                             :aria-expanded="(optionsDe === i).toString()"
-                            x-text="s.type === 'echauffement' ? 'Échauffement' : (s.rpe ? 'RPE ' + s.rpe : 'RPE, remarque')"></button>
+                            x-text="s.rpe ? 'RPE ' + s.rpe : 'RPE, remarque'"></button>
                     <button type="button" class="serie-puce danger" @click="removeSet(i)"
                             x-show="sets.length > 1"
                             :aria-label="'Retirer la série ' + (i + 1)">Retirer</button>
@@ -302,11 +309,6 @@
                       </template>
                     </div>
                     {% endif %}
-                    {# Hors records, suggestions et volume de travail (core/hist.py). #}
-                    <button type="button" class="serie-puce serie-echauff" x-show="echauffOk"
-                            :class="s.type === 'echauffement' ? 'on' : ''"
-                            :aria-pressed="(s.type === 'echauffement').toString()"
-                            @click="basculerEchauffement(s)">Série d'échauffement</button>
                     <input type="text" class="serie-remarque" x-model="s.remarque"
                            placeholder="Remarque (facultatif)"
                            :aria-label="'Remarque série ' + (i + 1)">
@@ -365,6 +367,26 @@
             <input type="hidden" name="variant" :value="variant">
             <button type="submit" class="btn label-icon" :class="skipArme ? 'btn-danger' : ''"><svg class="icon icon-sm"><use href="/static/img/icons.svg#skip-forward"/></svg><span x-text="skipArme ? 'Effacer ?' : 'Skip'">Skip</span></button>
           </form>
+          {# Repartir de zéro sur CET exercice (retour du 23/11 : la séance avait
+             son « Recommencer », pas l'exercice). Efface ses séries du jour,
+             échauffements compris, sans le marquer « passé » comme Skip. #}
+          <form method="post" action="/seance/reset-exo" x-data="{ c: false }"
+                x-show="aUneSerieFaite() || completed" @submit="oublierSaisie()">
+            <input type="hidden" name="mode" value="{{ mode }}">
+            <input type="hidden" name="name" value="{{ seance_name }}">
+            <input type="hidden" name="date" value="{{ date_iso }}">
+            <input type="hidden" name="semaine" value="{{ s_act }}">
+            <input type="hidden" name="seance_name" value="{{ seance_name }}">
+            <input type="hidden" name="exo_base" value="{{ exo.base }}">
+            <input type="hidden" name="exo_id" value="{{ exo.exo_id }}">
+            <input type="hidden" name="variant" :value="variant">
+            <button type="button" class="btn label-icon" x-show="!c" @click="c = true"><svg class="icon icon-sm" aria-hidden="true"><use href="/static/img/icons.svg#refresh"/></svg>Réinitialiser</button>
+            <div class="inline-confirm" x-show="c" x-cloak>
+              <span class="confirm-label">Effacer les séries de cet exercice ?</span>
+              <button type="button" class="btn" @click="c = false">Annuler</button>
+              <button type="submit" class="btn btn-danger">Confirmer</button>
+            </div>
+          </form>
         </div>
 
         {# Ce qui sert de temps en temps, replié sous les séries : l'écran de
@@ -410,9 +432,8 @@
           </div>
         </template>
 
-        {# « Réinitialiser les poids » et « Recommencer cet exercice » sont
-           partis (audit du 06/10, 4.3) : une série se corrige en la
-           rouvrant d'un tap, et « Skip » efface, après confirmation. #}
+        {# « Réinitialiser les poids » est parti (audit du 06/10, 4.3) ;
+           « Réinitialiser » l'exercice est revenu à côté de « Skip » (23/11). #}
 
         {% if exo.is_extra %}
           <form class="s-fe7b49" method="post" action="/seance/remove-extra">
